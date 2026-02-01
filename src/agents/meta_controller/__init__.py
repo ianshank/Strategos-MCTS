@@ -135,11 +135,11 @@ except ImportError:
 # dependencies are not installed but type checking is still run
 if TYPE_CHECKING:
     try:
-        from src.agents.meta_controller.rnn_controller import (
+        from src.agents.meta_controller.rnn_controller import (  # noqa: F401
             RNNMetaController,
             RNNMetaControllerModel,
         )
-        from src.agents.meta_controller.utils import (
+        from src.agents.meta_controller.utils import (  # noqa: F401
             features_to_tensor,
             features_to_text,
             normalize_features,
@@ -150,13 +150,13 @@ if TYPE_CHECKING:
         pass
 
     try:
-        from src.agents.meta_controller.bert_controller import BERTMetaController
+        from src.agents.meta_controller.bert_controller import BERTMetaController  # noqa: F401
     except ImportError:
         # Optional transformers/peft dependencies not installed
         pass
 
     try:
-        from src.agents.meta_controller.hybrid_controller import (
+        from src.agents.meta_controller.hybrid_controller import (  # noqa: F401
             HybridMetaController,
             HybridPrediction,
         )
@@ -165,7 +165,7 @@ if TYPE_CHECKING:
         pass
 
     try:
-        from src.agents.meta_controller.feature_extractor import (
+        from src.agents.meta_controller.feature_extractor import (  # noqa: F401
             EmbeddingBackend,
             FeatureExtractor,
             FeatureExtractorConfig,
@@ -175,7 +175,7 @@ if TYPE_CHECKING:
         pass
 
     try:
-        from src.agents.meta_controller.assembly_router import (
+        from src.agents.meta_controller.assembly_router import (  # noqa: F401
             AssemblyRouter,
             RoutingDecision,
         )

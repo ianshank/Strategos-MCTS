@@ -11,7 +11,8 @@ import os
 import subprocess
 import sys
 import time
-from typing import TYPE_CHECKING, Generator
+from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -131,7 +132,7 @@ def browser_options() -> dict:
 
 
 @pytest.fixture(scope="function")
-def driver(browser_options: dict, ui_server: subprocess.Popen | None) -> Generator["WebDriver", None, None]:
+def driver(browser_options: dict, ui_server: subprocess.Popen | None) -> Generator[WebDriver, None, None]:
     """Create and configure WebDriver for each test.
 
     This fixture creates a new browser instance for each test function,

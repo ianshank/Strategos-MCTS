@@ -30,10 +30,10 @@ pytestmark = pytest.mark.skipif(
 
 if CHESS_AVAILABLE:
     from examples.chess_demo.chess_state import (
-        ChessState,
         ChessConfig,
-        uci_to_index,
+        ChessState,
         index_to_uci,
+        uci_to_index,
     )
 
 
@@ -158,7 +158,6 @@ class TestChessState:
 
         except ImportError:
             # NumPy fallback
-            import numpy as np
             assert tensor.shape == (14, 8, 8)
 
     def test_get_hash_deterministic(self):
@@ -257,7 +256,7 @@ class TestMoveEncoding:
         state = ChessState()
 
         # Index that doesn't correspond to a legal move
-        result = index_to_uci(9999, state.board)
+        index_to_uci(9999, state.board)
         # Should return empty or some invalid indicator
         # depending on implementation
 

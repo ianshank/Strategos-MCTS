@@ -15,14 +15,11 @@ Best Practices 2025:
 """
 
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
 
-from src.neuro_symbolic.config import NeuroSymbolicConfig, get_default_config
+from src.neuro_symbolic.config import get_default_config
 from src.neuro_symbolic.reasoning import (
     LogicEngine,
     Predicate,
-    Proof,
     ProofStatus,
     ProofStep,
     ProofTree,
@@ -534,7 +531,6 @@ class TestSymbolicReasoningAgent:
 
     def test_add_knowledge(self, agent):
         """Test adding knowledge to agent."""
-        facts = [("human", ("socrates",))]
         rules = [
             ("mortality", ("mortal", ("?X",)), [("human", ("?X",))]),
         ]

@@ -8,16 +8,17 @@ through property-based testing.
 from __future__ import annotations
 
 import pytest
-from hypothesis import given, settings, strategies as st, assume
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
 
-from src.games.chess.state import ChessGameState
 from src.games.chess.action_space import ChessActionEncoder
 from src.games.chess.config import ChessActionSpaceConfig
+from src.games.chess.state import ChessGameState
 from src.games.chess.verification import (
-    MoveValidator,
     ChessGameVerifier,
-    create_move_validator,
+    MoveValidator,
     create_game_verifier,
+    create_move_validator,
 )
 from tests.games.chess.builders import initial_position
 

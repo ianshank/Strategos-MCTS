@@ -8,7 +8,6 @@ by the Neural MCTS framework for self-play and training.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 import torch
@@ -279,7 +278,7 @@ class ChessGameState(GameState):
         from_black = self.current_player == -1
         return self._encoder.decode_move(index, from_black_perspective=from_black)
 
-    def get_action_mask(self) -> "np.ndarray":
+    def get_action_mask(self) -> np.ndarray:
         """Get mask of legal actions.
 
         Returns:

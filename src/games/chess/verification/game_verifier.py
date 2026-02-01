@@ -555,22 +555,20 @@ class ChessGameVerifier:
         checks["castling_rights"] = (True, "")
         if board.castling_rights:
             # Check if the required pieces are in place
-            if board.castling_rights & chess.BB_H1:
-                if board.piece_at(chess.E1) != chess.Piece(
-                    chess.KING, chess.WHITE
-                ) or board.piece_at(chess.H1) != chess.Piece(chess.ROOK, chess.WHITE):
-                    checks["castling_rights"] = (
-                        False,
-                        "White kingside castling rights but pieces not in place",
-                    )
-            if board.castling_rights & chess.BB_A1:
-                if board.piece_at(chess.E1) != chess.Piece(
-                    chess.KING, chess.WHITE
-                ) or board.piece_at(chess.A1) != chess.Piece(chess.ROOK, chess.WHITE):
-                    checks["castling_rights"] = (
-                        False,
-                        "White queenside castling rights but pieces not in place",
-                    )
+            if board.castling_rights & chess.BB_H1 and (board.piece_at(chess.E1) != chess.Piece(
+                chess.KING, chess.WHITE
+            ) or board.piece_at(chess.H1) != chess.Piece(chess.ROOK, chess.WHITE)):
+                checks["castling_rights"] = (
+                    False,
+                    "White kingside castling rights but pieces not in place",
+                )
+            if board.castling_rights & chess.BB_A1 and (board.piece_at(chess.E1) != chess.Piece(
+                chess.KING, chess.WHITE
+            ) or board.piece_at(chess.A1) != chess.Piece(chess.ROOK, chess.WHITE)):
+                checks["castling_rights"] = (
+                    False,
+                    "White queenside castling rights but pieces not in place",
+                )
 
         return checks
 

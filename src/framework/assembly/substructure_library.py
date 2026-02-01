@@ -419,7 +419,7 @@ class SubstructureLibrary:
             }
 
             # Rebuild hash index
-            self._hash_index = {pid: pid for pid in self._patterns.keys()}
+            self._hash_index = {pid: pid for pid in self._patterns}
 
             # Restore stats
             self._stats.update(data.get('stats', {}))

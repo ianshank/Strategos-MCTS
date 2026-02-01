@@ -23,7 +23,7 @@ import os
 import secrets
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
@@ -365,7 +365,7 @@ async def health_check():
 
     return HealthResponse(
         status=status,
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
         version="1.0.0",
         uptime_seconds=time.time() - start_time,
     )

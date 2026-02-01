@@ -11,15 +11,16 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import torch
 
 if TYPE_CHECKING:
-    import chess
+    pass
 
 from src.games.chess.config import ChessConfig
 from src.games.chess.ensemble_agent import ChessEnsembleAgent
@@ -381,7 +382,7 @@ class ChessTrainingOrchestrator:
         num_actors = self.config.training.num_actors
 
         # Create game tasks
-        games_per_actor = num_games // num_actors
+        num_games // num_actors
 
         tasks = [
             self._play_single_game()
@@ -479,7 +480,7 @@ class ChessTrainingOrchestrator:
         outcome = state.get_reward(player=1)  # From white's perspective
 
         # Assign values to all positions based on outcome
-        for i, pos_tensor in enumerate(positions):
+        for i, _pos_tensor in enumerate(positions):
             # Alternate perspective
             perspective = 1 if i % 2 == 0 else -1
             values[i] = outcome * perspective

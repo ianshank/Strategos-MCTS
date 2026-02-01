@@ -549,7 +549,7 @@ class ChessConfig:
             raise ValueError(f"Unknown preset: {preset}. Available: {list(presets.keys())}")
         return presets[preset]()
 
-    def to_system_config(self) -> "SystemConfig":
+    def to_system_config(self) -> SystemConfig:
         """Convert to base SystemConfig for framework compatibility."""
         from src.training.system_config import (
             HRMConfig,

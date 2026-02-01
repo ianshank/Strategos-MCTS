@@ -10,11 +10,9 @@ Based on: NEXT_STEPS_PLAN.md Phase 2.2
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 
 # =============================================================================
 # Test Markers

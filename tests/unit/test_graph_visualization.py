@@ -13,7 +13,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # =============================================================================
 # Test Markers
 # =============================================================================
@@ -258,7 +257,7 @@ class TestDrawMermaid:
             mock_response.raise_for_status = MagicMock()
             mock_client.return_value.__enter__.return_value.get.return_value = mock_response
 
-            with patch("builtins.open", MagicMock()) as mock_open:
+            with patch("builtins.open", MagicMock()):
                 result = mock_integrated_framework.draw_mermaid(output_file="/tmp/graph.png")
 
                 assert "flowchart TD" in result

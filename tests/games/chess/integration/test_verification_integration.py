@@ -15,13 +15,10 @@ from src.games.chess.config import ChessConfig
 from src.games.chess.state import ChessGameState
 from src.games.chess.verification import (
     ChessVerificationFactory,
-    GameResult,
     VerificationBuilder,
     create_verification_factory,
 )
 from tests.games.chess.builders import (
-    ChessGameSequenceBuilder,
-    ChessPositionBuilder,
     initial_position,
 )
 

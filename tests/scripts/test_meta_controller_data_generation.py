@@ -55,7 +55,7 @@ class TestTemplateGeneration:
     def test_simple_queries_are_short(self):
         """Test that simple queries are generally shorter."""
         simple = generate_query("simple")
-        complex_query = generate_query("complex")
+        generate_query("complex")
 
         # Simple queries should generally be shorter (statistical test)
         assert len(simple) < 200  # Simple queries typically < 200 chars
@@ -118,7 +118,7 @@ class TestTrainingSampleGeneration:
             # Check no NaN values
             value = sample["assembly_features"][feature]
             if isinstance(value, float):
-                assert not (value != value)  # NaN check
+                assert value == value  # NaN check
 
     def test_meta_controller_features_complete(self, feature_extractor):
         """Test that all meta-controller features are present."""

@@ -16,15 +16,14 @@ Best Practices 2025:
 import json
 import os
 import tempfile
-from pathlib import Path
 
 import pytest
 
 from examples.chess_demo.learning_dashboard import (
-    LearningDashboard,
-    DashboardConfig,
     AgentStats,
+    DashboardConfig,
     GameStats,
+    LearningDashboard,
     create_dashboard,
 )
 

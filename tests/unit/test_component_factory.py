@@ -18,9 +18,7 @@ Focus areas:
 from __future__ import annotations
 
 import logging
-import os
 import threading
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -223,6 +221,7 @@ class TestTrainerFactory:
     def test_create_hrm_trainer_default(self, mock_settings, mock_logger, trainer_config, mock_hrm_agent, mock_optimizer, mock_loss_fn):
         """Test creating HRM trainer with default configuration."""
         import sys
+
         from src.framework.component_factory import TrainerFactory
 
         factory = TrainerFactory(settings=mock_settings, logger=mock_logger, config=trainer_config)
@@ -253,6 +252,7 @@ class TestTrainerFactory:
     def test_create_trm_trainer_default(self, mock_settings, mock_logger, trainer_config, mock_trm_agent, mock_optimizer, mock_loss_fn):
         """Test creating TRM trainer with default configuration."""
         import sys
+
         from src.framework.component_factory import TrainerFactory
 
         factory = TrainerFactory(settings=mock_settings, logger=mock_logger, config=trainer_config)
@@ -278,6 +278,7 @@ class TestTrainerFactory:
     def test_create_self_play_evaluator(self, mock_settings, mock_logger, trainer_config, mock_mcts):
         """Test creating self-play evaluator."""
         import sys
+
         from src.framework.component_factory import TrainerFactory
 
         factory = TrainerFactory(settings=mock_settings, logger=mock_logger, config=trainer_config)
@@ -308,6 +309,7 @@ class TestTrainerFactory:
     def test_create_self_play_evaluator_custom_config(self, mock_settings, mock_logger, trainer_config, mock_mcts):
         """Test creating self-play evaluator with custom configuration."""
         import sys
+
         from src.framework.component_factory import TrainerFactory
 
         factory = TrainerFactory(settings=mock_settings, logger=mock_logger, config=trainer_config)
@@ -340,6 +342,7 @@ class TestTrainerFactory:
     def test_create_replay_buffer_uniform(self, mock_settings, mock_logger, trainer_config):
         """Test creating uniform replay buffer."""
         import sys
+
         from src.framework.component_factory import TrainerFactory
 
         factory = TrainerFactory(settings=mock_settings, logger=mock_logger, config=trainer_config)
@@ -366,6 +369,7 @@ class TestTrainerFactory:
     def test_create_replay_buffer_prioritized(self, mock_settings, mock_logger, trainer_config):
         """Test creating prioritized replay buffer."""
         import sys
+
         from src.framework.component_factory import TrainerFactory
 
         factory = TrainerFactory(settings=mock_settings, logger=mock_logger, config=trainer_config)
@@ -401,6 +405,7 @@ class TestTrainerFactory:
     def test_create_replay_buffer_singleton_caching(self, mock_settings, mock_logger, trainer_config):
         """Test that replay buffers are cached when use_singleton=True."""
         import sys
+
         from src.framework.component_factory import TrainerFactory
 
         # Clear any existing cache
@@ -439,6 +444,7 @@ class TestTrainerFactory:
     def test_create_replay_buffer_invalid_type(self, mock_settings, mock_logger, trainer_config):
         """Test that invalid buffer type raises ValueError."""
         import sys
+
         from src.framework.component_factory import TrainerFactory
 
         factory = TrainerFactory(settings=mock_settings, logger=mock_logger, config=trainer_config)
@@ -459,6 +465,7 @@ class TestTrainerFactory:
     def test_clear_singleton_cache(self, mock_settings, mock_logger, trainer_config):
         """Test clearing singleton cache."""
         import sys
+
         from src.framework.component_factory import TrainerFactory
 
         # Clear any existing cache
@@ -513,6 +520,7 @@ class TestMetricsFactory:
     def test_create_performance_monitor(self, mock_settings, mock_logger, metrics_config):
         """Test creating performance monitor."""
         import sys
+
         from src.framework.component_factory import MetricsFactory
 
         factory = MetricsFactory(settings=mock_settings, logger=mock_logger, config=metrics_config)
@@ -541,6 +549,7 @@ class TestMetricsFactory:
     def test_create_performance_monitor_singleton(self, mock_settings, mock_logger, metrics_config):
         """Test performance monitor singleton caching."""
         import sys
+
         from src.framework.component_factory import MetricsFactory
 
         # Clear cache
@@ -568,6 +577,7 @@ class TestMetricsFactory:
     def test_create_experiment_tracker_braintrust(self, mock_settings, mock_logger, metrics_config):
         """Test creating Braintrust experiment tracker."""
         import sys
+
         from src.framework.component_factory import MetricsFactory
 
         factory = MetricsFactory(settings=mock_settings, logger=mock_logger, config=metrics_config)
@@ -596,6 +606,7 @@ class TestMetricsFactory:
     def test_create_experiment_tracker_wandb(self, mock_settings, mock_logger, metrics_config):
         """Test creating W&B experiment tracker."""
         import sys
+
         from src.framework.component_factory import MetricsFactory
 
         factory = MetricsFactory(settings=mock_settings, logger=mock_logger, config=metrics_config)
@@ -626,6 +637,7 @@ class TestMetricsFactory:
     def test_create_experiment_tracker_unified(self, mock_settings, mock_logger, metrics_config):
         """Test creating unified experiment tracker."""
         import sys
+
         from src.framework.component_factory import MetricsFactory
 
         factory = MetricsFactory(settings=mock_settings, logger=mock_logger, config=metrics_config)
@@ -651,6 +663,7 @@ class TestMetricsFactory:
     def test_create_experiment_tracker_invalid_platform(self, mock_settings, mock_logger, metrics_config):
         """Test that invalid platform raises ValueError."""
         import sys
+
         from src.framework.component_factory import MetricsFactory
 
         factory = MetricsFactory(settings=mock_settings, logger=mock_logger, config=metrics_config)
@@ -671,6 +684,7 @@ class TestMetricsFactory:
     def test_create_metrics_collector(self, mock_settings, mock_logger, metrics_config):
         """Test creating metrics collector with all components."""
         import sys
+
         from src.framework.component_factory import MetricsFactory
 
         factory = MetricsFactory(settings=mock_settings, logger=mock_logger, config=metrics_config)
@@ -700,6 +714,7 @@ class TestMetricsFactory:
     def test_create_metrics_collector_performance_only(self, mock_settings, mock_logger, metrics_config):
         """Test creating metrics collector with performance only."""
         import sys
+
         from src.framework.component_factory import MetricsFactory
 
         factory = MetricsFactory(settings=mock_settings, logger=mock_logger, config=metrics_config)
@@ -720,6 +735,7 @@ class TestMetricsFactory:
     def test_clear_singleton_cache(self, mock_settings, mock_logger, metrics_config):
         """Test clearing metrics factory singleton cache."""
         import sys
+
         from src.framework.component_factory import MetricsFactory
 
         # Clear any existing cache at start
@@ -998,6 +1014,7 @@ class TestComponentRegistry:
     def test_clear_caches(self, mock_settings, mock_logger):
         """Test clearing all caches across factories."""
         import sys
+
         from src.framework.component_factory import ComponentRegistry
 
         registry = ComponentRegistry(settings=mock_settings, logger=mock_logger)
@@ -1311,7 +1328,6 @@ class TestProtocols:
 
     def test_trainer_protocol(self):
         """Test TrainerProtocol can be used for type checking."""
-        from src.framework.component_factory import TrainerProtocol
 
         # Create a mock that implements the protocol
         mock_trainer = MagicMock()
@@ -1324,7 +1340,6 @@ class TestProtocols:
 
     def test_metrics_collector_protocol(self):
         """Test MetricsCollectorProtocol can be used for type checking."""
-        from src.framework.component_factory import MetricsCollectorProtocol
 
         mock_collector = MagicMock()
         mock_collector.log_metric = MagicMock()
@@ -1335,7 +1350,6 @@ class TestProtocols:
 
     def test_data_loader_protocol(self):
         """Test DataLoaderProtocol can be used for type checking."""
-        from src.framework.component_factory import DataLoaderProtocol
 
         mock_loader = MagicMock()
         mock_loader.load = MagicMock()

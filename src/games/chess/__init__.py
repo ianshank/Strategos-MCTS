@@ -34,6 +34,7 @@ Example usage:
     ```
 """
 
+from src.games.chess.action_space import ChessActionEncoder
 from src.games.chess.config import (
     AgentType,
     ChessActionSpaceConfig,
@@ -50,14 +51,14 @@ from src.games.chess.config import (
     get_chess_medium_config,
     get_chess_small_config,
 )
-from src.games.chess.action_space import ChessActionEncoder
-from src.games.chess.representation import ChessBoardRepresentation, board_to_tensor
-from src.games.chess.state import ChessGameState, create_initial_state, create_state_from_fen
-from src.games.chess.meta_controller import (
-    ChessFeatureExtractor,
-    ChessMetaController,
-    ChessPositionFeatures,
-    RoutingDecision,
+from src.games.chess.continuous_learning import (
+    ContinuousLearningConfig,
+    ContinuousLearningSession,
+    GameRecord,
+    GameResult,
+    OnlineLearner,
+    ScoreCard,
+    create_learning_session,
 )
 from src.games.chess.ensemble_agent import (
     AgentResponse,
@@ -65,6 +66,14 @@ from src.games.chess.ensemble_agent import (
     ChessStateEncoder,
     EnsembleResponse,
 )
+from src.games.chess.meta_controller import (
+    ChessFeatureExtractor,
+    ChessMetaController,
+    ChessPositionFeatures,
+    RoutingDecision,
+)
+from src.games.chess.representation import ChessBoardRepresentation, board_to_tensor
+from src.games.chess.state import ChessGameState, create_initial_state, create_state_from_fen
 from src.games.chess.training import (
     ChessDataAugmentation,
     ChessOpeningBook,
@@ -77,15 +86,6 @@ from src.games.chess.ui import (
     GameSession,
     create_chess_ui,
     render_board_html,
-)
-from src.games.chess.continuous_learning import (
-    ContinuousLearningConfig,
-    ContinuousLearningSession,
-    GameRecord,
-    GameResult,
-    OnlineLearner,
-    ScoreCard,
-    create_learning_session,
 )
 
 __all__ = [

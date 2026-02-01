@@ -8,10 +8,7 @@ Based on: NEXT_STEPS_PLAN.md Phase 2.4
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
-
 import pytest
-
 
 # =============================================================================
 # Test Markers

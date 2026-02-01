@@ -40,7 +40,7 @@ except ImportError as e:
     _logger.debug(f"HRM agent not available: {e}")
     # Create placeholder types for type checking
     if TYPE_CHECKING:
-        from src.agents.hrm_agent import (
+        from src.agents.hrm_agent import (  # noqa: F401
             AdaptiveComputationTime,
             HModule,
             HRMAgent,
@@ -66,7 +66,7 @@ try:
 except ImportError as e:
     _logger.debug(f"TRM agent not available: {e}")
     if TYPE_CHECKING:
-        from src.agents.trm_agent import (
+        from src.agents.trm_agent import (  # noqa: F401
             DeepSupervisionHead,
             RecursiveBlock,
             TRMAgent,
@@ -90,7 +90,7 @@ try:
 except ImportError as e:
     _logger.debug(f"Hybrid agent not available: {e}")
     if TYPE_CHECKING:
-        from src.agents.hybrid_agent import (
+        from src.agents.hybrid_agent import (  # noqa: F401
             CostSavings,
             DecisionMetadata,
             DecisionSource,

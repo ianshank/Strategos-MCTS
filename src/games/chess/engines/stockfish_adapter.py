@@ -335,7 +335,7 @@ class StockfishAdapter:
             game_moves: list[str] = []
             agent_plays_white = game_num % 2 == 0
 
-            for move_num in range(max_moves_per_game):
+            for _move_num in range(max_moves_per_game):
                 if state.is_terminal():
                     break
 

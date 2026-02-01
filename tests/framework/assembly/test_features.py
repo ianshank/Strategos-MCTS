@@ -74,7 +74,7 @@ class TestAssemblyFeatureExtractor:
         non_technical = "Write a simple hello world program"
 
         tech_features = extractor.extract(technical)
-        simple_features = extractor.extract(non_technical)
+        extractor.extract(non_technical)
 
         # Technical query should have higher technical complexity
         # (though this depends on domain library)

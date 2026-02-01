@@ -9,7 +9,6 @@ Based on: MULTI_AGENT_MCTS_TEMPLATE.md Section 10
 from __future__ import annotations
 
 import os
-
 from unittest.mock import MagicMock, patch
 
 import pytest

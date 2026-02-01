@@ -1507,9 +1507,7 @@ class IntegratedFramework:
                 label = f"{label}<br/><small>{node['description']}</small>"
 
             # Use different shapes based on node type
-            if node_type == "start":
-                lines.append(f"    {node_id}([{label}])")
-            elif node_type == "end":
+            if node_type == "start" or node_type == "end":
                 lines.append(f"    {node_id}([{label}])")
             elif node_type == "branch":
                 lines.append(f"    {node_id}{{{label}}}")

@@ -30,9 +30,9 @@ class MoveValidatorProtocol(Protocol):
 
     def validate_move(
         self,
-        state: "ChessGameState",
+        state: ChessGameState,
         move_uci: str,
-    ) -> "MoveValidationResult":
+    ) -> MoveValidationResult:
         """Validate a move in UCI format.
 
         Args:
@@ -46,9 +46,9 @@ class MoveValidatorProtocol(Protocol):
 
     def validate_castling(
         self,
-        state: "ChessGameState",
+        state: ChessGameState,
         kingside: bool,
-    ) -> "MoveValidationResult":
+    ) -> MoveValidationResult:
         """Validate a castling move.
 
         Args:
@@ -62,9 +62,9 @@ class MoveValidatorProtocol(Protocol):
 
     def validate_en_passant(
         self,
-        state: "ChessGameState",
+        state: ChessGameState,
         move_uci: str,
-    ) -> "MoveValidationResult":
+    ) -> MoveValidationResult:
         """Validate an en passant capture.
 
         Args:
@@ -78,9 +78,9 @@ class MoveValidatorProtocol(Protocol):
 
     def validate_promotion(
         self,
-        state: "ChessGameState",
+        state: ChessGameState,
         move_uci: str,
-    ) -> "MoveValidationResult":
+    ) -> MoveValidationResult:
         """Validate a pawn promotion.
 
         Args:
@@ -94,9 +94,9 @@ class MoveValidatorProtocol(Protocol):
 
     def validate_encoding_roundtrip(
         self,
-        state: "ChessGameState",
+        state: ChessGameState,
         move_uci: str,
-    ) -> "MoveValidationResult":
+    ) -> MoveValidationResult:
         """Validate that a move survives encoding/decoding roundtrip.
 
         Args:
@@ -119,9 +119,9 @@ class ChessGameVerifierProtocol(Protocol):
     async def verify_full_game(
         self,
         moves: list[str],
-        expected_outcome: "GameResult | None" = None,
+        expected_outcome: GameResult | None = None,
         game_id: str | None = None,
-    ) -> "GameVerificationResult":
+    ) -> GameVerificationResult:
         """Verify a complete chess game.
 
         Args:
@@ -137,7 +137,7 @@ class ChessGameVerifierProtocol(Protocol):
     def verify_position(
         self,
         fen: str,
-    ) -> "PositionVerificationResult":
+    ) -> PositionVerificationResult:
         """Verify a chess position.
 
         Args:
@@ -152,7 +152,7 @@ class ChessGameVerifierProtocol(Protocol):
         self,
         initial_fen: str,
         moves: list[str],
-    ) -> "MoveSequenceResult":
+    ) -> MoveSequenceResult:
         """Verify a sequence of moves from a given position.
 
         Args:
@@ -166,9 +166,9 @@ class ChessGameVerifierProtocol(Protocol):
 
     async def verify_game_playthrough(
         self,
-        state: "ChessGameState",
+        state: ChessGameState,
         max_moves: int | None = None,
-    ) -> "GameVerificationResult":
+    ) -> GameVerificationResult:
         """Verify a game by playing it through.
 
         Args:
@@ -190,8 +190,8 @@ class EnsembleConsistencyCheckerProtocol(Protocol):
 
     async def check_position_consistency(
         self,
-        state: "ChessGameState",
-    ) -> "EnsembleConsistencyResult":
+        state: ChessGameState,
+    ) -> EnsembleConsistencyResult:
         """Check agent consistency for a single position.
 
         Args:
@@ -204,8 +204,8 @@ class EnsembleConsistencyCheckerProtocol(Protocol):
 
     async def check_sequence_consistency(
         self,
-        states: list["ChessGameState"],
-    ) -> list["EnsembleConsistencyResult"]:
+        states: list[ChessGameState],
+    ) -> list[EnsembleConsistencyResult]:
         """Check agent consistency across a sequence of positions.
 
         Args:
@@ -220,7 +220,7 @@ class EnsembleConsistencyCheckerProtocol(Protocol):
         self,
         moves: list[str],
         initial_fen: str | None = None,
-    ) -> list["EnsembleConsistencyResult"]:
+    ) -> list[EnsembleConsistencyResult]:
         """Check agent consistency throughout a game.
 
         Args:
@@ -254,9 +254,9 @@ class SubAgentVerifierProtocol(Protocol):
 
     async def verify_agent_response(
         self,
-        state: "ChessGameState",
+        state: ChessGameState,
         agent_name: str,
-    ) -> "MoveValidationResult":
+    ) -> MoveValidationResult:
         """Verify a sub-agent's response for a position.
 
         Args:
@@ -270,7 +270,7 @@ class SubAgentVerifierProtocol(Protocol):
 
     async def verify_routing_decision(
         self,
-        state: "ChessGameState",
+        state: ChessGameState,
     ) -> bool:
         """Verify that routing decision is appropriate.
 

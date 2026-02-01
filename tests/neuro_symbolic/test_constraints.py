@@ -14,12 +14,9 @@ Best Practices 2025:
 """
 
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
 
 from src.neuro_symbolic.config import ConstraintConfig, ConstraintEnforcement
 from src.neuro_symbolic.constraints import (
-    Constraint,
     ConstraintResult,
     ConstraintSatisfactionLevel,
     ConstraintSystem,
@@ -686,7 +683,7 @@ class TestConstraintSystem:
 
         # All actions should be valid (state satisfies constraint)
         assert len(valid_actions) == 3
-        for action, score in valid_actions:
+        for _action, score in valid_actions:
             assert score == 1.0
 
     def test_conflict_logging(self):

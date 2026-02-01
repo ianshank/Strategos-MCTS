@@ -13,7 +13,7 @@ import secrets
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from src.api.exceptions import (
     AuthenticationError,
@@ -24,7 +24,7 @@ from src.api.exceptions import (
 
 def _utc_now() -> datetime:
     """Get current UTC time (Python 3.10+ compatible)."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @dataclass

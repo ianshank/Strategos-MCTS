@@ -17,15 +17,11 @@ from src.games.chess.verification import (
     ChessGameVerifier,
     GameResult,
     GameVerifierConfig,
-    VerificationSeverity,
     create_game_verifier,
 )
 from tests.games.chess.builders import (
-    ChessGameSequenceBuilder,
     ChessPositionBuilder,
-    fools_mate_sequence,
     initial_position,
-    scholars_mate_sequence,
 )
 from tests.games.chess.fixtures import FAMOUS_GAMES
 

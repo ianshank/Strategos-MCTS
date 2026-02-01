@@ -22,7 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum, auto
 from typing import Any, Protocol, runtime_checkable
 
@@ -62,7 +62,7 @@ class Fact:
     fact_type: SymbolicFactType = SymbolicFactType.PREDICATE
     confidence: float = 1.0
     source: str = "unknown"
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def __post_init__(self):
         """Validate fact after initialization."""

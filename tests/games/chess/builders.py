@@ -14,7 +14,6 @@ from src.games.chess.config import ChessActionSpaceConfig, ChessBoardConfig, Gam
 from src.games.chess.state import ChessGameState
 from src.games.chess.verification.types import (
     GameResult,
-    MoveType,
 )
 
 
@@ -36,7 +35,7 @@ class ChessPositionBuilder:
     _board_config: ChessBoardConfig = field(default_factory=ChessBoardConfig)
     _action_config: ChessActionSpaceConfig = field(default_factory=ChessActionSpaceConfig)
 
-    def with_fen(self, fen: str) -> "ChessPositionBuilder":
+    def with_fen(self, fen: str) -> ChessPositionBuilder:
         """Set the FEN string.
 
         Args:
@@ -48,7 +47,7 @@ class ChessPositionBuilder:
         self._fen = fen
         return self
 
-    def with_phase(self, phase: GamePhase) -> "ChessPositionBuilder":
+    def with_phase(self, phase: GamePhase) -> ChessPositionBuilder:
         """Set the expected game phase.
 
         Args:
@@ -60,7 +59,7 @@ class ChessPositionBuilder:
         self._phase = phase
         return self
 
-    def with_board_config(self, config: ChessBoardConfig) -> "ChessPositionBuilder":
+    def with_board_config(self, config: ChessBoardConfig) -> ChessPositionBuilder:
         """Set the board configuration.
 
         Args:
@@ -72,7 +71,7 @@ class ChessPositionBuilder:
         self._board_config = config
         return self
 
-    def with_action_config(self, config: ChessActionSpaceConfig) -> "ChessPositionBuilder":
+    def with_action_config(self, config: ChessActionSpaceConfig) -> ChessPositionBuilder:
         """Set the action space configuration.
 
         Args:
@@ -84,7 +83,7 @@ class ChessPositionBuilder:
         self._action_config = config
         return self
 
-    def with_initial_position(self) -> "ChessPositionBuilder":
+    def with_initial_position(self) -> ChessPositionBuilder:
         """Set to initial chess position.
 
         Returns:
@@ -93,7 +92,7 @@ class ChessPositionBuilder:
         self._fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         return self
 
-    def with_check(self) -> "ChessPositionBuilder":
+    def with_check(self) -> ChessPositionBuilder:
         """Set a position where the side to move is in check.
 
         Returns:
@@ -103,7 +102,7 @@ class ChessPositionBuilder:
         self._fen = "rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3"
         return self
 
-    def with_mate_threat(self) -> "ChessPositionBuilder":
+    def with_mate_threat(self) -> ChessPositionBuilder:
         """Set a position with a mate threat.
 
         Returns:
@@ -113,7 +112,7 @@ class ChessPositionBuilder:
         self._fen = "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4"
         return self
 
-    def with_checkmate(self) -> "ChessPositionBuilder":
+    def with_checkmate(self) -> ChessPositionBuilder:
         """Set a checkmate position.
 
         Returns:
@@ -123,7 +122,7 @@ class ChessPositionBuilder:
         self._fen = "6k1/5ppp/8/8/8/8/8/R3K3 b - - 0 1"
         return self
 
-    def with_stalemate(self) -> "ChessPositionBuilder":
+    def with_stalemate(self) -> ChessPositionBuilder:
         """Set a stalemate position.
 
         Returns:
@@ -132,7 +131,7 @@ class ChessPositionBuilder:
         self._fen = "k7/8/1K6/8/8/8/8/8 b - - 0 1"
         return self
 
-    def with_endgame(self) -> "ChessPositionBuilder":
+    def with_endgame(self) -> ChessPositionBuilder:
         """Set an endgame position.
 
         Returns:
@@ -143,7 +142,7 @@ class ChessPositionBuilder:
         self._phase = GamePhase.ENDGAME
         return self
 
-    def with_middlegame(self) -> "ChessPositionBuilder":
+    def with_middlegame(self) -> ChessPositionBuilder:
         """Set a middlegame position.
 
         Returns:
@@ -200,7 +199,7 @@ class ChessGameSequenceBuilder:
         }
     )
 
-    def with_initial_fen(self, fen: str) -> "ChessGameSequenceBuilder":
+    def with_initial_fen(self, fen: str) -> ChessGameSequenceBuilder:
         """Set the initial FEN.
 
         Args:
@@ -212,7 +211,7 @@ class ChessGameSequenceBuilder:
         self._initial_fen = fen
         return self
 
-    def with_moves(self, moves: list[str]) -> "ChessGameSequenceBuilder":
+    def with_moves(self, moves: list[str]) -> ChessGameSequenceBuilder:
         """Set the move sequence.
 
         Args:
@@ -224,7 +223,7 @@ class ChessGameSequenceBuilder:
         self._moves = moves
         return self
 
-    def with_opening(self, opening_name: str) -> "ChessGameSequenceBuilder":
+    def with_opening(self, opening_name: str) -> ChessGameSequenceBuilder:
         """Use a named opening.
 
         Args:
@@ -242,7 +241,7 @@ class ChessGameSequenceBuilder:
         self._opening_name = opening_name
         return self
 
-    def with_expected_outcome(self, outcome: GameResult) -> "ChessGameSequenceBuilder":
+    def with_expected_outcome(self, outcome: GameResult) -> ChessGameSequenceBuilder:
         """Set the expected game outcome.
 
         Args:
@@ -254,7 +253,7 @@ class ChessGameSequenceBuilder:
         self._expected_outcome = outcome
         return self
 
-    def add_move(self, move: str) -> "ChessGameSequenceBuilder":
+    def add_move(self, move: str) -> ChessGameSequenceBuilder:
         """Add a single move.
 
         Args:
@@ -346,7 +345,7 @@ class TacticalPositionBuilder:
         }
     )
 
-    def with_id(self, id: str) -> "TacticalPositionBuilder":
+    def with_id(self, id: str) -> TacticalPositionBuilder:
         """Set the scenario ID.
 
         Args:
@@ -358,7 +357,7 @@ class TacticalPositionBuilder:
         self._id = id
         return self
 
-    def with_name(self, name: str) -> "TacticalPositionBuilder":
+    def with_name(self, name: str) -> TacticalPositionBuilder:
         """Set the scenario name.
 
         Args:
@@ -370,7 +369,7 @@ class TacticalPositionBuilder:
         self._name = name
         return self
 
-    def with_fen(self, fen: str) -> "TacticalPositionBuilder":
+    def with_fen(self, fen: str) -> TacticalPositionBuilder:
         """Set the FEN string.
 
         Args:
@@ -382,7 +381,7 @@ class TacticalPositionBuilder:
         self._fen = fen
         return self
 
-    def with_type(self, tactic: str) -> "TacticalPositionBuilder":
+    def with_type(self, tactic: str) -> TacticalPositionBuilder:
         """Set the tactic type from presets.
 
         Args:
@@ -400,7 +399,7 @@ class TacticalPositionBuilder:
         self._tactic_type = tactic
         return self
 
-    def with_best_move(self, move: str) -> "TacticalPositionBuilder":
+    def with_best_move(self, move: str) -> TacticalPositionBuilder:
         """Set the best move.
 
         Args:
@@ -412,7 +411,7 @@ class TacticalPositionBuilder:
         self._best_move = move
         return self
 
-    def with_evaluation(self, eval_cp: int) -> "TacticalPositionBuilder":
+    def with_evaluation(self, eval_cp: int) -> TacticalPositionBuilder:
         """Set the evaluation in centipawns.
 
         Args:
@@ -424,7 +423,7 @@ class TacticalPositionBuilder:
         self._evaluation_cp = eval_cp
         return self
 
-    def with_expected_agent(self, agent: str) -> "TacticalPositionBuilder":
+    def with_expected_agent(self, agent: str) -> TacticalPositionBuilder:
         """Set the expected best agent.
 
         Args:
@@ -436,7 +435,7 @@ class TacticalPositionBuilder:
         self._expected_agent = agent
         return self
 
-    def with_difficulty(self, difficulty: str) -> "TacticalPositionBuilder":
+    def with_difficulty(self, difficulty: str) -> TacticalPositionBuilder:
         """Set the difficulty level.
 
         Args:

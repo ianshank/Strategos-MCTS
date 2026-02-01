@@ -464,13 +464,12 @@ class MCTSEngine:
             iterations_run = iteration + 1
 
             # Check for early termination after minimum iterations
-            if iterations_run >= min_iterations_before_termination:
-                if self._should_terminate_early(
-                    root,
-                    early_termination_threshold,
-                ):
-                    early_terminated = True
-                    break
+            if iterations_run >= min_iterations_before_termination and self._should_terminate_early(
+                root,
+                early_termination_threshold,
+            ):
+                early_terminated = True
+                break
 
         # Select best action based on policy
         best_action = self._select_best_action(root, selection_policy)

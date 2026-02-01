@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from src.framework.mcts.neural_mcts import NeuralMCTS
     from src.models.policy_value_net import PolicyValueNetwork
 
-from src.games.chess.config import AgentType, ChessConfig, GamePhase
+from src.games.chess.config import AgentType, ChessConfig
 from src.games.chess.meta_controller import ChessMetaController, RoutingDecision
 from src.games.chess.state import ChessGameState
 
@@ -112,7 +112,7 @@ class ChessEnsembleAgent:
     def __init__(
         self,
         config: ChessConfig,
-        policy_value_net: "PolicyValueNetwork | None" = None,
+        policy_value_net: PolicyValueNetwork | None = None,
         device: str | None = None,
     ) -> None:
         """Initialize the ensemble agent.
@@ -137,9 +137,9 @@ class ChessEnsembleAgent:
 
         # Initialize components (lazy loading)
         self._policy_value_net = policy_value_net
-        self._hrm_agent: "HRMAgent | None" = None
-        self._trm_agent: "TRMAgent | None" = None
-        self._mcts: "NeuralMCTS | None" = None
+        self._hrm_agent: HRMAgent | None = None
+        self._trm_agent: TRMAgent | None = None
+        self._mcts: NeuralMCTS | None = None
 
         # Action encoder
         from src.games.chess.action_space import ChessActionEncoder
@@ -147,7 +147,7 @@ class ChessEnsembleAgent:
         self.action_encoder = ChessActionEncoder(config.action_space)
 
     @property
-    def policy_value_net(self) -> "PolicyValueNetwork":
+    def policy_value_net(self) -> PolicyValueNetwork:
         """Lazy-load policy-value network."""
         if self._policy_value_net is None:
             from src.models.policy_value_net import create_policy_value_network
@@ -161,7 +161,7 @@ class ChessEnsembleAgent:
         return self._policy_value_net
 
     @property
-    def hrm_agent(self) -> "HRMAgent":
+    def hrm_agent(self) -> HRMAgent:
         """Lazy-load HRM agent."""
         if self._hrm_agent is None:
             from src.agents.hrm_agent import create_hrm_agent
@@ -171,7 +171,7 @@ class ChessEnsembleAgent:
         return self._hrm_agent
 
     @property
-    def trm_agent(self) -> "TRMAgent":
+    def trm_agent(self) -> TRMAgent:
         """Lazy-load TRM agent."""
         if self._trm_agent is None:
             from src.agents.trm_agent import create_trm_agent
@@ -185,7 +185,7 @@ class ChessEnsembleAgent:
         return self._trm_agent
 
     @property
-    def mcts(self) -> "NeuralMCTS":
+    def mcts(self) -> NeuralMCTS:
         """Lazy-load Neural MCTS."""
         if self._mcts is None:
             from src.framework.mcts.neural_mcts import NeuralMCTS

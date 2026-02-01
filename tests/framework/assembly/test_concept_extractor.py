@@ -159,7 +159,7 @@ def test_domain_concept_detection(domain, text, expected_concept):
     extractor = ConceptExtractor(domain=domain)
     concepts = extractor.extract_concepts(text)
 
-    concept_terms = [c.term for c in concepts]
+    [c.term for c in concepts]
     # Expected concept might not always be extracted depending on tokenization
     # So we just check that some concepts are extracted
     assert len(concepts) > 0

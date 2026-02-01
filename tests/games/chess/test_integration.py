@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-from unittest.mock import MagicMock, patch
-
 import numpy as np
 import pytest
 import torch
@@ -12,7 +9,6 @@ import torch
 from src.games.chess.config import (
     AgentType,
     ChessConfig,
-    GamePhase,
     get_chess_small_config,
 )
 from src.games.chess.state import ChessGameState

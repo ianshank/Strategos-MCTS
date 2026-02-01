@@ -6,7 +6,7 @@ Provides reusable test data for chess verification tests.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from src.games.chess.config import AgentType, GamePhase

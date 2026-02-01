@@ -15,9 +15,7 @@ Based on: MULTI_AGENT_MCTS_TEMPLATE.md Section 8.6
 
 from __future__ import annotations
 
-import asyncio
 import os
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -510,7 +508,7 @@ class TestQueryProcessing:
             )
 
         assert response.status_code == 200
-        data = response.json()
+        response.json()
 
         # Verify thread_id was passed to the framework
         mock_framework_service.process_query.assert_called_once()

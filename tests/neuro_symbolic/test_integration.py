@@ -13,17 +13,16 @@ Best Practices 2025:
 - Realistic scenarios
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from src.neuro_symbolic.config import (
     ConstraintConfig,
     ConstraintEnforcement,
-    NeuroSymbolicConfig,
     get_default_config,
 )
-from src.neuro_symbolic.constraints import ConstraintSystem, PredicateConstraint
+from src.neuro_symbolic.constraints import ConstraintSystem
 from src.neuro_symbolic.integration import (
     HybridConfidenceAggregator,
     NeuroSymbolicMCTSConfig,
@@ -87,7 +86,7 @@ class TestNeuroSymbolicMCTSIntegration:
 
         # All actions should be valid with no constraints
         assert len(valid) == 3
-        for action, score in valid:
+        for _action, score in valid:
             assert score == 1.0
 
     @pytest.mark.asyncio

@@ -416,10 +416,7 @@ class ConceptExtractor:
                 return True
 
         # Check if one contains the other
-        if term1 in term2 or term2 in term1:
-            return True
-
-        return False
+        return bool(term1 in term2 or term2 in term1)
 
     def _make_dag(self, graph: nx.DiGraph) -> nx.DiGraph:
         """Convert graph to DAG by removing cycles."""

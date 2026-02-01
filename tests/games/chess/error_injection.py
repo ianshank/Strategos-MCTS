@@ -9,8 +9,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from src.games.chess.ensemble_agent import ChessEnsembleAgent
@@ -150,7 +149,7 @@ class ChessErrorInjector:
 
     def patch_agent_with_failure(
         self,
-        agent: "ChessEnsembleAgent",
+        agent: ChessEnsembleAgent,
         failure_type: str = "exception",
     ) -> None:
         """Patch agent to simulate failure.
@@ -196,7 +195,7 @@ class ChessErrorInjector:
     def create_timeout_context(
         self,
         timeout_seconds: float,
-    ) -> "TimeoutContext":
+    ) -> TimeoutContext:
         """Create a context that simulates timeout.
 
         Args:
@@ -227,7 +226,7 @@ class TimeoutContext:
         self.timeout_seconds = timeout_seconds
         self._task: asyncio.Task | None = None
 
-    async def __aenter__(self) -> "TimeoutContext":
+    async def __aenter__(self) -> TimeoutContext:
         """Enter async context."""
         return self
 

@@ -10,15 +10,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import threading
+import tempfile
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-import gradio as gr
-import tempfile
 import chess.pgn
+import gradio as gr
 
 from src.games.chess.continuous_learning import (
     ContinuousLearningConfig,
@@ -166,9 +165,9 @@ def render_board_html(fen: str, last_move: str | None = None, flipped: bool = Fa
     row_indices = range(8) if not flipped else range(7, -1, -1)
     col_indices = range(8) if not flipped else range(7, -1, -1)
 
-    for row_idx, board_row in enumerate(row_indices):
+    for _row_idx, board_row in enumerate(row_indices):
         html_parts.append('<div class="chess-row">')
-        for col_idx, board_col in enumerate(col_indices):
+        for _col_idx, board_col in enumerate(col_indices):
             is_light = (board_row + board_col) % 2 == 0
             square_class = "light-square" if is_light else "dark-square"
             if (board_row, board_col) in highlight_squares:
@@ -198,7 +197,7 @@ def render_board_html(fen: str, last_move: str | None = None, flipped: bool = Fa
 def render_scorecard_html(scorecard: ScoreCard) -> str:
     """Render scorecard as HTML."""
     win_rate = scorecard.win_rate * 100
-    draw_rate = scorecard.draw_rate * 100
+    scorecard.draw_rate * 100
 
     # Determine streak info
     if scorecard.streak_type == "win":
@@ -517,8 +516,9 @@ def make_ai_move_sync() -> tuple[str, str, str, str, str]:
 
 def get_ai_move(fen: str) -> tuple[str, dict[str, Any]]:
     """Get AI's move for the position."""
-    import chess
     import random
+
+    import chess
 
     board = chess.Board(fen)
     legal_moves = list(board.legal_moves)
@@ -678,7 +678,7 @@ def export_game_pgn() -> str | None:
                 board.push(move)
             else:
                 break
-        
+
         # Write to temp file
         with tempfile.NamedTemporaryFile(mode='w', suffix='.pgn', delete=False) as tmp:
             print(game, file=tmp, end="\n\n")

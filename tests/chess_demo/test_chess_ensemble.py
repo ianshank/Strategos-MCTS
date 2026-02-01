@@ -13,9 +13,8 @@ Best Practices 2025:
 - Edge case handling
 """
 
+
 import pytest
-import asyncio
-from unittest.mock import MagicMock, patch, AsyncMock
 
 # Skip all tests if chess not available
 try:
@@ -30,14 +29,14 @@ pytestmark = pytest.mark.skipif(
 )
 
 if CHESS_AVAILABLE:
-    from examples.chess_demo.chess_state import ChessState
     from examples.chess_demo.chess_ensemble import (
+        AgentResult,
+        AgentType,
         ChessEnsemble,
         EnsembleConfig,
-        AgentType,
-        AgentResult,
         LearningRecord,
     )
+    from examples.chess_demo.chess_state import ChessState
 
 
 class TestEnsembleConfig:

@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 if TYPE_CHECKING:
-    from numpy.typing import NDArray
+    pass
 
 # Module-level logger
 logger: logging.Logger = logging.getLogger(__name__)

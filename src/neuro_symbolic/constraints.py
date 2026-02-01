@@ -19,7 +19,7 @@ import hashlib
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum, auto
 from typing import Any, TypeVar
 
@@ -89,7 +89,7 @@ class Constraint(ABC):
         self.enforcement = enforcement
         self.priority = priority  # Higher = more important
         self._compiled: bool = False
-        self._created_at = datetime.now(timezone.utc)
+        self._created_at = datetime.now(UTC)
 
     @abstractmethod
     def evaluate(
@@ -763,7 +763,7 @@ class ConstraintSystem:
                             "parent_state_id": parent_state.state_id,
                             "action": action,
                             "violations": [r.message for r in results if r.is_violated],
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "timestamp": datetime.now(UTC).isoformat(),
                         }
                     )
 

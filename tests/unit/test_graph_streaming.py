@@ -9,11 +9,9 @@ Based on: NEXT_STEPS_PLAN.md Phase 3.1
 from __future__ import annotations
 
 import logging
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 
 # =============================================================================
 # Test Markers
@@ -134,7 +132,7 @@ class TestNodeLevelStreaming:
         """Test astream yields node updates as they complete."""
         nodes_received = []
 
-        async for node_name, state_update in mock_integrated_framework.astream(
+        async for node_name, _state_update in mock_integrated_framework.astream(
             query="Test query"
         ):
             nodes_received.append(node_name)

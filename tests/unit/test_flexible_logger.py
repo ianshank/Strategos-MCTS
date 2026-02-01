@@ -5,7 +5,7 @@ Tests graceful fallback between structured and standard logging.
 """
 
 import logging
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -178,7 +178,8 @@ class TestFlexibleLoggerIntegration:
     def test_used_in_lightweight_framework(self):
         """Test FlexibleLogger is used correctly in LightweightFramework."""
         from unittest.mock import MagicMock
-        from src.api.framework_service import LightweightFramework, FrameworkConfig
+
+        from src.api.framework_service import FrameworkConfig, LightweightFramework
 
         mock_llm = MagicMock()
         mock_llm.generate.return_value = MagicMock(text="Test response")

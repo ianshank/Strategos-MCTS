@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import os
 import tempfile
 from pathlib import Path
 
 import pytest
-import torch
 
 from src.games.chess.config import (
     AgentType,
@@ -16,9 +14,6 @@ from src.games.chess.config import (
     ChessBoardConfig,
     ChessConfig,
     ChessEnsembleConfig,
-    ChessMCTSConfig,
-    ChessNeuralNetConfig,
-    ChessTrainingConfig,
     GamePhase,
     get_chess_large_config,
     get_chess_medium_config,

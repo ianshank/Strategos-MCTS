@@ -10,12 +10,10 @@ Based on: NEXT_STEPS_PLAN.md Phase 2.3
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-
 
 # =============================================================================
 # Test Markers
@@ -262,6 +260,7 @@ class TestADKAdapterInitialization:
     def test_adapter_creates_workspace_directory(self, adk_config):
         """Test adapter creates workspace directory on init."""
         import tempfile
+
         from src.integrations.google_adk.base import ADKAgentAdapter
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -278,7 +277,7 @@ class TestADKAdapterInitialization:
                 def get_capabilities(self):
                     return {}
 
-            adapter = TestAdapter(config=adk_config, agent_name="test")
+            TestAdapter(config=adk_config, agent_name="test")
 
             assert os.path.exists(workspace)
 
@@ -309,10 +308,8 @@ class TestADKAdapterInvocation:
         self, mock_adk_adapter, adk_request
     ):
         """Test adapter auto-initializes on first invocation."""
-        from src.integrations.google_adk.base import ADKAgentAdapter
 
         # Patch invoke to check auto-init
-        original_invoke = mock_adk_adapter.__class__.invoke
 
         async def patched_invoke(self, request):
             if not self._initialized:

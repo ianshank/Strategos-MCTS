@@ -9,14 +9,10 @@ Based on: NEXT_STEPS_PLAN.md Phase 2.1
 
 from __future__ import annotations
 
-import asyncio
-import json
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-
 
 # =============================================================================
 # Test Markers

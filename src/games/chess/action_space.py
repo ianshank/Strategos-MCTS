@@ -366,7 +366,7 @@ class ChessActionEncoder:
 
     def get_legal_action_mask(
         self,
-        board: "chess.Board",
+        board: chess.Board,
         from_black_perspective: bool = False,
     ) -> np.ndarray:
         """Get mask of legal actions for current board position.
@@ -393,7 +393,7 @@ class ChessActionEncoder:
     def filter_policy_to_legal(
         self,
         policy: np.ndarray,
-        board: "chess.Board",
+        board: chess.Board,
         from_black_perspective: bool = False,
         temperature: float = 1.0,
     ) -> dict[str, float]:

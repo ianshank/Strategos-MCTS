@@ -21,8 +21,6 @@ if TYPE_CHECKING:
 from src.games.chess.constants import truncate_fen
 from src.observability.logging import (
     StructuredLogger,
-    get_correlation_id,
-    get_structured_logger,
 )
 
 
@@ -48,7 +46,7 @@ class ChessVerificationLogger(StructuredLogger):
     def log_game_verification(
         self,
         game_id: str,
-        result: "GameVerificationResult",
+        result: GameVerificationResult,
         duration_ms: float,
         **extra: Any,
     ) -> None:
@@ -75,7 +73,7 @@ class ChessVerificationLogger(StructuredLogger):
         self,
         state_fen: str,
         move: str,
-        result: "MoveValidationResult",
+        result: MoveValidationResult,
         **extra: Any,
     ) -> None:
         """Log move validation result.
@@ -104,8 +102,8 @@ class ChessVerificationLogger(StructuredLogger):
     def log_ensemble_decision(
         self,
         state_fen: str,
-        routing_decision: "RoutingDecision",
-        agent_responses: dict[str, "AgentResponse"],
+        routing_decision: RoutingDecision,
+        agent_responses: dict[str, AgentResponse],
         **extra: Any,
     ) -> None:
         """Log ensemble decision.

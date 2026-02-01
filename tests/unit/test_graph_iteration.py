@@ -10,12 +10,10 @@ Based on: NEXT_STEPS_PLAN.md Phase 1.1
 from __future__ import annotations
 
 import logging
-import sys
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # =============================================================================
 # Test Markers

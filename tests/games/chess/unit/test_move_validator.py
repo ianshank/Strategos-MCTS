@@ -16,10 +16,8 @@ import pytest
 from src.games.chess.state import ChessGameState
 from src.games.chess.verification import (
     MoveType,
-    MoveValidationResult,
     MoveValidator,
     MoveValidatorConfig,
-    VerificationSeverity,
     create_move_validator,
 )
 from tests.games.chess.builders import (

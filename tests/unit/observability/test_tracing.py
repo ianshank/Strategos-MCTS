@@ -12,7 +12,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # =============================================================================
 # Test Markers
 # =============================================================================
@@ -189,7 +188,6 @@ class TestTraceSpan:
 
     def test_trace_span_creates_span(self):
         """Test trace_span creates a span."""
-        from opentelemetry.trace import SpanKind
 
         from src.observability.tracing import TracingManager, trace_span
 
@@ -207,7 +205,7 @@ class TestTraceSpan:
             with trace_span(
                 "test.operation",
                 attributes={"test.key": "value"},
-            ) as span:
+            ):
                 # Should not raise
                 pass
 
@@ -240,7 +238,7 @@ class TestAsyncTraceSpan:
             async with async_trace_span(
                 "test.async.operation",
                 attributes={"test.key": "value"},
-            ) as span:
+            ):
                 # Should not raise
                 pass
 
@@ -370,7 +368,7 @@ class TestRecordMctsIteration:
 
         TracingManager._instance = None
         with patch.dict("os.environ", {"OTEL_EXPORTER_TYPE": "none"}):
-            with trace_span("test.mcts") as span:
+            with trace_span("test.mcts"):
                 record_mcts_iteration(
                     iteration=5,
                     selected_node_id="node-123",
@@ -401,7 +399,7 @@ class TestRecordAgentExecution:
 
         TracingManager._instance = None
         with patch.dict("os.environ", {"OTEL_EXPORTER_TYPE": "none"}):
-            with trace_span("test.agent") as span:
+            with trace_span("test.agent"):
                 record_agent_execution(
                     agent_name="hrm",
                     confidence=0.9,
@@ -421,7 +419,7 @@ class TestRecordAgentExecution:
 
         TracingManager._instance = None
         with patch.dict("os.environ", {"OTEL_EXPORTER_TYPE": "none"}):
-            with trace_span("test.agent.error") as span:
+            with trace_span("test.agent.error"):
                 record_agent_execution(
                     agent_name="trm",
                     confidence=0.3,

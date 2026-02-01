@@ -35,7 +35,7 @@ class FeatureExtractorConfig:
 class FeatureExtractor:
     """
     Extracts semantic features from queries using embeddings.
-    
+
     Uses a pre-trained embedding model to map queries to a vector space,
     then calculates similarity scores against agent prototypes to estimate
     routing confidence.

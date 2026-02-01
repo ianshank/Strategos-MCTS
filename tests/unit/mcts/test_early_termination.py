@@ -8,11 +8,10 @@ Based on: NEXT_STEPS_PLAN.md Phase 3.3
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import numpy as np
 import pytest
-
 
 # =============================================================================
 # Test Markers

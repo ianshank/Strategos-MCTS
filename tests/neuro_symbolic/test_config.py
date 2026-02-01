@@ -14,7 +14,6 @@ Best Practices 2025:
 - Mocking for external dependencies
 """
 
-import json
 import os
 import tempfile
 from unittest.mock import patch
@@ -35,8 +34,8 @@ from src.neuro_symbolic.config import (
     ConstraintConfig,
     ConstraintEnforcement,
     LogicEngineConfig,
-    NeuroSymbolicConfig,
     NeuralEmbeddingConfig,
+    NeuroSymbolicConfig,
     ProofConfig,
     ProofStrategy,
     SolverBackend,

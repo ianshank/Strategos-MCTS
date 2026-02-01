@@ -12,14 +12,12 @@ from src.games.chess.state import ChessGameState
 from src.games.chess.verification import (
     ChessGameVerifier,
     MoveValidator,
-    VerificationSeverity,
     create_game_verifier,
     create_move_validator,
 )
 from tests.games.chess.builders import initial_position
 from tests.games.chess.error_injection import (
     ChessErrorInjector,
-    MockEnsembleAgent,
     create_error_injector,
     create_mock_ensemble_agent,
 )
@@ -162,7 +160,7 @@ class TestCorruptedPositionRecovery:
         # Validator should handle gracefully
         legal_moves = corrupted.get_legal_actions()
         if legal_moves:
-            result = validator.validate_move(corrupted, legal_moves[0])
+            validator.validate_move(corrupted, legal_moves[0])
             # Should produce a result without crashing
 
     @pytest.mark.unit

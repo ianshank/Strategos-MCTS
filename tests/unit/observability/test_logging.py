@@ -10,10 +10,9 @@ from __future__ import annotations
 
 import json
 import logging
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-
 
 # =============================================================================
 # Test Markers
@@ -368,7 +367,7 @@ class TestLogContext:
             pass
 
         # After context exits, metadata should be cleared
-        metadata = get_request_metadata()
+        get_request_metadata()
         # The specific behavior depends on implementation
 
 

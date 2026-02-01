@@ -305,7 +305,6 @@ class TestHybridMetaController:
 
     def test_weight_adjustment(self, hybrid_controller):
         """Test dynamic weight adjustment."""
-        initial_neural = hybrid_controller.neural_weight
 
         hybrid_controller.adjust_weights(0.8, 0.2)
 

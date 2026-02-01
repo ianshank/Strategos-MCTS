@@ -8,24 +8,24 @@ acceptable latency and throughput.
 from __future__ import annotations
 
 import time
-from typing import Callable
+from collections.abc import Callable
 
 import pytest
 
-from src.games.chess.state import ChessGameState
 from src.games.chess.action_space import ChessActionEncoder
 from src.games.chess.config import ChessActionSpaceConfig
+from src.games.chess.state import ChessGameState
 from src.games.chess.verification import (
-    MoveValidator,
     ChessGameVerifier,
     ChessVerificationFactory,
-    create_move_validator,
+    MoveValidator,
     create_game_verifier,
+    create_move_validator,
 )
 from tests.games.chess.builders import (
-    initial_position,
     ChessGameSequenceBuilder,
     ChessPositionBuilder,
+    initial_position,
 )
 
 
@@ -433,7 +433,7 @@ class TestMemoryBenchmarks:
         base_size = sys.getsizeof(state)
 
         # Create many states
-        states = [ChessGameState.from_fen(initial_position().fen) for _ in range(100)]
+        [ChessGameState.from_fen(initial_position().fen) for _ in range(100)]
 
         # Estimate per-state memory
         # This is approximate due to shared references
@@ -442,7 +442,6 @@ class TestMemoryBenchmarks:
     @pytest.mark.benchmark
     def test_encoder_memory_footprint(self) -> None:
         """Benchmark: Memory footprint of ChessActionEncoder."""
-        import sys
 
         encoder = ChessActionEncoder(ChessActionSpaceConfig())
 

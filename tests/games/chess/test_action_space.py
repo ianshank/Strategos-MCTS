@@ -12,7 +12,6 @@ from src.games.chess.action_space import (
     PromotionDirection,
     PromotionPiece,
 )
-from src.games.chess.config import ChessActionSpaceConfig
 
 
 class TestChessActionEncoder:

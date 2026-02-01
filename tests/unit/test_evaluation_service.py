@@ -12,8 +12,7 @@ Tests:
 
 from __future__ import annotations
 
-import math
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -31,7 +30,6 @@ from src.training.evaluation_service import (
     MetricsHistory,
     create_evaluation_service,
 )
-
 
 # =============================================================================
 # Test Fixtures
@@ -858,7 +856,7 @@ class TestEvaluationService:
         assert "benchmark_0" in results
         assert "benchmark_1" in results
         assert "benchmark_2" in results
-        for key, result in results.items():
+        for _key, result in results.items():
             assert isinstance(result, EvaluationResult)
             assert result.strategy == EvaluationStrategy.BENCHMARK
 

@@ -20,9 +20,9 @@ import os
 import subprocess
 import sys
 import time
-from contextlib import contextmanager
+from collections.abc import Generator
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -95,7 +95,7 @@ def ui_server(config: SeleniumTestConfig) -> Generator[subprocess.Popen, None, N
 
 
 @pytest.fixture(scope="function")
-def driver(config: SeleniumTestConfig) -> Generator["WebDriver", None, None]:
+def driver(config: SeleniumTestConfig) -> Generator[WebDriver, None, None]:
     """Create and configure WebDriver."""
     try:
         from selenium import webdriver
@@ -148,7 +148,7 @@ def driver(config: SeleniumTestConfig) -> Generator["WebDriver", None, None]:
 
 
 @pytest.fixture(scope="function")
-def chess_page(driver: "WebDriver", config: SeleniumTestConfig, ui_server: subprocess.Popen) -> "ChessPage":
+def chess_page(driver: WebDriver, config: SeleniumTestConfig, ui_server: subprocess.Popen) -> ChessPage:
     """Navigate to chess page and return page object."""
     page = ChessPage(driver, config)
     page.navigate()
@@ -159,7 +159,7 @@ def chess_page(driver: "WebDriver", config: SeleniumTestConfig, ui_server: subpr
 class ChessPage:
     """Page object for the chess UI."""
 
-    def __init__(self, driver: "WebDriver", config: SeleniumTestConfig) -> None:
+    def __init__(self, driver: WebDriver, config: SeleniumTestConfig) -> None:
         """Initialize the page object."""
         self.driver = driver
         self.config = config
@@ -186,13 +186,13 @@ class ChessPage:
 
     # Element locators
     @property
-    def board_container(self) -> "WebElement":
+    def board_container(self) -> WebElement:
         """Get the chess board container."""
         from selenium.webdriver.common.by import By
         return self.driver.find_element(By.ID, "board-container")
 
     @property
-    def move_input(self) -> "WebElement":
+    def move_input(self) -> WebElement:
         """Get the move input field."""
         from selenium.webdriver.common.by import By
         # Gradio wraps inputs, find by parent ID
@@ -203,45 +203,45 @@ class ChessPage:
             return container.find_element(By.TAG_NAME, "input")
 
     @property
-    def move_button(self) -> "WebElement":
+    def move_button(self) -> WebElement:
         """Get the make move button."""
         from selenium.webdriver.common.by import By
         return self.driver.find_element(By.ID, "move-btn")
 
     @property
-    def new_game_button(self) -> "WebElement":
+    def new_game_button(self) -> WebElement:
         """Get the new game button."""
         from selenium.webdriver.common.by import By
         return self.driver.find_element(By.ID, "new-game-btn")
 
     @property
-    def undo_button(self) -> "WebElement":
+    def undo_button(self) -> WebElement:
         """Get the undo button."""
         from selenium.webdriver.common.by import By
         return self.driver.find_element(By.ID, "undo-btn")
 
     @property
-    def status_display(self) -> "WebElement":
+    def status_display(self) -> WebElement:
         """Get the status display."""
         from selenium.webdriver.common.by import By
         container = self.driver.find_element(By.ID, "status-display")
         return container.find_element(By.TAG_NAME, "textarea")
 
     @property
-    def history_display(self) -> "WebElement":
+    def history_display(self) -> WebElement:
         """Get the move history display."""
         from selenium.webdriver.common.by import By
         container = self.driver.find_element(By.ID, "history-display")
         return container.find_element(By.TAG_NAME, "textarea")
 
     @property
-    def analysis_display(self) -> "WebElement":
+    def analysis_display(self) -> WebElement:
         """Get the AI analysis display."""
         from selenium.webdriver.common.by import By
         return self.driver.find_element(By.ID, "analysis-display")
 
     @property
-    def color_select_white(self) -> "WebElement":
+    def color_select_white(self) -> WebElement:
         """Get the white color radio button."""
         from selenium.webdriver.common.by import By
         container = self.driver.find_element(By.ID, "color-select")
@@ -252,7 +252,7 @@ class ChessPage:
         raise ValueError("White color option not found")
 
     @property
-    def color_select_black(self) -> "WebElement":
+    def color_select_black(self) -> WebElement:
         """Get the black color radio button."""
         from selenium.webdriver.common.by import By
         container = self.driver.find_element(By.ID, "color-select")
@@ -592,7 +592,7 @@ class TestScorecard:
         chess_page.start_new_game("white")
 
         # Get initial scorecard
-        initial_html = chess_page.get_scorecard_html()
+        chess_page.get_scorecard_html()
 
         # Play a few moves (may not finish game but scorecard should persist)
         chess_page.make_move("e2e4")
@@ -713,13 +713,13 @@ ChessPage.get_learning_status = lambda self: self._get_element_by_id("learning-s
 ChessPage.get_refresh_button = lambda self: self._get_element_by_id("refresh-btn")
 
 
-def _get_element_by_id(self, element_id: str) -> "WebElement":
+def _get_element_by_id(self, element_id: str) -> WebElement:
     """Get element by ID."""
     from selenium.webdriver.common.by import By
     return self.driver.find_element(By.ID, element_id)
 
 
-def _find_tab(self, tab_name: str) -> "WebElement":
+def _find_tab(self, tab_name: str) -> WebElement:
     """Find a tab by name."""
     from selenium.webdriver.common.by import By
     tabs = self.driver.find_elements(By.CSS_SELECTOR, "[role='tab'], .tab-nav button")
