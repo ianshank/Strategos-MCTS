@@ -1,0 +1,177 @@
+# Epic: Unblock Staging Deployment
+# Priority: Critical - Blocking deployment
+# Created: 2026-02-01
+# Status: Planning
+
+epic:
+  id: UNBLOCK-001
+  name: Unblock Staging Deployment
+  status: planning
+  priority: critical
+  milestone: M3 (Review and Polish) / M4 (Deployment Readiness)
+  goal: Fix all blocking issues preventing staging deployment
+  owner: TBD
+  created: 2026-02-01
+
+stories:
+  - id: UNBLOCK-001-S1
+    name: Fix MCTS Policy Interface Mismatch
+    status: todo
+    priority: critical
+    subagent: Coder
+    description: |
+      The RandomRolloutPolicy.evaluate() method signature may not match what tests expect.
+      Need to verify and fix the interface consistency across all rollout policies.
+
+    files:
+      - src/framework/mcts/policies.py
+      - tests/unit/test_mcts_policies.py
+
+    acceptance_criteria:
+      - All RolloutPolicy implementations match abstract interface
+      - Unit tests for policies pass (24 tests)
+      - No signature mismatches in policy methods
+
+    tasks:
+      - Review RolloutPolicy abstract interface
+      - Check all concrete implementations (Random, Greedy, Hybrid)
+      - Fix any signature mismatches
+      - Run policy tests to verify
+
+  - id: UNBLOCK-001-S2
+    name: Add DABStep Dataset Split Parameter
+    status: todo
+    priority: high
+    subagent: Coder
+    description: |
+      Dataset loader is missing the 'split' parameter required for DABStep dataset configuration.
+
+    files:
+      - src/data/dataset_loader.py
+
+    acceptance_criteria:
+      - split parameter added to dataset config
+      - Default value provided for backward compatibility
+      - 6 failing tests now pass
+
+    tasks:
+      - Locate DABStep dataset config class
+      - Add split parameter with sensible default
+      - Update documentation
+
+  - id: UNBLOCK-001-S3
+    name: Export HRMAgent from Main Module
+    status: todo
+    priority: high
+    subagent: Coder
+    description: |
+      HRMAgent is not exported from the main examples module, causing import errors in tests.
+
+    files:
+      - examples/langgraph_multi_agent_mcts.py
+      - examples/__init__.py
+
+    acceptance_criteria:
+      - HRMAgent is exported and importable
+      - 14 error tests now pass
+      - No circular import issues
+
+    tasks:
+      - Add HRMAgent to module exports
+      - Verify import path works
+      - Update __all__ list if present
+
+  - id: UNBLOCK-001-S4
+    name: Configure Production Secrets Management
+    status: todo
+    priority: high
+    subagent: Orchestrator
+    description: |
+      Replace placeholder secrets in Kubernetes deployment with proper secrets management.
+
+    files:
+      - kubernetes/deployment.yaml
+      - docs/SECRETS_MANAGEMENT.md (new)
+
+    acceptance_criteria:
+      - No plaintext secrets in version control
+      - External secrets operator configured
+      - Documentation for secrets rotation
+
+    tasks:
+      - Remove placeholder API keys from deployment.yaml
+      - Document external-secrets-operator setup
+      - Create sealed-secrets or vault integration guide
+
+    options:
+      - option: HashiCorp Vault
+        pros: Industry standard, enterprise features
+        cons: Requires Vault cluster
+
+      - option: AWS Secrets Manager + ESO
+        pros: Native AWS integration, managed
+        cons: AWS-specific
+
+      - option: Sealed Secrets (Bitnami)
+        pros: GitOps friendly, encrypted in repo
+        cons: Limited rotation support
+
+  - id: UNBLOCK-001-S5
+    name: Verify Test Environment Dependencies
+    status: todo
+    priority: medium
+    subagent: SQE
+    description: |
+      Ensure all test dependencies are properly specified and CI/CD installs them correctly.
+
+    files:
+      - pyproject.toml
+      - .github/workflows/ci.yml
+
+    acceptance_criteria:
+      - All dev dependencies listed correctly
+      - CI pipeline installs with [dev] extras
+      - Tests run without import errors
+
+    dependencies:
+      required:
+        - pydantic>=2.0.0
+        - numpy>=1.24.0
+        - httpx>=0.25.0
+        - psutil>=5.9.0
+        - pyyaml>=6.0.0
+        - pytest-asyncio>=0.21.0
+        - pytest-timeout>=2.2.0
+
+      optional:
+        - langchain-openai  # For LLM integration tests
+        - torch  # For neural MCTS tests
+
+completion_criteria:
+  - All 44 test failures/errors resolved
+  - CI pipeline shows green status
+  - Staging deployment unblocked
+  - Secrets managed securely
+
+estimated_effort:
+  total: 2-3 days
+  breakdown:
+    S1_policy_fix: 4 hours
+    S2_dataset_fix: 2 hours
+    S3_export_fix: 1 hour
+    S4_secrets: 4 hours
+    S5_dependencies: 2 hours
+
+risks:
+  - risk: Hidden test failures after fixing collection errors
+    mitigation: Run full test suite after each fix
+    probability: medium
+
+  - risk: Secrets management may require infrastructure changes
+    mitigation: Start with Sealed Secrets for quick win
+    probability: low
+
+notes: |
+  This epic directly enables staging deployment. All stories are independent
+  and can be worked on in parallel by different subagents. Priority order
+  should be: S1 > S2 > S3 > S5 > S4 (S4 can wait until after deployment).
