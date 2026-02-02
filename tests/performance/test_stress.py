@@ -24,7 +24,9 @@ import pytest
 # Optional torch import - skip tests if not available
 torch = pytest.importorskip("torch", reason="PyTorch required for performance stress tests")
 
-from tests.mocks.mock_external_services import create_mock_llm
+import numpy as np  # noqa: E402 - import after torch check for type annotations
+
+from tests.mocks.mock_external_services import create_mock_llm  # noqa: E402
 
 # ============================================================================
 # LOAD TESTING
@@ -44,18 +46,19 @@ class TestLoadPerformance:
         queries = []
 
         for i in range(num_concurrent):
-            queries.append(QueryInput(
-                query=f"Tactical query number {i} requiring analysis",
-                use_rag=True,
-                use_mcts=False,
-                thread_id=f"concurrent_test_{i}",
-            ))
+            queries.append(
+                QueryInput(
+                    query=f"Tactical query number {i} requiring analysis",
+                    use_rag=True,
+                    use_mcts=False,
+                    thread_id=f"concurrent_test_{i}",
+                )
+            )
 
         mock_llm = create_mock_llm()
-        mock_llm.set_responses([
-            f"Response {i}: Analysis complete. Confidence: 0.85"
-            for i in range(num_concurrent * 2)
-        ])
+        mock_llm.set_responses(
+            [f"Response {i}: Analysis complete. Confidence: 0.85" for i in range(num_concurrent * 2)]
+        )
 
         async def process_query(query: QueryInput) -> dict[str, Any]:
             start = time.perf_counter()
@@ -188,7 +191,7 @@ class TestMCTSStress:
         from src.framework.mcts.policies import RolloutPolicy
 
         class FastPolicy(RolloutPolicy):
-            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 return rng.uniform(0.3, 0.9)
 
         engine = MCTSEngine(
@@ -238,7 +241,7 @@ class TestMCTSStress:
         from src.framework.mcts.policies import RolloutPolicy
 
         class DepthAwarePolicy(RolloutPolicy):
-            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 # Reward deeper exploration
                 depth = state.state_id.count("_")
                 return min(1.0, 0.3 + depth * 0.1 + rng.uniform(-0.1, 0.1))
@@ -285,7 +288,7 @@ class TestMCTSStress:
         from src.framework.mcts.policies import RolloutPolicy
 
         class SimplePolicy(RolloutPolicy):
-            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 return rng.uniform(0.0, 1.0)
 
         engine = MCTSEngine(
@@ -394,7 +397,7 @@ class TestMemoryStress:
         from src.framework.mcts.policies import RolloutPolicy
 
         class CacheTestPolicy(RolloutPolicy):
-            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 return rng.uniform(0.0, 1.0)
 
         # Small cache limit
@@ -492,7 +495,7 @@ class TestConcurrencyStress:
         from src.framework.mcts.policies import RolloutPolicy
 
         class ConcurrentPolicy(RolloutPolicy):
-            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 await asyncio.sleep(0.001)  # Simulate some async work
                 return rng.uniform(0.0, 1.0)
 
@@ -555,21 +558,36 @@ class TestEdgeCaseStress:
         extreme_cases = [
             # All zeros
             MetaControllerFeatures(
-                hrm_confidence=0.0, trm_confidence=0.0, mcts_value=0.0,
-                consensus_score=0.0, last_agent="none", iteration=0,
-                query_length=0, has_rag_context=False,
+                hrm_confidence=0.0,
+                trm_confidence=0.0,
+                mcts_value=0.0,
+                consensus_score=0.0,
+                last_agent="none",
+                iteration=0,
+                query_length=0,
+                has_rag_context=False,
             ),
             # All ones
             MetaControllerFeatures(
-                hrm_confidence=1.0, trm_confidence=1.0, mcts_value=1.0,
-                consensus_score=1.0, last_agent="mcts", iteration=100,
-                query_length=10000, has_rag_context=True,
+                hrm_confidence=1.0,
+                trm_confidence=1.0,
+                mcts_value=1.0,
+                consensus_score=1.0,
+                last_agent="mcts",
+                iteration=100,
+                query_length=10000,
+                has_rag_context=True,
             ),
             # Mixed extremes
             MetaControllerFeatures(
-                hrm_confidence=1.0, trm_confidence=0.0, mcts_value=0.5,
-                consensus_score=0.0, last_agent="hrm", iteration=50,
-                query_length=5000, has_rag_context=False,
+                hrm_confidence=1.0,
+                trm_confidence=0.0,
+                mcts_value=0.5,
+                consensus_score=0.0,
+                last_agent="hrm",
+                iteration=50,
+                query_length=5000,
+                has_rag_context=False,
             ),
         ]
 
@@ -617,7 +635,7 @@ class TestEdgeCaseStress:
         from src.framework.mcts.policies import RolloutPolicy
 
         class SingleActionPolicy(RolloutPolicy):
-            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 return 0.8
 
         engine = MCTSEngine(seed=42)
@@ -650,7 +668,7 @@ class TestEdgeCaseStress:
         from src.framework.mcts.policies import RolloutPolicy
 
         class TerminalPolicy(RolloutPolicy):
-            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 if "terminal" in state.state_id:
                     return 1.0
                 return 0.5
@@ -744,7 +762,7 @@ class TestSustainedLoad:
         from src.framework.mcts.policies import RolloutPolicy
 
         class StablePolicy(RolloutPolicy):
-            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 return rng.uniform(0.4, 0.8)
 
         def action_gen(state: MCTSState) -> list[str]:
@@ -848,7 +866,7 @@ class TestRecoveryStress:
         from src.framework.mcts.policies import RolloutPolicy
 
         class CacheRecoveryPolicy(RolloutPolicy):
-            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 return rng.uniform(0.0, 1.0)
 
         engine = MCTSEngine(seed=42, cache_size_limit=500)
@@ -896,7 +914,3 @@ class TestRecoveryStress:
 
         # Cache should be rebuilt
         assert len(engine._simulation_cache) > 0
-
-
-
-

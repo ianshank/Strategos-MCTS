@@ -541,10 +541,7 @@ class CombinedDatasetLoader:
             import pyarrow as pa
             import pyarrow.parquet as pq
         except ImportError as e:
-            raise ImportError(
-                "pyarrow is required for Parquet export. "
-                "Install with: pip install pyarrow"
-            ) from e
+            raise ImportError("pyarrow is required for Parquet export. " "Install with: pip install pyarrow") from e
 
         import json
 
@@ -617,10 +614,7 @@ class CombinedDatasetLoader:
         try:
             import pyarrow.parquet as pq
         except ImportError as e:
-            raise ImportError(
-                "pyarrow is required for Parquet import. "
-                "Install with: pip install pyarrow"
-            ) from e
+            raise ImportError("pyarrow is required for Parquet import. " "Install with: pip install pyarrow") from e
 
         import json
 
@@ -698,6 +692,10 @@ def load_dataset(
         if cache_dir:
             load_kwargs["cache_dir"] = cache_dir
 
+        # Always pass split parameter - defaults to "train" if not specified
+        # This ensures consistent behavior across all dataset types
+        load_kwargs["split"] = split
+
         dataset = hf_load_dataset(dataset_name, **load_kwargs)
 
         logger.info(f"Successfully loaded dataset: {dataset_name}")
@@ -705,7 +703,9 @@ def load_dataset(
 
     except ImportError as e:
         logger.error("datasets library not installed. Run: pip install datasets")
-        raise ImportError("The datasets library is required but not installed. Install it with: pip install datasets") from e
+        raise ImportError(
+            "The datasets library is required but not installed. Install it with: pip install datasets"
+        ) from e
     except Exception as e:
         logger.error(f"Failed to load dataset {dataset_name}: {e}")
         raise

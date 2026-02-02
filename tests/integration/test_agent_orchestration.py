@@ -21,7 +21,9 @@ import pytest
 # Skip all tests in this module if torch is not available
 torch = pytest.importorskip("torch", reason="PyTorch required for agent orchestration tests")
 
-from tests.mocks.mock_external_services import create_mock_llm
+import numpy as np  # noqa: E402 - import after torch check for type annotations
+
+from tests.mocks.mock_external_services import create_mock_llm  # noqa: E402
 
 # ============================================================================
 # META-CONTROLLER INTEGRATION TESTS
@@ -164,6 +166,7 @@ class TestHRMTRMIntegration:
     def hrm_config(self):
         """Create HRM configuration."""
         from src.training.system_config import HRMConfig
+
         return HRMConfig(
             h_dim=64,
             l_dim=32,
@@ -180,6 +183,7 @@ class TestHRMTRMIntegration:
     def trm_config(self):
         """Create TRM configuration."""
         from src.training.system_config import TRMConfig
+
         return TRMConfig(
             latent_dim=64,
             hidden_dim=128,
@@ -315,6 +319,7 @@ class TestMCTSIntegration:
     def mcts_engine(self):
         """Create MCTS engine for testing."""
         from src.framework.mcts.core import MCTSEngine
+
         return MCTSEngine(
             seed=42,
             exploration_weight=1.414,
@@ -360,7 +365,7 @@ class TestMCTSIntegration:
             )
 
         class TestRolloutPolicy(RolloutPolicy):
-            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 return rng.uniform(0.3, 0.9)
 
         rollout_policy = TestRolloutPolicy()
@@ -397,7 +402,7 @@ class TestMCTSIntegration:
             return MCTSState(state_id=f"{state.state_id}_{action}", features={})
 
         class CacheTestPolicy(RolloutPolicy):
-            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 return 0.5 + rng.uniform(-0.1, 0.1)
 
         rollout_policy = CacheTestPolicy()
@@ -427,7 +432,7 @@ class TestMCTSIntegration:
         from src.framework.mcts.policies import RolloutPolicy
 
         class DeterministicPolicy(RolloutPolicy):
-            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 return rng.uniform(0.0, 1.0)
 
         def action_generator(state: MCTSState) -> list[str]:
@@ -506,9 +511,11 @@ class TestFullPipelineIntegration:
 
         # Step 3: Simulate agent processing
         mock_llm = create_mock_llm()
-        mock_llm.set_responses([
-            "Analysis complete. Confidence: 0.85",
-        ])
+        mock_llm.set_responses(
+            [
+                "Analysis complete. Confidence: 0.85",
+            ]
+        )
 
         response = await mock_llm.generate(query_input.query)
 
@@ -582,11 +589,13 @@ class TestFullPipelineIntegration:
             )
 
             prediction = controller.predict(features)
-            iterations.append({
-                "iteration": i,
-                "agent": prediction.agent,
-                "confidence": prediction.confidence,
-            })
+            iterations.append(
+                {
+                    "iteration": i,
+                    "agent": prediction.agent,
+                    "confidence": prediction.confidence,
+                }
+            )
 
         # Should have predictions for all iterations
         assert len(iterations) == 5
@@ -797,7 +806,7 @@ class TestPerformanceIntegration:
         from src.framework.mcts.policies import RolloutPolicy
 
         class FastPolicy(RolloutPolicy):
-            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 return rng.uniform(0.0, 1.0)
 
         def action_gen(state: MCTSState) -> list[str]:
@@ -832,4 +841,3 @@ class TestPerformanceIntegration:
 
         # Allow some overhead, but shouldn't be worse than 2x expected
         assert ratio < expected_ratio * 2
-

@@ -1,13 +1,37 @@
 """
 Agents module for the LangGraph Multi-Agent MCTS framework.
 
-This module provides the core agent implementations:
-- HRM (Hierarchical Reasoning Module): DeBERTa-based adaptive computation time agent
-- TRM (Task Refinement Module): Iterative refinement with deep supervision
-- Hybrid Agent: Cost-optimized blending of neural and LLM decisions
+Core agent implementations with graceful handling of optional dependencies:
+
+- HRM (Hierarchical Reasoning Module): Requires PyTorch
+    DeBERTa-based adaptive computation time agent
+    Install with: pip install -e ".[dev,neural]"
+
+- TRM (Task Refinement Module): Requires PyTorch
+    Iterative refinement with deep supervision
+    Install with: pip install -e ".[dev,neural]"
+
+- Hybrid Agent: Cost-optimized LLM + neural hybrid
 
 All agents follow the dependency injection pattern and use configuration
 from Pydantic Settings (no hardcoded values).
+
+Usage Patterns:
+    # Direct imports (fail if dependencies missing):
+    from src.agents.hrm_agent import HRMAgent
+
+    # Module-level imports (gracefully handle missing dependencies):
+    from src.agents import HRMAgent, is_hrm_available
+
+    if is_hrm_available():
+        agent = HRMAgent(config)
+    else:
+        # Fallback behavior
+
+    # Type checking (always available):
+    from typing import TYPE_CHECKING
+    if TYPE_CHECKING:
+        from src.agents import HRMAgent
 """
 
 from __future__ import annotations
@@ -35,6 +59,7 @@ try:
         SubProblem,
         create_hrm_agent,
     )
+
     _HRM_AVAILABLE = True
 except ImportError as e:
     _logger.debug(f"HRM agent not available: {e}")
@@ -62,6 +87,7 @@ try:
         TRMRefinementWrapper,
         create_trm_agent,
     )
+
     _TRM_AVAILABLE = True
 except ImportError as e:
     _logger.debug(f"TRM agent not available: {e}")
@@ -86,6 +112,7 @@ try:
         HybridConfig,
         create_hybrid_agent,
     )
+
     _HYBRID_AVAILABLE = True
 except ImportError as e:
     _logger.debug(f"Hybrid agent not available: {e}")
@@ -115,46 +142,80 @@ def is_hybrid_available() -> bool:
     return _HYBRID_AVAILABLE
 
 
+def get_missing_dependencies() -> dict[str, str]:
+    """
+    Get a summary of missing optional dependencies for agents.
+
+    Returns:
+        dict mapping agent name to installation instructions for missing dependencies.
+        Empty dict if all dependencies are satisfied.
+
+    Example:
+        >>> missing = get_missing_dependencies()
+        >>> if missing:
+        ...     for agent, instructions in missing.items():
+        ...         print(f"{agent}: {instructions}")
+    """
+    missing = {}
+    install_instructions = 'pip install -e ".[dev,neural]"'
+
+    if not _HRM_AVAILABLE:
+        missing["HRMAgent"] = f"PyTorch required. Install with: {install_instructions}"
+    if not _TRM_AVAILABLE:
+        missing["TRMAgent"] = f"PyTorch required. Install with: {install_instructions}"
+    if not _HYBRID_AVAILABLE:
+        missing["HybridAgent"] = "Check installation logs for missing dependencies"
+
+    return missing
+
+
 # Build __all__ dynamically based on what's available
 __all__ = [
     # Availability checks
     "is_hrm_available",
     "is_trm_available",
     "is_hybrid_available",
+    "get_missing_dependencies",
 ]
 
 if _HRM_AVAILABLE:
-    __all__.extend([
-        # HRM Agent
-        "AdaptiveComputationTime",
-        "HModule",
-        "HRMAgent",
-        "HRMLoss",
-        "HRMOutput",
-        "LModule",
-        "SubProblem",
-        "create_hrm_agent",
-    ])
+    __all__.extend(
+        [
+            # HRM Agent
+            "AdaptiveComputationTime",
+            "HModule",
+            "HRMAgent",
+            "HRMLoss",
+            "HRMOutput",
+            "LModule",
+            "SubProblem",
+            "create_hrm_agent",
+        ]
+    )
 
 if _TRM_AVAILABLE:
-    __all__.extend([
-        # TRM Agent
-        "DeepSupervisionHead",
-        "RecursiveBlock",
-        "TRMAgent",
-        "TRMLoss",
-        "TRMOutput",
-        "TRMRefinementWrapper",
-        "create_trm_agent",
-    ])
+    __all__.extend(
+        [
+            # TRM Agent
+            "DeepSupervisionHead",
+            "RecursiveBlock",
+            "TRMAgent",
+            "TRMLoss",
+            "TRMOutput",
+            "TRMRefinementWrapper",
+            "create_trm_agent",
+        ]
+    )
 
 if _HYBRID_AVAILABLE:
-    __all__.extend([
-        # Hybrid Agent
-        "CostSavings",
-        "DecisionMetadata",
-        "DecisionSource",
-        "HybridAgent",
-        "HybridConfig",
-        "create_hybrid_agent",
-    ])
+    __all__.extend(
+        [
+            # Hybrid Agent
+            "CostSavings",
+            "DecisionMetadata",
+            "DecisionSource",
+            "HybridAgent",
+            "HybridConfig",
+            "create_hybrid_agent",
+        ]
+    )

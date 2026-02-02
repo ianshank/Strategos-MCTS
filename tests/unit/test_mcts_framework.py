@@ -802,7 +802,12 @@ class TestMCTSEngine:
 
         # Create deterministic rollout policy
         class DeterministicPolicy(RolloutPolicy):
-            async def evaluate(self, state, rng, max_depth=10):
+            async def evaluate(
+                self,
+                state: MCTSState,
+                rng: np.random.Generator,
+                max_depth: int = 10,
+            ) -> float:
                 # Use state hash to generate deterministic value
                 hash_val = int(state.to_hash_key()[:8], 16)
                 return (hash_val % 100) / 100.0
