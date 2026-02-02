@@ -39,8 +39,8 @@ try:
 
     _TORCH_AVAILABLE = True
 except ImportError:
-    torch = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
+    torch = None  # type: ignore[assignment,unused-ignore]
+    nn = None  # type: ignore[assignment,unused-ignore]
 
 _logger = logging.getLogger(__name__)
 
@@ -717,7 +717,7 @@ def select_child_puct(
     sqrt_parent = math.sqrt(node.visits) if node.visits > 0 else 1.0
 
     for child in node.children:
-        action = child.action
+        action = child.action or ""  # Default to empty string if None
         prior = priors_manager.get_prior(state_hash, action)
 
         # Calculate PUCT score
@@ -733,7 +733,9 @@ def select_child_puct(
             best_action = action
             best_child = child
 
-    return (best_action, best_child) if best_child is not None else None
+    if best_child is not None and best_action is not None:
+        return (best_action, best_child)
+    return None
 
 
 # =============================================================================

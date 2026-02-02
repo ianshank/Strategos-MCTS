@@ -33,7 +33,7 @@ try:
 
     _TORCH_AVAILABLE = True
 except ImportError:
-    torch = None  # type: ignore[assignment]
+    torch = None  # type: ignore[assignment,unused-ignore]
 
 _logger = logging.getLogger(__name__)
 
@@ -617,7 +617,8 @@ def create_domain_adapter(
 
     config = config_class(**config_params) if config_params else None
 
-    return adapter_class(config=config, **other_params)
+    adapter: BaseDomainAdapter = adapter_class(config=config, **other_params)
+    return adapter
 
 
 # =============================================================================

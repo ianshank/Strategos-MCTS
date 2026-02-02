@@ -406,11 +406,8 @@ class TestMCTSModuleIntegration:
         """Test that adapters are exported from MCTS module."""
         from src.framework.mcts import (
             BaseDomainAdapter,
-            FeatureAdapterConfig,
             FeatureStateAdapter,
-            GridAdapterConfig,
             GridStateAdapter,
-            TextAdapterConfig,
             TextStateAdapter,
             create_domain_adapter,
         )
