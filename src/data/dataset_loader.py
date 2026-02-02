@@ -157,7 +157,7 @@ class DABStepLoader(DatasetLoader):
         if not self._loaded_samples:
             raise ValueError("No samples loaded. Call load() first.")
 
-        difficulty_dist = {}
+        difficulty_dist: dict[str, int] = {}
         total_length = 0
 
         for sample in self._loaded_samples:
@@ -341,7 +341,7 @@ class PRIMUSLoader(DatasetLoader):
         if not all_samples:
             raise ValueError("No samples loaded. Call load() first.")
 
-        domain_dist = {}
+        domain_dist: dict[str, int] = {}
         total_length = 0
 
         for sample in all_samples:
@@ -436,7 +436,7 @@ class CombinedDatasetLoader:
 
     def get_domain_distribution(self) -> dict[str, int]:
         """Get distribution of samples across domains."""
-        dist = {}
+        dist: dict[str, int] = {}
         for sample in self._all_samples:
             domain = sample.domain or "unknown"
             dist[domain] = dist.get(domain, 0) + 1
