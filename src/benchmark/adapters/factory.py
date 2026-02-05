@@ -75,7 +75,8 @@ class BenchmarkAdapterFactory:
         # Check custom adapters first
         if system_name in self._custom_adapters:
             adapter_class = self._custom_adapters[system_name]
-            return adapter_class(settings=self._settings, **kwargs)
+            adapter: BenchmarkSystemProtocol = adapter_class(settings=self._settings, **kwargs)
+            return adapter
 
         # Check built-in registry
         if system_name not in ADAPTER_REGISTRY:

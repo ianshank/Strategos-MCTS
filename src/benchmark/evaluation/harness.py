@@ -301,9 +301,9 @@ class EvaluationHarness:
         )
 
     def _apply_costs(self) -> None:
-        """Apply cost estimates based on system-provider mapping."""
+        """Apply cost estimates based on system-provider mapping from settings."""
         system_providers: dict[str, tuple[str, str]] = {
-            "langgraph_mcts": ("openai", "gpt-4-turbo-preview"),
+            "langgraph_mcts": (self._settings.scoring.provider, self._settings.scoring.model),
             "vertex_adk": ("google", self._settings.adk.coordinator_model),
         }
         if self._cost_calculator:

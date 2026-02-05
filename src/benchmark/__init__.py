@@ -16,18 +16,26 @@ Public API:
     - ReportGenerator: Produces comparison reports
 """
 
+from src.benchmark.adapters.factory import BenchmarkAdapterFactory
 from src.benchmark.config.benchmark_settings import BenchmarkSettings, get_benchmark_settings
+from src.benchmark.evaluation.harness import EvaluationHarness
 from src.benchmark.evaluation.models import BenchmarkResult, ScoringResult
 from src.benchmark.factory import BenchmarkFactory
+from src.benchmark.reporting.report_generator import ReportGenerator
 from src.benchmark.tasks.models import BenchmarkTask, TaskCategory, TaskComplexity
+from src.benchmark.tasks.registry import BenchmarkTaskRegistry
 
 __all__ = [
-    "BenchmarkSettings",
-    "get_benchmark_settings",
+    "BenchmarkAdapterFactory",
     "BenchmarkFactory",
-    "BenchmarkTask",
     "BenchmarkResult",
+    "BenchmarkSettings",
+    "BenchmarkTask",
+    "BenchmarkTaskRegistry",
+    "EvaluationHarness",
+    "ReportGenerator",
     "ScoringResult",
     "TaskCategory",
     "TaskComplexity",
+    "get_benchmark_settings",
 ]

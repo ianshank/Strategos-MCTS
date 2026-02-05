@@ -38,6 +38,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Phase 4: Benchmark Framework (LangGraph MCTS vs Google ADK)
+- **Benchmark Module** (`src/benchmark/`): Complete framework for comparing multi-agent systems
+  - `BenchmarkFactory`: Master factory wiring adapters, scorer, cost calculator, harness, and report generator
+  - `EvaluationHarness`: Orchestrates benchmark runs with timeout, retry, health checks, and multi-iteration support
+  - `LLMJudgeScorer`: LLM-as-judge scoring on 5 quality dimensions (task completion, reasoning depth, accuracy, coherence, delegation)
+  - `CostCalculator`: Per-provider token cost estimation (OpenAI, Anthropic, Google Gemini)
+  - `MetricsAggregator`: Statistical analysis with system comparison and winner detection
+  - `ReportGenerator`: Markdown report with summary tables, per-task analysis, scoring breakdown, and cost analysis
+- **System Adapters**: Protocol-based adapters for benchmarking different multi-agent systems
+  - `LangGraphBenchmarkAdapter`: Wraps `IntegratedFramework.process()` with fallback to direct LLM mode
+  - `ADKBenchmarkAdapter`: Google ADK coordinator + 4 sub-agents (code_reviewer, test_strategist, compliance_analyst, risk_assessor)
+  - `BenchmarkAdapterFactory`: Dynamic adapter creation with custom registration support
+- **Task Framework**: Data-driven benchmark tasks across 3 categories
+  - 10 default tasks: Quality Engineering (A1-A4), Compliance (B1-B3), Strategic (C1-C3)
+  - `BenchmarkTaskRegistry` with JSON import/export, category/complexity filtering
+- **Configuration**: Pydantic Settings v2 with 7 nested config classes and env var prefixes (`BENCHMARK_*`)
+- **CLI Runner** (`python -m src.benchmark`): Full CLI with `--systems`, `--tasks`, `--iterations`, `--dry-run`, `--no-scoring`, `--output-dir`
+- **207 benchmark tests** (202 unit + 5 integration) covering all modules
+- **Design Document**: `PHASE_4_TEMPLATE_PLAN.md` with 11-section architecture following Agentic Coding template
+
+### Changed
+- Updated `pyproject.toml` with `[benchmark]` extras group and `benchmark` console entry point
+- Updated `.env.example` with 20+ benchmark environment variables
+- Updated `CLAUDE.md` with benchmark commands, file locations, and build instructions
+- Updated `.gitignore` with benchmark output artifact patterns
+
 #### Comprehensive Test Suite
 - **563 new unit tests** bringing total to 734 passing tests
 - **Test coverage improved from 22.49% to 49.65%** (more than doubled)

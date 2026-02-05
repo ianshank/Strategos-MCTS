@@ -7,6 +7,7 @@ quality dimensions, avoiding manual scoring bias.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any, Protocol
@@ -123,8 +124,6 @@ class LLMJudgeScorer:
                     e,
                 )
                 if attempt < self._config.max_retries:
-                    import asyncio
-
                     backoff = self._config.retry_backoff_base_seconds * (2**attempt)
                     await asyncio.sleep(backoff)
             except Exception as e:

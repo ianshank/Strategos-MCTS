@@ -178,6 +178,9 @@ class LangGraphBenchmarkAdapter:
             use_mcts,
         )
 
+        if self._framework is None:
+            raise RuntimeError("Framework not available")
+
         result = await self._framework.process(
             query=task.input_data,
             use_rag=False,
