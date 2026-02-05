@@ -3,6 +3,10 @@ LangGraph MCTS benchmark adapter.
 
 Wraps the existing LangGraph multi-agent MCTS framework to conform
 to the BenchmarkSystemProtocol for uniform evaluation.
+
+Supports two execution modes:
+1. Full framework mode: Uses IntegratedFramework.process() for real graph execution
+2. Direct LLM mode: Fallback using raw LLM client for simpler invocations
 """
 
 from __future__ import annotations
@@ -34,6 +38,7 @@ class LangGraphBenchmarkAdapter:
         settings: BenchmarkSettings | None = None,
         graph_builder: Any | None = None,
         llm_client: Any | None = None,
+        framework: Any | None = None,
     ) -> None:
         """
         Initialize the adapter.
@@ -42,10 +47,13 @@ class LangGraphBenchmarkAdapter:
             settings: Benchmark settings (uses global if not provided)
             graph_builder: Pre-configured GraphBuilder (created lazily if not provided)
             llm_client: LLM client for agent operations
+            framework: IntegratedFramework instance for full graph execution.
+                      If provided, takes precedence over graph_builder.
         """
         self._settings = settings or get_benchmark_settings()
         self._graph_builder = graph_builder
         self._llm_client = llm_client
+        self._framework = framework
         self._graph: Any | None = None
         self._logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
@@ -70,6 +78,12 @@ class LangGraphBenchmarkAdapter:
         """
         Execute a benchmark task through the LangGraph MCTS pipeline.
 
+        Execution priority:
+        1. IntegratedFramework.process() if framework is injected
+        2. GraphBuilder graph if graph_builder is injected
+        3. Direct LLM call if only llm_client is available
+        4. Error response if nothing is configured
+
         Args:
             task: Benchmark task to execute
 
@@ -92,7 +106,11 @@ class LangGraphBenchmarkAdapter:
         start_time = time.perf_counter()
 
         try:
-            response_data = await self._run_graph(task)
+            # Choose execution path
+            if self._framework is not None:
+                response_data = await self._run_framework(task)
+            else:
+                response_data = await self._run_graph(task)
 
             end_time = time.perf_counter()
             result.total_latency_ms = (end_time - start_time) * 1000
@@ -137,6 +155,49 @@ class LangGraphBenchmarkAdapter:
         except Exception as e:
             self._logger.warning("Health check failed: %s", e)
             return False
+
+    async def _run_framework(self, task: BenchmarkTask) -> dict[str, Any]:
+        """
+        Run task through the full IntegratedFramework.
+
+        Uses IntegratedFramework.process() which orchestrates
+        the LangGraph state machine with HRM/TRM agents and MCTS.
+
+        Args:
+            task: Benchmark task to execute
+
+        Returns:
+            Normalized response dictionary
+        """
+        lg_config = self._settings.langgraph
+        use_mcts = lg_config.mcts_iterations > 0
+
+        self._logger.debug(
+            "Running task %s via IntegratedFramework (use_mcts=%s)",
+            task.task_id,
+            use_mcts,
+        )
+
+        result = await self._framework.process(
+            query=task.input_data,
+            use_rag=False,
+            use_mcts=use_mcts,
+        )
+
+        # Normalize IntegratedFramework response to adapter format
+        response_text = result.get("response", "")
+        metadata = result.get("metadata", {})
+        state = result.get("state", {})
+        agent_outputs = state.get("agent_outputs", [])
+
+        return {
+            "final_response": response_text,
+            "agent_call_count": len(agent_outputs),
+            "tool_call_count": metadata.get("tool_calls", 0),
+            "input_tokens": metadata.get("input_tokens", 0),
+            "output_tokens": metadata.get("output_tokens", 0),
+            "trace": agent_outputs,
+        }
 
     async def _run_graph(self, task: BenchmarkTask) -> dict[str, Any]:
         """

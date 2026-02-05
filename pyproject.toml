@@ -90,9 +90,15 @@ google-adk = [
     "opentelemetry-exporter-otlp-proto-http>=1.36.0",
     "pg8000>=1.31.2",
 ]
-all = [
-    "langgraph-multi-agent-mcts[dev,prometheus,neural,experiment,vectordb,google-adk]",
+benchmark = [
+    "pydantic-settings>=2.0.0",
 ]
+all = [
+    "langgraph-multi-agent-mcts[dev,prometheus,neural,experiment,vectordb,google-adk,benchmark]",
+]
+
+[project.scripts]
+benchmark = "src.benchmark.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/ianshank/langgraph_multi_agent_mcts"

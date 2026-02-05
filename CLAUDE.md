@@ -34,6 +34,7 @@ pytest tests/unit -v --tb=short -q
 | Command | Purpose |
 |---------|---------|
 | `pip install -e ".[dev]"` | Install with dev dependencies |
+| `pip install -e ".[dev,benchmark]"` | Include benchmark framework |
 | `pip install -e ".[dev,neural]"` | Include PyTorch for neural MCTS |
 | `black src/ tests/ --line-length 120` | Format code |
 | `isort src/ tests/ --profile black` | Sort imports |
@@ -52,6 +53,21 @@ pytest tests/unit -v --tb=short -q
 | `pytest tests/ --cov=src --cov-report=term-missing` | Run with coverage |
 | `pytest tests/ -m "not slow"` | Skip slow tests |
 | `pytest tests/unit -x` | Stop on first failure |
+| `pytest tests/unit/benchmark -v` | Run benchmark framework tests |
+
+---
+
+## Benchmark Commands
+
+| Command | Purpose |
+|---------|---------|
+| `python -m src.benchmark` | Run full benchmark with defaults |
+| `python -m src.benchmark --systems langgraph_mcts` | Benchmark single system |
+| `python -m src.benchmark --tasks A1 A2 B1` | Run specific tasks |
+| `python -m src.benchmark --iterations 3` | Run 3 iterations for significance |
+| `python -m src.benchmark --dry-run` | Preview tasks/systems without running |
+| `python -m src.benchmark --no-scoring` | Run without LLM scoring |
+| `python -m src.benchmark --output-dir ./results` | Custom output directory |
 
 ---
 
@@ -85,8 +101,18 @@ OBSERVABILITY
 ├── src/observability/metrics.py # Prometheus metrics
 └── src/observability/tracing.py # Distributed tracing
 
+BENCHMARK FRAMEWORK
+├── src/benchmark/cli.py         # CLI entry point (python -m src.benchmark)
+├── src/benchmark/factory.py     # BenchmarkFactory (wires all components)
+├── src/benchmark/config/        # Pydantic Settings benchmark configuration
+├── src/benchmark/tasks/         # Task models, registry, default task sets
+├── src/benchmark/adapters/      # System adapters (LangGraph, ADK) + factory
+├── src/benchmark/evaluation/    # Harness, scorer, cost calculator, models
+└── src/benchmark/reporting/     # Metrics aggregator, report generator
+
 TESTS
 ├── tests/unit/                  # Unit tests
+├── tests/unit/benchmark/        # Benchmark framework unit tests
 ├── tests/integration/           # Integration tests
 └── tests/fixtures/              # Shared test fixtures
 ```
