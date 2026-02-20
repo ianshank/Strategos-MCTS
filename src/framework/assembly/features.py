@@ -248,7 +248,7 @@ class AssemblyFeatureExtractor:
             0.3 * layer_score + 0.3 * connectivity_score + 0.2 * clarity_score + 0.2 * (1.0 if is_dag else 0.0)
         )
 
-        return min(decomposability, 1.0)
+        return float(min(decomposability, 1.0))
 
     def _calculate_graph_depth(self, dep_graph) -> int:
         """

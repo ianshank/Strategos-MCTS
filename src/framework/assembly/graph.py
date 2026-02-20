@@ -148,7 +148,7 @@ class AssemblyGraph(nx.DiGraph):
         # Find shortest path
         try:
             if nx.has_path(self, source, target):
-                return nx.shortest_path(self, source, target)
+                return list(nx.shortest_path(self, source, target))
             else:
                 return [source, target] if source != target else [source]
         except nx.NetworkXNoPath:
@@ -259,7 +259,7 @@ class AssemblyGraph(nx.DiGraph):
         else:
             reuse = 1.0
 
-        return max(0.0, min(1.0, reuse))
+        return float(max(0.0, min(1.0, reuse)))
 
     def get_assembly_layers(self) -> list[set[str]]:
         """

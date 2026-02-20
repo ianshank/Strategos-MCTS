@@ -463,7 +463,7 @@ class GraphBuilder:
                 prompt=f"Answer this question: {query}",
                 temperature=0.5,
             )
-            return response.text
+            return str(response.text)
         except Exception as e:
             self.logger.error(f"Neural fallback failed: {e}")
             return f"Could not determine answer for: {query}"

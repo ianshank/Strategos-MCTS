@@ -155,7 +155,7 @@ class ValueNetwork(nn.Module):
             if was_training:
                 self.train()
 
-            return result
+            return float(result)
 
     def evaluate_batch(self, states: torch.Tensor) -> torch.Tensor:
         """

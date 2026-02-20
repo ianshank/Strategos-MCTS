@@ -119,12 +119,12 @@ class ChessGameState(GameState):
     @property
     def move_number(self) -> int:
         """Get the current full move number."""
-        return self._board.fullmove_number
+        return int(self._board.fullmove_number)
 
     @property
     def halfmove_clock(self) -> int:
         """Get the halfmove clock (for 50-move rule)."""
-        return self._board.halfmove_clock
+        return int(self._board.halfmove_clock)
 
     def get_legal_actions(self) -> list[str]:
         """Return list of legal moves in UCI format.
@@ -188,7 +188,7 @@ class ChessGameState(GameState):
         Returns:
             True if game is over (checkmate, stalemate, draw)
         """
-        return self._board.is_game_over()
+        return bool(self._board.is_game_over())
 
     def get_reward(self, player: int = 1) -> float:
         """Get the reward for the specified player.
@@ -264,7 +264,7 @@ class ChessGameState(GameState):
             Index in the neural network output space [0, action_size)
         """
         from_black = self.current_player == -1
-        return self._encoder.encode_move(action, from_black_perspective=from_black)
+        return int(self._encoder.encode_move(action, from_black_perspective=from_black))
 
     def index_to_action(self, index: int) -> str:
         """Map an action index to a move.
@@ -276,7 +276,7 @@ class ChessGameState(GameState):
             Move in UCI format
         """
         from_black = self.current_player == -1
-        return self._encoder.decode_move(index, from_black_perspective=from_black)
+        return str(self._encoder.decode_move(index, from_black_perspective=from_black))
 
     def get_action_mask(self) -> np.ndarray:
         """Get mask of legal actions.
@@ -352,23 +352,23 @@ class ChessGameState(GameState):
 
     def is_check(self) -> bool:
         """Check if the current player is in check."""
-        return self._board.is_check()
+        return bool(self._board.is_check())
 
     def is_checkmate(self) -> bool:
         """Check if the current player is checkmated."""
-        return self._board.is_checkmate()
+        return bool(self._board.is_checkmate())
 
     def is_stalemate(self) -> bool:
         """Check if the position is stalemate."""
-        return self._board.is_stalemate()
+        return bool(self._board.is_stalemate())
 
     def is_insufficient_material(self) -> bool:
         """Check if there's insufficient material to mate."""
-        return self._board.is_insufficient_material()
+        return bool(self._board.is_insufficient_material())
 
     def is_fifty_moves(self) -> bool:
         """Check if fifty-move rule can be claimed."""
-        return self._board.is_fifty_moves()
+        return bool(self._board.is_fifty_moves())
 
     def is_repetition(self, count: int = 3) -> bool:
         """Check if position has repeated.
@@ -379,7 +379,7 @@ class ChessGameState(GameState):
         Returns:
             True if position has repeated 'count' times
         """
-        return self._board.is_repetition(count)
+        return bool(self._board.is_repetition(count))
 
     def copy(self) -> ChessGameState:
         """Create a copy of this state.
