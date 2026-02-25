@@ -30,7 +30,7 @@ except ImportError:  # pragma: no cover
         def model_json_schema(cls) -> dict[str, Any]:
             return {"type": "object"}
 
-    def Field(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]  # noqa: N802
+    def Field(*args: Any, **kwargs: Any) -> Any:  # noqa: N802
         return kwargs.get("default")
 
     def field_validator(*args: Any, **kwargs: Any) -> Any:

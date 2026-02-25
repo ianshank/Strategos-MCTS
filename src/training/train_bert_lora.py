@@ -36,10 +36,10 @@ except ImportError:
         ImportWarning,
         stacklevel=2,
     )
-    Trainer = None  # type: ignore
-    TrainingArguments = None  # type: ignore
-    AutoTokenizer = None  # type: ignore
-    EvalPrediction = None  # type: ignore
+    Trainer = None
+    TrainingArguments = None
+    AutoTokenizer = None
+    EvalPrediction = None
 
 try:
     from datasets import Dataset
@@ -51,7 +51,7 @@ except ImportError:
         ImportWarning,
         stacklevel=2,
     )
-    Dataset = None  # type: ignore
+    Dataset = None
 
 from src.agents.meta_controller.bert_controller import BERTMetaController  # noqa: E402
 from src.training.data_generator import MetaControllerDataGenerator  # noqa: E402

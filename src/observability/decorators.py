@@ -238,7 +238,7 @@ def logged(
 
         if is_async:
             return async_wrapper  # type: ignore
-        return sync_wrapper  # type: ignore
+        return sync_wrapper
 
     return decorator
 
@@ -298,7 +298,7 @@ def timed(
 
         if is_async:
             return async_wrapper  # type: ignore
-        return sync_wrapper  # type: ignore
+        return sync_wrapper
 
     return decorator
 
@@ -387,7 +387,7 @@ def retry(
 
         if is_async:
             return async_wrapper  # type: ignore
-        return sync_wrapper  # type: ignore
+        return sync_wrapper
 
     return decorator
 
@@ -465,7 +465,7 @@ def cached(
         wrapper.cache_clear = lambda: cache.clear()  # type: ignore
         wrapper.cache_info = lambda: {"size": len(cache), "max_size": max_size, "ttl": ttl}  # type: ignore
 
-        return wrapper  # type: ignore
+        return wrapper
 
     return decorator
 
@@ -538,7 +538,7 @@ def debug_on_error(
                 if reraise:
                     raise
 
-        return wrapper  # type: ignore
+        return wrapper
 
     return decorator
 
@@ -589,7 +589,7 @@ def validate_args(**validators: Callable[[Any], bool]) -> Callable[[Callable[P, 
 
             return func(*args, **kwargs)
 
-        return wrapper  # type: ignore
+        return wrapper
 
     return decorator
 

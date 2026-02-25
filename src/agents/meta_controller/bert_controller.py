@@ -32,8 +32,8 @@ except ImportError:
         ImportWarning,
         stacklevel=2,
     )
-    AutoTokenizer = None  # type: ignore
-    AutoModelForSequenceClassification = None  # type: ignore
+    AutoTokenizer = None
+    AutoModelForSequenceClassification = None
 
 try:
     from peft import LoraConfig, TaskType, get_peft_model
@@ -42,9 +42,9 @@ try:
 except ImportError:
     # Fallback if peft is missing or broken (e.g. version mismatch with transformers)
     _PEFT_AVAILABLE = False
-    LoraConfig = None  # type: ignore
-    TaskType = None  # type: ignore
-    get_peft_model = None  # type: ignore
+    LoraConfig = None
+    TaskType = None
+    get_peft_model = None
 
 
 class BERTMetaController(AbstractMetaController):

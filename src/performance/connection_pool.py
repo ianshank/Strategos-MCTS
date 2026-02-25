@@ -23,7 +23,7 @@ try:
     _HAS_HTTPX = True
 except ImportError:
     _HAS_HTTPX = False
-    httpx = None  # type: ignore[assignment]
+    httpx = None
 
 if TYPE_CHECKING:
     from httpx import AsyncClient

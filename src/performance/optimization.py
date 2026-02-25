@@ -22,7 +22,7 @@ try:
 
     _HAS_PSUTIL = True
 except ImportError:
-    psutil = None  # type: ignore[assignment]
+    psutil = None
     _HAS_PSUTIL = False
 
 logger = logging.getLogger(__name__)

@@ -41,8 +41,8 @@ try:
 
     _HAS_TORCH = True
 except ImportError:
-    torch = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
+    torch = None
+    nn = None
 
 
 @dataclass

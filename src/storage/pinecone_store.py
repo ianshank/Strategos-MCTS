@@ -16,7 +16,7 @@ try:
     PINECONE_AVAILABLE = True
 except ImportError:
     PINECONE_AVAILABLE = False
-    Pinecone = None  # type: ignore
+    Pinecone = None
 
 from src.agents.meta_controller.base import MetaControllerFeatures, MetaControllerPrediction
 from src.agents.meta_controller.utils import normalize_features
