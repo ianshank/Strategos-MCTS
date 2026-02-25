@@ -29,7 +29,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -203,32 +203,35 @@ class RAVENode(MCTSNode):
             raise ValueError("No children to select from")
 
         best_score = float("-inf")
-        best_child = None
+        best_child: RAVENode | None = None
 
         for child in self.children:
+            rave_child = cast(RAVENode, child)
             # Unvisited nodes get priority
-            if child.visits == 0:
-                return child
+            if rave_child.visits == 0:
+                return rave_child
 
             # Standard UCB score
-            ucb_exploitation = child.value
-            ucb_exploration = exploration_weight * math.sqrt(math.log(self.visits) / child.visits)
+            ucb_exploitation = rave_child.value
+            ucb_exploration = exploration_weight * math.sqrt(math.log(self.visits) / rave_child.visits)
             ucb_score = ucb_exploitation + ucb_exploration
 
             # RAVE score
-            rave_visits = self.get_rave_visits(child.action)
-            rave_value = self.get_rave_value(child.action)
+            child_action = rave_child.action or ""
+            rave_visits = self.get_rave_visits(child_action)
+            rave_value = self.get_rave_value(child_action)
 
             # Compute β mixing parameter
-            beta = rave_config.compute_beta(child.visits, rave_visits)
+            beta = rave_config.compute_beta(rave_child.visits, rave_visits)
 
             # Hybrid score: (1-β)*UCB + β*RAVE
             score = (1 - beta) * ucb_score + beta * rave_value
 
             if score > best_score:
                 best_score = score
-                best_child = child
+                best_child = rave_child
 
+        assert best_child is not None, "No best child found despite non-empty children"
         return best_child
 
 
@@ -573,11 +576,12 @@ class ProgressiveWideningEngine:
         # Action statistics with RAVE info
         action_stats = {}
         for child in root.children:
-            rave_visits = root.get_rave_visits(child.action)
-            rave_value = root.get_rave_value(child.action)
+            child_action = child.action or ""
+            rave_visits = root.get_rave_visits(child_action)
+            rave_value = root.get_rave_value(child_action)
             beta = self.rave_config.compute_beta(child.visits, rave_visits)
 
-            action_stats[child.action] = {
+            action_stats[child_action] = {
                 "visits": child.visits,
                 "value": child.value,
                 "rave_visits": rave_visits,

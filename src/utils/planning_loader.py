@@ -15,7 +15,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 
@@ -350,8 +350,8 @@ class PlanningLoader:
         # Check milestone completion matches story status
         for milestone in plan.milestones:
             epic_ids = [e.split("/")[-1].replace(".yaml", "") for e in milestone.epics]
-            related_epics = [plan.epics.get(f"E{eid.split('_')[1]}.{eid.split('_')[2]}") for eid in epic_ids]
-            related_epics = [e for e in related_epics if e]
+            related_epics_raw = [plan.epics.get(f"E{eid.split('_')[1]}.{eid.split('_')[2]}") for eid in epic_ids]
+            related_epics: list[Epic] = [e for e in related_epics_raw if e is not None]
 
             total_stories = sum(len(e.stories) for e in related_epics)
             completed = sum(len([s for s in e.stories if s.is_complete()]) for e in related_epics)

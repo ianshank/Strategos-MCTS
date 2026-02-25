@@ -351,9 +351,9 @@ def create_policy_value_network(
                 nn.init.constant_(m.bias, 0)
 
     network.apply(init_weights)
-    network = network.to(device)
+    network_on_device: PolicyValueNetwork = network.to(device)
 
-    return network
+    return network_on_device
 
 
 # Example: Simpler MLP-based policy-value network for non-spatial tasks

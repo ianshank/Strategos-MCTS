@@ -286,7 +286,7 @@ class AnthropicClient(BaseLLMClient):
             max_tokens = 4096  # Sensible default
 
         if stream:
-            return self._generate_stream(
+            return await self._generate_stream(
                 messages=messages,
                 prompt=prompt,
                 temperature=temperature,

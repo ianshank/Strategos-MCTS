@@ -126,7 +126,7 @@ class ObservabilityFacade:
 
         # Lazy-load modules
         self._tracer = None
-        self._metrics = None
+        self._metrics: Any = None
         self._profiler = None
 
     @classmethod
@@ -190,9 +190,9 @@ class ObservabilityFacade:
         """Lazy-load metrics module."""
         if self._metrics is None and self.config.metrics_enabled:
             try:
-                from src.observability.metrics import get_metrics_registry
+                from src.observability.metrics import MetricsCollector
 
-                self._metrics = get_metrics_registry()
+                self._metrics = MetricsCollector()
             except ImportError:
                 logger.debug("Metrics module not available")
                 self._metrics = {}

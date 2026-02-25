@@ -243,7 +243,7 @@ class MetaControllerTrainingOrchestrator:
         self._feature_importance: dict[str, float] = {}
 
         # Experiment tracker (lazy initialized)
-        self._tracker = None
+        self._tracker: Any = None
 
         # Ensure checkpoint directory exists
         self.config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
@@ -303,6 +303,8 @@ class MetaControllerTrainingOrchestrator:
             )
         except ImportError:
             # Fallback to simple GRU classifier (defined at module level)
+            if _SimpleRNNController is None:
+                raise ImportError("PyTorch required for _SimpleRNNController")
             return _SimpleRNNController(
                 input_dim=self.config.embedding_dim,
                 hidden_dim=self.config.hidden_dim,
@@ -437,6 +439,7 @@ class MetaControllerTrainingOrchestrator:
     ) -> TrainingMetrics:
         """Train for one epoch."""
         start_time = time.time()
+        assert self._model is not None, "Model not initialized"
 
         # Training phase
         self._model.train()
@@ -474,8 +477,10 @@ class MetaControllerTrainingOrchestrator:
             inputs, targets = self._prepare_batch(batch)
 
             if is_training:
+                assert self._optimizer is not None, "Optimizer not initialized"
                 self._optimizer.zero_grad()
 
+            assert self._model is not None, "Model not initialized"
             outputs = self._model(inputs)
             loss = self._criterion(outputs, targets)
 
@@ -485,6 +490,7 @@ class MetaControllerTrainingOrchestrator:
                     self._model.parameters(),
                     self.config.gradient_clip,
                 )
+                assert self._optimizer is not None, "Optimizer not initialized"
                 self._optimizer.step()
 
             total_loss += loss.item() * len(targets)
@@ -511,6 +517,7 @@ class MetaControllerTrainingOrchestrator:
 
         for batch in loader:
             inputs, targets = self._prepare_batch(batch)
+            assert self._model is not None, "Model not initialized"
             outputs = self._model(inputs)
             loss = self._criterion(outputs, targets)
 
@@ -565,6 +572,7 @@ class MetaControllerTrainingOrchestrator:
 
     def _save_checkpoint(self, filename: str) -> None:
         """Save model checkpoint."""
+        assert self._model is not None, "Model not initialized"
         path = self.config.checkpoint_dir / filename
         checkpoint = {
             "epoch": self._current_epoch,
@@ -601,12 +609,10 @@ class MetaControllerTrainingOrchestrator:
         """Initialize experiment tracker."""
         if self.config.use_wandb or self.config.use_braintrust:
             try:
-                from src.training.experiment_tracker import ExperimentTracker
+                from src.training.experiment_tracker import UnifiedExperimentTracker
 
-                self._tracker = ExperimentTracker(
-                    experiment_name=self.config.experiment_name,
-                    use_wandb=self.config.use_wandb,
-                    use_braintrust=self.config.use_braintrust,
+                self._tracker = UnifiedExperimentTracker(
+                    project_name=self.config.experiment_name,
                 )
             except ImportError:
                 self._log_warning("Experiment tracker not available")

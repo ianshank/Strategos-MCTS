@@ -182,7 +182,7 @@ class ExperimentTracker:
         tree_depths = [r.tree_depth for r in self.results]
         node_counts = [r.tree_node_count for r in self.results]
 
-        def compute_stats(values: list[float]) -> dict[str, float]:
+        def compute_stats(values: list[float] | list[int]) -> dict[str, float]:
             """Compute basic statistics."""
             if not values:
                 return {}
@@ -196,9 +196,10 @@ class ExperimentTracker:
 
         # Best action consistency
         best_actions = [r.best_action for r in self.results]
-        action_counts = {}
+        action_counts: dict[str, int] = {}
         for action in best_actions:
-            action_counts[action] = action_counts.get(action, 0) + 1
+            if action is not None:
+                action_counts[action] = action_counts.get(action, 0) + 1
         most_common_action = max(action_counts.items(), key=lambda x: x[1])
         consistency_rate = most_common_action[1] / len(best_actions)
 

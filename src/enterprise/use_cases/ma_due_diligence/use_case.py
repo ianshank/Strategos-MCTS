@@ -235,6 +235,7 @@ class MADueDiligence(BaseUseCase[MADueDiligenceState]):
         """Return the reward function for MCTS."""
         if self._reward_function is None:
             self._setup_reward_function()
+        assert self._reward_function is not None, "Reward function not initialized"
         return self._reward_function
 
     def get_rollout_policy(self) -> RolloutPolicy:

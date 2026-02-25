@@ -67,8 +67,8 @@ class BraintrustTracker:
         """
         self.api_key = api_key or os.getenv("BRAINTRUST_API_KEY")
         self.project_name = project_name
-        self._experiment = None
-        self._experiment_id = None
+        self._experiment: Any = None
+        self._experiment_id: str | None = None
         self._metrics_buffer: list[dict[str, Any]] = []
         self._initialized = False
 
@@ -132,9 +132,9 @@ class BraintrustTracker:
                 project=self.project_name,
                 experiment=name,
             )
-            self._experiment_id = self._experiment.id
+            self._experiment_id = self._experiment.id if self._experiment else None
             logger.info(f"Created Braintrust experiment: {name} (ID: {self._experiment_id})")
-            return self._experiment_id
+            return str(self._experiment_id)
         except Exception as e:
             logger.error(f"Failed to create experiment: {e}")
             return self.init_experiment(name, description, tags, metadata)  # Fallback to offline
@@ -276,7 +276,8 @@ class BraintrustTracker:
         if self._offline_mode:
             if "artifacts" not in self._experiment_config:
                 self._experiment_config["artifacts"] = []
-            self._experiment_config["artifacts"].append(str(path))
+            artifacts: list[Any] = self._experiment_config["artifacts"]  # type: ignore[assignment]
+            artifacts.append(str(path))
             return
 
         # Braintrust artifact logging would go here

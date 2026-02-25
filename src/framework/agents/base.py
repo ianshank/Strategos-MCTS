@@ -12,7 +12,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from src.adapters.llm.base import LLMClient, LLMResponse
 
@@ -371,7 +371,7 @@ class AsyncAgentBase(ABC):
             max_tokens=max_tokens,
             **kwargs,
         )
-        return response
+        return cast(LLMResponse, response)
 
 
 class CompositeAgent(AsyncAgentBase):
@@ -481,7 +481,7 @@ class SequentialAgent(CompositeAgent):
             )
 
         current_context = context
-        intermediate_results = []
+        intermediate_results: list[dict[str, Any]] = []
 
         for agent in self.sub_agents:
             result = await agent.process(context=current_context)

@@ -48,8 +48,8 @@ class DataEngineeringAgent(ADKAgentAdapter):
         self.logs_dir.mkdir(parents=True, exist_ok=True)
 
         # Dataform configuration
-        self.dataform_repo = None
-        self.dataform_workspace = None
+        self.dataform_repo: str | None = None
+        self.dataform_workspace: str | None = None
 
     async def _agent_initialize(self) -> None:
         """Initialize Data Engineering agent resources."""

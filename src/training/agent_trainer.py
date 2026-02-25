@@ -477,7 +477,7 @@ class SelfPlayEvaluator:
             "model2_avg_mcts_value": 0.0,
         }
 
-        mcts_values = [[], []]
+        mcts_values: list[list[float]] = [[], []]
 
         while not state.is_terminal():
             current_model = models[current_model_idx]

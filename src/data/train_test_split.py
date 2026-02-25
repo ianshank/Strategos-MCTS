@@ -302,7 +302,7 @@ class StratifiedSplitter(DataSplitter):
         def get_distribution(samples: list[DatasetSample]) -> dict[str, float]:
             if not samples:
                 return {}
-            counts = defaultdict(int)
+            counts: dict[str, int] = defaultdict(int)
             for sample in samples:
                 key = self._get_stratify_key(sample)
                 counts[key] += 1
@@ -342,7 +342,7 @@ class StratifiedSplitter(DataSplitter):
             groups[key].append(sample)
 
         # Initialize folds
-        folds_data = [{"train": [], "val": []} for _ in range(k)]
+        folds_data: list[dict[str, list[DatasetSample]]] = [{"train": [], "val": []} for _ in range(k)]
 
         # Distribute each group across folds
         for _key, group_samples in groups.items():
@@ -498,7 +498,7 @@ class BalancedSampler:
         Returns:
             Dictionary of class counts
         """
-        distribution = defaultdict(int)
+        distribution: dict[str, int] = defaultdict(int)
         for sample in samples:
             key = getattr(sample, target_key, "unknown") or "unknown"
             distribution[key] += 1

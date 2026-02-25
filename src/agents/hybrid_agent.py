@@ -117,7 +117,7 @@ class HybridAgent:
             self.value_net.eval()
 
         # Statistics tracking
-        self.stats = {
+        self.stats: dict[str, Any] = {
             "neural_policy_calls": 0,
             "neural_value_calls": 0,
             "llm_calls": 0,

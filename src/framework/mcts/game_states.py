@@ -470,7 +470,7 @@ class DecisionState:
             actions.append(
                 {
                     "type": "decide",
-                    "best_option": max(self.evaluated_options, key=self.evaluated_options.get),
+                    "best_option": max(self.evaluated_options, key=lambda k: self.evaluated_options[k]),
                 }
             )
 

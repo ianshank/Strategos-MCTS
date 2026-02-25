@@ -395,7 +395,7 @@ def get_trace_context() -> dict[str, str]:
 
     from opentelemetry.propagate import inject
 
-    headers = {}
+    headers: dict[str, str] = {}
     inject(headers)
     return headers
 

@@ -183,7 +183,7 @@ class AssemblyIndexCalculator:
             return 1.0
 
         # Count node pattern frequencies
-        node_patterns = defaultdict(int)
+        node_patterns: dict[tuple[int, int], int] = defaultdict(int)
 
         for node in graph.nodes():
             # Pattern: (in_degree, out_degree)

@@ -145,11 +145,13 @@ class ChessGameState(GameState):
             List of legal moves as UCI strings (e.g., ['e2e4', 'd2d4', ...])
         """
         if self._legal_actions_cache is None:
+            actions = [move.uci() for move in self._board.legal_moves]
             object.__setattr__(
                 self,
                 "_legal_actions_cache",
-                [move.uci() for move in self._board.legal_moves],
+                actions,
             )
+            return actions
         return self._legal_actions_cache
 
     def apply_action(self, action: str) -> ChessGameState:

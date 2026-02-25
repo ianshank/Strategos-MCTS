@@ -41,7 +41,7 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast, runtime_checkable
 
 from src.config.settings import Settings, get_settings
 from src.observability.logging import StructuredLogger, get_structured_logger
@@ -510,7 +510,10 @@ class TrainerFactory:
                 buffer_type=buffer_type,
                 capacity=buffer_capacity,
             )
-            return self._replay_buffer_instances[cache_key]
+            return cast(
+                "ReplayBuffer | PrioritizedReplayBuffer | AugmentedReplayBuffer",
+                self._replay_buffer_instances[cache_key],
+            )
 
         self._logger.info(
             "Creating replay buffer",
@@ -627,7 +630,7 @@ class MetricsFactory:
         # Check for cached singleton
         if use_singleton and self._monitor_instance is not None:
             self._logger.info("Returning cached performance monitor")
-            return self._monitor_instance
+            return cast("PerformanceMonitor", self._monitor_instance)
 
         window = window_size if window_size is not None else self._config.window_size
         gpu_monitoring = (
@@ -700,7 +703,10 @@ class MetricsFactory:
                 platform=platform,
                 project=project,
             )
-            return self._tracker_instances[cache_key]
+            return cast(
+                "BraintrustTracker | WandBTracker | UnifiedExperimentTracker",
+                self._tracker_instances[cache_key],
+            )
 
         self._logger.info(
             "Creating experiment tracker",
@@ -980,7 +986,7 @@ class DataLoaderFactory:
         # Check for cached singleton
         if use_singleton and cache_key in self._loader_instances:
             self._logger.info("Returning cached DABStep loader")
-            return self._loader_instances[cache_key]
+            return cast("DABStepLoader", self._loader_instances[cache_key])
 
         cache = cache_dir if cache_dir is not None else self._config.cache_dir
 
@@ -1035,7 +1041,7 @@ class DataLoaderFactory:
         # Check for cached singleton
         if use_singleton and cache_key in self._loader_instances:
             self._logger.info("Returning cached PRIMUS loader")
-            return self._loader_instances[cache_key]
+            return cast("PRIMUSLoader", self._loader_instances[cache_key])
 
         cache = cache_dir if cache_dir is not None else self._config.cache_dir
 
@@ -1091,7 +1097,7 @@ class DataLoaderFactory:
         # Check for cached singleton
         if use_singleton and cache_key in self._loader_instances:
             self._logger.info("Returning cached combined loader")
-            return self._loader_instances[cache_key]
+            return cast("CombinedDatasetLoader", self._loader_instances[cache_key])
 
         cache = cache_dir if cache_dir is not None else self._config.cache_dir
 
@@ -1134,19 +1140,21 @@ class DataLoaderFactory:
         max_samples = max_samples if max_samples is not None else self._config.max_samples
 
         if dataset_name == "dabstep":
-            loader = self.create_dabstep_loader(**kwargs)
-            return loader.load(split=split)
+            dabstep_loader = self.create_dabstep_loader(**kwargs)
+            return list(dabstep_loader.load(split=split))
         elif dataset_name == "primus_seed":
-            loader = self.create_primus_loader(**kwargs)
-            return loader.load_seed(max_samples=max_samples)
+            primus_loader = self.create_primus_loader(**kwargs)
+            return list(primus_loader.load_seed(max_samples=max_samples))
         elif dataset_name == "primus_instruct":
-            loader = self.create_primus_loader(**kwargs)
-            return loader.load_instruct()
+            primus_instruct_loader = self.create_primus_loader(**kwargs)
+            return list(primus_instruct_loader.load_instruct())
         elif dataset_name == "combined":
-            loader = self.create_combined_loader(**kwargs)
-            return loader.load_all(
-                primus_max_samples=max_samples,
-                include_instruct=self._config.include_instruct,
+            combined_loader = self.create_combined_loader(**kwargs)
+            return list(
+                combined_loader.load_all(
+                    primus_max_samples=max_samples,
+                    include_instruct=self._config.include_instruct,
+                )
             )
         else:
             raise ValueError(

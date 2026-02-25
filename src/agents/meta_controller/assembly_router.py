@@ -254,7 +254,7 @@ class AssemblyRouter:
         Returns:
             Dictionary of routing statistics
         """
-        stats = dict(self._routing_stats)
+        stats: dict[str, Any] = dict(self._routing_stats)
 
         if stats["total_routes"] > 0:
             stats["trm_rate"] = stats["trm_routes"] / stats["total_routes"]

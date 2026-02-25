@@ -26,11 +26,20 @@ try:
 except ImportError:
     TRACING_AVAILABLE = False
 
-    def setup_tracing(*args, **kwargs):
+    def setup_tracing(
+        service_name: str = "mcts-framework",
+        environment: str = "production",
+        otlp_endpoint: str | None = None,
+        enable_httpx_instrumentation: bool = True,
+    ) -> None:
         """Dummy function when tracing is not available."""
         pass
 
-    def trace_operation(*args, **kwargs):
+    def trace_operation(
+        name: str | None = None,
+        attributes: dict | None = None,
+        record_exception: bool = True,
+    ):
         """Dummy decorator when tracing is not available."""
 
         def decorator(func):

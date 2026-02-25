@@ -28,6 +28,7 @@ from typing import Any, Protocol, runtime_checkable
 from src.config.settings import Settings, get_settings
 
 # Try to import structured logging
+_structured_logger: Any
 try:
     from src.observability.logging import get_correlation_id, get_structured_logger, set_correlation_id
 
@@ -290,7 +291,7 @@ class FrameworkService:
 
             # Create LLM client
             llm_factory = LLMClientFactory(settings=self._settings)
-            llm_client = None
+            llm_client: Any = None
 
             try:
                 llm_client = llm_factory.create_from_settings()

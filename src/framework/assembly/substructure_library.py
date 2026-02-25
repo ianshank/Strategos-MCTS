@@ -274,7 +274,7 @@ class SubstructureLibrary:
         Returns:
             Statistics dictionary
         """
-        stats = dict(self._stats)
+        stats: dict[str, Any] = dict(self._stats)
         stats["num_patterns"] = len(self._patterns)
         stats["reuse_rate"] = self.calculate_reuse_rate()
         stats["max_frequency"] = max((freq for _, freq, _, _ in self._patterns.values()), default=0)

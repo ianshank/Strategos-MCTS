@@ -748,12 +748,17 @@ class LLMChessEngine:
         trm_task = self.trm_agent.process(query=fen)
         mcts_task = self.mcts_agent.process(query=fen)
 
-        hrm_raw, trm_raw, mcts_raw = await asyncio.gather(
-            hrm_task,
-            trm_task,
-            mcts_task,
-            return_exceptions=True,
+        gather_results: list[Any] = list(
+            await asyncio.gather(
+                hrm_task,
+                trm_task,
+                mcts_task,
+                return_exceptions=True,
+            )
         )
+        hrm_raw: Any = gather_results[0]
+        trm_raw: Any = gather_results[1]
+        mcts_raw: Any = gather_results[2]
 
         # 3. Parse agent results
         agent_results: dict[str, ChessMoveResult] = {}

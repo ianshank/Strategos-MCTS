@@ -495,7 +495,7 @@ class GraphBuilder:
                 prompt=f"Answer this question: {query}",
                 temperature=0.5,
             )
-            return response.text
+            return str(response.text)
         except Exception as e:
             self.logger.error(f"Neural fallback failed: {e}")
             return f"Could not determine answer for: {query}"
@@ -569,6 +569,7 @@ class GraphBuilder:
             if features is None:
                 return self._rule_based_route_decision(state)
 
+            assert self.meta_controller is not None, "Meta controller not initialized"
             prediction = self.meta_controller.predict(features)
 
             # Log prediction for debugging

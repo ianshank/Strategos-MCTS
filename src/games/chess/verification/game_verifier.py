@@ -127,7 +127,7 @@ class ChessGameVerifier:
         """
         start_time = time.perf_counter()
         game_id = game_id or str(uuid.uuid4())[:UUID_SHORT_LENGTH]
-        initial_fen = initial_fen or self.STARTING_FEN
+        initial_fen = initial_fen or self.DEFAULT_STARTING_FEN
         issues: list[VerificationIssue] = []
 
         # Verify the starting position

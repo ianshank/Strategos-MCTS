@@ -117,6 +117,7 @@ class MCTSNode:
                 best_score = score
                 best_child = child
 
+        assert best_child is not None, "No best child found despite non-empty children"
         return best_child
 
     def add_child(self, action: str, child_state: MCTSState) -> MCTSNode:
@@ -384,7 +385,7 @@ class MCTSEngine:
         if node.depth > self._cached_tree_depth:
             self._cached_tree_depth = node.depth
 
-        current = node
+        current: MCTSNode | None = node
         while current is not None:
             current.visits += 1
             current.value_sum += value

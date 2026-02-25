@@ -263,7 +263,7 @@ class OpenAIClient(BaseLLMClient):
             )
 
         if stream:
-            return self._generate_stream(
+            return await self._generate_stream(
                 messages=messages,
                 prompt=prompt,
                 temperature=temperature,

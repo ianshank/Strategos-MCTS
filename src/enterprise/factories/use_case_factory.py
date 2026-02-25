@@ -310,6 +310,6 @@ class EnterpriseUseCaseFactory:
             return None
 
         # Return use case for highest scoring domain
-        best_domain = max(domain_scores, key=domain_scores.get)
+        best_domain = max(domain_scores, key=lambda k: domain_scores[k])
         self._logger.info(f"Detected domain from query: {best_domain.value} (score={domain_scores[best_domain]})")
         return self.create(best_domain)

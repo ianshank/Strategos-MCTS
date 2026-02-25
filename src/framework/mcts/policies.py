@@ -238,7 +238,7 @@ class LLMRolloutPolicy(RolloutPolicy):
         state_key = state.to_hash_key()
 
         if self.cache_results and state_key in self._cache:
-            return self._cache[state_key]
+            return float(self._cache[state_key])
 
         value = await self.evaluate_fn(state)
         value = max(0.0, min(1.0, value))
@@ -293,7 +293,7 @@ class ProgressiveWideningConfig:
             True if should expand, False otherwise
         """
         threshold = self.k * (num_children**self.alpha)
-        return visits > threshold
+        return bool(visits > threshold)
 
     def min_visits_for_expansion(self, num_children: int) -> int:
         """

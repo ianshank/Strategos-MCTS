@@ -956,8 +956,8 @@ class SymbolicReasoningAgent:
         if self.neural_fallback:
             result = self.neural_fallback(query, state)
             if asyncio.iscoroutine(result):
-                return await result
-            return result
+                return str(await result)
+            return str(result)
         return f"No answer available for: {query}"
 
     def _format_response(self, query: str, proof: Proof) -> str:

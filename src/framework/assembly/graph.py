@@ -280,7 +280,7 @@ class AssemblyGraph(nx.DiGraph):
             return layers
         except nx.NetworkXError:
             # Fallback: group by assembly index
-            index_layers = {}
+            index_layers: dict[int, set[str]] = {}
             for node, data in self.nodes(data=True):
                 idx = data.get("assembly_index", 0)
                 if idx not in index_layers:

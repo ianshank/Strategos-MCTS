@@ -7,6 +7,7 @@ prerequisite relationships between concepts.
 
 import re
 from dataclasses import dataclass, field
+from typing import Any
 
 import networkx as nx
 
@@ -544,4 +545,4 @@ class ConceptExtractor:
             },
         }
 
-        self.domain_library = libraries.get(self.domain, libraries["general"])
+        self.domain_library: dict[str, Any] = libraries.get(self.domain, libraries["general"])

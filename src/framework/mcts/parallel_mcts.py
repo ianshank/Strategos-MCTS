@@ -28,7 +28,7 @@ import time
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -224,18 +224,20 @@ class VirtualLossNode(MCTSNode):
         best_score = float("-inf")
 
         for child in self.children:
+            vl_child = cast(VirtualLossNode, child)
             # Use effective values for virtual loss
-            if child.effective_visits == 0:
-                return child
+            if vl_child.effective_visits == 0:
+                return vl_child
 
-            exploitation = child.effective_value
-            exploration = exploration_weight * math.sqrt(math.log(self.effective_visits) / child.effective_visits)
+            exploitation = vl_child.effective_value
+            exploration = exploration_weight * math.sqrt(math.log(self.effective_visits) / vl_child.effective_visits)
             score = exploitation + exploration
 
             if score > best_score:
                 best_score = score
-                best_child = child
+                best_child = vl_child
 
+        assert best_child is not None, "No best child found despite non-empty children"
         return best_child
 
 
@@ -541,10 +543,11 @@ class ParallelMCTSEngine:
         # Action statistics
         action_stats = {}
         for child in root.children:
-            action_stats[child.action] = {
-                "visits": child.visits,
-                "value": child.value,
-                "effective_visits": child.effective_visits,
+            vl_child = cast(VirtualLossNode, child)
+            action_stats[vl_child.action] = {
+                "visits": vl_child.visits,
+                "value": vl_child.value,
+                "effective_visits": vl_child.effective_visits,
             }
 
         # Compute tree depth
@@ -567,7 +570,7 @@ class ParallelMCTSEngine:
 
         max_depth = 0
         for child in node.children:
-            depth = 1 + self._compute_tree_depth(child)
+            depth = 1 + self._compute_tree_depth(cast(VirtualLossNode, child))
             max_depth = max(max_depth, depth)
 
         return max_depth

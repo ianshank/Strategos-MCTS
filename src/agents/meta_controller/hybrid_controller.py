@@ -133,7 +133,7 @@ class HybridMetaController(AbstractMetaController):
         self._current_query = query
         self._current_assembly_features = None  # Will be computed on demand
 
-    def predict(
+    def predict(  # type: ignore[override]
         self,
         features: MetaControllerFeatures,
         query: str | None = None,
@@ -189,6 +189,7 @@ class HybridMetaController(AbstractMetaController):
             return self._fallback_prediction()
         elif neural_pred is None:
             # Only assembly available
+            assert assembly_decision is not None
             return self._assembly_only_prediction(assembly_decision)
         elif assembly_decision is None:
             # Only neural available
@@ -226,7 +227,7 @@ class HybridMetaController(AbstractMetaController):
             combined_probs[agent] = self.neural_weight * neural_prob + self.assembly_weight * assembly_prob
 
         # Select agent with highest combined probability
-        selected_agent = max(combined_probs, key=combined_probs.get)
+        selected_agent = max(combined_probs, key=lambda k: combined_probs[k])
         confidence = combined_probs[selected_agent]
 
         # Track agreement/disagreement
@@ -359,7 +360,7 @@ class HybridMetaController(AbstractMetaController):
         Returns:
             Dictionary of statistics including agreement rates
         """
-        stats = dict(self._stats)
+        stats: dict[str, Any] = dict(self._stats)
 
         if stats["total_predictions"] > 0:
             total = stats["total_predictions"]

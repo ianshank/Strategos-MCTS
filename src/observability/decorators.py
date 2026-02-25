@@ -495,11 +495,11 @@ def debug_on_error(
 
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @functools.wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:  # type: ignore[return]
             try:
                 return func(*args, **kwargs)
             except Exception as e:
-                error_context = {
+                error_context: dict[str, Any] = {
                     "function": func.__name__,
                     "exception": type(e).__name__,
                     "message": str(e),

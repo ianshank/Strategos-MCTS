@@ -417,7 +417,7 @@ class MetricsCollector:
     def export_prometheus_format(self) -> str:
         """Export metrics in Prometheus text format."""
         if PROMETHEUS_AVAILABLE:
-            return generate_latest(REGISTRY).decode("utf-8")
+            return str(generate_latest(REGISTRY).decode("utf-8"))
         else:
             return "# Prometheus client not available\n"
 
