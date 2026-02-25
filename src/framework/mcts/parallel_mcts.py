@@ -138,21 +138,6 @@ class ParallelMCTSConfig:
         if errors:
             raise ValueError("Invalid ParallelMCTSConfig:\n" + "\n".join(f"  - {e}" for e in errors))
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert stats to dictionary."""
-        return {
-            "total_simulations": self.total_simulations,
-            "total_duration": self.total_duration,
-            "simulations_per_second": (
-                self.total_simulations / self.total_duration if self.total_duration > 0 else 0.0
-            ),
-            "thread_simulations": dict(self.thread_simulations),
-            "collision_count": self.collision_count,
-            "collision_rate": (self.collision_count / max(1, self.total_simulations)),
-            "lock_wait_time": self.lock_wait_time,
-            "avg_tree_depth": self.avg_tree_depth,
-            "effective_parallelism": self.effective_parallelism,
-        }
 
 
 class VirtualLossNode(MCTSNode):
