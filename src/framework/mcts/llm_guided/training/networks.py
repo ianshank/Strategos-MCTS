@@ -180,7 +180,7 @@ def _check_torch() -> None:
         raise ImportError("PyTorch is required. Install with: pip install torch")
 
 
-class PositionalEncoding(nn.Module if _TORCH_AVAILABLE else object):
+class PositionalEncoding(nn.Module if _TORCH_AVAILABLE else object):  # type: ignore[misc]
     """Positional encoding for transformer."""
 
     def __init__(self, d_model: int, max_len: int = 5000, dropout: float = 0.1):
@@ -202,7 +202,7 @@ class PositionalEncoding(nn.Module if _TORCH_AVAILABLE else object):
         return self.dropout(x)
 
 
-class CodeEncoder(nn.Module if _TORCH_AVAILABLE else object):
+class CodeEncoder(nn.Module if _TORCH_AVAILABLE else object):  # type: ignore[misc]
     """
     Transformer-based encoder for code and text.
 
@@ -310,7 +310,7 @@ class CodeEncoder(nn.Module if _TORCH_AVAILABLE else object):
         return x
 
 
-class PolicyNetwork(nn.Module if _TORCH_AVAILABLE else object):
+class PolicyNetwork(nn.Module if _TORCH_AVAILABLE else object):  # type: ignore[misc]
     """
     Policy network for action selection.
 
@@ -434,7 +434,7 @@ class PolicyNetwork(nn.Module if _TORCH_AVAILABLE else object):
         return torch.exp(log_probs)
 
 
-class ValueNetwork(nn.Module if _TORCH_AVAILABLE else object):
+class ValueNetwork(nn.Module if _TORCH_AVAILABLE else object):  # type: ignore[misc]
     """
     Value network for state value estimation.
 
@@ -527,7 +527,7 @@ class ValueNetwork(nn.Module if _TORCH_AVAILABLE else object):
         return value
 
 
-class CombinedNetwork(nn.Module if _TORCH_AVAILABLE else object):
+class CombinedNetwork(nn.Module if _TORCH_AVAILABLE else object):  # type: ignore[misc]
     """
     Combined policy and value network with shared encoder.
 

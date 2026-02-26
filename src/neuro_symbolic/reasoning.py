@@ -718,7 +718,7 @@ class SymbolicReasoner:
         args_str = match.group(2)
 
         # Parse arguments
-        args = []
+        args: list[int | float | str] = []
         for arg in args_str.split(","):
             arg = arg.strip()
             if not arg:

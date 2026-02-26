@@ -8,6 +8,8 @@ This module provides:
 - Performance monitoring
 """
 
+from typing import Any
+
 from .prometheus_metrics import (
     ACTIVE_OPERATIONS,
     AGENT_CONFIDENCE_SCORES,
@@ -37,7 +39,7 @@ except ImportError:
 
     def trace_operation(
         name: str | None = None,
-        attributes: dict | None = None,
+        attributes: dict[str, Any] | None = None,
         record_exception: bool = True,
     ):
         """Dummy decorator when tracing is not available."""

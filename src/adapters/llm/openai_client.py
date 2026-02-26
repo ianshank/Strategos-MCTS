@@ -347,6 +347,7 @@ class OpenAIClient(BaseLLMClient):
             finish_reason = choice.get("finish_reason", "stop")
 
             # Check for tool calls
+            llm_response: LLMResponse | LLMToolResponse
             if "tool_calls" in message:
                 tool_calls = [
                     ToolCall(

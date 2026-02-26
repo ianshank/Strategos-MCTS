@@ -476,7 +476,9 @@ class EnsembleValueNetwork(nn.Module):
                 state = state.unsqueeze(0)
 
             output = self.forward(state)
-            result = (output.value.item(), output.uncertainty.item())
+            value_item = output.value.item() if output.value is not None else 0.0
+            uncertainty_item = output.uncertainty.item() if output.uncertainty is not None else 0.0
+            result = (value_item, uncertainty_item)
 
             # Restore training modes
             for net, was_train in zip(self.networks, was_training, strict=True):

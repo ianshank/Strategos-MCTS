@@ -398,6 +398,7 @@ class AnthropicClient(BaseLLMClient):
 
             finish_reason = data.get("stop_reason", "stop")
 
+            llm_response: LLMResponse | LLMToolResponse
             if tool_calls:
                 llm_response = LLMToolResponse(
                     text=text,

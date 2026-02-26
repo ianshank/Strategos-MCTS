@@ -483,25 +483,26 @@ class SelfPlayEvaluator:
             current_model = models[current_model_idx]
 
             # Temporarily set the model for MCTS
-            original_model = self.mcts.policy_value_network
-            self.mcts.policy_value_network = current_model
+            original_model = self.mcts.network
+            self.mcts.network = current_model
 
             # Run MCTS search
-            action_probs, root_value = await self.mcts.search(
+            action_probs, root_node = await self.mcts.search(
                 state,
-                num_iterations=self.config.mcts_iterations,
+                num_simulations=self.config.mcts_iterations,
                 temperature=self.config.temperature,
             )
 
             # Restore original model
-            self.mcts.policy_value_network = original_model
+            self.mcts.network = original_model
 
             # Track MCTS values
+            root_value = root_node.value if root_node is not None else 0.0
             mcts_values[current_model_idx].append(root_value)
 
             # Select action (deterministic for evaluation)
             if self.config.temperature == 0:
-                action = max(action_probs, key=action_probs.get)
+                action = max(action_probs, key=lambda k: action_probs[k])
             else:
                 actions = list(action_probs.keys())
                 probs = list(action_probs.values())

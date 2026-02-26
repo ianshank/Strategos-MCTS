@@ -342,7 +342,7 @@ async def handle_position_features(args: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-CHESS_TOOL_HANDLERS = {
+CHESS_TOOL_HANDLERS: dict[str, Any] = {
     "chess_analyze_position": handle_analyze_position,
     "chess_suggest_moves": handle_suggest_moves,
     "chess_evaluate_move": handle_evaluate_move,

@@ -275,7 +275,7 @@ class MetaControllerTrainingOrchestrator:
         try:
             from src.agents.meta_controller.bert_controller import BERTMetaController
 
-            return BERTMetaController(
+            return BERTMetaController(  # type: ignore[call-arg]
                 num_agents=self.config.num_agents,
                 hidden_dim=self.config.hidden_dim,
                 num_layers=self.config.num_layers,
@@ -295,7 +295,7 @@ class MetaControllerTrainingOrchestrator:
         try:
             from src.agents.meta_controller.rnn_controller import RNNMetaController
 
-            return RNNMetaController(
+            return RNNMetaController(  # type: ignore[call-arg]
                 num_agents=self.config.num_agents,
                 hidden_dim=self.config.hidden_dim,
                 num_layers=self.config.num_layers,

@@ -185,8 +185,8 @@ class ChessActionEncoder:
 
         # Build underpromotion lookups
         for piece in PromotionPiece:
-            for direction in PromotionDirection:
-                plane = self._promotion_plane_offset + piece * 3 + direction
+            for promo_direction in PromotionDirection:
+                plane = self._promotion_plane_offset + piece * 3 + promo_direction
                 for square in range(64):
                     action_idx = plane * 64 + square
                     file_from = square % 8
@@ -198,7 +198,7 @@ class ChessActionEncoder:
                         continue
 
                     # Calculate destination
-                    file_delta = direction - 1  # LEFT=-1, STRAIGHT=0, RIGHT=1
+                    file_delta = promo_direction - 1  # LEFT=-1, STRAIGHT=0, RIGHT=1
                     file_to = file_from + file_delta
                     rank_to = 7  # Promotion always to 8th rank
 
@@ -210,7 +210,7 @@ class ChessActionEncoder:
                             "from": square,
                             "to": to_square,
                             "type": "underpromotion",
-                            "direction": direction,
+                            "direction": promo_direction,
                             "distance": None,
                             "promotion": promo_piece,
                         }
@@ -265,13 +265,13 @@ class ChessActionEncoder:
 
             # Determine direction
             if file_delta == -1:
-                direction = PromotionDirection.LEFT
+                promo_dir = PromotionDirection.LEFT
             elif file_delta == 0:
-                direction = PromotionDirection.STRAIGHT
+                promo_dir = PromotionDirection.STRAIGHT
             else:
-                direction = PromotionDirection.RIGHT
+                promo_dir = PromotionDirection.RIGHT
 
-            plane = self._promotion_plane_offset + piece_idx * 3 + direction
+            plane = self._promotion_plane_offset + piece_idx * 3 + promo_dir
             return plane * 64 + from_square
 
         # Check for knight move

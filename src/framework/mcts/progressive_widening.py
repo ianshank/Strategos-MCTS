@@ -413,7 +413,7 @@ class ProgressiveWideningEngine:
             value: Value to propagate
             simulation_actions: Actions taken during simulation (for RAVE)
         """
-        current = node
+        current: RAVENode | None = node
 
         while current is not None:
             # Standard UCB update
@@ -426,7 +426,8 @@ class ProgressiveWideningEngine:
                     # Update RAVE statistics for this action
                     current.update_rave(action, value)
 
-            current = current.parent
+            parent = current.parent
+            current = cast("RAVENode | None", parent)
             value = -value  # Flip for opponent
 
     async def run_iteration(

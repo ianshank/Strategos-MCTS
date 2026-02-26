@@ -116,13 +116,12 @@ if _TORCH_AVAILABLE:
 # Try importing feature extractor (may have additional dependencies)
 try:
     from src.agents.meta_controller.feature_extractor import (
-        EmbeddingBackend,
         FeatureExtractor,
         FeatureExtractorConfig,
     )
 
     _FEATURE_EXTRACTOR_AVAILABLE = True
-    __all__.extend(["FeatureExtractor", "FeatureExtractorConfig", "EmbeddingBackend"])
+    __all__.extend(["FeatureExtractor", "FeatureExtractorConfig"])
 except ImportError:
     _logger.debug("Feature extractor not available")
 
@@ -165,7 +164,6 @@ if TYPE_CHECKING:
 
     with contextlib.suppress(ImportError):
         from src.agents.meta_controller.feature_extractor import (  # noqa: F401
-            EmbeddingBackend,
             FeatureExtractor,
             FeatureExtractorConfig,
         )

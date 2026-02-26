@@ -100,7 +100,7 @@ class MADueDiligence(BaseUseCase[MADueDiligenceState]):
             confidence_threshold=self._config.confidence_threshold,
             max_docs_per_batch=self._config.max_documents_per_analysis,
         )
-        self._agents["document_analysis"] = DocumentAnalysisAgent(
+        self._agents["document_analysis"] = DocumentAnalysisAgent(  # type: ignore[assignment]
             config=doc_config,
             llm_client=self._llm_client,
             logger=self._logger,
@@ -112,7 +112,7 @@ class MADueDiligence(BaseUseCase[MADueDiligenceState]):
             "risk_threshold": self._config.risk_threshold,
             "critical_threshold": self._config.critical_risk_threshold,
         }
-        self._agents["risk_identification"] = RiskIdentificationAgent(
+        self._agents["risk_identification"] = RiskIdentificationAgent(  # type: ignore[assignment]
             config=risk_config,
             llm_client=self._llm_client,
             logger=self._logger,
@@ -123,7 +123,7 @@ class MADueDiligence(BaseUseCase[MADueDiligenceState]):
             "exploration_depth": self._config.synergy_exploration_depth,
             "min_synergy_value": self._config.min_synergy_value,
         }
-        self._agents["synergy_exploration"] = SynergyExplorationAgent(
+        self._agents["synergy_exploration"] = SynergyExplorationAgent(  # type: ignore[assignment]
             config=synergy_config,
             llm_client=self._llm_client,
             logger=self._logger,
@@ -133,7 +133,7 @@ class MADueDiligence(BaseUseCase[MADueDiligenceState]):
         compliance_config = {
             "jurisdictions": self._config.jurisdictions,
         }
-        self._agents["compliance_check"] = ComplianceCheckAgent(
+        self._agents["compliance_check"] = ComplianceCheckAgent(  # type: ignore[assignment]
             config=compliance_config,
             llm_client=self._llm_client,
             logger=self._logger,

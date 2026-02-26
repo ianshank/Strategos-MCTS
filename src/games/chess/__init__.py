@@ -146,7 +146,7 @@ try:
         ChessStateEncoder,
         EnsembleResponse,
     )
-    from src.games.chess.meta_controller import (  # noqa: F401 - re-exported
+    from src.games.chess.meta_controller import (  # type: ignore[assignment]  # noqa: F401
         ChessFeatureExtractor,
         ChessMetaController,
         ChessPositionFeatures,

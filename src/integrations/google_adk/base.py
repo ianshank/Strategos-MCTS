@@ -302,7 +302,7 @@ class ADKAgentFactory:
             raise ValueError(f"Unknown agent type: {agent_type}. Available types: {list(cls._registry.keys())}")
 
         agent_class = cls._registry[agent_type]
-        return agent_class(config)
+        return agent_class(config, agent_name=agent_type)
 
     @classmethod
     def list_agent_types(cls) -> list[str]:

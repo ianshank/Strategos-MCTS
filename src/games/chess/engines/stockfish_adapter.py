@@ -246,6 +246,7 @@ class StockfishAdapter:
         )
 
         start_time = time.perf_counter()
+        assert self._engine is not None, "Engine not initialized. Call initialize() first."
         info = await self._engine.analyse(board, limit, multipv=self._config.multipv)
         elapsed_ms = (time.perf_counter() - start_time) * 1000
 

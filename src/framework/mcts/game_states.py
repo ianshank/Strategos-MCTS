@@ -11,6 +11,7 @@ Based on: MULTI_AGENT_MCTS_TEMPLATE.md Section 5
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import logging
 from dataclasses import dataclass, field
@@ -598,7 +599,7 @@ def create_game_state(
     state_class = state_classes[state_type]
 
     # Filter kwargs to only include valid fields for the dataclass
-    valid_fields = {f.name for f in state_class.__dataclass_fields__.values()}
+    valid_fields = {f.name for f in dataclasses.fields(state_class)}
     filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_fields}
 
     result: ReasoningState | PlanningState | DecisionState = state_class(**filtered_kwargs)
