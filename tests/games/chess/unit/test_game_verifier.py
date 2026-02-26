@@ -98,9 +98,7 @@ class TestChessGameVerifier:
     @pytest.mark.unit
     def test_verify_position_valid(self, verifier: ChessGameVerifier) -> None:
         """Test verification of valid position."""
-        result = verifier.verify_position(
-            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
-        )
+        result = verifier.verify_position("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1")
 
         assert result.is_valid is True
         assert result.is_terminal is False
@@ -152,10 +150,7 @@ class TestChessGameVerifier:
         result = verifier.verify_move_sequence(initial_fen, moves)
 
         assert result.is_valid is False
-        assert any(
-            issue.code == "INVALID_MOVE"
-            for issue in result.issues
-        )
+        assert any(issue.code == "INVALID_MOVE" for issue in result.issues)
 
     @pytest.mark.unit
     def test_verify_move_sequence_statistics(self, verifier: ChessGameVerifier) -> None:
@@ -280,9 +275,7 @@ class TestPositionVerification:
     def test_verify_position_game_phase(self, verifier: ChessGameVerifier) -> None:
         """Test that game phase is correctly identified."""
         # Opening position
-        result = verifier.verify_position(
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-        )
+        result = verifier.verify_position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
         assert result.game_phase == "opening"
 
         # Endgame position
@@ -293,9 +286,7 @@ class TestPositionVerification:
     def test_verify_position_material_balance(self, verifier: ChessGameVerifier) -> None:
         """Test material balance calculation."""
         # Even position
-        result = verifier.verify_position(
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-        )
+        result = verifier.verify_position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
         assert result.material_balance == 0
 
         # White up a queen

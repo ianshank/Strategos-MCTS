@@ -234,12 +234,20 @@ class LLMGuidedMCTSConfig:
             errors.append(f"max_children must be in [{C.MIN_CHILDREN}, {C.MAX_CHILDREN_LIMIT}]")
 
         # Early termination
-        if self.solution_confidence_threshold < C.CONFIDENCE_MIN or self.solution_confidence_threshold > C.CONFIDENCE_MAX:
+        if (
+            self.solution_confidence_threshold < C.CONFIDENCE_MIN
+            or self.solution_confidence_threshold > C.CONFIDENCE_MAX
+        ):
             errors.append(f"solution_confidence_threshold must be in [{C.CONFIDENCE_MIN}, {C.CONFIDENCE_MAX}]")
 
         # Code execution
-        if self.execution_timeout_seconds < C.EXECUTION_TIMEOUT_MIN or self.execution_timeout_seconds > C.EXECUTION_TIMEOUT_MAX:
-            errors.append(f"execution_timeout_seconds must be in [{C.EXECUTION_TIMEOUT_MIN}, {C.EXECUTION_TIMEOUT_MAX}]")
+        if (
+            self.execution_timeout_seconds < C.EXECUTION_TIMEOUT_MIN
+            or self.execution_timeout_seconds > C.EXECUTION_TIMEOUT_MAX
+        ):
+            errors.append(
+                f"execution_timeout_seconds must be in [{C.EXECUTION_TIMEOUT_MIN}, {C.EXECUTION_TIMEOUT_MAX}]"
+            )
         if self.max_memory_mb < C.MAX_MEMORY_MIN_MB or self.max_memory_mb > C.MAX_MEMORY_MAX_MB:
             errors.append(f"max_memory_mb must be in [{C.MAX_MEMORY_MIN_MB}, {C.MAX_MEMORY_MAX_MB}]")
 
@@ -462,7 +470,7 @@ def get_preset_config(preset: str | LLMGuidedMCTSPreset) -> LLMGuidedMCTSConfig:
         }
         preset_enum = preset_map.get(preset.lower())
         if preset_enum is None:
-            raise ValueError(f"Unknown preset: {preset}. " f"Available presets: {list(preset_map.keys())}")
+            raise ValueError(f"Unknown preset: {preset}. Available presets: {list(preset_map.keys())}")
         return create_llm_mcts_preset(preset_enum)
     else:
         return create_llm_mcts_preset(preset)

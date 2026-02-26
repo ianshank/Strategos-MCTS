@@ -545,7 +545,7 @@ def extend_graph_builder(
             return extension.get_routing_key()
 
         # Fall back to original routing
-        return original_rule_based_route(state)
+        return str(original_rule_based_route(state))
 
     # Replace routing method
     graph_builder._rule_based_route_decision = extended_route_decision

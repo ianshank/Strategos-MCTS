@@ -167,7 +167,7 @@ class PersonalityResponseGenerator:
             full_response = "\n\n".join(parts)
 
             if len(full_response) > max_length:
-                full_response = full_response[:max_length - 3] + "..."
+                full_response = full_response[: max_length - 3] + "..."
                 logger.warning(f"Response truncated to {max_length} characters")
 
             return full_response
@@ -191,15 +191,11 @@ class PersonalityResponseGenerator:
 
         # Transparency (highest weight)
         if self.traits.transparency >= 0.8:
-            preamble_parts.append(
-                f"{self.TRANSPARENCY_PHRASES[0]} my approach to your query. "
-            )
+            preamble_parts.append(f"{self.TRANSPARENCY_PHRASES[0]} my approach to your query. ")
 
         # Loyalty
         if self.traits.loyalty >= 0.9:
-            preamble_parts.append(
-                f"{self.LOYALTY_PHRASES[0]}, and I've carefully analyzed your question. "
-            )
+            preamble_parts.append(f"{self.LOYALTY_PHRASES[0]}, and I've carefully analyzed your question. ")
 
         return "".join(preamble_parts).strip()
 
@@ -243,23 +239,17 @@ class PersonalityResponseGenerator:
 
         # Aspiration - offer to go further
         if self.traits.aspiration >= 0.85:
-            closing_parts.append(
-                "I'm committed to helping you achieve the best possible outcome. "
-            )
+            closing_parts.append("I'm committed to helping you achieve the best possible outcome. ")
 
         # Curiosity - suggest alternatives
         if self.traits.curiosity >= 0.8 and any(
-            keyword in agent_response.lower()
-            for keyword in ["optimize", "improve", "compare"]
+            keyword in agent_response.lower() for keyword in ["optimize", "improve", "compare"]
         ):
-            closing_parts.append(
-                "I'm curious if you'd like to explore alternative approaches as well. "
-            )
+            closing_parts.append("I'm curious if you'd like to explore alternative approaches as well. ")
 
         # Ethical considerations for certain technical queries
         if self.traits.ethical_weight >= 0.9 and any(
-            keyword in agent_response.lower()
-            for keyword in ["system", "design", "architecture", "security"]
+            keyword in agent_response.lower() for keyword in ["system", "design", "architecture", "security"]
         ):
             closing_parts.append(
                 "As we proceed, let's ensure our approach aligns with best practices and ethical considerations. "

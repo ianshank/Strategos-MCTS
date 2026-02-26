@@ -143,16 +143,16 @@ class MLEngineeringAgent(ADKAgentAdapter):
 # ML Engineering Task Plan
 
 ## Task Overview
-- **Name**: {task_config['task_name']}
-- **Type**: {task_config['task_type']}
-- **Data**: {task_config['data_path']}
-- **Metric**: {task_config['metric']} ({'lower is better' if task_config['lower_is_better'] else 'higher is better'})
+- **Name**: {task_config["task_name"]}
+- **Type**: {task_config["task_type"]}
+- **Data**: {task_config["data_path"]}
+- **Metric**: {task_config["metric"]} ({"lower is better" if task_config["lower_is_better"] else "higher is better"})
 
 ## Execution Strategy (MLE-STAR)
 
 ### Phase 1: Initial Solution Generation
 1. **Web Search for SOTA Models**
-   - Search for state-of-the-art approaches for {task_config['task_type']}
+   - Search for state-of-the-art approaches for {task_config["task_type"]}
    - Identify top-performing architectures and techniques
    - Consolidate best candidate solutions
 
@@ -173,7 +173,7 @@ class MLEngineeringAgent(ADKAgentAdapter):
 2. **Ablation Studies**
    - Iteratively refine each component
    - Test variations and improvements
-   - Measure impact on {task_config['metric']}
+   - Measure impact on {task_config["metric"]}
 
 ### Phase 3: Ensemble Strategies
 1. **Model Combination**
@@ -198,7 +198,7 @@ class MLEngineeringAgent(ADKAgentAdapter):
    - Distribution analysis
 
 ## Query
-{task_config['query']}
+{task_config["query"]}
 
 ## Next Steps
 To execute this plan, the MLE agent will:
@@ -280,25 +280,35 @@ To execute this plan, the MLE agent will:
     def get_capabilities(self) -> dict[str, Any]:
         """Get ML Engineering agent capabilities."""
         base_caps = super().get_capabilities()
-        base_caps.update({
-            "agent_type": "ml_engineering",
-            "supported_tasks": [
-                "Tabular Regression",
-                "Tabular Classification",
-                "Time Series Forecasting",
-                "Clustering",
-            ],
-            "supported_metrics": [
-                "rmse", "mse", "mae", "r2",  # regression
-                "accuracy", "f1", "precision", "recall", "auc",  # classification
-                "silhouette", "davies_bouldin",  # clustering
-            ],
-            "features": [
-                "sota_model_search",
-                "code_refinement",
-                "ensemble_strategies",
-                "debugging",
-                "data_leakage_detection",
-            ],
-        })
+        base_caps.update(
+            {
+                "agent_type": "ml_engineering",
+                "supported_tasks": [
+                    "Tabular Regression",
+                    "Tabular Classification",
+                    "Time Series Forecasting",
+                    "Clustering",
+                ],
+                "supported_metrics": [
+                    "rmse",
+                    "mse",
+                    "mae",
+                    "r2",  # regression
+                    "accuracy",
+                    "f1",
+                    "precision",
+                    "recall",
+                    "auc",  # classification
+                    "silhouette",
+                    "davies_bouldin",  # clustering
+                ],
+                "features": [
+                    "sota_model_search",
+                    "code_refinement",
+                    "ensemble_strategies",
+                    "debugging",
+                    "data_leakage_detection",
+                ],
+            }
+        )
         return base_caps

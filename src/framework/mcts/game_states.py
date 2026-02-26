@@ -11,6 +11,7 @@ Based on: MULTI_AGENT_MCTS_TEMPLATE.md Section 5
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import logging
 from dataclasses import dataclass, field
@@ -295,9 +296,7 @@ class PlanningState:
             cost = self._get_action_cost(action_name)
 
             # Check if we have enough resources
-            can_afford = all(
-                self.resources.get(resource, 0) >= amount for resource, amount in cost.items()
-            )
+            can_afford = all(self.resources.get(resource, 0) >= amount for resource, amount in cost.items())
 
             if can_afford and len(self.completed_actions) < self.max_actions:
                 actions.append(
@@ -374,9 +373,7 @@ class PlanningState:
             return 0.0
 
         # Base reward for completion
-        completed_with_finish = (
-            self.completed_actions and self.completed_actions[-1].get("name") == "finish"
-        )
+        completed_with_finish = self.completed_actions and self.completed_actions[-1].get("name") == "finish"
         base_reward = 0.8 if completed_with_finish else 0.3
 
         # Efficiency bonus
@@ -474,7 +471,7 @@ class DecisionState:
             actions.append(
                 {
                     "type": "decide",
-                    "best_option": max(self.evaluated_options, key=self.evaluated_options.get),
+                    "best_option": max(self.evaluated_options, key=lambda k: self.evaluated_options[k]),
                 }
             )
 
@@ -495,14 +492,10 @@ class DecisionState:
             new_history.append({"action": "evaluate", "option": option_id, "score": score})
 
         elif action_type == "compare":
-            new_history.append(
-                {"action": "compare", "options": action.get("options", []), "result": "compared"}
-            )
+            new_history.append({"action": "compare", "options": action.get("options", []), "result": "compared"})
 
         elif action_type == "decide":
-            new_history.append(
-                {"action": "decide", "selected": action.get("best_option"), "final": True}
-            )
+            new_history.append({"action": "decide", "selected": action.get("best_option"), "final": True})
 
         return DecisionState(
             context=self.context,
@@ -516,7 +509,7 @@ class DecisionState:
     def is_terminal(self) -> bool:
         """Check if decision is made."""
         if self.decision_history:
-            return self.decision_history[-1].get("final", False)
+            return bool(self.decision_history[-1].get("final", False))
         return len(self.evaluated_options) >= self.max_evaluations
 
     def get_reward(self, player: int = 1) -> float:
@@ -601,17 +594,16 @@ def create_game_state(
     }
 
     if state_type not in state_classes:
-        raise ValueError(
-            f"Unknown state type: {state_type}. Valid types: {list(state_classes.keys())}"
-        )
+        raise ValueError(f"Unknown state type: {state_type}. Valid types: {list(state_classes.keys())}")
 
     state_class = state_classes[state_type]
 
     # Filter kwargs to only include valid fields for the dataclass
-    valid_fields = {f.name for f in state_class.__dataclass_fields__.values()}
+    valid_fields = {f.name for f in dataclasses.fields(state_class)}
     filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_fields}
 
-    return state_class(**filtered_kwargs)
+    result: ReasoningState | PlanningState | DecisionState = state_class(**filtered_kwargs)
+    return result
 
 
 __all__ = [

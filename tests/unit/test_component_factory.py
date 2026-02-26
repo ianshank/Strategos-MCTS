@@ -23,6 +23,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark")
+
 # ============================================================================
 # Test Constants (avoid hardcoded values in tests)
 # ============================================================================
@@ -218,7 +220,9 @@ class TestTrainerFactory:
             mock_get_settings.assert_called_once()
             assert factory._settings is mock_settings
 
-    def test_create_hrm_trainer_default(self, mock_settings, mock_logger, trainer_config, mock_hrm_agent, mock_optimizer, mock_loss_fn):
+    def test_create_hrm_trainer_default(
+        self, mock_settings, mock_logger, trainer_config, mock_hrm_agent, mock_optimizer, mock_loss_fn
+    ):
         """Test creating HRM trainer with default configuration."""
         import sys
 
@@ -249,7 +253,9 @@ class TestTrainerFactory:
             # Verify logging occurred
             mock_logger.info.assert_called()
 
-    def test_create_trm_trainer_default(self, mock_settings, mock_logger, trainer_config, mock_trm_agent, mock_optimizer, mock_loss_fn):
+    def test_create_trm_trainer_default(
+        self, mock_settings, mock_logger, trainer_config, mock_trm_agent, mock_optimizer, mock_loss_fn
+    ):
         """Test creating TRM trainer with default configuration."""
         import sys
 
@@ -697,10 +703,13 @@ class TestMetricsFactory:
         mock_tracker_module.BraintrustTracker = MagicMock()
         mock_tracker_module.WandBTracker = MagicMock()
 
-        with patch.dict(sys.modules, {
-            "src.training.performance_monitor": mock_monitor_module,
-            "src.training.experiment_tracker": mock_tracker_module,
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "src.training.performance_monitor": mock_monitor_module,
+                "src.training.experiment_tracker": mock_tracker_module,
+            },
+        ):
             collector = factory.create_metrics_collector(
                 include_performance=True,
                 include_experiment_tracking=True,
@@ -1039,11 +1048,14 @@ class TestComponentRegistry:
         mock_loader_module.CombinedDatasetLoader = MagicMock()
 
         # Create some cached components
-        with patch.dict(sys.modules, {
-            "src.training.replay_buffer": mock_buffer_module,
-            "src.training.performance_monitor": mock_monitor_module,
-            "src.data.dataset_loader": mock_loader_module,
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "src.training.replay_buffer": mock_buffer_module,
+                "src.training.performance_monitor": mock_monitor_module,
+                "src.data.dataset_loader": mock_loader_module,
+            },
+        ):
             registry.trainers.create_replay_buffer(use_singleton=True)
             registry.metrics.create_performance_monitor(use_singleton=True)
             registry.data_loaders.create_dabstep_loader(use_singleton=True)

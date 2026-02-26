@@ -90,7 +90,7 @@ class UnifiedTrainingOrchestrator:
         # Training state
         self.current_iteration = 0
         self.best_win_rate = 0.0
-        self.best_model_path = None
+        self.best_model_path: Path | None = None
 
         # Setup paths
         self._setup_paths()
@@ -321,7 +321,7 @@ class UnifiedTrainingOrchestrator:
             **memory_info,
         )
 
-        metrics = {}
+        metrics: dict[str, Any] = {}
 
         with LogContext(iteration=iteration, phase="training_iteration"):
             # Phase 1: Self-play data generation
@@ -719,7 +719,7 @@ class UnifiedTrainingOrchestrator:
             if p.grad is not None:
                 param_norm = p.grad.data.norm(2)
                 total_norm += param_norm.item() ** 2
-        return total_norm**0.5
+        return float(total_norm**0.5)
 
     async def _train_hrm_agent(self) -> dict[str, float]:
         """

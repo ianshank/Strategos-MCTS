@@ -224,7 +224,7 @@ def logged(
                 elif cfg.log_duration:
                     log.log(cfg.exit_level, f"[EXIT] {func_name} ({duration_ms:.2f}ms)")
 
-                return result
+                return result  # type: ignore[no-any-return]
 
             except Exception as e:
                 duration_ms = (time.time() - start_time) * 1000
@@ -238,7 +238,7 @@ def logged(
 
         if is_async:
             return async_wrapper  # type: ignore
-        return sync_wrapper  # type: ignore
+        return sync_wrapper
 
     return decorator
 
@@ -280,9 +280,7 @@ def timed(
             finally:
                 duration_ms = (time.perf_counter() - start) * 1000
                 if duration_ms > threshold:
-                    logger.warning(
-                        f"Slow operation: {name} took {duration_ms:.2f}ms (threshold: {threshold}ms)"
-                    )
+                    logger.warning(f"Slow operation: {name} took {duration_ms:.2f}ms (threshold: {threshold}ms)")
                 else:
                     logger.debug(f"Timing: {name} took {duration_ms:.2f}ms")
 
@@ -294,15 +292,13 @@ def timed(
             finally:
                 duration_ms = (time.perf_counter() - start) * 1000
                 if duration_ms > threshold:
-                    logger.warning(
-                        f"Slow operation: {name} took {duration_ms:.2f}ms (threshold: {threshold}ms)"
-                    )
+                    logger.warning(f"Slow operation: {name} took {duration_ms:.2f}ms (threshold: {threshold}ms)")
                 else:
                     logger.debug(f"Timing: {name} took {duration_ms:.2f}ms")
 
         if is_async:
             return async_wrapper  # type: ignore
-        return sync_wrapper  # type: ignore
+        return sync_wrapper
 
     return decorator
 
@@ -348,14 +344,11 @@ def retry(
                 except exceptions as e:
                     last_exception = e
                     if attempt == max_attempts:
-                        logger.error(
-                            f"All {max_attempts} attempts failed for {func.__name__}: {e}"
-                        )
+                        logger.error(f"All {max_attempts} attempts failed for {func.__name__}: {e}")
                         raise
 
                     logger.warning(
-                        f"Attempt {attempt}/{max_attempts} failed for {func.__name__}: {e}. "
-                        f"Retrying in {delay:.1f}s..."
+                        f"Attempt {attempt}/{max_attempts} failed for {func.__name__}: {e}. Retrying in {delay:.1f}s..."
                     )
 
                     if on_retry:
@@ -377,14 +370,11 @@ def retry(
                 except exceptions as e:
                     last_exception = e
                     if attempt == max_attempts:
-                        logger.error(
-                            f"All {max_attempts} attempts failed for {func.__name__}: {e}"
-                        )
+                        logger.error(f"All {max_attempts} attempts failed for {func.__name__}: {e}")
                         raise
 
                     logger.warning(
-                        f"Attempt {attempt}/{max_attempts} failed for {func.__name__}: {e}. "
-                        f"Retrying in {delay:.1f}s..."
+                        f"Attempt {attempt}/{max_attempts} failed for {func.__name__}: {e}. Retrying in {delay:.1f}s..."
                     )
 
                     if on_retry:
@@ -397,7 +387,7 @@ def retry(
 
         if is_async:
             return async_wrapper  # type: ignore
-        return sync_wrapper  # type: ignore
+        return sync_wrapper
 
     return decorator
 
@@ -475,7 +465,7 @@ def cached(
         wrapper.cache_clear = lambda: cache.clear()  # type: ignore
         wrapper.cache_info = lambda: {"size": len(cache), "max_size": max_size, "ttl": ttl}  # type: ignore
 
-        return wrapper  # type: ignore
+        return wrapper
 
     return decorator
 
@@ -505,11 +495,11 @@ def debug_on_error(
 
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @functools.wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:  # type: ignore[return]
             try:
                 return func(*args, **kwargs)
             except Exception as e:
-                error_context = {
+                error_context: dict[str, Any] = {
                     "function": func.__name__,
                     "exception": type(e).__name__,
                     "message": str(e),
@@ -529,10 +519,7 @@ def debug_on_error(
                             # Mask sensitive data
                             safe_locals = {}
                             for k, v in local_vars.items():
-                                if any(
-                                    s in k.lower()
-                                    for s in ["password", "secret", "token", "key"]
-                                ):
+                                if any(s in k.lower() for s in ["password", "secret", "token", "key"]):
                                     safe_locals[k] = "***MASKED***"
                                 else:
                                     try:
@@ -551,7 +538,7 @@ def debug_on_error(
                 if reraise:
                     raise
 
-        return wrapper  # type: ignore
+        return wrapper
 
     return decorator
 
@@ -602,7 +589,7 @@ def validate_args(**validators: Callable[[Any], bool]) -> Callable[[Callable[P, 
 
             return func(*args, **kwargs)
 
-        return wrapper  # type: ignore
+        return wrapper
 
     return decorator
 

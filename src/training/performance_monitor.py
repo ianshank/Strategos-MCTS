@@ -358,7 +358,7 @@ class TimingContext:
     def __init__(self, monitor: PerformanceMonitor, stage: str):
         self.monitor = monitor
         self.stage = stage
-        self.start_time = None
+        self.start_time: float | None = None
 
     def __enter__(self):
         self.start_time = time.perf_counter()

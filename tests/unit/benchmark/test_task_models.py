@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark")
+
 from src.benchmark.tasks.models import BenchmarkTask, TaskCategory, TaskComplexity
 from src.benchmark.tasks.registry import BenchmarkTaskRegistry
 from src.benchmark.tasks.task_sets import (

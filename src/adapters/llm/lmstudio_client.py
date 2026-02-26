@@ -12,6 +12,8 @@ from typing import Any
 
 import httpx
 
+from src.config.constants import DEFAULT_LMSTUDIO_URL
+
 from .base import BaseLLMClient, LLMResponse
 from .exceptions import (
     LLMClientError,
@@ -38,7 +40,7 @@ class LMStudioClient(BaseLLMClient):
     """
 
     PROVIDER_NAME = "lmstudio"
-    DEFAULT_BASE_URL = "http://localhost:1234/v1"
+    DEFAULT_BASE_URL = DEFAULT_LMSTUDIO_URL
     DEFAULT_MODEL = "local-model"  # LM Studio uses the loaded model
 
     def __init__(
@@ -104,7 +106,7 @@ class LMStudioClient(BaseLLMClient):
         try:
             client = await self._get_client()
             response = await client.get("/models")
-            return response.status_code == 200
+            return bool(response.status_code == 200)
         except Exception:
             return False
 
@@ -120,7 +122,7 @@ class LMStudioClient(BaseLLMClient):
             response = await client.get("/models")
             if response.status_code == 200:
                 data = response.json()
-                return data.get("data", [])
+                return list(data.get("data", []))
             return []
         except Exception as e:
             logger.warning(f"Failed to list models: {e}")
@@ -173,7 +175,7 @@ class LMStudioClient(BaseLLMClient):
         await self._apply_rate_limit()
 
         if stream:
-            return self._generate_stream(
+            return await self._generate_stream(
                 messages=messages,
                 prompt=prompt,
                 temperature=temperature,
@@ -230,7 +232,7 @@ class LMStudioClient(BaseLLMClient):
                 payload[key] = kwargs[key]
 
         # Retry logic for local server
-        last_error = None
+        last_error: LLMClientError | None = None
         for attempt in range(self.max_retries):
             try:
                 response = await client.post("/chat/completions", json=payload)
@@ -306,7 +308,7 @@ class LMStudioClient(BaseLLMClient):
             if key in kwargs:
                 payload[key] = kwargs[key]
 
-        async def stream_generator():
+        async def stream_generator() -> AsyncIterator[str]:
             try:
                 async with client.stream("POST", "/chat/completions", json=payload) as response:
                     if response.status_code != 200:

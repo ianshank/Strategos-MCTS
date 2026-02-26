@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
 from src.framework.mcts.llm_guided.data_collector import (
     EpisodeMetadata,
     TrainingDataCollector,

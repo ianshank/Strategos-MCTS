@@ -238,7 +238,9 @@ class AgentFactory:
             latent_dim=latent_dim if latent_dim is not None else self.settings.TRM_LATENT_DIM,
             hidden_dim=hidden_dim if hidden_dim is not None else self.settings.TRM_HIDDEN_DIM,
             num_recursions=num_recursions if num_recursions is not None else self.settings.TRM_NUM_RECURSIONS,
-            convergence_threshold=convergence_threshold if convergence_threshold is not None else self.settings.TRM_CONVERGENCE_THRESHOLD,
+            convergence_threshold=convergence_threshold
+            if convergence_threshold is not None
+            else self.settings.TRM_CONVERGENCE_THRESHOLD,
             deep_supervision=deep_supervision if deep_supervision is not None else True,
             **{k: v for k, v in config.items() if k in TRMConfig.__dataclass_fields__},
         )
@@ -311,9 +313,7 @@ class MCTSEngineFactory:
             kwargs.update(config)
 
         self.logger.info(
-            f"Creating MCTS engine: seed={seed}, "
-            f"exploration_weight={exploration_weight}, "
-            f"preset={config_preset}"
+            f"Creating MCTS engine: seed={seed}, exploration_weight={exploration_weight}, preset={config_preset}"
         )
 
         return MCTSEngine(
@@ -428,10 +428,7 @@ class MetaControllerFactory:
         elif controller_type == "assembly":
             return self._create_assembly_router(**kwargs)
         else:
-            raise ValueError(
-                f"Unknown controller type: {controller_type}. "
-                f"Valid types: rnn, bert, hybrid, assembly"
-            )
+            raise ValueError(f"Unknown controller type: {controller_type}. Valid types: rnn, bert, hybrid, assembly")
 
     def _create_rnn_controller(
         self,
@@ -591,8 +588,7 @@ class HybridAgentFactory:
         )
 
         self.logger.info(
-            f"Creating hybrid agent: mode={config.mode}, "
-            f"policy_threshold={config.policy_confidence_threshold}"
+            f"Creating hybrid agent: mode={config.mode}, policy_threshold={config.policy_confidence_threshold}"
         )
 
         return HybridAgent(

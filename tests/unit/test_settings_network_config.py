@@ -8,6 +8,10 @@ Tests the new settings for:
 - Circuit breaker settings
 """
 
+import pytest
+
+pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark")
+
 
 class TestLLMTimeoutSettings:
     """Test LLM provider-specific timeout settings."""

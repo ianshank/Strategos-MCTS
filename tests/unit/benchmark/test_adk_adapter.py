@@ -12,6 +12,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark")
+
 from src.benchmark.adapters.adk_adapter import (
     _ADK_APP_NAME,
     _ADK_USER_ID,

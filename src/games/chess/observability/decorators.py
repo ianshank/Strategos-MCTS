@@ -52,12 +52,8 @@ def traced_move_selection(func: F) -> F:
             logger.debug(
                 "Move selection started",
                 fen=truncate_fen(state.fen),
-                phase=(
-                    state.get_game_phase().value if hasattr(state, "get_game_phase") else "unknown"
-                ),
-                legal_moves=(
-                    len(state.get_legal_actions()) if hasattr(state, "get_legal_actions") else 0
-                ),
+                phase=(state.get_game_phase().value if hasattr(state, "get_game_phase") else "unknown"),
+                legal_moves=(len(state.get_legal_actions()) if hasattr(state, "get_legal_actions") else 0),
                 correlation_id=correlation_id,
             )
 
@@ -73,7 +69,11 @@ def traced_move_selection(func: F) -> F:
                     move=result.best_move,
                     confidence=getattr(result, "confidence", 0.0),
                     routing=(
-                        getattr(result.routing_decision, "primary_agent", None).value
+                        (
+                            pa.value
+                            if (pa := getattr(result.routing_decision, "primary_agent", None)) is not None
+                            else "unknown"
+                        )
                         if hasattr(result, "routing_decision")
                         else "unknown"
                     ),

@@ -31,6 +31,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from src.config.constants import DEFAULT_SERVER_HOST
 from src.config.settings import get_settings
 
 # Configure logging
@@ -201,7 +202,7 @@ async def lifespan(app: FastAPI):
                 logger.info("Framework service initialized successfully")
             else:
                 logger.warning("Framework service initialization deferred")
-        except Exception as e:
+        except Exception as e:  # Broad catch: API stability requires catching unexpected errors
             logger.error(f"Failed to initialize framework service: {e}")
             framework_service = None
     else:
@@ -293,7 +294,7 @@ async def metrics_middleware(request: Request, call_next):
     try:
         response = await call_next(request)
         status = response.status_code
-    except Exception:
+    except Exception:  # Broad catch: API stability requires catching unexpected errors
         status = 500
         raise
     finally:
@@ -325,9 +326,7 @@ async def verify_api_key(x_api_key: str = Header(..., description="API key for a
             ERROR_COUNT.labels(error_type="rate_limit").inc()
         settings = get_settings()
         retry_after = e.retry_after_seconds or settings.RATE_LIMIT_RETRY_AFTER_SECONDS
-        raise HTTPException(
-            status_code=429, detail=e.user_message, headers={"Retry-After": str(retry_after)}
-        ) from e
+        raise HTTPException(status_code=429, detail=e.user_message, headers={"Retry-After": str(retry_after)}) from e
 
 
 # Exception handlers
@@ -460,7 +459,7 @@ async def process_query(request: QueryRequest, client_info: ClientInfo = Depends
                 use_mcts=request.use_mcts,
                 thread_id=request.thread_id,
             )
-        except Exception as e:
+        except Exception as e:  # Broad catch: API stability requires catching unexpected errors
             if PROMETHEUS_AVAILABLE:
                 ERROR_COUNT.labels(error_type="validation").inc()
             raise HTTPException(status_code=400, detail=f"Validation failed: {str(e)}") from e
@@ -519,7 +518,7 @@ async def process_query(request: QueryRequest, client_info: ClientInfo = Depends
             detail="Framework temporarily unavailable. Please try again.",
         ) from e
 
-    except Exception as e:
+    except Exception as e:  # Broad catch: API stability requires catching unexpected errors
         if PROMETHEUS_AVAILABLE:
             ERROR_COUNT.labels(error_type="internal").inc()
         logger.exception(f"Unexpected error processing query: {e}")
@@ -557,7 +556,7 @@ if __name__ == "__main__":
 
     uvicorn.run(
         "src.api.rest_server:app",
-        host="0.0.0.0",
+        host=DEFAULT_SERVER_HOST,
         port=8000,
         reload=False,
         workers=4,

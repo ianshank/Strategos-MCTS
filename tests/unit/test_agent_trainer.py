@@ -280,9 +280,7 @@ class TestHRMTrainer:
         return optimizer
 
     @pytest.mark.asyncio
-    async def test_train_step_returns_metrics(
-        self, mock_hrm_agent, mock_loss_fn, mock_optimizer
-    ):
+    async def test_train_step_returns_metrics(self, mock_hrm_agent, mock_loss_fn, mock_optimizer):
         """Test that train_step returns proper metrics."""
         config = HRMTrainingConfig(batch_size=8)
         trainer = HRMTrainer(
@@ -351,9 +349,7 @@ class TestTRMTrainer:
         return optimizer
 
     @pytest.mark.asyncio
-    async def test_train_step_returns_metrics(
-        self, mock_trm_agent, mock_loss_fn, mock_optimizer
-    ):
+    async def test_train_step_returns_metrics(self, mock_trm_agent, mock_loss_fn, mock_optimizer):
         """Test that train_step returns proper metrics."""
         config = TRMTrainingConfig(batch_size=8)
         trainer = TRMTrainer(
@@ -446,6 +442,7 @@ class TestIntegration:
     @pytest.mark.asyncio
     async def test_hrm_training_epoch_with_dummy_data(self):
         """Test HRM training with dummy data loader."""
+
         # Create a simple HRM-like model for testing
         class SimpleHRM(nn.Module):
             def __init__(self):

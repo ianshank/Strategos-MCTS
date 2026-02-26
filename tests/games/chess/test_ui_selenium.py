@@ -119,6 +119,7 @@ def driver(config: SeleniumTestConfig) -> Generator[WebDriver, None, None]:
 
             try:
                 from webdriver_manager.chrome import ChromeDriverManager
+
                 service = ChromeService(ChromeDriverManager().install())
                 driver_instance = webdriver.Chrome(service=service, options=options)
             except Exception:
@@ -132,6 +133,7 @@ def driver(config: SeleniumTestConfig) -> Generator[WebDriver, None, None]:
 
             try:
                 from webdriver_manager.firefox import GeckoDriverManager
+
                 service = FirefoxService(GeckoDriverManager().install())
                 driver_instance = webdriver.Firefox(service=service, options=options)
             except Exception:
@@ -189,12 +191,14 @@ class ChessPage:
     def board_container(self) -> WebElement:
         """Get the chess board container."""
         from selenium.webdriver.common.by import By
+
         return self.driver.find_element(By.ID, "board-container")
 
     @property
     def move_input(self) -> WebElement:
         """Get the move input field."""
         from selenium.webdriver.common.by import By
+
         # Gradio wraps inputs, find by parent ID
         container = self.driver.find_element(By.ID, "move-input")
         try:
@@ -206,24 +210,28 @@ class ChessPage:
     def move_button(self) -> WebElement:
         """Get the make move button."""
         from selenium.webdriver.common.by import By
+
         return self.driver.find_element(By.ID, "move-btn")
 
     @property
     def new_game_button(self) -> WebElement:
         """Get the new game button."""
         from selenium.webdriver.common.by import By
+
         return self.driver.find_element(By.ID, "new-game-btn")
 
     @property
     def undo_button(self) -> WebElement:
         """Get the undo button."""
         from selenium.webdriver.common.by import By
+
         return self.driver.find_element(By.ID, "undo-btn")
 
     @property
     def status_display(self) -> WebElement:
         """Get the status display."""
         from selenium.webdriver.common.by import By
+
         container = self.driver.find_element(By.ID, "status-display")
         return container.find_element(By.TAG_NAME, "textarea")
 
@@ -231,6 +239,7 @@ class ChessPage:
     def history_display(self) -> WebElement:
         """Get the move history display."""
         from selenium.webdriver.common.by import By
+
         container = self.driver.find_element(By.ID, "history-display")
         return container.find_element(By.TAG_NAME, "textarea")
 
@@ -238,12 +247,14 @@ class ChessPage:
     def analysis_display(self) -> WebElement:
         """Get the AI analysis display."""
         from selenium.webdriver.common.by import By
+
         return self.driver.find_element(By.ID, "analysis-display")
 
     @property
     def color_select_white(self) -> WebElement:
         """Get the white color radio button."""
         from selenium.webdriver.common.by import By
+
         container = self.driver.find_element(By.ID, "color-select")
         labels = container.find_elements(By.TAG_NAME, "label")
         for label in labels:
@@ -255,6 +266,7 @@ class ChessPage:
     def color_select_black(self) -> WebElement:
         """Get the black color radio button."""
         from selenium.webdriver.common.by import By
+
         container = self.driver.find_element(By.ID, "color-select")
         labels = container.find_elements(By.TAG_NAME, "label")
         for label in labels:
@@ -284,6 +296,7 @@ class ChessPage:
     def submit_move_with_enter(self, move: str) -> None:
         """Enter a move and submit with Enter key."""
         from selenium.webdriver.common.keys import Keys
+
         self.enter_move(move)
         self.move_input.send_keys(Keys.RETURN)
         self._wait_for_response()
@@ -492,6 +505,7 @@ class TestGameControls:
     def test_export_pgn_button_exists(self, chess_page: ChessPage) -> None:
         """Test that Export PGN button exists."""
         from selenium.webdriver.common.by import By
+
         btn = chess_page.driver.find_element(By.ID, "export-pgn-btn")
         assert btn.is_displayed()
 
@@ -692,14 +706,13 @@ class TestContinuousLearning:
 ChessPage.get_scorecard_element = lambda self: self._get_element_by_id("scorecard-display")
 ChessPage.get_scorecard_html = lambda self: (
     self.driver.find_element(
-        __import__("selenium.webdriver.common.by", fromlist=["By"]).By.ID,
-        "scorecard-display"
-    ).get_attribute("innerHTML") or ""
+        __import__("selenium.webdriver.common.by", fromlist=["By"]).By.ID, "scorecard-display"
+    ).get_attribute("innerHTML")
+    or ""
 )
 ChessPage.reset_score_button = property(
     lambda self: self.driver.find_element(
-        __import__("selenium.webdriver.common.by", fromlist=["By"]).By.ID,
-        "reset-score-btn"
+        __import__("selenium.webdriver.common.by", fromlist=["By"]).By.ID, "reset-score-btn"
     )
 )
 ChessPage.get_learning_tab = lambda self: self._find_tab("Continuous Learning")
@@ -716,12 +729,14 @@ ChessPage.get_refresh_button = lambda self: self._get_element_by_id("refresh-btn
 def _get_element_by_id(self, element_id: str) -> WebElement:
     """Get element by ID."""
     from selenium.webdriver.common.by import By
+
     return self.driver.find_element(By.ID, element_id)
 
 
 def _find_tab(self, tab_name: str) -> WebElement:
     """Find a tab by name."""
     from selenium.webdriver.common.by import By
+
     tabs = self.driver.find_elements(By.CSS_SELECTOR, "[role='tab'], .tab-nav button")
     for tab in tabs:
         if tab_name.lower() in tab.text.lower():

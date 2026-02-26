@@ -7,6 +7,7 @@ prerequisite relationships between concepts.
 
 import re
 from dataclasses import dataclass, field
+from typing import Any
 
 import networkx as nx
 
@@ -101,7 +102,7 @@ class ConceptExtractor:
         concepts = self._filter_and_score(candidates, text)
 
         # Step 3: Limit to max_concepts
-        concepts = sorted(concepts, key=lambda c: c.importance, reverse=True)[:self.max_concepts]
+        concepts = sorted(concepts, key=lambda c: c.importance, reverse=True)[: self.max_concepts]
 
         return concepts
 
@@ -128,12 +129,7 @@ class ConceptExtractor:
 
         # Add nodes
         for concept in concepts:
-            graph.add_node(
-                concept.term,
-                type=concept.type,
-                frequency=concept.frequency,
-                importance=concept.importance
-            )
+            graph.add_node(concept.term, type=concept.type, frequency=concept.frequency, importance=concept.importance)
 
         # Add dependency edges based on:
         # 1. Explicit dependencies
@@ -145,21 +141,25 @@ class ConceptExtractor:
             # Explicit dependencies
             for dep in concept.dependencies:
                 if dep in [c.term for c in concepts]:
-                    graph.add_edge(dep, concept.term, type='explicit')
+                    graph.add_edge(dep, concept.term, type="explicit")
 
             # Infer dependencies from domain knowledge
             prerequisite_concepts = self._infer_prerequisites(concept.term)
             for prereq in prerequisite_concepts:
-                if prereq in [c.term for c in concepts] and prereq != concept.term:
-                    if not graph.has_edge(prereq, concept.term):
-                        graph.add_edge(prereq, concept.term, type='inferred')
+                if (
+                    prereq in [c.term for c in concepts]
+                    and prereq != concept.term
+                    and not graph.has_edge(prereq, concept.term)
+                ):
+                    graph.add_edge(prereq, concept.term, type="inferred")
 
             # Sequential dependencies (weaker)
             if i > 0:
                 prev_concept = concepts[i - 1]
-                if self._are_related(prev_concept.term, concept.term):
-                    if not graph.has_edge(prev_concept.term, concept.term):
-                        graph.add_edge(prev_concept.term, concept.term, type='sequential')
+                if self._are_related(prev_concept.term, concept.term) and not graph.has_edge(
+                    prev_concept.term, concept.term
+                ):
+                    graph.add_edge(prev_concept.term, concept.term, type="sequential")
 
         # Ensure DAG (remove cycles)
         if not nx.is_directed_acyclic_graph(graph):
@@ -186,40 +186,38 @@ class ConceptExtractor:
             # Draw nodes
             node_colors = []
             for node in graph.nodes():
-                node_type = graph.nodes[node].get('type', 'noun')
-                if node_type == 'verb':
-                    node_colors.append('lightblue')
-                elif node_type == 'technical_term':
-                    node_colors.append('lightcoral')
+                node_type = graph.nodes[node].get("type", "noun")
+                if node_type == "verb":
+                    node_colors.append("lightblue")
+                elif node_type == "technical_term":
+                    node_colors.append("lightcoral")
                 else:
-                    node_colors.append('lightgreen')
+                    node_colors.append("lightgreen")
 
             nx.draw_networkx_nodes(graph, pos, node_color=node_colors, node_size=1000, alpha=0.9)
 
             # Draw edges
             edge_colors = []
             for u, v in graph.edges():
-                edge_type = graph[u][v].get('type', 'inferred')
-                if edge_type == 'explicit':
-                    edge_colors.append('red')
-                elif edge_type == 'sequential':
-                    edge_colors.append('gray')
+                edge_type = graph[u][v].get("type", "inferred")
+                if edge_type == "explicit":
+                    edge_colors.append("red")
+                elif edge_type == "sequential":
+                    edge_colors.append("gray")
                 else:
-                    edge_colors.append('black')
+                    edge_colors.append("black")
 
-            nx.draw_networkx_edges(
-                graph, pos, edge_color=edge_colors, arrows=True, arrowsize=20, alpha=0.6
-            )
+            nx.draw_networkx_edges(graph, pos, edge_color=edge_colors, arrows=True, arrowsize=20, alpha=0.6)
 
             # Draw labels
-            nx.draw_networkx_labels(graph, pos, font_size=10, font_weight='bold')
+            nx.draw_networkx_labels(graph, pos, font_size=10, font_weight="bold")
 
             plt.title("Concept Dependency Graph", fontsize=14)
-            plt.axis('off')
+            plt.axis("off")
             plt.tight_layout()
 
             if output_path:
-                plt.savefig(output_path, dpi=150, bbox_inches='tight')
+                plt.savefig(output_path, dpi=150, bbox_inches="tight")
             else:
                 plt.show()
 
@@ -265,12 +263,12 @@ class ConceptExtractor:
     def _extract_nouns(self, text: str) -> list[str]:
         """Extract nouns using simple patterns."""
         # Common noun patterns
-        words = re.findall(r'\b[a-z]+\b', text.lower())
+        words = re.findall(r"\b[a-z]+\b", text.lower())
 
         # Filter using noun indicators (can be enhanced with POS tagging)
         nouns = []
         for word in words:
-            if len(word) > 2 and word in self.domain_library.get('nouns', set()) or len(word) > 3:
+            if len(word) > 2 and word in self.domain_library.get("nouns", set()) or len(word) > 3:
                 nouns.append(word)
 
         return nouns
@@ -279,8 +277,8 @@ class ConceptExtractor:
         """Extract verbs using simple patterns."""
         # Common verb endings
         verb_patterns = [
-            r'\b(\w+(?:ize|ise|ate|ify|en))\b',  # -ize, -ate, -ify endings
-            r'\b(create|build|design|implement|optimize|analyze|solve|find|get|set|use|make)\b',
+            r"\b(\w+(?:ize|ise|ate|ify|en))\b",  # -ize, -ate, -ify endings
+            r"\b(create|build|design|implement|optimize|analyze|solve|find|get|set|use|make)\b",
         ]
 
         verbs = set()
@@ -295,8 +293,8 @@ class ConceptExtractor:
         tech_terms = set()
 
         # Check domain library
-        domain_terms = self.domain_library.get('technical_terms', set())
-        words = re.findall(r'\b\w+\b', text.lower())
+        domain_terms = self.domain_library.get("technical_terms", set())
+        words = re.findall(r"\b\w+\b", text.lower())
 
         for word in words:
             if word in domain_terms:
@@ -305,7 +303,7 @@ class ConceptExtractor:
         # Multi-word technical terms (bigrams/trigrams)
         tokens = text.lower().split()
         for i in range(len(tokens) - 1):
-            bigram = f"{tokens[i]} {tokens[i+1]}"
+            bigram = f"{tokens[i]} {tokens[i + 1]}"
             if bigram in domain_terms:
                 tech_terms.add(bigram)
 
@@ -314,9 +312,9 @@ class ConceptExtractor:
     def _extract_entities(self, text: str) -> list[str]:
         """Extract named entities (basic)."""
         # Capitalized words (basic NER)
-        entities = re.findall(r'\b[A-Z][a-z]+\b', text)
+        entities = re.findall(r"\b[A-Z][a-z]+\b", text)
         # Filter out common words at sentence start
-        common_starts = {'The', 'A', 'An', 'This', 'That', 'These', 'Those', 'What', 'How', 'Why'}
+        common_starts = {"The", "A", "An", "This", "That", "These", "Those", "What", "How", "Why"}
         entities = [e for e in entities if e not in common_starts]
         return entities
 
@@ -359,10 +357,10 @@ class ConceptExtractor:
 
         # Type bonus
         type_bonuses = {
-            'technical_term': 0.3,
-            'verb': 0.2,
-            'entity': 0.2,
-            'noun': 0.1,
+            "technical_term": 0.3,
+            "verb": 0.2,
+            "entity": 0.2,
+            "noun": 0.1,
         }
         score += type_bonuses.get(concept.type, 0.0)
 
@@ -373,7 +371,7 @@ class ConceptExtractor:
             score += 0.2
 
         # Domain relevance
-        if concept.term in self.domain_library.get('important_terms', set()):
+        if concept.term in self.domain_library.get("important_terms", set()):
             score += 0.2
 
         return min(score, 1.0)
@@ -387,7 +385,7 @@ class ConceptExtractor:
             if term in word:
                 start = max(0, i - window)
                 end = min(len(words), i + window + 1)
-                context = ' '.join(words[start:end])
+                context = " ".join(words[start:end])
                 contexts.append(context)
 
         return contexts
@@ -397,7 +395,7 @@ class ConceptExtractor:
         prerequisites = []
 
         # Domain-specific prerequisite rules
-        prereq_rules = self.domain_library.get('prerequisites', {})
+        prereq_rules = self.domain_library.get("prerequisites", {})
 
         for prereq in prereq_rules.get(term, []):
             prerequisites.append(prereq)
@@ -437,44 +435,114 @@ class ConceptExtractor:
         """Load domain-specific concept library."""
         # Default libraries for different domains
         libraries = {
-            'software': {
-                'nouns': {'api', 'database', 'server', 'client', 'query', 'function', 'class',
-                          'method', 'algorithm', 'data', 'code', 'system', 'architecture',
-                          'service', 'endpoint', 'request', 'response', 'cache', 'session'},
-                'technical_terms': {'api', 'database', 'microservices', 'rest', 'sql', 'nosql',
-                                    'cache', 'queue', 'asynchronous', 'synchronous', 'http', 'https',
-                                    'authentication', 'authorization', 'crud', 'orm', 'framework'},
-                'prerequisites': {
-                    'query': ['database'],
-                    'endpoint': ['api'],
-                    'microservices': ['service', 'api'],
-                    'orm': ['database', 'sql'],
-                    'cache': ['database'],
+            "software": {
+                "nouns": {
+                    "api",
+                    "database",
+                    "server",
+                    "client",
+                    "query",
+                    "function",
+                    "class",
+                    "method",
+                    "algorithm",
+                    "data",
+                    "code",
+                    "system",
+                    "architecture",
+                    "service",
+                    "endpoint",
+                    "request",
+                    "response",
+                    "cache",
+                    "session",
                 },
-                'important_terms': {'api', 'database', 'architecture', 'system', 'algorithm'},
-            },
-            'data_science': {
-                'nouns': {'data', 'model', 'feature', 'prediction', 'algorithm', 'training',
-                          'dataset', 'sample', 'variable', 'parameter', 'metric', 'accuracy',
-                          'precision', 'recall', 'regression', 'classification'},
-                'technical_terms': {'machine learning', 'deep learning', 'neural network',
-                                    'regression', 'classification', 'clustering', 'supervised',
-                                    'unsupervised', 'overfitting', 'cross-validation', 'hyperparameter'},
-                'prerequisites': {
-                    'model': ['data', 'algorithm'],
-                    'prediction': ['model'],
-                    'training': ['data', 'model'],
-                    'cross-validation': ['training', 'model'],
+                "technical_terms": {
+                    "api",
+                    "database",
+                    "microservices",
+                    "rest",
+                    "sql",
+                    "nosql",
+                    "cache",
+                    "queue",
+                    "asynchronous",
+                    "synchronous",
+                    "http",
+                    "https",
+                    "authentication",
+                    "authorization",
+                    "crud",
+                    "orm",
+                    "framework",
                 },
-                'important_terms': {'model', 'data', 'algorithm', 'prediction', 'training'},
+                "prerequisites": {
+                    "query": ["database"],
+                    "endpoint": ["api"],
+                    "microservices": ["service", "api"],
+                    "orm": ["database", "sql"],
+                    "cache": ["database"],
+                },
+                "important_terms": {"api", "database", "architecture", "system", "algorithm"},
             },
-            'general': {
-                'nouns': {'problem', 'solution', 'method', 'approach', 'result', 'analysis',
-                          'process', 'system', 'component', 'structure', 'pattern'},
-                'technical_terms': set(),
-                'prerequisites': {},
-                'important_terms': {'problem', 'solution', 'method', 'system'},
+            "data_science": {
+                "nouns": {
+                    "data",
+                    "model",
+                    "feature",
+                    "prediction",
+                    "algorithm",
+                    "training",
+                    "dataset",
+                    "sample",
+                    "variable",
+                    "parameter",
+                    "metric",
+                    "accuracy",
+                    "precision",
+                    "recall",
+                    "regression",
+                    "classification",
+                },
+                "technical_terms": {
+                    "machine learning",
+                    "deep learning",
+                    "neural network",
+                    "regression",
+                    "classification",
+                    "clustering",
+                    "supervised",
+                    "unsupervised",
+                    "overfitting",
+                    "cross-validation",
+                    "hyperparameter",
+                },
+                "prerequisites": {
+                    "model": ["data", "algorithm"],
+                    "prediction": ["model"],
+                    "training": ["data", "model"],
+                    "cross-validation": ["training", "model"],
+                },
+                "important_terms": {"model", "data", "algorithm", "prediction", "training"},
+            },
+            "general": {
+                "nouns": {
+                    "problem",
+                    "solution",
+                    "method",
+                    "approach",
+                    "result",
+                    "analysis",
+                    "process",
+                    "system",
+                    "component",
+                    "structure",
+                    "pattern",
+                },
+                "technical_terms": set(),
+                "prerequisites": {},
+                "important_terms": {"problem", "solution", "method", "system"},
             },
         }
 
-        self.domain_library = libraries.get(self.domain, libraries['general'])
+        self.domain_library: dict[str, Any] = libraries.get(self.domain, libraries["general"])

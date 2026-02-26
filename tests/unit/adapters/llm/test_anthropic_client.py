@@ -12,8 +12,11 @@ from __future__ import annotations
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
 import pytest
+
+pytest.importorskip("httpx", reason="httpx required for HTTP client tests")
+
+import httpx
 
 from src.adapters.llm.anthropic_client import ANTHROPIC_MODELS, AnthropicClient
 from src.adapters.llm.exceptions import (
@@ -190,9 +193,7 @@ class TestMessageConversion:
 
     def test_convert_tool_result_message(self, client: AnthropicClient) -> None:
         """Test converting tool result message."""
-        messages = [
-            {"role": "tool", "tool_call_id": "call_123", "content": "Result: 42"}
-        ]
+        messages = [{"role": "tool", "tool_call_id": "call_123", "content": "Result: 42"}]
 
         system, converted = client._convert_messages_to_anthropic(messages)
 
@@ -238,9 +239,7 @@ class TestToolConversion:
                     "description": "Get current weather",
                     "parameters": {
                         "type": "object",
-                        "properties": {
-                            "location": {"type": "string"}
-                        },
+                        "properties": {"location": {"type": "string"}},
                     },
                 },
             }

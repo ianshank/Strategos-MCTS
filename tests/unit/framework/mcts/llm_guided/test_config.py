@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
 from src.config.settings import LLMProvider
 from src.framework.mcts.llm_guided.config import (
     BALANCED_LLM_MCTS_CONFIG,

@@ -13,8 +13,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    import logging
-
     from src.games.chess.ensemble_agent import ChessEnsembleAgent
 
 from src.games.chess.constants import get_stockfish_executables
@@ -126,13 +124,13 @@ class StockfishAdapter:
     def __init__(
         self,
         config: StockfishConfig | None = None,
-        logger: StructuredLogger | logging.Logger | None = None,
+        logger: StructuredLogger | None = None,
     ) -> None:
         """Initialize the Stockfish adapter.
 
         Args:
             config: Stockfish configuration
-            logger: Optional logger instance (StructuredLogger preferred)
+            logger: Optional logger instance
         """
         self._config = config or StockfishConfig()
         self._logger = logger or get_structured_logger("chess.engines.stockfish")
@@ -248,6 +246,7 @@ class StockfishAdapter:
         )
 
         start_time = time.perf_counter()
+        assert self._engine is not None, "Engine not initialized. Call initialize() first."
         info = await self._engine.analyse(board, limit, multipv=self._config.multipv)
         elapsed_ms = (time.perf_counter() - start_time) * 1000
 
@@ -347,13 +346,9 @@ class StockfishAdapter:
                     move = response.best_move
 
                     # Compare with Stockfish (using comparison_depth for faster evaluation)
-                    sf_analysis = await self.analyze_position(
-                        state, depth=self._config.comparison_depth
-                    )
+                    sf_analysis = await self.analyze_position(state, depth=self._config.comparison_depth)
                     if sf_analysis.best_move:
-                        total_move_diff += abs(
-                            response.value_estimate - sf_analysis.evaluation_score
-                        )
+                        total_move_diff += abs(response.value_estimate - sf_analysis.evaluation_score)
                         move_count += 1
                         if move == sf_analysis.best_move:
                             agreements += 1

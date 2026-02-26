@@ -26,7 +26,6 @@ from .config import LLMGuidedMCTSConfig
 from .engine import LLMGuidedMCTSEngine, MCTSSearchResult
 
 if TYPE_CHECKING:
-
     from src.agents.hrm_agent import HRMAgent
     from src.agents.meta_controller.base import (
         AbstractMetaController,

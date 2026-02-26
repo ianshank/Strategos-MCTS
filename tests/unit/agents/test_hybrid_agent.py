@@ -248,9 +248,7 @@ class TestNeuralOnlyMode:
     """Tests for neural_only routing mode."""
 
     @pytest.mark.asyncio
-    async def test_neural_only_uses_policy_network(
-        self, mock_policy_network, mock_llm_client, sample_state
-    ):
+    async def test_neural_only_uses_policy_network(self, mock_policy_network, mock_llm_client, sample_state):
         """Test neural_only mode uses policy network."""
         from src.agents.hybrid_agent import DecisionSource, HybridAgent, HybridConfig
 
@@ -269,9 +267,7 @@ class TestNeuralOnlyMode:
         mock_policy_network.select_action.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_neural_only_does_not_call_llm(
-        self, mock_policy_network, mock_llm_client, sample_state
-    ):
+    async def test_neural_only_does_not_call_llm(self, mock_policy_network, mock_llm_client, sample_state):
         """Test neural_only mode doesn't call LLM."""
         from src.agents.hybrid_agent import HybridAgent, HybridConfig
 
@@ -287,9 +283,7 @@ class TestNeuralOnlyMode:
         mock_llm_client.generate.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_neural_only_tracks_statistics(
-        self, mock_policy_network, sample_state
-    ):
+    async def test_neural_only_tracks_statistics(self, mock_policy_network, sample_state):
         """Test neural_only mode tracks statistics."""
         from src.agents.hybrid_agent import HybridAgent, HybridConfig
 
@@ -315,9 +309,7 @@ class TestLLMOnlyMode:
     """Tests for llm_only routing mode."""
 
     @pytest.mark.asyncio
-    async def test_llm_only_uses_llm_client(
-        self, mock_policy_network, mock_llm_client, sample_state
-    ):
+    async def test_llm_only_uses_llm_client(self, mock_policy_network, mock_llm_client, sample_state):
         """Test llm_only mode uses LLM client."""
         from src.agents.hybrid_agent import DecisionSource, HybridAgent, HybridConfig
 
@@ -334,9 +326,7 @@ class TestLLMOnlyMode:
         mock_llm_client.generate.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_llm_only_does_not_use_neural(
-        self, mock_policy_network, mock_llm_client, sample_state
-    ):
+    async def test_llm_only_does_not_use_neural(self, mock_policy_network, mock_llm_client, sample_state):
         """Test llm_only mode doesn't use neural network."""
         from src.agents.hybrid_agent import HybridAgent, HybridConfig
 
@@ -362,9 +352,7 @@ class TestAutoMode:
     """Tests for auto routing mode."""
 
     @pytest.mark.asyncio
-    async def test_auto_uses_neural_when_confident(
-        self, mock_policy_network, mock_llm_client, sample_state
-    ):
+    async def test_auto_uses_neural_when_confident(self, mock_policy_network, mock_llm_client, sample_state):
         """Test auto mode uses neural when confidence is high."""
         from src.agents.hybrid_agent import DecisionSource, HybridAgent, HybridConfig
 
@@ -385,9 +373,7 @@ class TestAutoMode:
         mock_llm_client.generate.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_auto_falls_back_to_llm_when_uncertain(
-        self, mock_policy_network, mock_llm_client, sample_state
-    ):
+    async def test_auto_falls_back_to_llm_when_uncertain(self, mock_policy_network, mock_llm_client, sample_state):
         """Test auto mode falls back to LLM when neural is uncertain."""
         from src.agents.hybrid_agent import DecisionSource, HybridAgent, HybridConfig
 
@@ -433,9 +419,7 @@ class TestAdaptiveMode:
     """Tests for adaptive routing mode."""
 
     @pytest.mark.asyncio
-    async def test_adaptive_tracks_confidences(
-        self, mock_policy_network, sample_state
-    ):
+    async def test_adaptive_tracks_confidences(self, mock_policy_network, sample_state):
         """Test adaptive mode tracks recent confidences."""
         from src.agents.hybrid_agent import HybridAgent, HybridConfig
 
@@ -456,9 +440,7 @@ class TestAdaptiveMode:
         assert all(c == 0.85 for c in agent.recent_confidences)
 
     @pytest.mark.asyncio
-    async def test_adaptive_respects_window_limit(
-        self, mock_policy_network, sample_state
-    ):
+    async def test_adaptive_respects_window_limit(self, mock_policy_network, sample_state):
         """Test adaptive mode respects window size limit."""
         from src.agents.hybrid_agent import HybridAgent, HybridConfig
 
@@ -511,9 +493,7 @@ class TestCostTracking:
     """Tests for cost tracking functionality."""
 
     @pytest.mark.asyncio
-    async def test_neural_cost_tracked(
-        self, mock_policy_network, sample_state
-    ):
+    async def test_neural_cost_tracked(self, mock_policy_network, sample_state):
         """Test neural network costs are tracked."""
         from src.agents.hybrid_agent import HybridAgent, HybridConfig
 
@@ -532,9 +512,7 @@ class TestCostTracking:
         assert agent.stats["total_neural_cost"] == pytest.approx(0.00001)
 
     @pytest.mark.asyncio
-    async def test_llm_cost_tracked(
-        self, mock_llm_client, sample_state
-    ):
+    async def test_llm_cost_tracked(self, mock_llm_client, sample_state):
         """Test LLM costs are tracked."""
         from src.agents.hybrid_agent import HybridAgent, HybridConfig
 
@@ -598,9 +576,7 @@ class TestValueEvaluation:
     """Tests for position evaluation."""
 
     @pytest.mark.asyncio
-    async def test_evaluate_uses_value_network(
-        self, mock_value_network, sample_state
-    ):
+    async def test_evaluate_uses_value_network(self, mock_value_network, sample_state):
         """Test evaluate_position uses value network."""
         from src.agents.hybrid_agent import DecisionSource, HybridAgent
 
@@ -613,9 +589,7 @@ class TestValueEvaluation:
         assert metadata.confidence == 0.8
 
     @pytest.mark.asyncio
-    async def test_evaluate_blends_when_uncertain(
-        self, mock_value_network, mock_llm_client, sample_state
-    ):
+    async def test_evaluate_blends_when_uncertain(self, mock_value_network, mock_llm_client, sample_state):
         """Test evaluate_position blends neural and LLM when uncertain."""
         from src.agents.hybrid_agent import DecisionSource, HybridAgent, HybridConfig
 
@@ -642,9 +616,7 @@ class TestValueEvaluation:
         assert "neural_value" in metadata.additional_info
 
     @pytest.mark.asyncio
-    async def test_evaluate_uses_llm_when_no_value_network(
-        self, mock_llm_client, sample_state
-    ):
+    async def test_evaluate_uses_llm_when_no_value_network(self, mock_llm_client, sample_state):
         """Test evaluate_position uses LLM when no value network."""
         from src.agents.hybrid_agent import DecisionSource, HybridAgent
 
@@ -668,9 +640,7 @@ class TestDecisionMetadata:
     """Tests for decision metadata."""
 
     @pytest.mark.asyncio
-    async def test_metadata_includes_latency(
-        self, mock_policy_network, sample_state
-    ):
+    async def test_metadata_includes_latency(self, mock_policy_network, sample_state):
         """Test metadata includes latency measurement."""
         from src.agents.hybrid_agent import HybridAgent, HybridConfig
 
@@ -682,9 +652,7 @@ class TestDecisionMetadata:
         assert metadata.latency_ms >= 0
 
     @pytest.mark.asyncio
-    async def test_metadata_includes_cost(
-        self, mock_policy_network, sample_state
-    ):
+    async def test_metadata_includes_cost(self, mock_policy_network, sample_state):
         """Test metadata includes cost."""
         from src.agents.hybrid_agent import HybridAgent, HybridConfig
 
@@ -699,9 +667,7 @@ class TestDecisionMetadata:
         assert metadata.cost == 0.000001
 
     @pytest.mark.asyncio
-    async def test_decision_history_logged(
-        self, mock_policy_network, sample_state
-    ):
+    async def test_decision_history_logged(self, mock_policy_network, sample_state):
         """Test decisions are logged to history."""
         from src.agents.hybrid_agent import HybridAgent, HybridConfig
 

@@ -96,9 +96,7 @@ class RetrievalResult:
 
         context_parts = []
         for i, doc in enumerate(self.documents, 1):
-            context_parts.append(
-                f"[Document {i}] (score: {doc.score:.3f})\n{doc.content}"
-            )
+            context_parts.append(f"[Document {i}] (score: {doc.score:.3f})\n{doc.content}")
 
         return "\n\n".join(context_parts)
 

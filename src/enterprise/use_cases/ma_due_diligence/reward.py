@@ -52,7 +52,7 @@ class MADueDiligenceReward(RewardFunctionProtocol):
         # Get weights from configuration
         self._weights = weights or self._config.reward_weights.copy()
 
-    def evaluate(
+    def evaluate(  # type: ignore[override]
         self,
         state: MADueDiligenceState,
         action: str,
@@ -81,7 +81,7 @@ class MADueDiligenceReward(RewardFunctionProtocol):
 
         return max(0.0, min(1.0, reward))
 
-    def get_components(
+    def get_components(  # type: ignore[override]
         self,
         state: MADueDiligenceState,
         action: str,

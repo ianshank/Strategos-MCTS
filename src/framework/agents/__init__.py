@@ -9,6 +9,8 @@ from .base import (
     ParallelAgent,
     SequentialAgent,
 )
+from .llm_hrm import LLMHRMAgent
+from .llm_trm import LLMTRMAgent
 
 __all__ = [
     "AsyncAgentBase",
@@ -19,4 +21,6 @@ __all__ = [
     "CompositeAgent",
     "ParallelAgent",
     "SequentialAgent",
+    "LLMHRMAgent",
+    "LLMTRMAgent",
 ]

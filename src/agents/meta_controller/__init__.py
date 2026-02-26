@@ -10,6 +10,7 @@ Note: This module requires PyTorch for neural components.
 If PyTorch is not installed, only base classes will be available.
 """
 
+import contextlib
 import logging
 from typing import TYPE_CHECKING
 
@@ -24,6 +25,7 @@ _ASSEMBLY_AVAILABLE = False
 # Check if torch is available
 try:
     import torch  # noqa: F401
+
     _TORCH_AVAILABLE = True
 except ImportError:
     _logger.debug("PyTorch not available - neural meta-controllers will be limited")
@@ -80,18 +82,21 @@ if _TORCH_AVAILABLE:
         one_hot_encode_agent,
     )
 
-    __all__.extend([
-        "normalize_features",
-        "one_hot_encode_agent",
-        "features_to_tensor",
-        "features_to_text",
-        "RNNMetaController",
-        "RNNMetaControllerModel",
-    ])
+    __all__.extend(
+        [
+            "normalize_features",
+            "one_hot_encode_agent",
+            "features_to_tensor",
+            "features_to_text",
+            "RNNMetaController",
+            "RNNMetaControllerModel",
+        ]
+    )
 
     # Try importing BERT controller (requires transformers/peft)
     try:
         from src.agents.meta_controller.bert_controller import BERTMetaController
+
         _BERT_AVAILABLE = True
         __all__.append("BERTMetaController")
     except ImportError:
@@ -103,6 +108,7 @@ if _TORCH_AVAILABLE:
             HybridMetaController,
             HybridPrediction,
         )
+
         __all__.extend(["HybridMetaController", "HybridPrediction"])
     except ImportError:
         _logger.debug("Hybrid meta-controller not available")
@@ -110,12 +116,12 @@ if _TORCH_AVAILABLE:
 # Try importing feature extractor (may have additional dependencies)
 try:
     from src.agents.meta_controller.feature_extractor import (
-        EmbeddingBackend,
         FeatureExtractor,
         FeatureExtractorConfig,
     )
+
     _FEATURE_EXTRACTOR_AVAILABLE = True
-    __all__.extend(["FeatureExtractor", "FeatureExtractorConfig", "EmbeddingBackend"])
+    __all__.extend(["FeatureExtractor", "FeatureExtractorConfig"])
 except ImportError:
     _logger.debug("Feature extractor not available")
 
@@ -125,6 +131,7 @@ try:
         AssemblyRouter,
         RoutingDecision,
     )
+
     _ASSEMBLY_AVAILABLE = True
     __all__.extend(["AssemblyRouter", "RoutingDecision"])
 except ImportError:
@@ -134,7 +141,7 @@ except ImportError:
 # Note: These are guarded with try/except to handle cases where
 # dependencies are not installed but type checking is still run
 if TYPE_CHECKING:
-    try:
+    with contextlib.suppress(ImportError):
         from src.agents.meta_controller.rnn_controller import (  # noqa: F401
             RNNMetaController,
             RNNMetaControllerModel,
@@ -145,40 +152,24 @@ if TYPE_CHECKING:
             normalize_features,
             one_hot_encode_agent,
         )
-    except ImportError:
-        # Optional dependencies not required at runtime; imports are for type checking only
-        pass
 
-    try:
+    with contextlib.suppress(ImportError):
         from src.agents.meta_controller.bert_controller import BERTMetaController  # noqa: F401
-    except ImportError:
-        # Optional transformers/peft dependencies not installed
-        pass
 
-    try:
+    with contextlib.suppress(ImportError):
         from src.agents.meta_controller.hybrid_controller import (  # noqa: F401
             HybridMetaController,
             HybridPrediction,
         )
-    except ImportError:
-        # Optional hybrid controller dependencies not installed
-        pass
 
-    try:
+    with contextlib.suppress(ImportError):
         from src.agents.meta_controller.feature_extractor import (  # noqa: F401
-            EmbeddingBackend,
             FeatureExtractor,
             FeatureExtractorConfig,
         )
-    except ImportError:
-        # Optional feature extractor dependencies not installed
-        pass
 
-    try:
+    with contextlib.suppress(ImportError):
         from src.agents.meta_controller.assembly_router import (  # noqa: F401
             AssemblyRouter,
             RoutingDecision,
         )
-    except ImportError:
-        # Optional networkx dependency not installed
-        pass

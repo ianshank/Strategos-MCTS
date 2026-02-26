@@ -140,6 +140,7 @@ ignore = [
     "SIM116", # use dict.get (sometimes less clear)
     "SIM117", # combine with statements (sometimes clearer separate)
     "F541",   # f-string without placeholders (used for future formatting)
+    "UP042",  # str+Enum -> StrEnum; project supports Python 3.10 which lacks StrEnum
 ]
 
 [tool.ruff.format]
@@ -152,10 +153,11 @@ line-ending = "auto"
 known-first-party = ["src"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["ARG002"]  # Unused method argument - pytest fixtures
-"training/tests/*" = ["ARG002"]  # Unused method argument - pytest fixtures
+"tests/*" = ["ARG002", "E402"]  # Unused method argument - pytest fixtures; E402 for importorskip guards
+"training/tests/*" = ["ARG002", "E402"]  # Unused method argument - pytest fixtures; E402 for importorskip guards
 "tools/*" = ["ARG002"]  # Unused method argument - API handlers with required signatures
 "training/*" = ["ARG002", "SIM108"]  # Training modules have complex patterns
+"src/**/__init__.py" = ["E402"]  # Module-level imports after conditional torch/dependency checks
 
 [tool.black]
 line-length = 120

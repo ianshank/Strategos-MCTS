@@ -12,6 +12,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark")
+
 from src.benchmark.adapters.factory import BenchmarkAdapterFactory
 from src.benchmark.adapters.langgraph_adapter import LangGraphBenchmarkAdapter
 from src.benchmark.adapters.protocol import BenchmarkSystemProtocol

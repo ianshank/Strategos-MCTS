@@ -19,6 +19,8 @@ from unittest.mock import patch
 
 import pytest
 
+pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark")
+
 sys.path.insert(0, ".")
 
 from pydantic import SecretStr, ValidationError

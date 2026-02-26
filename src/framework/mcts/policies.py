@@ -10,6 +10,7 @@ Provides:
 
 from __future__ import annotations
 
+import logging
 import math
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
@@ -17,6 +18,8 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .core import MCTSState
@@ -52,46 +55,6 @@ def ucb1(
 
     exploitation = value_sum / visits
     exploration = c * math.sqrt(math.log(parent_visits) / visits)
-
-    return exploitation + exploration
-
-
-def ucb1_tuned(
-    value_sum: float,
-    value_squared_sum: float,
-    visits: int,
-    parent_visits: int,
-    c: float = 1.0,
-) -> float:
-    """
-    UCB1-Tuned variant with variance estimate.
-
-    Provides tighter bounds by considering value variance.
-
-    Args:
-        value_sum: Total accumulated value
-        value_squared_sum: Sum of squared values (for variance)
-        visits: Number of visits
-        parent_visits: Parent visit count
-        c: Exploration constant
-
-    Returns:
-        UCB1-Tuned score
-    """
-    if visits == 0:
-        return float("inf")
-
-    mean_value = value_sum / visits
-    variance = value_squared_sum / visits - mean_value**2
-    variance = max(0, variance)  # Ensure non-negative
-
-    # Variance bound term
-    ln_parent = math.log(parent_visits)
-    variance_bound = variance + math.sqrt(2 * ln_parent / visits)
-    min_bound = min(0.25, variance_bound)
-
-    exploitation = mean_value
-    exploration = c * math.sqrt(ln_parent / visits * min_bound)
 
     return exploitation + exploration
 
@@ -157,7 +120,7 @@ class RandomRolloutPolicy(RolloutPolicy):
         max_depth: int = 10,
     ) -> float:
         """Generate random evaluation with noise."""
-        noise = rng.uniform(-self.noise_scale, self.noise_scale)
+        noise = float(rng.uniform(-self.noise_scale, self.noise_scale))
         value = self.base_value + noise
         return max(0.0, min(1.0, value))
 
@@ -188,7 +151,7 @@ class GreedyRolloutPolicy(RolloutPolicy):
     ) -> float:
         """Evaluate using heuristic with small noise."""
         base_value = self.heuristic_fn(state)
-        noise = rng.uniform(-self.noise_scale, self.noise_scale)
+        noise = float(rng.uniform(-self.noise_scale, self.noise_scale))
         value = base_value + noise
         return max(0.0, min(1.0, value))
 
@@ -234,7 +197,7 @@ class HybridRolloutPolicy(RolloutPolicy):
     ) -> float:
         """Combine heuristic and random evaluation."""
         # Random component
-        random_noise = rng.uniform(-self.noise_scale, self.noise_scale)
+        random_noise = float(rng.uniform(-self.noise_scale, self.noise_scale))
         random_value = self.base_random_value + random_noise
 
         # Heuristic component
@@ -275,7 +238,7 @@ class LLMRolloutPolicy(RolloutPolicy):
         state_key = state.to_hash_key()
 
         if self.cache_results and state_key in self._cache:
-            return self._cache[state_key]
+            return float(self._cache[state_key])
 
         value = await self.evaluate_fn(state)
         value = max(0.0, min(1.0, value))
@@ -330,7 +293,7 @@ class ProgressiveWideningConfig:
             True if should expand, False otherwise
         """
         threshold = self.k * (num_children**self.alpha)
-        return visits > threshold
+        return bool(visits > threshold)
 
     def min_visits_for_expansion(self, num_children: int) -> int:
         """
@@ -347,56 +310,3 @@ class ProgressiveWideningConfig:
 
     def __repr__(self) -> str:
         return f"ProgressiveWideningConfig(k={self.k}, alpha={self.alpha})"
-
-
-def compute_action_probabilities(
-    children_stats: list[dict],
-    temperature: float = 1.0,
-) -> list[float]:
-    """
-    Compute action probabilities from visit counts using softmax.
-
-    Args:
-        children_stats: List of dicts with 'visits' key
-        temperature: Temperature parameter (lower = more deterministic)
-
-    Returns:
-        List of probabilities for each action
-    """
-    if not children_stats:
-        return []
-
-    visits = np.array([c["visits"] for c in children_stats], dtype=float)
-
-    if temperature == 0:
-        # Deterministic: assign 1.0 to max, 0 to others
-        probs = np.zeros_like(visits)
-        probs[np.argmax(visits)] = 1.0
-        return probs.tolist()
-
-    # Apply temperature
-    scaled_visits = visits ** (1.0 / temperature)
-    probs = scaled_visits / scaled_visits.sum()
-    return probs.tolist()
-
-
-def select_action_stochastic(
-    children_stats: list[dict],
-    rng: np.random.Generator,
-    temperature: float = 1.0,
-) -> int:
-    """
-    Stochastically select action based on visit counts.
-
-    Args:
-        children_stats: List of child statistics
-        rng: Random number generator
-        temperature: Temperature for softmax
-
-    Returns:
-        Index of selected action
-    """
-    probs = compute_action_probabilities(children_stats, temperature)
-    if not probs:
-        raise ValueError("No actions to select from")
-    return rng.choice(len(probs), p=probs)

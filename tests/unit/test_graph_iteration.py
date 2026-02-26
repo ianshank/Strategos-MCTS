@@ -15,6 +15,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
 # =============================================================================
 # Test Markers
 # =============================================================================
@@ -87,9 +89,7 @@ class TestEvaluateConsensusNode:
         base_agent_state,
     ):
         """Test iteration counter increments when there's a single agent output."""
-        base_agent_state["agent_outputs"] = [
-            {"agent": "hrm", "confidence": 0.85, "response": "Test response"}
-        ]
+        base_agent_state["agent_outputs"] = [{"agent": "hrm", "confidence": 0.85, "response": "Test response"}]
         base_agent_state["iteration"] = 0
 
         result = mock_graph_builder._evaluate_consensus_node(base_agent_state)
@@ -467,9 +467,7 @@ class TestIterationEdgeCases:
     ):
         """Test handles state without iteration key."""
         del base_agent_state["iteration"]
-        base_agent_state["agent_outputs"] = [
-            {"agent": "hrm", "confidence": 0.8, "response": "Response"}
-        ]
+        base_agent_state["agent_outputs"] = [{"agent": "hrm", "confidence": 0.8, "response": "Response"}]
 
         result = mock_graph_builder._evaluate_consensus_node(base_agent_state)
 
@@ -498,9 +496,7 @@ class TestIterationEdgeCases:
     ):
         """Test handles invalid negative iteration value."""
         base_agent_state["iteration"] = -1
-        base_agent_state["agent_outputs"] = [
-            {"agent": "hrm", "confidence": 0.8, "response": "Response"}
-        ]
+        base_agent_state["agent_outputs"] = [{"agent": "hrm", "confidence": 0.8, "response": "Response"}]
 
         result = mock_graph_builder._evaluate_consensus_node(base_agent_state)
 

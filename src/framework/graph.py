@@ -11,6 +11,7 @@ Provides:
 from __future__ import annotations
 
 import asyncio
+import logging
 import operator
 import time
 from typing import Annotated, Any, NotRequired, TypedDict
@@ -80,6 +81,8 @@ except ImportError:
     NeuroSymbolicMCTSConfig = None  # type: ignore
     ConstraintSystem = None  # type: ignore
     ConstraintConfig = None  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 
 class AgentState(TypedDict):
@@ -215,6 +218,14 @@ class GraphBuilder:
         if neuro_symbolic_config is not None:
             self._init_neuro_symbolic(neuro_symbolic_config)
 
+        logger.debug(
+            "GraphBuilder initialized: max_iterations=%d, consensus_threshold=%.2f, parallel_agents=%s, mcts_seed=%d",
+            self.max_iterations,
+            self.consensus_threshold,
+            self.enable_parallel_agents,
+            self.mcts_config.seed,
+        )
+
     def build_graph(self) -> StateGraph:
         """
         Build LangGraph state machine.
@@ -225,6 +236,7 @@ class GraphBuilder:
         if StateGraph is None:
             raise ImportError("LangGraph not installed. Install with: pip install langgraph")
 
+        logger.info("Building LangGraph state machine")
         workflow = StateGraph(AgentState)
 
         # Add nodes
@@ -483,7 +495,7 @@ class GraphBuilder:
                 prompt=f"Answer this question: {query}",
                 temperature=0.5,
             )
-            return response.text
+            return str(response.text)
         except Exception as e:
             self.logger.error(f"Neural fallback failed: {e}")
             return f"Could not determine answer for: {query}"
@@ -557,6 +569,7 @@ class GraphBuilder:
             if features is None:
                 return self._rule_based_route_decision(state)
 
+            assert self.meta_controller is not None, "Meta controller not initialized"
             prediction = self.meta_controller.predict(features)
 
             # Log prediction for debugging
@@ -977,9 +990,7 @@ class GraphBuilder:
         next_iteration = current_iteration + 1
 
         if len(agent_outputs) < 2:
-            self.logger.debug(
-                f"Single agent output, auto-consensus (iteration={next_iteration})"
-            )
+            self.logger.debug(f"Single agent output, auto-consensus (iteration={next_iteration})")
             return {
                 "consensus_reached": True,
                 "consensus_score": 1.0,
@@ -1015,15 +1026,10 @@ class GraphBuilder:
             return "synthesize"
 
         if current_iteration >= max_iter:
-            self.logger.warning(
-                f"Max iterations ({max_iter}) reached without consensus, "
-                f"proceeding to synthesis"
-            )
+            self.logger.warning(f"Max iterations ({max_iter}) reached without consensus, proceeding to synthesis")
             return "synthesize"
 
-        self.logger.debug(
-            f"Continuing iteration loop (current={current_iteration}, max={max_iter})"
-        )
+        self.logger.debug(f"Continuing iteration loop (current={current_iteration}, max={max_iter})")
         return "iterate"
 
     async def _synthesize_node(self, state: AgentState) -> dict:
@@ -1290,10 +1296,7 @@ class IntegratedFramework:
             "on_chain_end",
         ]
 
-        self.logger.debug(
-            f"Starting event streaming for query: {query[:100]}, "
-            f"event_types: {include_types}"
-        )
+        self.logger.debug(f"Starting event streaming for query: {query[:100]}, event_types: {include_types}")
 
         try:
             async for event in self.app.astream_events(
@@ -1325,9 +1328,7 @@ class IntegratedFramework:
                     elif isinstance(chunk, dict):
                         stream_event["token"] = chunk.get("content", "")
 
-                self.logger.debug(
-                    f"Event: {event_type}, name: {stream_event['name']}"
-                )
+                self.logger.debug(f"Event: {event_type}, name: {stream_event['name']}")
                 yield stream_event
 
         except Exception as e:
@@ -1376,32 +1377,52 @@ class IntegratedFramework:
             {"id": "entry", "label": "Entry", "description": "Input validation", "type": "start"},
             {"id": "retrieve_context", "label": "Retrieve Context", "description": "RAG retrieval", "type": "process"},
             {"id": "route_decision", "label": "Route Decision", "description": "Agent selection", "type": "branch"},
-            {"id": "parallel_agents", "label": "Parallel Agents", "description": "HRM + TRM parallel", "type": "process"},
+            {
+                "id": "parallel_agents",
+                "label": "Parallel Agents",
+                "description": "HRM + TRM parallel",
+                "type": "process",
+            },
             {"id": "hrm_agent", "label": "HRM Agent", "description": "Hierarchical reasoning", "type": "agent"},
             {"id": "trm_agent", "label": "TRM Agent", "description": "Task refinement", "type": "agent"},
             {"id": "mcts_simulator", "label": "MCTS Simulator", "description": "Monte Carlo search", "type": "agent"},
-            {"id": "aggregate_results", "label": "Aggregate Results", "description": "Combine outputs", "type": "process"},
-            {"id": "evaluate_consensus", "label": "Evaluate Consensus", "description": "Check agreement", "type": "branch"},
+            {
+                "id": "aggregate_results",
+                "label": "Aggregate Results",
+                "description": "Combine outputs",
+                "type": "process",
+            },
+            {
+                "id": "evaluate_consensus",
+                "label": "Evaluate Consensus",
+                "description": "Check agreement",
+                "type": "branch",
+            },
             {"id": "synthesize", "label": "Synthesize", "description": "Final response", "type": "end"},
         ]
 
         # Add symbolic agent if enabled
         if self.graph_builder.use_symbolic_reasoning:
-            nodes.insert(7, {
-                "id": "symbolic_agent",
-                "label": "Symbolic Agent",
-                "description": "Neuro-symbolic reasoning",
-                "type": "agent",
-            })
+            nodes.insert(
+                7,
+                {
+                    "id": "symbolic_agent",
+                    "label": "Symbolic Agent",
+                    "description": "Neuro-symbolic reasoning",
+                    "type": "agent",
+                },
+            )
 
         # Add ADK agent nodes
         for name in self.graph_builder.adk_agents:
-            nodes.append({
-                "id": f"adk_{name}",
-                "label": f"ADK: {name}",
-                "description": f"Google ADK agent: {name}",
-                "type": "agent",
-            })
+            nodes.append(
+                {
+                    "id": f"adk_{name}",
+                    "label": f"ADK: {name}",
+                    "description": f"Google ADK agent: {name}",
+                    "type": "agent",
+                }
+            )
 
         # Sequential edges
         edges = [
@@ -1614,10 +1635,7 @@ class IntegratedFramework:
             self.logger.info(f"Saved graph diagram to {output_file}")
 
         except ImportError:
-            self.logger.warning(
-                "httpx not available for Kroki rendering. "
-                "Install with: pip install httpx"
-            )
+            self.logger.warning("httpx not available for Kroki rendering. Install with: pip install httpx")
         except Exception as e:
             self.logger.error(f"Failed to render diagram: {e}")
             raise RuntimeError(f"Diagram rendering failed: {e}") from e

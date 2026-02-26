@@ -76,9 +76,7 @@ class TestMoveValidator:
     def test_validate_capture_move(self, validator: MoveValidator) -> None:
         """Test that capture moves are identified correctly."""
         # Position with a capture available
-        state = ChessPositionBuilder().with_fen(
-            "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2"
-        ).build()
+        state = ChessPositionBuilder().with_fen("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2").build()
 
         result = validator.validate_move(state, "e4d5")
 
@@ -90,9 +88,9 @@ class TestMoveValidator:
     def test_validate_check_move(self, validator: MoveValidator) -> None:
         """Test that check moves are identified correctly."""
         # Position where Qh5 gives check
-        state = ChessPositionBuilder().with_fen(
-            "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3"
-        ).build()
+        state = (
+            ChessPositionBuilder().with_fen("r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3").build()
+        )
 
         result = validator.validate_move(state, "d1h5")
 
@@ -103,9 +101,11 @@ class TestMoveValidator:
     def test_validate_checkmate_move(self, validator: MoveValidator) -> None:
         """Test that checkmate moves are identified correctly."""
         # Scholar's mate position
-        state = ChessPositionBuilder().with_fen(
-            "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4"
-        ).build()
+        state = (
+            ChessPositionBuilder()
+            .with_fen("r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4")
+            .build()
+        )
 
         result = validator.validate_move(state, "h5f7")
 
@@ -153,8 +153,7 @@ class TestMoveValidator:
             result = validator.validate_move(state, case["move"])
 
         assert result.is_valid == case["should_be_legal"], (
-            f"Expected is_valid={case['should_be_legal']} for {case['name']}, "
-            f"got {result.is_valid}"
+            f"Expected is_valid={case['should_be_legal']} for {case['name']}, got {result.is_valid}"
         )
 
     @pytest.mark.unit
@@ -169,8 +168,7 @@ class TestMoveValidator:
             result = validator.validate_move(state, case["move"])
 
         assert result.is_valid == case["should_be_legal"], (
-            f"Expected is_valid={case['should_be_legal']} for {case['name']}, "
-            f"got {result.is_valid}"
+            f"Expected is_valid={case['should_be_legal']} for {case['name']}, got {result.is_valid}"
         )
 
     @pytest.mark.unit
@@ -182,8 +180,7 @@ class TestMoveValidator:
         result = validator.validate_promotion(state, case["move"])
 
         assert result.is_valid == case["should_be_legal"], (
-            f"Expected is_valid={case['should_be_legal']} for {case['name']}, "
-            f"got {result.is_valid}"
+            f"Expected is_valid={case['should_be_legal']} for {case['name']}, got {result.is_valid}"
         )
 
         if result.is_valid and "promotion_piece" in case:
@@ -277,8 +274,6 @@ class TestMoveValidatorEdgeCases:
         assert result.is_valid is True
 
         # With promotion
-        promo_state = ChessPositionBuilder().with_fen(
-            "8/4P3/8/8/8/8/8/4K2k w - - 0 1"
-        ).build()
+        promo_state = ChessPositionBuilder().with_fen("8/4P3/8/8/8/8/8/4K2k w - - 0 1").build()
         result = validator.validate_move(promo_state, "e7e8q")
         assert result.is_valid is True

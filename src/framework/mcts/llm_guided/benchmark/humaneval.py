@@ -107,7 +107,7 @@ class HumanEvalProblem:
 - Follow Python best practices
 
 ### Test Examples:
-{chr(10).join(self.test_cases[:3]) if self.test_cases else 'See test code for examples'}
+{chr(10).join(self.test_cases[:3]) if self.test_cases else "See test code for examples"}
 """
 
     def get_test_harness(self) -> str:

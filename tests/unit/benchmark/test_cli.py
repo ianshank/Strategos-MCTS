@@ -11,6 +11,8 @@ import argparse
 
 import pytest
 
+pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark")
+
 from src.benchmark.cli import _dry_run, _print_summary, apply_cli_overrides, build_parser
 from src.benchmark.config.benchmark_settings import BenchmarkSettings, reset_benchmark_settings
 from src.benchmark.factory import BenchmarkFactory

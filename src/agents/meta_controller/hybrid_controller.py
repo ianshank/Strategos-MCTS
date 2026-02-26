@@ -107,12 +107,12 @@ class HybridMetaController(AbstractMetaController):
 
         # Statistics
         self._stats = {
-            'total_predictions': 0,
-            'neural_dominant': 0,  # Neural and assembly agreed, neural had higher confidence
-            'assembly_dominant': 0,  # Neural and assembly agreed, assembly had higher confidence
-            'neural_override': 0,  # Neural overrode assembly (disagreement, neural won)
-            'assembly_override': 0,  # Assembly overrode neural (disagreement, assembly won)
-            'agreement_rate': 0.0,
+            "total_predictions": 0,
+            "neural_dominant": 0,  # Neural and assembly agreed, neural had higher confidence
+            "assembly_dominant": 0,  # Neural and assembly agreed, assembly had higher confidence
+            "neural_override": 0,  # Neural overrode assembly (disagreement, neural won)
+            "assembly_override": 0,  # Assembly overrode neural (disagreement, assembly won)
+            "agreement_rate": 0.0,
         }
 
         logger.info(
@@ -133,7 +133,7 @@ class HybridMetaController(AbstractMetaController):
         self._current_query = query
         self._current_assembly_features = None  # Will be computed on demand
 
-    def predict(
+    def predict(  # type: ignore[override]
         self,
         features: MetaControllerFeatures,
         query: str | None = None,
@@ -154,7 +154,7 @@ class HybridMetaController(AbstractMetaController):
             >>> prediction = controller.predict(meta_features)
             >>> print(prediction.agent, prediction.explanation)
         """
-        self._stats['total_predictions'] += 1
+        self._stats["total_predictions"] += 1
 
         # Get query (from context or parameter)
         if query is not None:
@@ -165,10 +165,7 @@ class HybridMetaController(AbstractMetaController):
         if self.neural_controller is not None:
             try:
                 neural_pred = self.neural_controller.predict(features)
-                logger.debug(
-                    f"Neural prediction: {neural_pred.agent} "
-                    f"(confidence: {neural_pred.confidence:.2f})"
-                )
+                logger.debug(f"Neural prediction: {neural_pred.agent} (confidence: {neural_pred.confidence:.2f})")
             except Exception as e:
                 logger.warning(f"Neural prediction failed: {e}")
 
@@ -181,8 +178,7 @@ class HybridMetaController(AbstractMetaController):
                     self._current_assembly_features,
                 )
                 logger.debug(
-                    f"Assembly routing: {assembly_decision.agent} "
-                    f"(confidence: {assembly_decision.confidence:.2f})"
+                    f"Assembly routing: {assembly_decision.agent} (confidence: {assembly_decision.confidence:.2f})"
                 )
             except Exception as e:
                 logger.warning(f"Assembly routing failed: {e}")
@@ -193,6 +189,7 @@ class HybridMetaController(AbstractMetaController):
             return self._fallback_prediction()
         elif neural_pred is None:
             # Only assembly available
+            assert assembly_decision is not None
             return self._assembly_only_prediction(assembly_decision)
         elif assembly_decision is None:
             # Only neural available
@@ -227,28 +224,25 @@ class HybridMetaController(AbstractMetaController):
             assembly_prob = assembly_pred.probabilities.get(agent, 1.0 / len(self.AGENT_NAMES))
 
             # Weighted combination
-            combined_probs[agent] = (
-                self.neural_weight * neural_prob +
-                self.assembly_weight * assembly_prob
-            )
+            combined_probs[agent] = self.neural_weight * neural_prob + self.assembly_weight * assembly_prob
 
         # Select agent with highest combined probability
-        selected_agent = max(combined_probs, key=combined_probs.get)
+        selected_agent = max(combined_probs, key=lambda k: combined_probs[k])
         confidence = combined_probs[selected_agent]
 
         # Track agreement/disagreement
         if neural_pred.agent == assembly_decision.agent:
             # Agreement
             if neural_pred.confidence > assembly_decision.confidence:
-                self._stats['neural_dominant'] += 1
+                self._stats["neural_dominant"] += 1
             else:
-                self._stats['assembly_dominant'] += 1
+                self._stats["assembly_dominant"] += 1
         else:
             # Disagreement
             if selected_agent == neural_pred.agent:
-                self._stats['neural_override'] += 1
+                self._stats["neural_override"] += 1
             else:
-                self._stats['assembly_override'] += 1
+                self._stats["assembly_override"] += 1
 
         # Generate explanation
         explanation = self._generate_explanation(
@@ -311,7 +305,7 @@ class HybridMetaController(AbstractMetaController):
         return HybridPrediction(
             agent="hrm",
             confidence=0.5,
-            probabilities={'hrm': 0.5, 'trm': 0.25, 'mcts': 0.25},
+            probabilities={"hrm": 0.5, "trm": 0.25, "mcts": 0.25},
             neural_prediction=None,
             assembly_decision=None,
             neural_weight=0.0,
@@ -366,22 +360,18 @@ class HybridMetaController(AbstractMetaController):
         Returns:
             Dictionary of statistics including agreement rates
         """
-        stats = dict(self._stats)
+        stats: dict[str, Any] = dict(self._stats)
 
-        if stats['total_predictions'] > 0:
-            total = stats['total_predictions']
-            agreements = stats['neural_dominant'] + stats['assembly_dominant']
-            stats['agreement_rate'] = agreements / total
+        if stats["total_predictions"] > 0:
+            total = stats["total_predictions"]
+            agreements = stats["neural_dominant"] + stats["assembly_dominant"]
+            stats["agreement_rate"] = agreements / total
 
-            stats['neural_win_rate'] = (
-                (stats['neural_dominant'] + stats['neural_override']) / total
-            )
-            stats['assembly_win_rate'] = (
-                (stats['assembly_dominant'] + stats['assembly_override']) / total
-            )
+            stats["neural_win_rate"] = (stats["neural_dominant"] + stats["neural_override"]) / total
+            stats["assembly_win_rate"] = (stats["assembly_dominant"] + stats["assembly_override"]) / total
 
         # Include assembly router stats
-        stats['assembly_router'] = self.assembly_router.get_statistics()
+        stats["assembly_router"] = self.assembly_router.get_statistics()
 
         return stats
 
@@ -423,10 +413,7 @@ class HybridMetaController(AbstractMetaController):
         self.neural_weight = neural_weight / total
         self.assembly_weight = assembly_weight / total
 
-        logger.info(
-            f"Adjusted weights: neural={self.neural_weight:.2f}, "
-            f"assembly={self.assembly_weight:.2f}"
-        )
+        logger.info(f"Adjusted weights: neural={self.neural_weight:.2f}, assembly={self.assembly_weight:.2f}")
 
     def explain_decision(self, verbose: bool = False) -> str:
         """
@@ -438,7 +425,7 @@ class HybridMetaController(AbstractMetaController):
         Returns:
             Formatted explanation string
         """
-        if not hasattr(self, '_last_prediction') or self._last_prediction is None:
+        if not hasattr(self, "_last_prediction") or self._last_prediction is None:
             return "No predictions made yet"
 
         pred = self._last_prediction

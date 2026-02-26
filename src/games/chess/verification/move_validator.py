@@ -7,7 +7,6 @@ special moves (castling, en passant, promotion) and edge cases.
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -23,7 +22,7 @@ from src.games.chess.verification.types import (
     VerificationIssue,
     VerificationSeverity,
 )
-from src.observability.logging import get_structured_logger
+from src.observability.logging import StructuredLogger, get_structured_logger
 
 
 @dataclass
@@ -65,7 +64,7 @@ class MoveValidator:
         self,
         action_encoder: ChessActionEncoder | None = None,
         config: MoveValidatorConfig | None = None,
-        logger: logging.Logger | None = None,
+        logger: StructuredLogger | None = None,
     ) -> None:
         """Initialize the move validator.
 
@@ -173,10 +172,7 @@ class MoveValidator:
 
         return MoveValidationResult(
             is_valid=is_legal
-            and not any(
-                i.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL)
-                for i in issues
-            ),
+            and not any(i.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL) for i in issues),
             move_uci=move_uci,
             move_type=move_type,
             encoded_index=encoded_index,
@@ -218,13 +214,11 @@ class MoveValidator:
         # Check if castling rights exist
         if kingside:
             has_rights = bool(
-                state.board.castling_rights
-                & (chess.BB_H1 if state.board.turn == chess.WHITE else chess.BB_H8)
+                state.board.castling_rights & (chess.BB_H1 if state.board.turn == chess.WHITE else chess.BB_H8)
             )
         else:
             has_rights = bool(
-                state.board.castling_rights
-                & (chess.BB_A1 if state.board.turn == chess.WHITE else chess.BB_A8)
+                state.board.castling_rights & (chess.BB_A1 if state.board.turn == chess.WHITE else chess.BB_A8)
             )
 
         if not has_rights:
@@ -323,9 +317,7 @@ class MoveValidator:
         # Check if move is legal
         is_legal = move in state.board.legal_moves
 
-        extra_info["ep_square"] = (
-            chess.square_name(state.board.ep_square) if state.board.ep_square else None
-        )
+        extra_info["ep_square"] = chess.square_name(state.board.ep_square) if state.board.ep_square else None
 
         return MoveValidationResult(
             is_valid=is_legal and is_ep,

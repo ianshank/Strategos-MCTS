@@ -14,6 +14,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("aioboto3", reason="aioboto3 required for storage tests")
+
 # =============================================================================
 # Test Markers
 # =============================================================================
@@ -52,10 +54,12 @@ def mock_faiss():
     mock_index = MagicMock()
     mock_index.is_trained = True
     mock_index.add = MagicMock()
-    mock_index.search = MagicMock(return_value=(
-        [[0.9, 0.8, 0.7]],  # distances
-        [[0, 1, 2]],  # indices
-    ))
+    mock_index.search = MagicMock(
+        return_value=(
+            [[0.9, 0.8, 0.7]],  # distances
+            [[0, 1, 2]],  # indices
+        )
+    )
 
     mock_faiss_module = MagicMock()
     mock_faiss_module.IndexFlatIP.return_value = mock_index
@@ -73,12 +77,16 @@ def mock_faiss():
 def mock_sentence_transformer():
     """Create mock SentenceTransformer."""
     mock_model = MagicMock()
-    mock_model.encode = MagicMock(return_value=MagicMock(
-        shape=(384,),
-        astype=MagicMock(return_value=MagicMock(
-            reshape=MagicMock(return_value=[[0.1] * 384]),
-        )),
-    ))
+    mock_model.encode = MagicMock(
+        return_value=MagicMock(
+            shape=(384,),
+            astype=MagicMock(
+                return_value=MagicMock(
+                    reshape=MagicMock(return_value=[[0.1] * 384]),
+                )
+            ),
+        )
+    )
     return mock_model
 
 
@@ -247,14 +255,15 @@ class TestFAISSVectorStoreDocumentOps:
 
                             # Mock numpy operations
                             import numpy as np
-                            mock_sentence_transformer.encode.return_value = np.array(
-                                [[0.1] * 384]
-                            ).astype("float32")
 
-                            added = store.add_documents([
-                                {"content": "Test document 1"},
-                                {"content": "Test document 2"},
-                            ])
+                            mock_sentence_transformer.encode.return_value = np.array([[0.1] * 384]).astype("float32")
+
+                            added = store.add_documents(
+                                [
+                                    {"content": "Test document 1"},
+                                    {"content": "Test document 2"},
+                                ]
+                            )
 
                             assert added == 2
 
@@ -282,15 +291,16 @@ class TestFAISSVectorStoreDocumentOps:
                         store._is_initialized = True
 
                         import numpy as np
-                        mock_sentence_transformer.encode.return_value = np.array(
-                            [[0.1] * 384]
-                        ).astype("float32")
 
-                        added = store.add_documents([
-                            {"content": "Valid content"},
-                            {"content": ""},  # Empty
-                            {"content": None},  # None
-                        ])
+                        mock_sentence_transformer.encode.return_value = np.array([[0.1] * 384]).astype("float32")
+
+                        added = store.add_documents(
+                            [
+                                {"content": "Valid content"},
+                                {"content": ""},  # Empty
+                                {"content": None},  # None
+                            ]
+                        )
 
                         assert added == 1
 

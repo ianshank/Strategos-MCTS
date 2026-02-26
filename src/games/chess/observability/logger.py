@@ -116,14 +116,8 @@ class ChessVerificationLogger(StructuredLogger):
         """
         fen_short = truncate_fen(state_fen)
 
-        agent_moves = {
-            name: response.move
-            for name, response in agent_responses.items()
-        }
-        agent_confidences = {
-            name: round(response.confidence, 3)
-            for name, response in agent_responses.items()
-        }
+        agent_moves = {name: response.move for name, response in agent_responses.items()}
+        agent_confidences = {name: round(response.confidence, 3) for name, response in agent_responses.items()}
 
         self.info(
             f"Ensemble decision: {routing_decision.primary_agent.value}",

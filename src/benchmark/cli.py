@@ -65,14 +65,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--systems",
         nargs="+",
         metavar="NAME",
-        help="Systems to benchmark (default: all available). " "Options: langgraph_mcts, vertex_adk",
+        help="Systems to benchmark (default: all available). Options: langgraph_mcts, vertex_adk",
     )
 
     parser.add_argument(
         "--tasks",
         nargs="+",
         metavar="ID",
-        help="Specific task IDs to run (default: all). " "Example: A1 A2 B1 C1",
+        help="Specific task IDs to run (default: all). Example: A1 A2 B1 C1",
     )
 
     parser.add_argument(

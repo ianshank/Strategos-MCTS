@@ -487,7 +487,7 @@ class CodeExecutor:
                 except TimeoutException:
                     timed_out = True
                     errors.append("Code execution timed out")
-                except Exception as e:
+                except Exception as e:  # Intentionally broad: user code may raise any exception
                     errors.append(f"Runtime error: {type(e).__name__}: {e}")
 
                 # Run test cases if code executed successfully
@@ -505,7 +505,7 @@ class CodeExecutor:
                             test_result["error"] = "Timed out"
                             errors.append(f"Test {i + 1} timed out")
                             break
-                        except Exception as e:
+                        except Exception as e:  # Intentionally broad: user code may raise any exception
                             test_result["error"] = f"{type(e).__name__}: {e}"
                             errors.append(f"Test {i + 1} error: {type(e).__name__}: {e}")
                         test_results.append(test_result)
@@ -513,7 +513,7 @@ class CodeExecutor:
         except TimeoutException:
             timed_out = True
             errors.append("Code execution timed out")
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: user code may raise any exception
             errors.append(f"Unexpected error: {type(e).__name__}: {e}")
         finally:
             # Clear timeout
@@ -557,7 +557,7 @@ class CodeExecutor:
             try:
                 result = self._execute_in_process(code, test_cases, None, time.perf_counter())
                 queue.put(result.to_dict())
-            except Exception as e:
+            except Exception as e:  # Intentionally broad: user code may raise any exception
                 queue.put(
                     {
                         "passed": False,
@@ -596,7 +596,7 @@ class CodeExecutor:
         try:
             result_dict = queue.get_nowait()
             return CodeExecutionResult(**result_dict)
-        except Exception:
+        except Exception:  # Intentionally broad: subprocess queue may raise any exception
             execution_time_ms = (time.perf_counter() - start_time) * 1000
             return CodeExecutionResult(
                 passed=False,

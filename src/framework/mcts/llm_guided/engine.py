@@ -474,7 +474,7 @@ class LLMGuidedMCTSEngine:
                         num_children=len(root.children),
                     )
 
-        except Exception as e:
+        except (RuntimeError, ValueError, OSError) as e:
             logger.error(
                 "Search failed",
                 error=str(e),

@@ -12,6 +12,8 @@ from unittest.mock import patch
 
 import pytest
 
+pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark")
+
 from src.benchmark.config.benchmark_settings import (
     ADKBenchmarkConfig,
     BenchmarkRunConfig,

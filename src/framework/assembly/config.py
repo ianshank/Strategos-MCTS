@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 
 @dataclass
@@ -77,97 +77,99 @@ class AssemblyConfig:
         with open(config_path) as f:
             data = yaml.safe_load(f)
 
-        assembly_config = data.get('assembly', {})
+        assembly_config = data.get("assembly", {})
 
         # Flatten nested structure
         config_dict = {}
 
         # MCTS settings
-        mcts = assembly_config.get('mcts', {})
-        config_dict['mcts_ucb_weight'] = mcts.get('ucb_weight', cls.mcts_ucb_weight)
-        config_dict['max_complexity_threshold'] = mcts.get('max_complexity_threshold', cls.max_complexity_threshold)
+        mcts = assembly_config.get("mcts", {})
+        config_dict["mcts_ucb_weight"] = mcts.get("ucb_weight", cls.mcts_ucb_weight)
+        config_dict["max_complexity_threshold"] = mcts.get("max_complexity_threshold", cls.max_complexity_threshold)
 
         # Routing
-        routing = assembly_config.get('routing', {})
-        config_dict['routing_simple_threshold'] = routing.get('simple_threshold', cls.routing_simple_threshold)
-        config_dict['routing_medium_threshold'] = routing.get('medium_threshold', cls.routing_medium_threshold)
+        routing = assembly_config.get("routing", {})
+        config_dict["routing_simple_threshold"] = routing.get("simple_threshold", cls.routing_simple_threshold)
+        config_dict["routing_medium_threshold"] = routing.get("medium_threshold", cls.routing_medium_threshold)
 
         # TRM
-        trm = assembly_config.get('trm', {})
-        config_dict['trm_complexity_penalty'] = trm.get('complexity_penalty', cls.trm_complexity_penalty)
-        config_dict['trm_convergence_threshold'] = trm.get('convergence_threshold', cls.trm_convergence_threshold)
+        trm = assembly_config.get("trm", {})
+        config_dict["trm_complexity_penalty"] = trm.get("complexity_penalty", cls.trm_complexity_penalty)
+        config_dict["trm_convergence_threshold"] = trm.get("convergence_threshold", cls.trm_convergence_threshold)
 
         # Substructure
-        substructure = assembly_config.get('substructure', {})
-        config_dict['substructure_reuse_threshold'] = substructure.get('reuse_threshold', cls.substructure_reuse_threshold)
-        config_dict['substructure_max_size'] = substructure.get('max_size', cls.substructure_max_size)
+        substructure = assembly_config.get("substructure", {})
+        config_dict["substructure_reuse_threshold"] = substructure.get(
+            "reuse_threshold", cls.substructure_reuse_threshold
+        )
+        config_dict["substructure_max_size"] = substructure.get("max_size", cls.substructure_max_size)
 
         # Feature flags
-        flags = assembly_config.get('feature_flags', {})
-        config_dict['enable_assembly_routing'] = flags.get('routing', cls.enable_assembly_routing)
-        config_dict['enable_assembly_mcts'] = flags.get('mcts', cls.enable_assembly_mcts)
-        config_dict['enable_assembly_hrm'] = flags.get('hrm', cls.enable_assembly_hrm)
-        config_dict['enable_assembly_trm'] = flags.get('trm', cls.enable_assembly_trm)
-        config_dict['enable_assembly_consensus'] = flags.get('consensus', cls.enable_assembly_consensus)
+        flags = assembly_config.get("feature_flags", {})
+        config_dict["enable_assembly_routing"] = flags.get("routing", cls.enable_assembly_routing)
+        config_dict["enable_assembly_mcts"] = flags.get("mcts", cls.enable_assembly_mcts)
+        config_dict["enable_assembly_hrm"] = flags.get("hrm", cls.enable_assembly_hrm)
+        config_dict["enable_assembly_trm"] = flags.get("trm", cls.enable_assembly_trm)
+        config_dict["enable_assembly_consensus"] = flags.get("consensus", cls.enable_assembly_consensus)
 
         # Performance
-        perf = assembly_config.get('performance', {})
-        config_dict['cache_assembly_indices'] = perf.get('cache_indices', cls.cache_assembly_indices)
-        config_dict['max_cache_size'] = perf.get('max_cache_size', cls.max_cache_size)
+        perf = assembly_config.get("performance", {})
+        config_dict["cache_assembly_indices"] = perf.get("cache_indices", cls.cache_assembly_indices)
+        config_dict["max_cache_size"] = perf.get("max_cache_size", cls.max_cache_size)
 
         # Consensus
-        consensus = assembly_config.get('consensus', {})
-        config_dict['consensus_pathway_weight'] = consensus.get('pathway_weight', cls.consensus_pathway_weight)
-        config_dict['consensus_complexity_weight'] = consensus.get('complexity_weight', cls.consensus_complexity_weight)
-        config_dict['complexity_selection_weight'] = consensus.get('selection_weight', cls.complexity_selection_weight)
+        consensus = assembly_config.get("consensus", {})
+        config_dict["consensus_pathway_weight"] = consensus.get("pathway_weight", cls.consensus_pathway_weight)
+        config_dict["consensus_complexity_weight"] = consensus.get("complexity_weight", cls.consensus_complexity_weight)
+        config_dict["complexity_selection_weight"] = consensus.get("selection_weight", cls.complexity_selection_weight)
 
         # Concept extraction
-        concepts = assembly_config.get('concept_extraction', {})
-        config_dict['min_concept_frequency'] = concepts.get('min_frequency', cls.min_concept_frequency)
-        config_dict['max_concepts'] = concepts.get('max_concepts', cls.max_concepts)
-        config_dict['use_technical_terms'] = concepts.get('use_technical_terms', cls.use_technical_terms)
+        concepts = assembly_config.get("concept_extraction", {})
+        config_dict["min_concept_frequency"] = concepts.get("min_frequency", cls.min_concept_frequency)
+        config_dict["max_concepts"] = concepts.get("max_concepts", cls.max_concepts)
+        config_dict["use_technical_terms"] = concepts.get("use_technical_terms", cls.use_technical_terms)
 
         return cls(**config_dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
         return {
-            'mcts': {
-                'ucb_weight': self.mcts_ucb_weight,
-                'max_complexity_threshold': self.max_complexity_threshold,
+            "mcts": {
+                "ucb_weight": self.mcts_ucb_weight,
+                "max_complexity_threshold": self.max_complexity_threshold,
             },
-            'routing': {
-                'simple_threshold': self.routing_simple_threshold,
-                'medium_threshold': self.routing_medium_threshold,
+            "routing": {
+                "simple_threshold": self.routing_simple_threshold,
+                "medium_threshold": self.routing_medium_threshold,
             },
-            'trm': {
-                'complexity_penalty': self.trm_complexity_penalty,
-                'convergence_threshold': self.trm_convergence_threshold,
+            "trm": {
+                "complexity_penalty": self.trm_complexity_penalty,
+                "convergence_threshold": self.trm_convergence_threshold,
             },
-            'substructure': {
-                'reuse_threshold': self.substructure_reuse_threshold,
-                'max_size': self.substructure_max_size,
+            "substructure": {
+                "reuse_threshold": self.substructure_reuse_threshold,
+                "max_size": self.substructure_max_size,
             },
-            'feature_flags': {
-                'routing': self.enable_assembly_routing,
-                'mcts': self.enable_assembly_mcts,
-                'hrm': self.enable_assembly_hrm,
-                'trm': self.enable_assembly_trm,
-                'consensus': self.enable_assembly_consensus,
+            "feature_flags": {
+                "routing": self.enable_assembly_routing,
+                "mcts": self.enable_assembly_mcts,
+                "hrm": self.enable_assembly_hrm,
+                "trm": self.enable_assembly_trm,
+                "consensus": self.enable_assembly_consensus,
             },
-            'performance': {
-                'cache_indices': self.cache_assembly_indices,
-                'max_cache_size': self.max_cache_size,
+            "performance": {
+                "cache_indices": self.cache_assembly_indices,
+                "max_cache_size": self.max_cache_size,
             },
-            'consensus': {
-                'pathway_weight': self.consensus_pathway_weight,
-                'complexity_weight': self.consensus_complexity_weight,
-                'selection_weight': self.complexity_selection_weight,
+            "consensus": {
+                "pathway_weight": self.consensus_pathway_weight,
+                "complexity_weight": self.consensus_complexity_weight,
+                "selection_weight": self.complexity_selection_weight,
             },
-            'concept_extraction': {
-                'min_frequency': self.min_concept_frequency,
-                'max_concepts': self.max_concepts,
-                'use_technical_terms': self.use_technical_terms,
+            "concept_extraction": {
+                "min_frequency": self.min_concept_frequency,
+                "max_concepts": self.max_concepts,
+                "use_technical_terms": self.use_technical_terms,
             },
         }
 
@@ -176,15 +178,16 @@ class AssemblyConfig:
         config_path = Path(path)
         config_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(config_path, 'w') as f:
-            yaml.dump({'assembly': self.to_dict()}, f, default_flow_style=False)
+        with open(config_path, "w") as f:
+            yaml.dump({"assembly": self.to_dict()}, f, default_flow_style=False)
 
     def validate(self) -> None:
         """Validate configuration values."""
         assert 0.0 <= self.mcts_ucb_weight <= 1.0, "UCB weight must be in [0, 1]"
         assert self.max_complexity_threshold > 0, "Max complexity threshold must be positive"
-        assert self.routing_simple_threshold < self.routing_medium_threshold, \
+        assert self.routing_simple_threshold < self.routing_medium_threshold, (
             "Simple threshold must be less than medium threshold"
+        )
         assert 0.0 <= self.trm_complexity_penalty <= 1.0, "Complexity penalty must be in [0, 1]"
         assert 0.0 <= self.substructure_reuse_threshold <= 1.0, "Reuse threshold must be in [0, 1]"
         assert self.max_cache_size > 0, "Cache size must be positive"

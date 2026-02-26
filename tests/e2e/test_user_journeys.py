@@ -43,9 +43,10 @@ from tests.utils.langsmith_tracing import (
 def mock_llm_client() -> MockLLMClient:
     """Create mock LLM client with comprehensive responses."""
     client = create_mock_llm(provider="openai")
-    client.set_responses([
-        # HRM hierarchical decomposition response
-        """Hierarchical Reasoning Model Analysis:
+    client.set_responses(
+        [
+            # HRM hierarchical decomposition response
+            """Hierarchical Reasoning Model Analysis:
         Primary Objective: Secure northern perimeter
         Sub-objectives:
         1. Establish defensive positions at Alpha
@@ -53,9 +54,8 @@ def mock_llm_client() -> MockLLMClient:
         3. Coordinate communication channels
         Risk Level: Medium
         Confidence: 0.87""",
-
-        # TRM iterative refinement response
-        """Task Refinement Model Analysis:
+            # TRM iterative refinement response
+            """Task Refinement Model Analysis:
         Iteration 1 - Position Evaluation:
         - Alpha: Coverage 85%, Risk Medium, Score 0.78
         - Beta: Coverage 72%, Risk Low, Score 0.71
@@ -64,14 +64,14 @@ def mock_llm_client() -> MockLLMClient:
         Recommendation: Alpha with Beta fallback
         Refinement cycles: 3
         Confidence: 0.83""",
-
-        # Consensus response
-        """Consensus Analysis:
+            # Consensus response
+            """Consensus Analysis:
         HRM and TRM agree on Alpha position (85% alignment)
         Risk factors identified: ammunition, visibility
         Final recommendation: Secure Alpha, prepare Beta fallback
         Combined confidence: 0.85""",
-    ])
+        ]
+    )
     return client
 
 
@@ -92,8 +92,8 @@ def tactical_scenario():
     """Standard tactical scenario for testing."""
     return {
         "query": "Enemy forces approaching from north. Night conditions, limited visibility. "
-                 "Available: Infantry platoon (25), UAV support, limited ammunition (100 rounds). "
-                 "Recommend optimal defensive strategy and engagement plan.",
+        "Available: Infantry platoon (25), UAV support, limited ammunition (100 rounds). "
+        "Recommend optimal defensive strategy and engagement plan.",
         "context": {
             "terrain": "urban",
             "weather": "night",
@@ -110,9 +110,9 @@ def cybersecurity_scenario():
     """Cybersecurity incident scenario for testing."""
     return {
         "query": "APT28 indicators detected on critical infrastructure. "
-                 "Evidence: credential harvesting, lateral movement, C2 communication. "
-                 "Systems affected: 3 domain controllers, 12 workstations. "
-                 "Recommend immediate containment and response strategy.",
+        "Evidence: credential harvesting, lateral movement, C2 communication. "
+        "Systems affected: 3 domain controllers, 12 workstations. "
+        "Recommend immediate containment and response strategy.",
         "indicators": {
             "iocs": ["malicious_ip_1", "malicious_domain_1"],
             "techniques": ["T1078", "T1021", "T1071"],
@@ -129,19 +129,34 @@ def sample_training_data():
 
     return [
         MetaControllerFeatures(
-            hrm_confidence=0.9, trm_confidence=0.6, mcts_value=0.7,
-            consensus_score=0.8, last_agent="hrm", iteration=1,
-            query_length=100, has_rag_context=True
+            hrm_confidence=0.9,
+            trm_confidence=0.6,
+            mcts_value=0.7,
+            consensus_score=0.8,
+            last_agent="hrm",
+            iteration=1,
+            query_length=100,
+            has_rag_context=True,
         ),
         MetaControllerFeatures(
-            hrm_confidence=0.5, trm_confidence=0.9, mcts_value=0.4,
-            consensus_score=0.6, last_agent="trm", iteration=2,
-            query_length=200, has_rag_context=False
+            hrm_confidence=0.5,
+            trm_confidence=0.9,
+            mcts_value=0.4,
+            consensus_score=0.6,
+            last_agent="trm",
+            iteration=2,
+            query_length=200,
+            has_rag_context=False,
         ),
         MetaControllerFeatures(
-            hrm_confidence=0.3, trm_confidence=0.4, mcts_value=0.95,
-            consensus_score=0.5, last_agent="mcts", iteration=5,
-            query_length=500, has_rag_context=True
+            hrm_confidence=0.3,
+            trm_confidence=0.4,
+            mcts_value=0.95,
+            consensus_score=0.5,
+            last_agent="mcts",
+            iteration=5,
+            query_length=500,
+            has_rag_context=True,
         ),
     ]
 
@@ -214,12 +229,14 @@ class TestNewUserOnboardingJourney:
         assert 0.0 <= response["confidence"] <= 1.0
         assert len(response["next_steps"]) >= 1
 
-        update_run_metadata({
-            "journey": "new_user_onboarding",
-            "steps_completed": 5,
-            "final_confidence": response["confidence"],
-            "agents_used": ["hrm"],
-        })
+        update_run_metadata(
+            {
+                "journey": "new_user_onboarding",
+                "steps_completed": 5,
+                "final_confidence": response["confidence"],
+                "agents_used": ["hrm"],
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.asyncio
@@ -254,11 +271,13 @@ class TestNewUserOnboardingJourney:
         )
         assert valid_input.query is not None
 
-        update_run_metadata({
-            "journey": "validation_feedback",
-            "validation_tests": 3,
-            "all_passed": True,
-        })
+        update_run_metadata(
+            {
+                "journey": "validation_feedback",
+                "validation_tests": 3,
+                "all_passed": True,
+            }
+        )
 
 
 # ============================================================================
@@ -301,11 +320,13 @@ class TestMultiTurnConversationJourney:
         )
 
         turn1_response = await mock_llm_client.generate(turn1_query.query)
-        conversation_history.append({
-            "turn": 1,
-            "query": turn1_query.query,
-            "response": turn1_response.content,
-        })
+        conversation_history.append(
+            {
+                "turn": 1,
+                "query": turn1_query.query,
+                "response": turn1_response.content,
+            }
+        )
 
         # Turn 2: Follow-up with context
         turn2_query = QueryInput(
@@ -318,11 +339,13 @@ class TestMultiTurnConversationJourney:
         # Context should be maintained
         context_prompt = f"Previous: {conversation_history[-1]['response'][:200]}... New query: {turn2_query.query}"
         turn2_response = await mock_llm_client.generate(context_prompt)
-        conversation_history.append({
-            "turn": 2,
-            "query": turn2_query.query,
-            "response": turn2_response.content,
-        })
+        conversation_history.append(
+            {
+                "turn": 2,
+                "query": turn2_query.query,
+                "response": turn2_response.content,
+            }
+        )
 
         # Turn 3: Further refinement
         turn3_query = QueryInput(
@@ -333,11 +356,13 @@ class TestMultiTurnConversationJourney:
         )
 
         turn3_response = await mock_llm_client.generate(turn3_query.query)
-        conversation_history.append({
-            "turn": 3,
-            "query": turn3_query.query,
-            "response": turn3_response.content,
-        })
+        conversation_history.append(
+            {
+                "turn": 3,
+                "query": turn3_query.query,
+                "response": turn3_response.content,
+            }
+        )
 
         # Validate conversation flow
         assert len(conversation_history) == 3
@@ -346,12 +371,14 @@ class TestMultiTurnConversationJourney:
         # All turns should use same thread
         assert all(turn["turn"] > 0 for turn in conversation_history)
 
-        update_run_metadata({
-            "journey": "multi_turn_conversation",
-            "total_turns": 3,
-            "thread_id": thread_id,
-            "context_maintained": True,
-        })
+        update_run_metadata(
+            {
+                "journey": "multi_turn_conversation",
+                "total_turns": 3,
+                "thread_id": thread_id,
+                "context_maintained": True,
+            }
+        )
 
 
 # ============================================================================
@@ -382,9 +409,7 @@ class TestFullAgentOrchestrationJourney:
         mcts_iterations=200,
         tags=["user_journey", "orchestration", "full_stack", "hrm", "trm", "mcts"],
     )
-    async def test_complete_agent_orchestration(
-        self, mock_llm_client, tactical_scenario, sample_training_data
-    ):
+    async def test_complete_agent_orchestration(self, mock_llm_client, tactical_scenario, sample_training_data):
         """Complete journey through all agents with orchestration."""
         from src.agents.meta_controller.base import MetaControllerFeatures
         from src.models.validation import QueryInput
@@ -441,8 +466,7 @@ class TestFullAgentOrchestrationJourney:
 
         # Calculate best action
         best_action = max(
-            action_stats.keys(),
-            key=lambda a: action_stats[a]["value_sum"] / max(action_stats[a]["visits"], 1)
+            action_stats.keys(), key=lambda a: action_stats[a]["value_sum"] / max(action_stats[a]["visits"], 1)
         )
         mcts_value = action_stats[best_action]["value_sum"] / action_stats[best_action]["visits"]
 
@@ -466,9 +490,7 @@ class TestFullAgentOrchestrationJourney:
                 "iterations": mcts_iterations,
                 "best_action": best_action,
                 "value": mcts_value,
-                "action_distribution": {
-                    a: s["visits"] for a, s in action_stats.items()
-                },
+                "action_distribution": {a: s["visits"] for a, s in action_stats.items()},
             },
             "consensus_score": consensus_score,
         }
@@ -478,15 +500,17 @@ class TestFullAgentOrchestrationJourney:
         assert len(final_response["agents_consulted"]) == 3
         assert final_response["mcts_analysis"]["iterations"] == mcts_iterations
 
-        update_run_metadata({
-            "journey": "full_agent_orchestration",
-            "hrm_confidence": hrm_confidence,
-            "trm_confidence": trm_confidence,
-            "mcts_value": mcts_value,
-            "consensus_score": consensus_score,
-            "best_action": best_action,
-            "total_mcts_iterations": mcts_iterations,
-        })
+        update_run_metadata(
+            {
+                "journey": "full_agent_orchestration",
+                "hrm_confidence": hrm_confidence,
+                "trm_confidence": trm_confidence,
+                "mcts_value": mcts_value,
+                "consensus_score": consensus_score,
+                "best_action": best_action,
+                "total_mcts_iterations": mcts_iterations,
+            }
+        )
 
 
 # ============================================================================
@@ -515,9 +539,7 @@ class TestCybersecurityIncidentResponseJourney:
         use_mcts=True,
         tags=["user_journey", "cybersecurity", "incident_response", "threat_analysis"],
     )
-    async def test_apt_incident_response_journey(
-        self, mock_llm_client, cybersecurity_scenario
-    ):
+    async def test_apt_incident_response_journey(self, mock_llm_client, cybersecurity_scenario):
         """Complete incident response journey for APT detection."""
         from src.models.validation import QueryInput
 
@@ -539,9 +561,7 @@ class TestCybersecurityIncidentResponseJourney:
         }
 
         # Step 3: HRM hierarchical threat breakdown
-        await mock_llm_client.generate(
-            f"HRM Threat Analysis: {incident_query.query}"
-        )
+        await mock_llm_client.generate(f"HRM Threat Analysis: {incident_query.query}")
 
         threat_hierarchy = {
             "primary_threat": "APT28 Intrusion",
@@ -578,10 +598,7 @@ class TestCybersecurityIncidentResponseJourney:
                 "evaluations": len(scores),
             }
 
-        best_strategy = max(
-            strategy_scores.keys(),
-            key=lambda s: strategy_scores[s]["mean_score"]
-        )
+        best_strategy = max(strategy_scores.keys(), key=lambda s: strategy_scores[s]["mean_score"])
 
         # Step 5: Generate response timeline
         response_timeline = {
@@ -622,14 +639,16 @@ class TestCybersecurityIncidentResponseJourney:
         assert incident_response["strategy_confidence"] >= 0.5
         assert len(incident_response["response_timeline"]) == 4
 
-        update_run_metadata({
-            "journey": "cybersecurity_incident_response",
-            "threat_actor": threat_analysis["threat_actor"],
-            "severity": threat_analysis["severity"],
-            "best_strategy": best_strategy,
-            "strategy_confidence": strategy_scores[best_strategy]["mean_score"],
-            "affected_systems": threat_analysis["affected_systems"],
-        })
+        update_run_metadata(
+            {
+                "journey": "cybersecurity_incident_response",
+                "threat_actor": threat_analysis["threat_actor"],
+                "severity": threat_analysis["severity"],
+                "best_strategy": best_strategy,
+                "strategy_confidence": strategy_scores[best_strategy]["mean_score"],
+                "affected_systems": threat_analysis["affected_systems"],
+            }
+        )
 
 
 # ============================================================================
@@ -683,13 +702,15 @@ class TestTrainingPipelineJourney:
 
         # Step 3: Initialize experiment tracking
         mock_braintrust_tracker.init_experiment("training_pipeline_test")
-        mock_braintrust_tracker.log_hyperparameters({
-            "hidden_dim": 32,
-            "num_layers": 1,
-            "learning_rate": 1e-3,
-            "batch_size": 16,
-            "epochs": 3,
-        })
+        mock_braintrust_tracker.log_hyperparameters(
+            {
+                "hidden_dim": 32,
+                "num_layers": 1,
+                "learning_rate": 1e-3,
+                "batch_size": 16,
+                "epochs": 3,
+            }
+        )
 
         # Step 4: Train model
         trainer = RNNTrainer(
@@ -720,9 +741,7 @@ class TestTrainingPipelineJourney:
             mock_braintrust_tracker.log_metric("val_loss", val_loss, step=epoch)
 
         # Step 5: Evaluate on test set
-        test_loader = trainer.create_dataloader(
-            splits["X_test"], splits["y_test"], shuffle=False
-        )
+        test_loader = trainer.create_dataloader(splits["X_test"], splits["y_test"], shuffle=False)
         eval_results = trainer.evaluate(test_loader)
 
         assert "accuracy" in eval_results
@@ -744,15 +763,17 @@ class TestTrainingPipelineJourney:
         # End experiment
         summary = mock_braintrust_tracker.end_experiment()
 
-        update_run_metadata({
-            "journey": "training_pipeline",
-            "total_samples": len(features_list),
-            "train_epochs": len(history["train_losses"]),
-            "final_train_loss": history["train_losses"][-1],
-            "final_val_loss": history["val_losses"][-1],
-            "test_accuracy": eval_results["accuracy"],
-            "experiment_id": summary.get("id"),
-        })
+        update_run_metadata(
+            {
+                "journey": "training_pipeline",
+                "total_samples": len(features_list),
+                "train_epochs": len(history["train_losses"]),
+                "final_train_loss": history["train_losses"][-1],
+                "final_val_loss": history["val_losses"][-1],
+                "test_accuracy": eval_results["accuracy"],
+                "experiment_id": summary.get("id"),
+            }
+        )
 
 
 # ============================================================================
@@ -809,6 +830,7 @@ class TestAPIConsumerJourney:
 
         # Validate request
         from src.models.validation import QueryInput
+
         query_input = QueryInput(**query_request)
         assert query_input.query is not None
 
@@ -842,13 +864,15 @@ class TestAPIConsumerJourney:
         stats = authenticator.get_client_stats(client_info.client_id)
         assert "requests_this_minute" in stats or stats is not None
 
-        update_run_metadata({
-            "journey": "api_consumer",
-            "authenticated": True,
-            "client_id": client_info.client_id,
-            "processing_time_ms": processing_time,
-            "response_confidence": api_response["confidence"],
-        })
+        update_run_metadata(
+            {
+                "journey": "api_consumer",
+                "authenticated": True,
+                "client_id": client_info.client_id,
+                "processing_time_ms": processing_time,
+                "response_confidence": api_response["confidence"],
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.asyncio
@@ -888,11 +912,13 @@ class TestAPIConsumerJourney:
         # Should hit rate limit before 10 requests
         assert rate_limited or successful_requests <= 5
 
-        update_run_metadata({
-            "journey": "rate_limiting",
-            "successful_requests": successful_requests,
-            "rate_limited": rate_limited,
-        })
+        update_run_metadata(
+            {
+                "journey": "rate_limiting",
+                "successful_requests": successful_requests,
+                "rate_limited": rate_limited,
+            }
+        )
 
 
 # ============================================================================
@@ -934,11 +960,13 @@ class TestFailureRecoveryJourney:
         response = await mock_llm_client.generate("Test query after recovery")
         assert response.content is not None
 
-        update_run_metadata({
-            "journey": "failure_recovery",
-            "failure_type": "llm_timeout",
-            "recovery_successful": True,
-        })
+        update_run_metadata(
+            {
+                "journey": "failure_recovery",
+                "failure_type": "llm_timeout",
+                "recovery_successful": True,
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.asyncio
@@ -964,10 +992,7 @@ class TestFailureRecoveryJourney:
         assert len(successful_agents) >= 1
 
         # Calculate confidence from successful agents only
-        confidences = [
-            v["confidence"] for v in agent_results.values()
-            if v.get("success") and "confidence" in v
-        ]
+        confidences = [v["confidence"] for v in agent_results.values() if v.get("success") and "confidence" in v]
         avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
 
         # Generate degraded response
@@ -983,12 +1008,14 @@ class TestFailureRecoveryJourney:
         assert degraded_response["degraded"] is True
         assert len(degraded_response["agents_used"]) >= 1
 
-        update_run_metadata({
-            "journey": "graceful_degradation",
-            "successful_agents": successful_agents,
-            "failed_agents": failed_agents,
-            "degraded_confidence": avg_confidence,
-        })
+        update_run_metadata(
+            {
+                "journey": "graceful_degradation",
+                "successful_agents": successful_agents,
+                "failed_agents": failed_agents,
+                "degraded_confidence": avg_confidence,
+            }
+        )
 
 
 # ============================================================================
@@ -1063,9 +1090,7 @@ class TestMCTSDeepSimulationJourney:
 
         # Step 4: Create rollout policy
         class SimpleRolloutPolicy(RolloutPolicy):
-            async def evaluate(
-                self, state: MCTSState, rng, max_depth: int = 10
-            ) -> float:
+            async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
                 # Simple heuristic-based evaluation
                 base_value = 0.5
                 if "alpha" in state.state_id:
@@ -1097,16 +1122,18 @@ class TestMCTSDeepSimulationJourney:
         assert stats["num_children"] > 0
         assert stats["best_action_visits"] > 0
 
-        update_run_metadata({
-            "journey": "mcts_deep_simulation",
-            "iterations": num_iterations,
-            "best_action": best_action,
-            "best_action_visits": stats["best_action_visits"],
-            "best_action_value": stats["best_action_value"],
-            "root_value": stats["root_value"],
-            "cache_hit_rate": stats["cache_hit_rate"],
-            "total_simulations": stats["total_simulations"],
-        })
+        update_run_metadata(
+            {
+                "journey": "mcts_deep_simulation",
+                "iterations": num_iterations,
+                "best_action": best_action,
+                "best_action_visits": stats["best_action_visits"],
+                "best_action_value": stats["best_action_value"],
+                "root_value": stats["root_value"],
+                "cache_hit_rate": stats["cache_hit_rate"],
+                "total_simulations": stats["total_simulations"],
+            }
+        )
 
 
 # ============================================================================
@@ -1203,12 +1230,14 @@ class TestHRMTRMSynergyJourney:
 
         assert synergy_metrics["total_processing_steps"] > 0
 
-        update_run_metadata({
-            "journey": "hrm_trm_synergy",
-            **synergy_metrics,
-            "hrm_params": hrm_agent.get_parameter_count(),
-            "trm_params": trm_agent.get_parameter_count(),
-        })
+        update_run_metadata(
+            {
+                "journey": "hrm_trm_synergy",
+                **synergy_metrics,
+                "hrm_params": hrm_agent.get_parameter_count(),
+                "trm_params": trm_agent.get_parameter_count(),
+            }
+        )
 
 
 # ============================================================================
@@ -1282,11 +1311,12 @@ class TestObservabilityJourney:
         assert log_entry["api_key"] == "[REDACTED]"
         assert "sk-" not in str(log_entry)
 
-        update_run_metadata({
-            "journey": "observability",
-            "correlation_id": correlation_id,
-            "components_traced": len(request_flow),
-            "metrics_collected": list(metrics.keys()),
-            "secrets_redacted": True,
-        })
-
+        update_run_metadata(
+            {
+                "journey": "observability",
+                "correlation_id": correlation_id,
+                "components_traced": len(request_flow),
+                "metrics_collected": list(metrics.keys()),
+                "secrets_redacted": True,
+            }
+        )

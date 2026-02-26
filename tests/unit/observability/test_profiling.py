@@ -11,6 +11,8 @@ import time
 
 import pytest
 
+pytest.importorskip("psutil", reason="psutil required for observability tests")
+
 from src.observability.profiling import (
     AsyncProfiler,
     MemoryProfiler,

@@ -34,22 +34,22 @@ class AssemblyNode:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
-            'id': self.id,
-            'label': self.label,
-            'assembly_index': self.assembly_index,
-            'components': self.components,
-            'metadata': self.metadata,
+            "id": self.id,
+            "label": self.label,
+            "assembly_index": self.assembly_index,
+            "components": self.components,
+            "metadata": self.metadata,
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> 'AssemblyNode':
+    def from_dict(cls, data: dict[str, Any]) -> "AssemblyNode":
         """Create from dictionary."""
         return cls(
-            id=data['id'],
-            label=data['label'],
-            assembly_index=data.get('assembly_index', 0),
-            components=data.get('components', []),
-            metadata=data.get('metadata', {}),
+            id=data["id"],
+            label=data["label"],
+            assembly_index=data.get("assembly_index", 0),
+            components=data.get("components", []),
+            metadata=data.get("metadata", {}),
         )
 
 
@@ -71,12 +71,7 @@ class AssemblyGraph(nx.DiGraph):
         self._pathways: list[list[str]] = []  # Construction pathways
 
     def add_assembly_node(
-        self,
-        node_id: str,
-        label: str,
-        assembly_index: int = 0,
-        components: list[str] | None = None,
-        **metadata
+        self, node_id: str, label: str, assembly_index: int = 0, components: list[str] | None = None, **metadata
     ) -> None:
         """
         Add node with assembly metadata.
@@ -96,13 +91,7 @@ class AssemblyGraph(nx.DiGraph):
             metadata=metadata,
         )
 
-        self.add_node(
-            node_id,
-            label=label,
-            assembly_index=assembly_index,
-            components=components or [],
-            **metadata
-        )
+        self.add_node(node_id, label=label, assembly_index=assembly_index, components=components or [], **metadata)
 
     def get_node_data(self, node_id: str) -> AssemblyNode | None:
         """
@@ -120,18 +109,13 @@ class AssemblyGraph(nx.DiGraph):
         data = self.nodes[node_id]
         return AssemblyNode(
             id=node_id,
-            label=data.get('label', node_id),
-            assembly_index=data.get('assembly_index', 0),
-            components=data.get('components', []),
-            metadata={k: v for k, v in data.items()
-                      if k not in ['label', 'assembly_index', 'components']},
+            label=data.get("label", node_id),
+            assembly_index=data.get("assembly_index", 0),
+            components=data.get("components", []),
+            metadata={k: v for k, v in data.items() if k not in ["label", "assembly_index", "components"]},
         )
 
-    def get_min_construction_pathway(
-        self,
-        source: str | None = None,
-        target: str | None = None
-    ) -> list[str]:
+    def get_min_construction_pathway(self, source: str | None = None, target: str | None = None) -> list[str]:
         """
         Return minimal assembly pathway from source to target.
 
@@ -164,17 +148,14 @@ class AssemblyGraph(nx.DiGraph):
         # Find shortest path
         try:
             if nx.has_path(self, source, target):
-                return nx.shortest_path(self, source, target)
+                return list(nx.shortest_path(self, source, target))
             else:
                 return [source, target] if source != target else [source]
         except nx.NetworkXNoPath:
             return [source]
 
     def get_all_pathways(
-        self,
-        source: str | None = None,
-        target: str | None = None,
-        max_pathways: int = 10
+        self, source: str | None = None, target: str | None = None, max_pathways: int = 10
     ) -> list[list[str]]:
         """
         Get all construction pathways from source to target.
@@ -210,7 +191,7 @@ class AssemblyGraph(nx.DiGraph):
         except nx.NetworkXNoPath:
             return []
 
-    def calculate_pathway_similarity(self, other: 'AssemblyGraph') -> float:
+    def calculate_pathway_similarity(self, other: "AssemblyGraph") -> float:
         """
         Compute similarity between this and another assembly graph.
 
@@ -266,7 +247,7 @@ class AssemblyGraph(nx.DiGraph):
             return 0.0
 
         # Calculate average assembly index
-        indices = [data.get('assembly_index', 0) for _, data in self.nodes(data=True)]
+        indices = [data.get("assembly_index", 0) for _, data in self.nodes(data=True)]
         avg_index = sum(indices) / len(indices) if indices else 0.0
 
         # Calculate max possible index (worst case: no reuse)
@@ -278,7 +259,7 @@ class AssemblyGraph(nx.DiGraph):
         else:
             reuse = 1.0
 
-        return max(0.0, min(1.0, reuse))
+        return float(max(0.0, min(1.0, reuse)))
 
     def get_assembly_layers(self) -> list[set[str]]:
         """
@@ -299,16 +280,16 @@ class AssemblyGraph(nx.DiGraph):
             return layers
         except nx.NetworkXError:
             # Fallback: group by assembly index
-            index_layers = {}
+            index_layers: dict[int, set[str]] = {}
             for node, data in self.nodes(data=True):
-                idx = data.get('assembly_index', 0)
+                idx = data.get("assembly_index", 0)
                 if idx not in index_layers:
                     index_layers[idx] = set()
                 index_layers[idx].add(node)
 
             return [index_layers[i] for i in sorted(index_layers.keys())]
 
-    def _make_dag(self) -> 'AssemblyGraph':
+    def _make_dag(self) -> "AssemblyGraph":
         """Create DAG version by removing cycles."""
         dag = AssemblyGraph()
 
@@ -339,26 +320,13 @@ class AssemblyGraph(nx.DiGraph):
             Dictionary representation
         """
         return {
-            'nodes': [
-                {
-                    'id': node,
-                    **data
-                }
-                for node, data in self.nodes(data=True)
-            ],
-            'edges': [
-                {
-                    'source': u,
-                    'target': v,
-                    **data
-                }
-                for u, v, data in self.edges(data=True)
-            ],
-            'pathways': self._pathways,
+            "nodes": [{"id": node, **data} for node, data in self.nodes(data=True)],
+            "edges": [{"source": u, "target": v, **data} for u, v, data in self.edges(data=True)],
+            "pathways": self._pathways,
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> 'AssemblyGraph':
+    def from_dict(cls, data: dict[str, Any]) -> "AssemblyGraph":
         """
         Deserialize graph from dictionary.
 
@@ -371,18 +339,18 @@ class AssemblyGraph(nx.DiGraph):
         graph = cls()
 
         # Add nodes
-        for node_data in data.get('nodes', []):
-            node_id = node_data.pop('id')
+        for node_data in data.get("nodes", []):
+            node_id = node_data.pop("id")
             graph.add_node(node_id, **node_data)
 
         # Add edges
-        for edge_data in data.get('edges', []):
-            source = edge_data.pop('source')
-            target = edge_data.pop('target')
+        for edge_data in data.get("edges", []):
+            source = edge_data.pop("source")
+            target = edge_data.pop("target")
             graph.add_edge(source, target, **edge_data)
 
         # Restore pathways
-        graph._pathways = data.get('pathways', [])
+        graph._pathways = data.get("pathways", [])
 
         return graph
 
@@ -396,11 +364,11 @@ class AssemblyGraph(nx.DiGraph):
         output_path = Path(path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
 
     @classmethod
-    def from_json(cls, path: str) -> 'AssemblyGraph':
+    def from_json(cls, path: str) -> "AssemblyGraph":
         """
         Load graph from JSON file.
 
@@ -423,28 +391,28 @@ class AssemblyGraph(nx.DiGraph):
             Dictionary of statistics
         """
         stats = {
-            'num_nodes': self.number_of_nodes(),
-            'num_edges': self.number_of_edges(),
-            'is_dag': nx.is_directed_acyclic_graph(self),
-            'is_connected': nx.is_weakly_connected(self) if self.number_of_nodes() > 0 else False,
-            'density': nx.density(self),
+            "num_nodes": self.number_of_nodes(),
+            "num_edges": self.number_of_edges(),
+            "is_dag": nx.is_directed_acyclic_graph(self),
+            "is_connected": nx.is_weakly_connected(self) if self.number_of_nodes() > 0 else False,
+            "density": nx.density(self),
         }
 
         if self.number_of_nodes() > 0:
             # Assembly statistics
-            indices = [data.get('assembly_index', 0) for _, data in self.nodes(data=True)]
-            stats['avg_assembly_index'] = sum(indices) / len(indices)
-            stats['max_assembly_index'] = max(indices) if indices else 0
-            stats['min_assembly_index'] = min(indices) if indices else 0
+            indices = [data.get("assembly_index", 0) for _, data in self.nodes(data=True)]
+            stats["avg_assembly_index"] = sum(indices) / len(indices)
+            stats["max_assembly_index"] = max(indices) if indices else 0
+            stats["min_assembly_index"] = min(indices) if indices else 0
 
             # Reuse factor
-            stats['reuse_factor'] = self.calculate_reuse_factor()
+            stats["reuse_factor"] = self.calculate_reuse_factor()
 
             # Pathway statistics
             try:
                 min_path = self.get_min_construction_pathway()
-                stats['min_pathway_length'] = len(min_path)
+                stats["min_pathway_length"] = len(min_path)
             except Exception:  # Catch all graph calculation errors
-                stats['min_pathway_length'] = 0
+                stats["min_pathway_length"] = 0
 
         return stats

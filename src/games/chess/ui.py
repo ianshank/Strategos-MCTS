@@ -88,8 +88,18 @@ _session = GameSession()
 def get_piece_unicode(piece: str) -> str:
     """Convert piece character to Unicode chess symbol."""
     pieces = {
-        "K": "♔", "Q": "♕", "R": "♖", "B": "♗", "N": "♘", "P": "♙",
-        "k": "♚", "q": "♛", "r": "♜", "b": "♝", "n": "♞", "p": "♟",
+        "K": "♔",
+        "Q": "♕",
+        "R": "♖",
+        "B": "♗",
+        "N": "♘",
+        "P": "♙",
+        "k": "♚",
+        "q": "♛",
+        "r": "♜",
+        "b": "♝",
+        "n": "♞",
+        "p": "♟",
     }
     return pieces.get(piece, "")
 
@@ -127,7 +137,8 @@ def render_board_html(fen: str, last_move: str | None = None, flipped: bool = Fa
         highlight_squares.add((from_rank, from_file))
         highlight_squares.add((to_rank, to_file))
 
-    html_parts = ["""
+    html_parts = [
+        """
     <style>
         .chess-board {
             display: inline-block;
@@ -154,7 +165,8 @@ def render_board_html(fen: str, last_move: str | None = None, flipped: bool = Fa
     <div class="board-wrapper">
         <div class="board-container">
             <div class="rank-labels">
-    """]
+    """
+    ]
 
     ranks = list(range(8, 0, -1)) if not flipped else list(range(1, 9))
     for rank in ranks:
@@ -180,7 +192,7 @@ def render_board_html(fen: str, last_move: str | None = None, flipped: bool = Fa
             html_parts.append(
                 f'<div class="chess-square {square_class}" '
                 f'data-square="{square_name}" data-piece="{piece}">'
-                f'{piece_symbol}</div>'
+                f"{piece_symbol}</div>"
             )
         html_parts.append("</div>")
 
@@ -302,7 +314,7 @@ def render_scorecard_html(scorecard: ScoreCard) -> str:
             <div class="elo-value">{scorecard.elo_estimate:.0f}</div>
         </div>
 
-        {f'<div class="streak-badge {streak_class}">{streak_text}</div>' if streak_text else ''}
+        {f'<div class="streak-badge {streak_class}">{streak_text}</div>' if streak_text else ""}
 
         <div class="learning-stats">
             <div class="score-row">
@@ -340,6 +352,7 @@ def get_game_status(session: GameSession) -> str:
 
     try:
         import chess
+
         board = chess.Board(session.fen)
         if board.is_check():
             return "Check!"
@@ -372,6 +385,7 @@ def validate_move(move_uci: str) -> tuple[bool, str]:
 
     try:
         import chess
+
         board = chess.Board(_session.fen)
         move = chess.Move.from_uci(move_uci.lower().strip())
         if move not in board.legal_moves:
@@ -411,6 +425,7 @@ def apply_player_move(move_uci: str) -> tuple[str, str, str, str, str]:
 
     try:
         import chess
+
         board = chess.Board(_session.fen)
         move = chess.Move.from_uci(move_uci.lower().strip())
         board.push(move)
@@ -456,6 +471,7 @@ def make_ai_move_sync() -> tuple[str, str, str, str, str]:
 
     try:
         import chess
+
         board = chess.Board(_session.fen)
 
         if board.is_game_over():
@@ -535,9 +551,7 @@ def get_ai_move(fen: str) -> tuple[str, dict[str, Any]]:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            response = loop.run_until_complete(
-                agent.get_best_move(state, temperature=0.1, use_ensemble=False)
-            )
+            response = loop.run_until_complete(agent.get_best_move(state, temperature=0.1, use_ensemble=False))
             return response.best_move, {
                 "value": response.value_estimate,
                 "confidence": response.confidence,
@@ -613,6 +627,7 @@ def undo_move() -> tuple[str, str, str, str, str]:
 
     try:
         import chess
+
         board = chess.Board()
         moves_to_keep = _session.move_history[:-2]
         for move_uci in moves_to_keep:
@@ -680,7 +695,7 @@ def export_game_pgn() -> str | None:
                 break
 
         # Write to temp file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.pgn', delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".pgn", delete=False) as tmp:
             print(game, file=tmp, end="\n\n")
             return tmp.name
 
@@ -890,7 +905,6 @@ def render_learning_status() -> str:
     """
 
 
-
 def render_learning_board_html() -> str:
     """Render the live learning board."""
     global _learning_session
@@ -901,9 +915,7 @@ def render_learning_board_html() -> str:
     game_info = f"<div style='text-align:center; margin-bottom:10px; font-weight:bold; color:#00d9ff;'>Playing: {_learning_session.current_game_id_display}</div>"
 
     return game_info + render_board_html(
-        _learning_session.current_fen,
-        _learning_session.current_last_move,
-        flipped=False
+        _learning_session.current_fen, _learning_session.current_last_move, flipped=False
     )
 
 
@@ -983,7 +995,14 @@ def create_chess_ui() -> gr.Blocks:
 
                         with gr.Row():
                             export_pgn_btn = gr.Button("Export PGN", size="sm", elem_id="export-pgn-btn")
-                            pgn_file = gr.File(label="Download PGN", file_count="single", type="filepath", interactive=False, elem_id="pgn-file-output", height=80)
+                            pgn_file = gr.File(
+                                label="Download PGN",
+                                file_count="single",
+                                type="filepath",
+                                interactive=False,
+                                elem_id="pgn-file-output",
+                                height=80,
+                            )
 
                         analysis_display = gr.Markdown(
                             value="*AI analysis will appear here*",

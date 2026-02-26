@@ -151,7 +151,7 @@ class NeuralMCTSNode:
                     prior=prior,
                 )
 
-    def select_child(self, c_puct: float) -> tuple[Any, NeuralMCTSNode]:
+    def select_child(self, c_puct: float) -> tuple[Any | None, NeuralMCTSNode | None]:
         """
         Select best child using PUCT algorithm.
 
@@ -435,7 +435,9 @@ class NeuralMCTS:
             path.append(current)
 
             # Select best child
-            _, current = current.select_child(self.config.c_puct)
+            _, selected = current.select_child(self.config.c_puct)
+            assert selected is not None, "select_child returned None"
+            current = selected
 
         # Add leaf to path
         path.append(current)

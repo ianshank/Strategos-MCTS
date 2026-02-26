@@ -27,6 +27,7 @@ _logger = logging.getLogger(__name__)
 _NETWORKX_AVAILABLE = False
 try:
     import networkx  # noqa: F401
+
     _NETWORKX_AVAILABLE = True
 except ImportError:
     _logger.debug("networkx not available - assembly module will be limited")

@@ -22,7 +22,7 @@ try:
 
     _HAS_PSUTIL = True
 except ImportError:
-    psutil = None  # type: ignore[assignment]
+    psutil = None
     _HAS_PSUTIL = False
 
 logger = logging.getLogger(__name__)
@@ -118,9 +118,7 @@ class BatchProcessor:
         # Cache process for memory checks (avoid repeated creation)
         self._process = psutil.Process() if _HAS_PSUTIL else None
 
-    def batch_iterator(
-        self, items: list[T]
-    ) -> Iterator[tuple[int, list[T]]]:
+    def batch_iterator(self, items: list[T]) -> Iterator[tuple[int, list[T]]]:
         """
         Iterate over items in batches.
 
@@ -235,13 +233,9 @@ class BatchProcessor:
             "total_processed": self._total_processed,
             "total_batches": self._total_batches,
             "total_time_ms": self._total_time_ms,
-            "avg_batch_time_ms": (
-                self._total_time_ms / self._total_batches if self._total_batches > 0 else 0.0
-            ),
+            "avg_batch_time_ms": (self._total_time_ms / self._total_batches if self._total_batches > 0 else 0.0),
             "avg_items_per_second": (
-                self._total_processed / (self._total_time_ms / 1000)
-                if self._total_time_ms > 0
-                else 0.0
+                self._total_processed / (self._total_time_ms / 1000) if self._total_time_ms > 0 else 0.0
             ),
         }
 
@@ -283,7 +277,7 @@ class MemoryOptimizer:
         """Get current process memory usage in MB."""
         if self._process is None:
             return 0.0
-        return self._process.memory_info().rss / (1024 * 1024)
+        return float(self._process.memory_info().rss / (1024 * 1024))
 
     def sample_memory(self) -> float:
         """Sample current memory and track it."""
@@ -410,7 +404,7 @@ def benchmark_iterations_per_second(
 
     # Standard deviation
     variance = sum((t - mean_time) ** 2 for t in times_ms) / iterations
-    std_time = variance ** 0.5
+    std_time = variance**0.5
 
     iterations_per_second = iterations / (total_time / 1000) if total_time > 0 else 0
 
@@ -500,7 +494,7 @@ async def benchmark_async_iterations_per_second(
     max_time = max(times_ms)
 
     variance = sum((t - mean_time) ** 2 for t in times_ms) / iterations
-    std_time = variance ** 0.5
+    std_time = variance**0.5
 
     iterations_per_second = iterations / (total_time / 1000) if total_time > 0 else 0
 

@@ -25,7 +25,7 @@ class TestConceptExtractor:
 
         assert len(concepts) > 0
         concept_terms = [c.term for c in concepts]
-        assert 'database' in concept_terms or 'optimize' in concept_terms
+        assert "database" in concept_terms or "optimize" in concept_terms
 
     def test_empty_text(self, extractor):
         """Test with empty text."""
@@ -39,7 +39,7 @@ class TestConceptExtractor:
         concepts = extractor.extract_concepts(text)
 
         # Should detect technical terms
-        technical_concepts = [c for c in concepts if c.type == 'technical_term']
+        technical_concepts = [c for c in concepts if c.type == "technical_term"]
         assert len(technical_concepts) > 0
 
     def test_concept_frequency(self, extractor):
@@ -48,7 +48,7 @@ class TestConceptExtractor:
 
         concepts = extractor.extract_concepts(text)
 
-        database_concept = next((c for c in concepts if c.term == 'database'), None)
+        database_concept = next((c for c in concepts if c.term == "database"), None)
         assert database_concept is not None
         # Frequency might vary based on tokenization, but should be > 1
         assert database_concept.frequency >= 1
@@ -82,9 +82,7 @@ class TestConceptExtractor:
 
         # Check if reasonable prerequisites exist
         # (This is domain-specific, so we just check structure)
-        if graph.number_of_edges() > 0:
-            # At least some dependencies should exist
-            assert True
+        assert graph.number_of_edges() >= 0
 
     def test_domain_specific_extraction(self):
         """Test domain-specific concept extraction."""
@@ -149,11 +147,14 @@ class TestConceptExtractor:
                 assert len(concept.context) > 0
 
 
-@pytest.mark.parametrize("domain,text,expected_concept", [
-    ("software", "Build REST API", "api"),
-    ("data_science", "Train machine learning model", "model"),
-    ("general", "Solve the problem", "problem"),
-])
+@pytest.mark.parametrize(
+    "domain,text,expected_concept",
+    [
+        ("software", "Build REST API", "api"),
+        ("data_science", "Train machine learning model", "model"),
+        ("general", "Solve the problem", "problem"),
+    ],
+)
 def test_domain_concept_detection(domain, text, expected_concept):
     """Test domain-specific concept detection."""
     extractor = ConceptExtractor(domain=domain)

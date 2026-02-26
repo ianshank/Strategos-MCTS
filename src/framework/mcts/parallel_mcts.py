@@ -28,7 +28,7 @@ import time
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -136,25 +136,7 @@ class ParallelMCTSConfig:
             errors.append("lock_timeout_seconds must be None or > 0")
 
         if errors:
-            raise ValueError(
-                "Invalid ParallelMCTSConfig:\n" + "\n".join(f"  - {e}" for e in errors)
-            )
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert stats to dictionary."""
-        return {
-            "total_simulations": self.total_simulations,
-            "total_duration": self.total_duration,
-            "simulations_per_second": (
-                self.total_simulations / self.total_duration if self.total_duration > 0 else 0.0
-            ),
-            "thread_simulations": dict(self.thread_simulations),
-            "collision_count": self.collision_count,
-            "collision_rate": (self.collision_count / max(1, self.total_simulations)),
-            "lock_wait_time": self.lock_wait_time,
-            "avg_tree_depth": self.avg_tree_depth,
-            "effective_parallelism": self.effective_parallelism,
-        }
+            raise ValueError("Invalid ParallelMCTSConfig:\n" + "\n".join(f"  - {e}" for e in errors))
 
 
 class VirtualLossNode(MCTSNode):
@@ -242,18 +224,20 @@ class VirtualLossNode(MCTSNode):
         best_score = float("-inf")
 
         for child in self.children:
+            vl_child = cast(VirtualLossNode, child)
             # Use effective values for virtual loss
-            if child.effective_visits == 0:
-                return child
+            if vl_child.effective_visits == 0:
+                return vl_child
 
-            exploitation = child.effective_value
-            exploration = exploration_weight * math.sqrt(math.log(self.effective_visits) / child.effective_visits)
+            exploitation = vl_child.effective_value
+            exploration = exploration_weight * math.sqrt(math.log(self.effective_visits) / vl_child.effective_visits)
             score = exploitation + exploration
 
             if score > best_score:
                 best_score = score
-                best_child = child
+                best_child = vl_child
 
+        assert best_child is not None, "No best child found despite non-empty children"
         return best_child
 
 
@@ -319,10 +303,7 @@ class ParallelMCTSEngine:
         self._collision_history: list[bool] = []
 
         # Worker-specific RNGs for deterministic parallel behavior
-        self._worker_rngs = {
-            i: np.random.default_rng(self.seed + i)
-            for i in range(self.num_workers)
-        }
+        self._worker_rngs = {i: np.random.default_rng(self.seed + i) for i in range(self.num_workers)}
 
     async def parallel_search(
         self,
@@ -562,10 +543,11 @@ class ParallelMCTSEngine:
         # Action statistics
         action_stats = {}
         for child in root.children:
-            action_stats[child.action] = {
-                "visits": child.visits,
-                "value": child.value,
-                "effective_visits": child.effective_visits,
+            vl_child = cast(VirtualLossNode, child)
+            action_stats[vl_child.action] = {
+                "visits": vl_child.visits,
+                "value": vl_child.value,
+                "effective_visits": vl_child.effective_visits,
             }
 
         # Compute tree depth
@@ -588,7 +570,7 @@ class ParallelMCTSEngine:
 
         max_depth = 0
         for child in node.children:
-            depth = 1 + self._compute_tree_depth(child)
+            depth = 1 + self._compute_tree_depth(cast(VirtualLossNode, child))
             max_depth = max(max_depth, depth)
 
         return max_depth
@@ -716,11 +698,7 @@ class RootParallelMCTSEngine:
             action_stats[act]["value"] = action_stats[act]["value_sum"] / visits if visits > 0 else 0.0
 
         # Select best action (most total visits)
-        best_action = (
-            max(action_stats.keys(), key=lambda a: action_stats[a]["visits"])
-            if action_stats
-            else None
-        )
+        best_action = max(action_stats.keys(), key=lambda a: action_stats[a]["visits"]) if action_stats else None
 
         # Merge statistics
         total_simulations = sum(stats["iterations"] for _, stats in results)
@@ -782,7 +760,9 @@ class LeafParallelMCTSEngine:
         # Create rollout tasks
         rollout_rngs = [np.random.default_rng(self.seed + i) for i in range(self.num_parallel_rollouts)]
 
-        rollout_tasks = [rollout_policy.evaluate(state=node.state, rng=rng, max_depth=max_depth) for rng in rollout_rngs]
+        rollout_tasks = [
+            rollout_policy.evaluate(state=node.state, rng=rng, max_depth=max_depth) for rng in rollout_rngs
+        ]
 
         # Run rollouts concurrently
         values = await asyncio.gather(*rollout_tasks)

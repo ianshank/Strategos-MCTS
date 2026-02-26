@@ -24,6 +24,7 @@ import pytest
 # Try to import Gradio test client
 try:
     from gradio_client import Client as GradioClient
+
     GRADIO_CLIENT_AVAILABLE = True
 except ImportError:
     GRADIO_CLIENT_AVAILABLE = False
@@ -147,7 +148,7 @@ class TestUIPageLoad:
 
         # Check that the demo block exists
         assert demo is not None
-        assert hasattr(demo, 'blocks')
+        assert hasattr(demo, "blocks")
 
         # Verify essential components exist in the blocks
         component_types = []
@@ -163,11 +164,13 @@ class TestUIPageLoad:
                 # Some components might have different names
                 pass
 
-        update_run_metadata({
-            "test": "page_components_present",
-            "component_count": len(component_types),
-            "component_types": list(set(component_types))[:10],  # First 10 unique types
-        })
+        update_run_metadata(
+            {
+                "test": "page_components_present",
+                "component_count": len(component_types),
+                "component_types": list(set(component_types))[:10],  # First 10 unique types
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -183,10 +186,12 @@ class TestUIPageLoad:
 
         assert demo.title == "LangGraph Multi-Agent MCTS - Trained Models Demo"
 
-        update_run_metadata({
-            "test": "page_title",
-            "title": demo.title,
-        })
+        update_run_metadata(
+            {
+                "test": "page_title",
+                "title": demo.title,
+            }
+        )
 
 
 # ============================================================================
@@ -245,13 +250,15 @@ class TestUIQueryProcessing:
         assert personality_response is not None
         assert len(personality_response) > 0
 
-        update_run_metadata({
-            "test": "query_submission_sync",
-            "query_length": len(sample_queries["tactical"]),
-            "response_length": len(final_response),
-            "agent": agent_details.get("agent"),
-            "has_personality_response": len(personality_response) > 0,
-        })
+        update_run_metadata(
+            {
+                "test": "query_submission_sync",
+                "query_length": len(sample_queries["tactical"]),
+                "response_length": len(final_response),
+                "agent": agent_details.get("agent"),
+                "has_personality_response": len(personality_response) > 0,
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -276,11 +283,13 @@ class TestUIQueryProcessing:
         # Verify response quality
         assert len(final_response) > 20  # Response should be substantive
 
-        update_run_metadata({
-            "test": "rnn_controller_selection",
-            "controller": "RNN",
-            "response_length": len(final_response),
-        })
+        update_run_metadata(
+            {
+                "test": "rnn_controller_selection",
+                "controller": "RNN",
+                "response_length": len(final_response),
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -305,11 +314,13 @@ class TestUIQueryProcessing:
         # Verify response quality
         assert len(final_response) > 20
 
-        update_run_metadata({
-            "test": "bert_controller_selection",
-            "controller": "BERT",
-            "response_length": len(final_response),
-        })
+        update_run_metadata(
+            {
+                "test": "bert_controller_selection",
+                "controller": "BERT",
+                "response_length": len(final_response),
+            }
+        )
 
 
 # ============================================================================
@@ -350,13 +361,15 @@ class TestUIResponseCompleteness:
         # Personality response should also be complete
         assert len(personality_response) > 50, "Personality response too short"
 
-        update_run_metadata({
-            "test": "response_not_truncated",
-            "response_length": len(final_response),
-            "personality_response_length": len(personality_response),
-            "response_truncated": response_truncated,
-            "response_preview": final_response[:200],
-        })
+        update_run_metadata(
+            {
+                "test": "response_not_truncated",
+                "response_length": len(final_response),
+                "personality_response_length": len(personality_response),
+                "response_truncated": response_truncated,
+                "response_preview": final_response[:200],
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -397,12 +410,14 @@ class TestUIResponseCompleteness:
         assert isinstance(agent_details["execution_time_ms"], (int, float))
         assert agent_details["execution_time_ms"] >= 0
 
-        update_run_metadata({
-            "test": "agent_details_complete",
-            "agent": agent_details["agent"],
-            "num_reasoning_steps": len(agent_details["reasoning_steps"]),
-            "execution_time_ms": agent_details["execution_time_ms"],
-        })
+        update_run_metadata(
+            {
+                "test": "agent_details_complete",
+                "agent": agent_details["agent"],
+                "num_reasoning_steps": len(agent_details["reasoning_steps"]),
+                "execution_time_ms": agent_details["execution_time_ms"],
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -432,11 +447,13 @@ class TestUIResponseCompleteness:
         # Check for progress bar characters
         assert "█" in routing_viz, "No progress bar visualization"
 
-        update_run_metadata({
-            "test": "routing_probabilities_displayed",
-            "routing_viz_length": len(routing_viz),
-            "agents_found": [a for a in agents if a in routing_viz],
-        })
+        update_run_metadata(
+            {
+                "test": "routing_probabilities_displayed",
+                "routing_viz_length": len(routing_viz),
+                "agents_found": [a for a in agents if a in routing_viz],
+            }
+        )
 
 
 # ============================================================================
@@ -467,10 +484,12 @@ class TestUIInputValidation:
         # Should return a message asking for input
         assert "Please enter a query" in final_response or len(final_response) == 0 or "enter" in final_response.lower()
 
-        update_run_metadata({
-            "test": "empty_query_handling",
-            "response": final_response[:100] if final_response else "empty",
-        })
+        update_run_metadata(
+            {
+                "test": "empty_query_handling",
+                "response": final_response[:100] if final_response else "empty",
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -493,11 +512,13 @@ class TestUIInputValidation:
         assert final_response is not None
         # Response might be an error or a processed result
 
-        update_run_metadata({
-            "test": "short_query_handling",
-            "query": sample_queries["short"],
-            "response_length": len(final_response) if final_response else 0,
-        })
+        update_run_metadata(
+            {
+                "test": "short_query_handling",
+                "query": sample_queries["short"],
+                "response_length": len(final_response) if final_response else 0,
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -522,11 +543,13 @@ class TestUIInputValidation:
         # Should not contain unescaped script tags in response
         assert "<script>" not in final_response.lower()
 
-        update_run_metadata({
-            "test": "special_chars_handling",
-            "query_preview": sample_queries["special_chars"][:50],
-            "response_length": len(final_response) if final_response else 0,
-        })
+        update_run_metadata(
+            {
+                "test": "special_chars_handling",
+                "query_preview": sample_queries["special_chars"][:50],
+                "response_length": len(final_response) if final_response else 0,
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -548,11 +571,13 @@ class TestUIInputValidation:
         # Should process without errors
         assert final_response is not None
 
-        update_run_metadata({
-            "test": "unicode_handling",
-            "query_preview": sample_queries["unicode"][:30],
-            "response_length": len(final_response) if final_response else 0,
-        })
+        update_run_metadata(
+            {
+                "test": "unicode_handling",
+                "query_preview": sample_queries["unicode"][:30],
+                "response_length": len(final_response) if final_response else 0,
+            }
+        )
 
 
 # ============================================================================
@@ -602,15 +627,17 @@ class TestUIControllerComparison:
         rnn_agent = rnn_details.get("agent", "")
         bert_agent = bert_details.get("agent", "")
 
-        update_run_metadata({
-            "test": "controller_comparison",
-            "query": query[:50],
-            "rnn_agent": rnn_agent,
-            "bert_agent": bert_agent,
-            "rnn_response_length": len(rnn_response),
-            "bert_response_length": len(bert_response),
-            "agents_match": rnn_agent == bert_agent,
-        })
+        update_run_metadata(
+            {
+                "test": "controller_comparison",
+                "query": query[:50],
+                "rnn_agent": rnn_agent,
+                "bert_agent": bert_agent,
+                "rnn_response_length": len(rnn_response),
+                "bert_response_length": len(bert_response),
+                "agents_match": rnn_agent == bert_agent,
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -638,12 +665,14 @@ class TestUIControllerComparison:
         # All runs should select the same agent (deterministic behavior)
         assert len(set(agents)) == 1, f"Inconsistent agent selection: {agents}"
 
-        update_run_metadata({
-            "test": "controller_consistency",
-            "num_runs": 3,
-            "agents_selected": agents,
-            "consistent": len(set(agents)) == 1,
-        })
+        update_run_metadata(
+            {
+                "test": "controller_consistency",
+                "num_runs": 3,
+                "agents_selected": agents,
+                "consistent": len(set(agents)) == 1,
+            }
+        )
 
 
 # ============================================================================
@@ -678,11 +707,13 @@ class TestUIPerformance:
 
         _, agent_details, _, _, _, _ = result
 
-        update_run_metadata({
-            "test": "response_time",
-            "elapsed_time_s": elapsed_time,
-            "execution_time_ms": agent_details.get("execution_time_ms", 0),
-        })
+        update_run_metadata(
+            {
+                "test": "response_time",
+                "elapsed_time_s": elapsed_time,
+                "execution_time_ms": agent_details.get("execution_time_ms", 0),
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -715,14 +746,16 @@ class TestUIPerformance:
         # Average response time should be reasonable
         assert avg_time < 15, f"Average response time too high: {avg_time:.2f}s"
 
-        update_run_metadata({
-            "test": "multiple_queries_performance",
-            "num_queries": len(queries),
-            "times": times,
-            "avg_time_s": avg_time,
-            "max_time_s": max(times),
-            "min_time_s": min(times),
-        })
+        update_run_metadata(
+            {
+                "test": "multiple_queries_performance",
+                "num_queries": len(queries),
+                "times": times,
+                "avg_time_s": avg_time,
+                "max_time_s": max(times),
+                "min_time_s": min(times),
+            }
+        )
 
 
 # ============================================================================
@@ -752,11 +785,13 @@ class TestUIExampleQueries:
             assert isinstance(example, str)
             assert len(example) > 10  # Examples should be meaningful
 
-        update_run_metadata({
-            "test": "example_queries_available",
-            "num_examples": len(examples),
-            "example_previews": [e[:50] for e in examples[:3]],
-        })
+        update_run_metadata(
+            {
+                "test": "example_queries_available",
+                "num_examples": len(examples),
+                "example_previews": [e[:50] for e in examples[:3]],
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -779,21 +814,25 @@ class TestUIExampleQueries:
 
             final_response, agent_details, _, _, _, _ = result
 
-            results.append({
-                "query": example[:50],
-                "response_length": len(final_response) if final_response else 0,
-                "agent": agent_details.get("agent", "unknown"),
-            })
+            results.append(
+                {
+                    "query": example[:50],
+                    "response_length": len(final_response) if final_response else 0,
+                    "agent": agent_details.get("agent", "unknown"),
+                }
+            )
 
         # All examples should produce valid responses
         for r in results:
             assert r["response_length"] > 0, f"Empty response for: {r['query']}"
 
-        update_run_metadata({
-            "test": "example_queries_processing",
-            "num_tested": len(results),
-            "results": results,
-        })
+        update_run_metadata(
+            {
+                "test": "example_queries_processing",
+                "num_tested": len(results),
+                "results": results,
+            }
+        )
 
 
 # ============================================================================
@@ -828,12 +867,14 @@ class TestUIPersonalityResponse:
         # Personality response should be more conversational
         # (typically longer or with different phrasing)
 
-        update_run_metadata({
-            "test": "personality_response_generated",
-            "raw_response_length": len(final_response) if final_response else 0,
-            "personality_response_length": len(personality_response),
-            "personality_preview": personality_response[:200] if personality_response else "",
-        })
+        update_run_metadata(
+            {
+                "test": "personality_response_generated",
+                "raw_response_length": len(final_response) if final_response else 0,
+                "personality_response_length": len(personality_response),
+                "personality_preview": personality_response[:200] if personality_response else "",
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -862,12 +903,14 @@ class TestUIPersonalityResponse:
 
         # Log if error detected but don't fail (some errors might be expected)
 
-        update_run_metadata({
-            "test": "personality_response_quality",
-            "response_length": len(personality_response),
-            "has_error_indicator": has_error,
-            "preview": personality_response[:300],
-        })
+        update_run_metadata(
+            {
+                "test": "personality_response_quality",
+                "response_length": len(personality_response),
+                "has_error_indicator": has_error,
+                "preview": personality_response[:300],
+            }
+        )
 
 
 # ============================================================================
@@ -894,9 +937,8 @@ class TestUIErrorHandling:
                 query=None,
                 controller_type="RNN",
             )
-            # If it doesn't raise, check the response
-            result[0] if result else ""
-            assert True  # Graceful handling
+            # If it doesn't raise, check the response is a tuple
+            assert result is not None, "Expected a result from process_query_sync"
         except (TypeError, AttributeError):
             # Expected - None is not a valid query
             pass
@@ -904,10 +946,12 @@ class TestUIErrorHandling:
             # Other exceptions should be informative
             assert str(e) is not None
 
-        update_run_metadata({
-            "test": "graceful_error_handling",
-            "handled_gracefully": True,
-        })
+        update_run_metadata(
+            {
+                "test": "graceful_error_handling",
+                "handled_gracefully": True,
+            }
+        )
 
 
 # ============================================================================
@@ -940,14 +984,16 @@ class TestUIIntegration:
         final_response, agent_details, routing_viz, features_viz, metrics, personality_response = result
 
         # Step 3: Validate all outputs
-        workflow_valid = all([
-            final_response is not None and len(final_response) > 0,
-            agent_details is not None and "agent" in agent_details,
-            routing_viz is not None and "Meta-Controller" in routing_viz,
-            features_viz is not None and "Features" in features_viz,
-            metrics is not None and "Controller" in metrics,
-            personality_response is not None,
-        ])
+        workflow_valid = all(
+            [
+                final_response is not None and len(final_response) > 0,
+                agent_details is not None and "agent" in agent_details,
+                routing_viz is not None and "Meta-Controller" in routing_viz,
+                features_viz is not None and "Features" in features_viz,
+                metrics is not None and "Controller" in metrics,
+                personality_response is not None,
+            ]
+        )
 
         assert workflow_valid, "Complete workflow validation failed"
 
@@ -955,13 +1001,15 @@ class TestUIIntegration:
         selected_agent = agent_details.get("agent", "")
         assert any(agent in selected_agent for agent in ["HRM", "TRM", "MCTS"])
 
-        update_run_metadata({
-            "test": "complete_ui_workflow",
-            "workflow_valid": workflow_valid,
-            "selected_agent": selected_agent,
-            "response_length": len(final_response),
-            "has_personality": len(personality_response) > 0,
-        })
+        update_run_metadata(
+            {
+                "test": "complete_ui_workflow",
+                "workflow_valid": workflow_valid,
+                "selected_agent": selected_agent,
+                "response_length": len(final_response),
+                "has_personality": len(personality_response) > 0,
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -990,24 +1038,28 @@ class TestUIIntegration:
 
             final_response, agent_details, _, _, _, _ = result
 
-            session_results.append({
-                "query_type": query_key,
-                "controller": controller,
-                "agent": agent_details.get("agent", "unknown"),
-                "response_length": len(final_response) if final_response else 0,
-                "success": len(final_response) > 0 if final_response else False,
-            })
+            session_results.append(
+                {
+                    "query_type": query_key,
+                    "controller": controller,
+                    "agent": agent_details.get("agent", "unknown"),
+                    "response_length": len(final_response) if final_response else 0,
+                    "success": len(final_response) > 0 if final_response else False,
+                }
+            )
 
         # All queries should succeed
         all_success = all(r["success"] for r in session_results)
         assert all_success, f"Some queries failed: {session_results}"
 
-        update_run_metadata({
-            "test": "multi_query_session",
-            "num_queries": len(queries),
-            "all_success": all_success,
-            "results": session_results,
-        })
+        update_run_metadata(
+            {
+                "test": "multi_query_session",
+                "num_queries": len(queries),
+                "all_success": all_success,
+                "results": session_results,
+            }
+        )
 
 
 # ============================================================================
@@ -1045,12 +1097,14 @@ class TestAgentResponseCompleteness:
         # Response should not end with truncation
         assert not final_response.rstrip().endswith("..."), f"HRM response truncated: {final_response[-50:]}"
 
-        update_run_metadata({
-            "test": "hrm_response_complete",
-            "agent": agent_details.get("agent", ""),
-            "response_length": len(final_response),
-            "response_preview": final_response[:200],
-        })
+        update_run_metadata(
+            {
+                "test": "hrm_response_complete",
+                "agent": agent_details.get("agent", ""),
+                "response_length": len(final_response),
+                "response_preview": final_response[:200],
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -1076,12 +1130,14 @@ class TestAgentResponseCompleteness:
         assert final_response is not None
         assert len(final_response) > 50, f"TRM response too short: {len(final_response)} chars"
 
-        update_run_metadata({
-            "test": "trm_response_complete",
-            "agent": agent_details.get("agent", ""),
-            "response_length": len(final_response),
-            "response_preview": final_response[:200],
-        })
+        update_run_metadata(
+            {
+                "test": "trm_response_complete",
+                "agent": agent_details.get("agent", ""),
+                "response_length": len(final_response),
+                "response_preview": final_response[:200],
+            }
+        )
 
     @pytest.mark.e2e
     @pytest.mark.ui
@@ -1094,7 +1150,9 @@ class TestAgentResponseCompleteness:
     def test_mcts_response_complete(self, gradio_app):
         """Test that MCTS agent responses are complete."""
         # Query designed to trigger MCTS routing
-        mcts_query = "Optimize the best strategy for resource allocation across multiple competing objectives with uncertainty."
+        mcts_query = (
+            "Optimize the best strategy for resource allocation across multiple competing objectives with uncertainty."
+        )
 
         result = gradio_app.process_query_sync(
             query=mcts_query,
@@ -1107,12 +1165,14 @@ class TestAgentResponseCompleteness:
         assert final_response is not None
         assert len(final_response) > 50, f"MCTS response too short: {len(final_response)} chars"
 
-        update_run_metadata({
-            "test": "mcts_response_complete",
-            "agent": agent_details.get("agent", ""),
-            "response_length": len(final_response),
-            "response_preview": final_response[:200],
-        })
+        update_run_metadata(
+            {
+                "test": "mcts_response_complete",
+                "agent": agent_details.get("agent", ""),
+                "response_length": len(final_response),
+                "response_preview": final_response[:200],
+            }
+        )
 
 
 # ============================================================================
@@ -1152,9 +1212,10 @@ class TestUIFeatureExtraction:
         for feature in expected_features:
             assert feature in features_viz, f"Missing feature: {feature}"
 
-        update_run_metadata({
-            "test": "features_displayed",
-            "features_viz_length": len(features_viz),
-            "features_found": [f for f in expected_features if f in features_viz],
-        })
-
+        update_run_metadata(
+            {
+                "test": "features_displayed",
+                "features_viz_length": len(features_viz),
+                "features_found": [f for f in expected_features if f in features_viz],
+            }
+        )

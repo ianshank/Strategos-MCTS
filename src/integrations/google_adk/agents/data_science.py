@@ -358,7 +358,7 @@ import seaborn as sns
 CREATE OR REPLACE TABLE `project.dataset.training_data` AS
 SELECT
   -- feature columns
-  {target_column or 'target'} as target
+  {target_column or "target"} as target
 FROM `project.dataset.source_table`
 WHERE conditions...;
 ```
@@ -370,7 +370,7 @@ CREATE OR REPLACE MODEL `project.dataset.{model_type}_model`
 OPTIONS(
   model_type='{model_type.upper()}',
   time_series_timestamp_col='timestamp',
-  time_series_data_col='{target_column or 'target'}'
+  time_series_data_col='{target_column or "target"}'
   -- Additional options...
 ) AS
 SELECT * FROM `project.dataset.training_data`;
@@ -484,25 +484,27 @@ SELECT * FROM ML.FORECAST(
     def get_capabilities(self) -> dict[str, Any]:
         """Get Data Science agent capabilities."""
         base_caps = super().get_capabilities()
-        base_caps.update({
-            "agent_type": "data_science",
-            "sub_agents": self.sub_agents,
-            "supported_backends": self.available_backends,
-            "features": [
-                "nl2sql_translation",
-                "data_analysis",
-                "visualization",
-                "bigquery_ml",
-                "cross_dataset_joins",
-                "session_memory",
-            ],
-            "bqml_models": [
-                "arima",
-                "exponential_smoothing",
-                "tft",
-                "linear_reg",
-                "logistic_reg",
-                "boosted_tree",
-            ],
-        })
+        base_caps.update(
+            {
+                "agent_type": "data_science",
+                "sub_agents": self.sub_agents,
+                "supported_backends": self.available_backends,
+                "features": [
+                    "nl2sql_translation",
+                    "data_analysis",
+                    "visualization",
+                    "bigquery_ml",
+                    "cross_dataset_joins",
+                    "session_memory",
+                ],
+                "bqml_models": [
+                    "arima",
+                    "exponential_smoothing",
+                    "tft",
+                    "linear_reg",
+                    "logistic_reg",
+                    "boosted_tree",
+                ],
+            }
+        )
         return base_caps

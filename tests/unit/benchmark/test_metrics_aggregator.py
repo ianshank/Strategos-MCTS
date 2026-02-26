@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import pytest
 
+pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark")
+
 from src.benchmark.evaluation.models import BenchmarkResult, ScoringResult
 from src.benchmark.reporting.metrics_aggregator import (
     AggregatedMetrics,

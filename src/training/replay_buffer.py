@@ -8,12 +8,15 @@ Implements:
 - Data augmentation support
 """
 
+import logging
 import random
 from collections import deque
 from dataclasses import dataclass
 
 import numpy as np
 import torch
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -23,7 +26,7 @@ class Experience:
     state: torch.Tensor  # State representation
     policy: np.ndarray  # MCTS visit count distribution
     value: float  # Game outcome from this state's perspective
-    metadata: dict = None  # Optional metadata (e.g., game_id, move_number)
+    metadata: dict | None = None  # Optional metadata (e.g., game_id, move_number)
 
 
 class ReplayBuffer:
@@ -42,6 +45,7 @@ class ReplayBuffer:
         """
         self.capacity = capacity
         self.buffer: deque = deque(maxlen=capacity)
+        logger.debug("ReplayBuffer initialized: capacity=%d", capacity)
 
     def add(self, experience: Experience):
         """Add an experience to the buffer."""
@@ -77,6 +81,7 @@ class ReplayBuffer:
 
     def clear(self):
         """Clear all experiences from buffer."""
+        logger.debug("Clearing replay buffer (had %d experiences)", len(self.buffer))
         self.buffer.clear()
 
 
@@ -118,6 +123,13 @@ class PrioritizedReplayBuffer:
         self.position = 0
         self.size = 0
 
+        logger.debug(
+            "PrioritizedReplayBuffer initialized: capacity=%d, alpha=%.2f, beta_start=%.2f",
+            capacity,
+            alpha,
+            beta_start,
+        )
+
     def _get_beta(self) -> float:
         """Get current beta value (anneals from beta_start to 1.0)."""
         return min(1.0, self.beta_start + (1.0 - self.beta_start) * self.frame / self.beta_frames)
@@ -148,10 +160,13 @@ class PrioritizedReplayBuffer:
             experiences: List of experiences
             priorities: Optional list of priorities (same length as experiences)
         """
+        resolved_priorities: list[float | None]
         if priorities is None:
-            priorities = [None] * len(experiences)
+            resolved_priorities = [None] * len(experiences)
+        else:
+            resolved_priorities = list(priorities)
 
-        for exp, priority in zip(experiences, priorities, strict=True):
+        for exp, priority in zip(experiences, resolved_priorities, strict=True):
             self.add(exp, priority)
 
     def sample(self, batch_size: int) -> tuple[list[Experience], np.ndarray, np.ndarray]:

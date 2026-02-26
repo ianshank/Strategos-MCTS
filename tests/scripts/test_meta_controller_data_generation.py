@@ -181,7 +181,7 @@ class TestDatasetValidation:
         samples = [
             {
                 "query": "test",
-                "features": {"hrm_confidence": float('nan')},
+                "features": {"hrm_confidence": float("nan")},
                 "assembly_features": {"assembly_index": 5.0},
                 "ground_truth_agent": "hrm",
             }
@@ -235,6 +235,7 @@ class TestDatasetDistribution:
 
         # Check rough balance (allowing some variance)
         from collections import Counter
+
         counts = Counter(agents)
 
         # At least 5% of each agent
@@ -252,6 +253,7 @@ class TestDatasetDistribution:
 
         # Should have variance
         import numpy as np
+
         assert np.std(indices) > 1.0
 
     def test_complexity_distribution(self, dataset):
@@ -259,6 +261,7 @@ class TestDatasetDistribution:
         complexities = [s["complexity"] for s in dataset]
 
         from collections import Counter
+
         counts = Counter(complexities)
 
         total = len(dataset)
@@ -295,15 +298,19 @@ class TestDatasetDistribution:
             reasoning = sample["reasoning"]
 
             assert len(reasoning) > 20  # At least some explanation
-            assert sample["ground_truth_agent"] in reasoning.lower() or \
-                   any(word in reasoning.lower() for word in ["trm", "hrm", "mcts"])
+            assert sample["ground_truth_agent"] in reasoning.lower() or any(
+                word in reasoning.lower() for word in ["trm", "hrm", "mcts"]
+            )
 
 
-@pytest.mark.parametrize("num_samples,simple_ratio,medium_ratio,complex_ratio", [
-    (100, 0.10, 0.30, 0.60),
-    (50, 0.20, 0.40, 0.40),
-    (200, 0.15, 0.35, 0.50),
-])
+@pytest.mark.parametrize(
+    "num_samples,simple_ratio,medium_ratio,complex_ratio",
+    [
+        (100, 0.10, 0.30, 0.60),
+        (50, 0.20, 0.40, 0.40),
+        (200, 0.15, 0.35, 0.50),
+    ],
+)
 def test_custom_curriculum(num_samples, simple_ratio, medium_ratio, complex_ratio):
     """Test dataset generation with custom curriculum."""
     from scripts.generate_meta_controller_training_data import generate_dataset
@@ -320,6 +327,7 @@ def test_custom_curriculum(num_samples, simple_ratio, medium_ratio, complex_rati
 
     # Check distribution
     from collections import Counter
+
     complexities = [s["complexity"] for s in samples]
     counts = Counter(complexities)
 

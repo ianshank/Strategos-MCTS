@@ -254,7 +254,7 @@ class GridStateAdapter(BaseDomainAdapter):
             device=device,
         )
 
-        self._logger.info(f"Initialized GridStateAdapter: board={board_size}x{board_size}, " f"channels={num_channels}")
+        self._logger.info(f"Initialized GridStateAdapter: board={board_size}x{board_size}, channels={num_channels}")
 
     def state_to_tensor(self, state: MCTSState) -> Any:
         """

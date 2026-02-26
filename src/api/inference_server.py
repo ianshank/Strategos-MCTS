@@ -17,6 +17,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from ..config.constants import DEFAULT_SERVER_HOST
 from ..config.settings import get_settings
 from ..framework.mcts.neural_mcts import NeuralMCTS
 from ..training.performance_monitor import PerformanceMonitor
@@ -95,7 +96,7 @@ class InferenceServer:
         self,
         checkpoint_path: str,
         config: SystemConfig | None = None,
-        host: str = "0.0.0.0",
+        host: str = DEFAULT_SERVER_HOST,
         port: int = 8000,
     ):
         """
@@ -148,9 +149,7 @@ class InferenceServer:
         # Setup routes
         self._setup_routes()
 
-    def _load_models(
-        self, checkpoint_path: str, config: SystemConfig | None
-    ) -> tuple[SystemConfig, dict[str, torch.nn.Module]]:
+    def _load_models(self, checkpoint_path: str, config: SystemConfig | None) -> tuple[SystemConfig, dict[str, Any]]:
         """Load models from checkpoint with error handling."""
         logger.info("Loading models from %s...", checkpoint_path)
 
@@ -171,7 +170,7 @@ class InferenceServer:
         device = config.device
 
         # Load models
-        models = {}
+        models: dict[str, Any] = {}
 
         # Policy-Value Network
         from ..models.policy_value_net import create_policy_value_network
@@ -258,7 +257,7 @@ class InferenceServer:
 
                 state_tensor = state_tensor.to(self.device)
 
-                results = {}
+                results: dict[str, Any] = {}
 
                 # HRM Decomposition (if requested)
                 if request.use_hrm_decomposition:
@@ -320,7 +319,7 @@ class InferenceServer:
             except RuntimeError as e:
                 logger.error("Runtime error during inference: %s", e)
                 raise HTTPException(status_code=500, detail=f"Inference failed: {str(e)}") from e
-            except Exception as e:
+            except Exception as e:  # Broad catch: API stability requires catching unexpected errors
                 logger.exception("Unexpected error during inference: %s", e)
                 raise HTTPException(status_code=500, detail=f"Inference failed: {str(e)}") from e
 
@@ -367,7 +366,7 @@ class InferenceServer:
             except RuntimeError as e:
                 logger.error("Runtime error during policy-value inference: %s", e)
                 raise HTTPException(status_code=500, detail=f"Policy-value inference failed: {str(e)}") from e
-            except Exception as e:
+            except Exception as e:  # Broad catch: API stability requires catching unexpected errors
                 logger.exception("Unexpected error during policy-value inference: %s", e)
                 raise HTTPException(status_code=500, detail=f"Policy-value inference failed: {str(e)}") from e
 
@@ -406,7 +405,7 @@ def main():
         required=True,
         help="Path to model checkpoint",
     )
-    parser.add_argument("--host", type=str, default="0.0.0.0", help="Server host")
+    parser.add_argument("--host", type=str, default=DEFAULT_SERVER_HOST, help="Server host")
     parser.add_argument("--port", type=int, default=8000, help="Server port")
     parser.add_argument(
         "--device",

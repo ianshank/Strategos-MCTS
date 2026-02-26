@@ -25,6 +25,7 @@ from hypothesis import strategies as st
 # Optional torch import
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -106,12 +107,8 @@ class TestConstraintConfig:
 
     @pytest.mark.property
     @given(
-        penalty_weight=st.floats(
-            min_value=0.0, max_value=10.0, allow_nan=False, allow_infinity=False
-        ),
-        min_satisfaction=st.floats(
-            min_value=0.0, max_value=1.0, allow_nan=False, allow_infinity=False
-        ),
+        penalty_weight=st.floats(min_value=0.0, max_value=10.0, allow_nan=False, allow_infinity=False),
+        min_satisfaction=st.floats(min_value=0.0, max_value=1.0, allow_nan=False, allow_infinity=False),
     )
     @settings(max_examples=50)
     def test_property_valid_threshold_ranges(
@@ -264,9 +261,7 @@ class TestPresetConfigurations:
         assert config.logic_engine.parallel_proof_search is True
         assert config.constraints.precompile_constraints is True
         # Balanced weights
-        weight_diff = abs(
-            config.agent.neural_confidence_weight - config.agent.symbolic_confidence_weight
-        )
+        weight_diff = abs(config.agent.neural_confidence_weight - config.agent.symbolic_confidence_weight)
         assert weight_diff < 0.3
 
     def test_all_presets_are_valid(self):

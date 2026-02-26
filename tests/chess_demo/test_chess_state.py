@@ -19,14 +19,12 @@ import pytest
 # Skip all tests if chess not available
 try:
     import chess
+
     CHESS_AVAILABLE = True
 except ImportError:
     CHESS_AVAILABLE = False
 
-pytestmark = pytest.mark.skipif(
-    not CHESS_AVAILABLE,
-    reason="python-chess not installed"
-)
+pytestmark = pytest.mark.skipif(not CHESS_AVAILABLE, reason="python-chess not installed")
 
 if CHESS_AVAILABLE:
     from examples.chess_demo.chess_state import (
@@ -150,6 +148,7 @@ class TestChessState:
         # Should have 14 channels
         try:
             import torch  # noqa: F401 - availability check
+
             assert tensor.shape == (14, 8, 8)
 
             # Check that pieces are encoded correctly

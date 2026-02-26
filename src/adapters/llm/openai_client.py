@@ -263,7 +263,7 @@ class OpenAIClient(BaseLLMClient):
             )
 
         if stream:
-            return self._generate_stream(
+            return await self._generate_stream(
                 messages=messages,
                 prompt=prompt,
                 temperature=temperature,
@@ -347,6 +347,7 @@ class OpenAIClient(BaseLLMClient):
             finish_reason = choice.get("finish_reason", "stop")
 
             # Check for tool calls
+            llm_response: LLMResponse | LLMToolResponse
             if "tool_calls" in message:
                 tool_calls = [
                     ToolCall(
@@ -412,7 +413,7 @@ class OpenAIClient(BaseLLMClient):
 
         payload.update(kwargs)
 
-        async def stream_generator():
+        async def stream_generator() -> AsyncIterator[str]:
             try:
                 async with client.stream("POST", "/chat/completions", json=payload) as response:
                     if response.status_code != 200:

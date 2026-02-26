@@ -321,7 +321,7 @@ class SpanContextPropagator:
 
     def get_trace_parent(self) -> str | None:
         """Get the traceparent header value for the current span."""
-        carrier = {}
+        carrier: dict[str, str] = {}
         self.inject(carrier)
         return carrier.get("traceparent")
 

@@ -631,9 +631,7 @@ class TestThreadSafety:
 
         def add_doc(doc_id: int) -> int:
             nonlocal operations_completed
-            result = initialized_store.add_documents([
-                {"content": f"Add-remove doc {doc_id}", "id": f"ar-{doc_id}"}
-            ])
+            result = initialized_store.add_documents([{"content": f"Add-remove doc {doc_id}", "id": f"ar-{doc_id}"}])
             with ops_lock:
                 operations_completed += 1
             return result

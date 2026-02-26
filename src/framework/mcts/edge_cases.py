@@ -288,17 +288,12 @@ class TimeoutHandler:
     def is_budget_exhausted(self) -> bool:
         """Check if any budget limit has been exceeded."""
         token_exceeded = (
-            self.budget_config.token_budget is not None
-            and self.tokens_used >= self.budget_config.token_budget
+            self.budget_config.token_budget is not None and self.tokens_used >= self.budget_config.token_budget
         )
         cost_exceeded = (
-            self.budget_config.cost_budget_usd is not None
-            and self.cost_used_usd >= self.budget_config.cost_budget_usd
+            self.budget_config.cost_budget_usd is not None and self.cost_used_usd >= self.budget_config.cost_budget_usd
         )
-        nodes_exceeded = (
-            self.budget_config.max_nodes is not None
-            and self.nodes_created >= self.budget_config.max_nodes
-        )
+        nodes_exceeded = self.budget_config.max_nodes is not None and self.nodes_created >= self.budget_config.max_nodes
         return token_exceeded or cost_exceeded or nodes_exceeded
 
     @property

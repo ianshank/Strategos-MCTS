@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import pytest
 
+pytest.importorskip("psutil", reason="psutil required for observability tests")
+
 # =============================================================================
 # Test Markers
 # =============================================================================
@@ -42,8 +44,10 @@ def metrics_collector():
     collector._prometheus_initialized = False
     # Initialize process handle for system metrics
     import psutil
+
     collector._process = psutil.Process()
     from datetime import datetime
+
     collector._start_time = datetime.utcnow()
 
     return collector

@@ -451,10 +451,11 @@ Top 20 citing papers
     def _sanitize_filename(self, name: str) -> str:
         """Sanitize string for use as filename."""
         import re
+
         # Remove special characters, keep alphanumeric and basic punctuation
-        clean = re.sub(r'[^\w\s-]', '', name)
+        clean = re.sub(r"[^\w\s-]", "", name)
         # Replace spaces with underscores
-        clean = re.sub(r'\s+', '_', clean)
+        clean = re.sub(r"\s+", "_", clean)
         return clean[:100]  # Limit length
 
     async def analyze_paper(
@@ -536,16 +537,18 @@ Top 20 citing papers
     def get_capabilities(self) -> dict[str, Any]:
         """Get Academic Research agent capabilities."""
         base_caps = super().get_capabilities()
-        base_caps.update({
-            "agent_type": "academic_research",
-            "features": [
-                "paper_analysis",
-                "citation_discovery",
-                "future_directions",
-                "pdf_processing",
-                "web_search",
-            ],
-            "citation_date_filter": self.citation_start_date,
-            "supported_formats": ["pdf", "url", "arxiv"],
-        })
+        base_caps.update(
+            {
+                "agent_type": "academic_research",
+                "features": [
+                    "paper_analysis",
+                    "citation_discovery",
+                    "future_directions",
+                    "pdf_processing",
+                    "web_search",
+                ],
+                "citation_date_filter": self.citation_start_date,
+                "supported_formats": ["pdf", "url", "arxiv"],
+            }
+        )
         return base_caps

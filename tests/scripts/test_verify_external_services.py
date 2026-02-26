@@ -564,7 +564,6 @@ async def test_verify_all_services(
         patch("scripts.verify_external_services.WandBVerifier.verify") as mock_wandb,
         patch("scripts.verify_external_services.OpenAIVerifier.verify") as mock_openai,
     ):
-
         mock_pinecone.return_value = VerificationResult(
             service_name="pinecone",
             status=ServiceStatus.SUCCESS,

@@ -479,11 +479,13 @@ class TestMetaControllerRouting:
         }
 
         # Simulate routing
-        state["routing_history"].append({
-            "iteration": 0,
-            "selected_agent": "hrm",
-            "confidence": 0.85,
-        })
+        state["routing_history"].append(
+            {
+                "iteration": 0,
+                "selected_agent": "hrm",
+                "confidence": 0.85,
+            }
+        )
         state["last_routed_agent"] = "hrm"
 
         assert len(state["routing_history"]) == 1

@@ -499,22 +499,12 @@ def italian_game_sequence() -> tuple[list[ChessGameState], GameResult]:
 
 def scholars_mate_sequence() -> tuple[list[ChessGameState], GameResult]:
     """Create Scholar's Mate sequence."""
-    return (
-        ChessGameSequenceBuilder()
-        .with_opening("scholars_mate")
-        .with_expected_outcome(GameResult.WHITE_WINS)
-        .build()
-    )
+    return ChessGameSequenceBuilder().with_opening("scholars_mate").with_expected_outcome(GameResult.WHITE_WINS).build()
 
 
 def fools_mate_sequence() -> tuple[list[ChessGameState], GameResult]:
     """Create Fool's Mate sequence."""
-    return (
-        ChessGameSequenceBuilder()
-        .with_opening("fools_mate")
-        .with_expected_outcome(GameResult.BLACK_WINS)
-        .build()
-    )
+    return ChessGameSequenceBuilder().with_opening("fools_mate").with_expected_outcome(GameResult.BLACK_WINS).build()
 
 
 def fork_tactical() -> dict[str, Any]:

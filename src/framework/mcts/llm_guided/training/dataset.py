@@ -164,7 +164,7 @@ class RawExample:
     q_value: float
 
 
-class MCTSDataset(Dataset if _TORCH_AVAILABLE else object):
+class MCTSDataset(Dataset if _TORCH_AVAILABLE else object):  # type: ignore[misc]
     """
     PyTorch Dataset for MCTS training data.
 

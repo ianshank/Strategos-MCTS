@@ -10,6 +10,7 @@ Provides:
 - Export to Prometheus format (optional)
 """
 
+import logging
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -17,6 +18,8 @@ from datetime import datetime
 from typing import Any, Optional
 
 import psutil
+
+logger = logging.getLogger(__name__)
 
 try:
     from prometheus_client import (
@@ -94,6 +97,8 @@ class MetricsCollector:
         self._prometheus_initialized = False
         if PROMETHEUS_AVAILABLE:
             self._init_prometheus_metrics()
+
+        logger.debug("MetricsCollector initialized")
 
     @classmethod
     def get_instance(cls) -> "MetricsCollector":
@@ -179,7 +184,10 @@ class MetricsCollector:
     def start_prometheus_server(self, port: int = 8000) -> None:
         """Start Prometheus metrics HTTP server."""
         if PROMETHEUS_AVAILABLE:
+            logger.info("Starting Prometheus metrics server on port %d", port)
             start_http_server(port)
+        else:
+            logger.warning("Prometheus client not available, cannot start metrics server")
 
     def record_mcts_iteration(
         self,
@@ -242,6 +250,13 @@ class MetricsCollector:
         success: bool = True,
     ) -> None:
         """Record agent execution metrics."""
+        logger.debug(
+            "Recording agent execution: agent=%s, time_ms=%.2f, confidence=%.4f, success=%s",
+            agent_name,
+            execution_time_ms,
+            confidence,
+            success,
+        )
         if agent_name not in self._agent_metrics:
             self._agent_metrics[agent_name] = AgentMetrics(name=agent_name)
 
@@ -402,12 +417,13 @@ class MetricsCollector:
     def export_prometheus_format(self) -> str:
         """Export metrics in Prometheus text format."""
         if PROMETHEUS_AVAILABLE:
-            return generate_latest(REGISTRY).decode("utf-8")
+            return str(generate_latest(REGISTRY).decode("utf-8"))
         else:
             return "# Prometheus client not available\n"
 
     def reset(self) -> None:
         """Reset all collected metrics."""
+        logger.info("Resetting all collected metrics")
         self._mcts_metrics.clear()
         self._agent_metrics.clear()
         self._node_timings.clear()

@@ -91,4 +91,3 @@ def test_bert_controller_flow_infers_personality_response(gradio_client):
     assert "is_technical" in features_viz
     assert "Controller:" in metrics
     assert "Balanced" in personality or len(personality) > 50
-

@@ -7,6 +7,8 @@ through property-based testing.
 
 from __future__ import annotations
 
+import contextlib
+
 import pytest
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
@@ -191,7 +193,6 @@ class TestGameStateProperties:
         import random
 
         state = initial_position()
-        moves_played = 0
 
         for _ in range(num_moves):
             if state.is_terminal:
@@ -204,7 +205,6 @@ class TestGameStateProperties:
             # Pick random legal move
             move = random.choice(legal_moves)
             state = state.apply_action(move)
-            moves_played += 1
 
             # Invariant: FEN is always valid
             assert state.fen is not None
@@ -369,12 +369,8 @@ class TestEncodingProperties:
         """Property: Decode handles out-of-bounds indices gracefully."""
         if index < 0 or index >= encoder.action_size:
             # Should handle gracefully (return None or raise)
-            try:
-                result = encoder.decode(index)
-                # If it returns, should be None for invalid indices
-                # (implementation may vary)
-            except (IndexError, ValueError):
-                pass  # Also acceptable
+            with contextlib.suppress(IndexError, ValueError):
+                encoder.decode(index)
         else:
             # Valid index should decode to something
             result = encoder.decode(index)
@@ -387,8 +383,12 @@ class TestEncodingProperties:
         """Property: Promotion moves encode correctly."""
         # White pawn promotion moves
         promotion_moves = [
-            "e7e8q", "e7e8r", "e7e8b", "e7e8n",
-            "a7a8q", "h7h8q",
+            "e7e8q",
+            "e7e8r",
+            "e7e8b",
+            "e7e8n",
+            "a7a8q",
+            "h7h8q",
         ]
 
         for move in promotion_moves:

@@ -95,8 +95,7 @@ class MoveValidationResult:
     def has_errors(self) -> bool:
         """Check if validation found any errors."""
         return any(
-            issue.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL)
-            for issue in self.issues
+            issue.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL) for issue in self.issues
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -148,8 +147,7 @@ class PositionVerificationResult:
     def has_errors(self) -> bool:
         """Check if verification found any errors."""
         return any(
-            issue.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL)
-            for issue in self.issues
+            issue.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL) for issue in self.issues
         )
 
 
@@ -179,8 +177,7 @@ class MoveSequenceResult:
     def has_errors(self) -> bool:
         """Check if verification found any errors."""
         return any(
-            issue.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL)
-            for issue in self.issues
+            issue.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL) for issue in self.issues
         )
 
     @property
@@ -219,23 +216,17 @@ class GameVerificationResult:
     def has_errors(self) -> bool:
         """Check if verification found any errors."""
         return any(
-            issue.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL)
-            for issue in self.issues
+            issue.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL) for issue in self.issues
         )
 
     def summary(self) -> str:
         """Generate a human-readable summary."""
         status = "VALID" if self.is_valid else "INVALID"
         errors = sum(
-            1
-            for i in self.issues
-            if i.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL)
+            1 for i in self.issues if i.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL)
         )
         warnings = sum(1 for i in self.issues if i.severity == VerificationSeverity.WARNING)
-        return (
-            f"Game {self.game_id}: {status} "
-            f"({self.total_moves} moves, {errors} errors, {warnings} warnings)"
-        )
+        return f"Game {self.game_id}: {status} ({self.total_moves} moves, {errors} errors, {warnings} warnings)"
 
 
 @dataclass

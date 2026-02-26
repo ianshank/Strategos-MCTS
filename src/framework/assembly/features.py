@@ -54,29 +54,32 @@ class AssemblyFeatures:
         Returns:
             1D numpy array of feature values
         """
-        return np.array([
-            self.assembly_index,
-            self.copy_number,
-            self.decomposability_score,
-            float(self.graph_depth),
-            float(self.constraint_count),
-            float(self.concept_count),
-            self.technical_complexity,
-            self.normalized_assembly_index,
-        ], dtype=np.float32)
+        return np.array(
+            [
+                self.assembly_index,
+                self.copy_number,
+                self.decomposability_score,
+                float(self.graph_depth),
+                float(self.constraint_count),
+                float(self.concept_count),
+                self.technical_complexity,
+                self.normalized_assembly_index,
+            ],
+            dtype=np.float32,
+        )
 
     @classmethod
     def feature_names(cls) -> list[str]:
         """Get list of feature names."""
         return [
-            'assembly_index',
-            'copy_number',
-            'decomposability_score',
-            'graph_depth',
-            'constraint_count',
-            'concept_count',
-            'technical_complexity',
-            'normalized_assembly_index',
+            "assembly_index",
+            "copy_number",
+            "decomposability_score",
+            "graph_depth",
+            "constraint_count",
+            "concept_count",
+            "technical_complexity",
+            "normalized_assembly_index",
         ]
 
 
@@ -215,6 +218,7 @@ class AssemblyFeatureExtractor:
         # Factors:
         # 1. Graph is a DAG (if not, hard to decompose)
         import networkx as nx
+
         is_dag = nx.is_directed_acyclic_graph(dep_graph)
         if not is_dag:
             return 0.2  # Low decomposability for cyclic graphs
@@ -241,13 +245,10 @@ class AssemblyFeatureExtractor:
 
         # Combined score
         decomposability = (
-            0.3 * layer_score +
-            0.3 * connectivity_score +
-            0.2 * clarity_score +
-            0.2 * (1.0 if is_dag else 0.0)
+            0.3 * layer_score + 0.3 * connectivity_score + 0.2 * clarity_score + 0.2 * (1.0 if is_dag else 0.0)
         )
 
-        return min(decomposability, 1.0)
+        return float(min(decomposability, 1.0))
 
     def _calculate_graph_depth(self, dep_graph) -> int:
         """
@@ -291,7 +292,7 @@ class AssemblyFeatureExtractor:
         if not concepts:
             return 0.0
 
-        technical_count = sum(1 for c in concepts if c.type == 'technical_term')
+        technical_count = sum(1 for c in concepts if c.type == "technical_term")
         return technical_count / len(concepts)
 
     def _empty_features(self) -> AssemblyFeatures:
@@ -319,24 +320,24 @@ class AssemblyFeatureExtractor:
         """
         # Heuristic importances based on domain knowledge
         importances = {
-            'assembly_index': 0.25,  # Core metric
-            'decomposability_score': 0.20,  # Critical for routing
-            'graph_depth': 0.15,
-            'constraint_count': 0.10,
-            'copy_number': 0.10,
-            'technical_complexity': 0.10,
-            'concept_count': 0.05,
-            'normalized_assembly_index': 0.05,
+            "assembly_index": 0.25,  # Core metric
+            "decomposability_score": 0.20,  # Critical for routing
+            "graph_depth": 0.15,
+            "constraint_count": 0.10,
+            "copy_number": 0.10,
+            "technical_complexity": 0.10,
+            "concept_count": 0.05,
+            "normalized_assembly_index": 0.05,
         }
 
         # Adjust based on feature values
         if features.decomposability_score > 0.7:
             # High decomposability increases its importance
-            importances['decomposability_score'] *= 1.2
+            importances["decomposability_score"] *= 1.2
 
         if features.assembly_index > 8:
             # High complexity increases importance of copy number
-            importances['copy_number'] *= 1.3
+            importances["copy_number"] *= 1.3
 
         # Normalize
         total = sum(importances.values())

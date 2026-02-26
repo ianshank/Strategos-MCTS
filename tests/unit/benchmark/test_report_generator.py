@@ -11,6 +11,8 @@ import tempfile
 
 import pytest
 
+pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark")
+
 from src.benchmark.config.benchmark_settings import ReportConfig
 from src.benchmark.evaluation.models import BenchmarkResult, ScoringResult
 from src.benchmark.reporting.report_generator import ReportGenerator

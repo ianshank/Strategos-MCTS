@@ -9,6 +9,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+pytest.importorskip("psutil", reason="psutil required for observability tests")
+
 from src.api.framework_service import FlexibleLogger
 
 
@@ -19,10 +21,12 @@ class TestFlexibleLogger:
     def mock_standard_logger(self):
         """Create a mock standard Python logger."""
         logger = MagicMock(spec=logging.Logger)
+
         # Standard loggers raise TypeError for keyword arguments
         def log_side_effect(level, msg, **kwargs):
             if kwargs:
                 raise TypeError("Logger._log() got an unexpected keyword argument")
+
         logger.log.side_effect = log_side_effect
         return logger
 

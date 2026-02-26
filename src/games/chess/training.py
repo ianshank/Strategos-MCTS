@@ -228,9 +228,7 @@ class ChessTrainingOrchestrator:
         """
         self.config = config
         self.device = config.device
-        self.initial_state_fn = initial_state_fn or (
-            lambda: create_initial_state(config.board, config.action_space)
-        )
+        self.initial_state_fn = initial_state_fn or (lambda: create_initial_state(config.board, config.action_space))
 
         # Initialize ensemble agent
         self.ensemble_agent = ChessEnsembleAgent(config, device=self.device)
@@ -384,10 +382,7 @@ class ChessTrainingOrchestrator:
         # Create game tasks
         num_games // num_actors
 
-        tasks = [
-            self._play_single_game()
-            for _ in range(num_games)
-        ]
+        tasks = [self._play_single_game() for _ in range(num_games)]
 
         # Run games (with some concurrency limit)
         games = []
@@ -425,10 +420,7 @@ class ChessTrainingOrchestrator:
 
             # Check opening book
             book_move = None
-            if (
-                self.opening_book is not None
-                and move_number < self.config.training.opening_book_moves
-            ):
+            if self.opening_book is not None and move_number < self.config.training.opening_book_moves:
                 book_move = self.opening_book.get_book_move(state, temperature)
 
             if book_move is not None:
@@ -559,9 +551,7 @@ class ChessTrainingOrchestrator:
             policy_logits, values = self.ensemble_agent.policy_value_net(states)
 
             # Calculate losses
-            policy_loss = -torch.mean(
-                torch.sum(target_policies * torch.log_softmax(policy_logits, dim=-1), dim=-1)
-            )
+            policy_loss = -torch.mean(torch.sum(target_policies * torch.log_softmax(policy_logits, dim=-1), dim=-1))
             value_loss = torch.mean((values - target_values) ** 2)
 
             total_loss = policy_loss + value_loss

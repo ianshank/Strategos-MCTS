@@ -88,7 +88,8 @@ class MADueDiligence(BaseUseCase[MADueDiligenceState]):
 
     @property
     def config(self) -> MADueDiligenceConfig:
-        return self._config
+        config: MADueDiligenceConfig = self._config
+        return config
 
     def _setup_agents(self) -> None:
         """Initialize domain-specific agents."""
@@ -99,7 +100,7 @@ class MADueDiligence(BaseUseCase[MADueDiligenceState]):
             confidence_threshold=self._config.confidence_threshold,
             max_docs_per_batch=self._config.max_documents_per_analysis,
         )
-        self._agents["document_analysis"] = DocumentAnalysisAgent(
+        self._agents["document_analysis"] = DocumentAnalysisAgent(  # type: ignore[assignment]
             config=doc_config,
             llm_client=self._llm_client,
             logger=self._logger,
@@ -111,7 +112,7 @@ class MADueDiligence(BaseUseCase[MADueDiligenceState]):
             "risk_threshold": self._config.risk_threshold,
             "critical_threshold": self._config.critical_risk_threshold,
         }
-        self._agents["risk_identification"] = RiskIdentificationAgent(
+        self._agents["risk_identification"] = RiskIdentificationAgent(  # type: ignore[assignment]
             config=risk_config,
             llm_client=self._llm_client,
             logger=self._logger,
@@ -122,7 +123,7 @@ class MADueDiligence(BaseUseCase[MADueDiligenceState]):
             "exploration_depth": self._config.synergy_exploration_depth,
             "min_synergy_value": self._config.min_synergy_value,
         }
-        self._agents["synergy_exploration"] = SynergyExplorationAgent(
+        self._agents["synergy_exploration"] = SynergyExplorationAgent(  # type: ignore[assignment]
             config=synergy_config,
             llm_client=self._llm_client,
             logger=self._logger,
@@ -132,7 +133,7 @@ class MADueDiligence(BaseUseCase[MADueDiligenceState]):
         compliance_config = {
             "jurisdictions": self._config.jurisdictions,
         }
-        self._agents["compliance_check"] = ComplianceCheckAgent(
+        self._agents["compliance_check"] = ComplianceCheckAgent(  # type: ignore[assignment]
             config=compliance_config,
             llm_client=self._llm_client,
             logger=self._logger,
@@ -234,6 +235,7 @@ class MADueDiligence(BaseUseCase[MADueDiligenceState]):
         """Return the reward function for MCTS."""
         if self._reward_function is None:
             self._setup_reward_function()
+        assert self._reward_function is not None, "Reward function not initialized"
         return self._reward_function
 
     def get_rollout_policy(self) -> RolloutPolicy:
@@ -271,7 +273,7 @@ class MADueDiligence(BaseUseCase[MADueDiligenceState]):
                 risk_score = features.get("risk_score", 0)
                 risk_penalty = risk_score * 0.05
 
-                return min(base + depth_bonus + phase_bonus + risk_bonus - risk_penalty, 1.0)
+                return float(min(base + depth_bonus + phase_bonus + risk_bonus - risk_penalty, 1.0))
 
             return HybridRolloutPolicy(
                 heuristic_fn=heuristic_fn,

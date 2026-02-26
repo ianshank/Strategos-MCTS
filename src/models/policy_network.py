@@ -7,12 +7,15 @@ enabling fast action selection without expensive LLM calls for routine decisions
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -107,6 +110,14 @@ class PolicyNetwork(nn.Module):
 
         # Initialize weights
         self.apply(self._init_weights)
+
+        logger.debug(
+            "PolicyNetwork initialized: state_dim=%d, action_dim=%d, hidden_dims=%s, dropout=%.2f",
+            state_dim,
+            action_dim,
+            self.hidden_dims,
+            dropout,
+        )
 
     def _init_weights(self, module: nn.Module) -> None:
         """Initialize network weights."""

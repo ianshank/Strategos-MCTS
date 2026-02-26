@@ -587,9 +587,7 @@ class TestConstraintValidator:
         validator = ConstraintValidator(config)
 
         state = NeuroSymbolicState(state_id="s1")
-        validator.add_constraint(
-            PredicateConstraint(constraint_id="c1", name="test", required_facts=[])
-        )
+        validator.add_constraint(PredicateConstraint(constraint_id="c1", name="test", required_facts=[]))
 
         # First evaluation - cache miss
         validator.validate(state)
@@ -607,9 +605,7 @@ class TestConstraintValidator:
         validator = ConstraintValidator(config)
 
         state = NeuroSymbolicState(state_id="s1")
-        validator.add_constraint(
-            PredicateConstraint(constraint_id="c1", name="test", required_facts=[])
-        )
+        validator.add_constraint(PredicateConstraint(constraint_id="c1", name="test", required_facts=[]))
 
         validator.validate(state)
         validator.clear_cache()

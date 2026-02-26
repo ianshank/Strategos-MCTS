@@ -14,6 +14,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("psutil", reason="psutil required for observability tests")
+
 from src.observability.facade import (
     ObservabilityConfig,
     ObservabilityFacade,

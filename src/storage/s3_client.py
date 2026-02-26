@@ -79,7 +79,7 @@ class S3StorageClient:
         """
         self.config = config or S3Config()
         self.logger = get_structured_logger("storage.s3")
-        self._session: aioboto3.Session | None = None
+        self._session: Any = None
         self._initialized = False
 
         # boto3 config with retries and timeouts
@@ -183,7 +183,7 @@ class S3StorageClient:
             await self.initialize()
 
         async with self._session.client("s3", **self._get_client_params()) as s3:
-            extra_args = {
+            extra_args: dict[str, Any] = {
                 "ContentType": content_type,
             }
             if metadata:
@@ -238,7 +238,7 @@ class S3StorageClient:
                 size_bytes=len(data),
             )
 
-            return data
+            return bytes(data)
 
     async def store_config(
         self,
@@ -287,7 +287,7 @@ class S3StorageClient:
             config_name=config_name,
             s3_key=key,
         )
-        return result
+        return dict(result)
 
     async def store_mcts_stats(
         self,
@@ -341,7 +341,7 @@ class S3StorageClient:
             s3_key=key,
             iteration=iteration,
         )
-        return result
+        return dict(result)
 
     async def store_traces(
         self,
@@ -386,7 +386,7 @@ class S3StorageClient:
             session_id=session_id,
             s3_key=key,
         )
-        return result
+        return dict(result)
 
     async def store_logs(
         self,
@@ -435,7 +435,7 @@ class S3StorageClient:
             entry_count=len(log_entries),
             s3_key=key,
         )
-        return result
+        return dict(result)
 
     async def store_checkpoint(
         self,
@@ -484,7 +484,7 @@ class S3StorageClient:
             session_id=session_id,
             s3_key=key,
         )
-        return result
+        return dict(result)
 
     async def retrieve_object(self, key: str) -> bytes:
         """
@@ -502,7 +502,7 @@ class S3StorageClient:
         if key.endswith(".gz"):
             data = self._decompress_data(data)
 
-        return data
+        return bytes(data)
 
     async def retrieve_json(self, key: str) -> Any:
         """

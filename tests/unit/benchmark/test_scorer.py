@@ -13,6 +13,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark")
+
 from src.benchmark.config.benchmark_settings import ScoringConfig
 from src.benchmark.evaluation.models import BenchmarkResult
 from src.benchmark.evaluation.scorer import LLMJudgeScorer

@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark")
+
 from src.config.settings import LLMProvider
 from src.framework.mcts.llm_guided.config import (
     GeneratorConfig,

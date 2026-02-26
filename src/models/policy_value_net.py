@@ -12,11 +12,15 @@ Based on:
 
 from __future__ import annotations
 
+import logging
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from ..training.system_config import NeuralNetworkConfig
+
+logger = logging.getLogger(__name__)
 
 
 class ResidualBlock(nn.Module):
@@ -171,6 +175,16 @@ class PolicyValueNetwork(nn.Module):
         super().__init__()
         self.config = config
         self.board_size = board_size
+
+        logger.debug(
+            "PolicyValueNetwork initialized: input_channels=%d, num_channels=%d, "
+            "num_res_blocks=%d, action_size=%d, board_size=%d",
+            config.input_channels,
+            config.num_channels,
+            config.num_res_blocks,
+            config.action_size,
+            board_size,
+        )
 
         # Initial convolution
         self.conv_input = nn.Conv2d(
@@ -337,9 +351,9 @@ def create_policy_value_network(
                 nn.init.constant_(m.bias, 0)
 
     network.apply(init_weights)
-    network = network.to(device)
+    network_on_device: PolicyValueNetwork = network.to(device)
 
-    return network
+    return network_on_device
 
 
 # Example: Simpler MLP-based policy-value network for non-spatial tasks

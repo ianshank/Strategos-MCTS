@@ -218,34 +218,36 @@ DANGEROUS_PATTERNS: Final[tuple[str, ...]] = (
 )
 
 # Allowed imports for sandboxed execution
-ALLOWED_IMPORTS: Final[frozenset[str]] = frozenset({
-    "math",
-    "string",
-    "re",
-    "collections",
-    "itertools",
-    "functools",
-    "operator",
-    "heapq",
-    "bisect",
-    "array",
-    "copy",
-    "pprint",
-    "reprlib",
-    "enum",
-    "graphlib",
-    "typing",
-    "types",
-    "dataclasses",
-    "abc",
-    "contextlib",
-    "decimal",
-    "fractions",
-    "numbers",
-    "cmath",
-    "statistics",
-    "random",
-})
+ALLOWED_IMPORTS: Final[frozenset[str]] = frozenset(
+    {
+        "math",
+        "string",
+        "re",
+        "collections",
+        "itertools",
+        "functools",
+        "operator",
+        "heapq",
+        "bisect",
+        "array",
+        "copy",
+        "pprint",
+        "reprlib",
+        "enum",
+        "graphlib",
+        "typing",
+        "types",
+        "dataclasses",
+        "abc",
+        "contextlib",
+        "decimal",
+        "fractions",
+        "numbers",
+        "cmath",
+        "statistics",
+        "random",
+    }
+)
 
 # ============================================================================
 # File Paths and Directories

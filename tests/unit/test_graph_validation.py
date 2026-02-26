@@ -8,6 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
 
 class TestEntryNodeValidation:
     """Tests for _entry_node query validation."""
@@ -128,9 +130,7 @@ class TestRetrieveContextNodeErrorHandling:
 
     def test_vector_store_failure_graceful_degradation(self, mock_graph_builder_with_vector_store):
         """Test graceful degradation when vector store fails."""
-        mock_graph_builder_with_vector_store.vector_store.similarity_search.side_effect = Exception(
-            "Database error"
-        )
+        mock_graph_builder_with_vector_store.vector_store.similarity_search.side_effect = Exception("Database error")
 
         state = {"query": "test query", "use_rag": True}
         result = mock_graph_builder_with_vector_store._retrieve_context_node(state)

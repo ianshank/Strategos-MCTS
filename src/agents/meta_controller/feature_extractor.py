@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FeatureExtractorConfig:
     """Configuration for FeatureExtractor."""
+
     model_name: str = "all-MiniLM-L6-v2"
     device: str = "cpu"
 
@@ -159,9 +160,9 @@ class FeatureExtractor:
                 last_agent=last_agent,
                 iteration=iteration,
                 query_length=query_length,
-                has_rag_context=query_length > 50, # Simple proxy
-                rag_relevance_score=0.0, # Placeholder
-                is_technical_query=has_technical
+                has_rag_context=query_length > 50,  # Simple proxy
+                rag_relevance_score=0.0,  # Placeholder
+                is_technical_query=has_technical,
             )
 
         except Exception as e:

@@ -296,4 +296,7 @@ def wrap_exception(
         FrameworkError instance with sanitized details
     """
     internal_details = f"{type(exc).__name__}: {str(exc)}"
-    return error_class(user_message=user_message, internal_details=internal_details, **kwargs)
+    result = error_class(user_message=user_message, internal_details=internal_details, **kwargs)
+    if not isinstance(result, FrameworkError):
+        raise TypeError(f"error_class must produce a FrameworkError, got {type(result)}")
+    return result

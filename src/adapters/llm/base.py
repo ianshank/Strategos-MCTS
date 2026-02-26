@@ -6,17 +6,17 @@ enabling seamless switching between providers (OpenAI, Anthropic, LM Studio, etc
 """
 
 import asyncio
+import logging
 import time
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any, Protocol, runtime_checkable
 
+from src.utils.time_utils import utc_now
 
-def _utc_now() -> datetime:
-    """Get current UTC time (Python 3.10+ compatible)."""
-    return datetime.now(UTC)
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -28,22 +28,22 @@ class LLMResponse:
     model: str = ""
     raw_response: Any = None
     finish_reason: str = "stop"
-    created_at: datetime = field(default_factory=_utc_now)
+    created_at: datetime = field(default_factory=utc_now)
 
     @property
     def total_tokens(self) -> int:
         """Total tokens used in request/response."""
-        return self.usage.get("total_tokens", 0)
+        return int(self.usage.get("total_tokens", 0))
 
     @property
     def prompt_tokens(self) -> int:
         """Tokens used in prompt."""
-        return self.usage.get("prompt_tokens", 0)
+        return int(self.usage.get("prompt_tokens", 0))
 
     @property
     def completion_tokens(self) -> int:
         """Tokens used in completion."""
-        return self.usage.get("completion_tokens", 0)
+        return int(self.usage.get("completion_tokens", 0))
 
 
 @dataclass
@@ -215,6 +215,7 @@ class BaseLLMClient(ABC):
         self._request_count = 0
         self._total_tokens_used = 0
         self._rate_limited_requests = 0
+        logger.debug("LLM client initialized: model=%s, timeout=%.1f, max_retries=%d", model, timeout, max_retries)
 
         # Initialize rate limiter if configured
         if rate_limit_per_minute is not None and rate_limit_per_minute > 0:
@@ -269,6 +270,13 @@ class BaseLLMClient(ABC):
         """Update internal statistics."""
         self._request_count += 1
         self._total_tokens_used += response.total_tokens
+        logger.debug(
+            "LLM request #%d: model=%s, tokens=%d, finish=%s",
+            self._request_count,
+            response.model,
+            response.total_tokens,
+            response.finish_reason,
+        )
 
     async def _apply_rate_limit(self) -> None:
         """
@@ -281,6 +289,9 @@ class BaseLLMClient(ABC):
             wait_time = await self._rate_limiter.acquire()
             if wait_time > 0:
                 self._rate_limited_requests += 1
+                logger.warning(
+                    "Rate limited: waited %.2fs (total rate-limited: %d)", wait_time, self._rate_limited_requests
+                )
 
     @property
     def stats(self) -> dict:

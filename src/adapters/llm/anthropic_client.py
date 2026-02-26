@@ -286,7 +286,7 @@ class AnthropicClient(BaseLLMClient):
             max_tokens = 4096  # Sensible default
 
         if stream:
-            return self._generate_stream(
+            return await self._generate_stream(
                 messages=messages,
                 prompt=prompt,
                 temperature=temperature,
@@ -398,6 +398,7 @@ class AnthropicClient(BaseLLMClient):
 
             finish_reason = data.get("stop_reason", "stop")
 
+            llm_response: LLMResponse | LLMToolResponse
             if tool_calls:
                 llm_response = LLMToolResponse(
                     text=text,
@@ -461,7 +462,7 @@ class AnthropicClient(BaseLLMClient):
             if key in kwargs:
                 payload[key] = kwargs[key]
 
-        async def stream_generator():
+        async def stream_generator() -> AsyncIterator[str]:
             try:
                 async with client.stream("POST", "/v1/messages", json=payload) as response:
                     if response.status_code != 200:

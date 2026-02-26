@@ -236,16 +236,12 @@ class ChessFeatureExtractor:
 
         # Check pawn shield
         pawn_shield_squares = self._get_pawn_shield_squares(king_square, color)
-        shield_pawns = sum(
-            1 for sq in pawn_shield_squares if board.piece_at(sq) == chess.Piece(chess.PAWN, color)
-        )
+        shield_pawns = sum(1 for sq in pawn_shield_squares if board.piece_at(sq) == chess.Piece(chess.PAWN, color))
         safety *= 0.5 + (shield_pawns / len(pawn_shield_squares)) * 0.5
 
         # Penalize for attackers near king
         king_zone = list(board.attacks(king_square))
-        attackers = sum(
-            len(board.attackers(not color, sq)) for sq in king_zone
-        )
+        attackers = sum(len(board.attackers(not color, sq)) for sq in king_zone)
         safety *= max(0.3, 1.0 - attackers * 0.1)
 
         return safety
@@ -338,12 +334,14 @@ class NeuralRouter(nn.Module):
         current_dim = input_dim
 
         for _ in range(num_layers):
-            layers.extend([
-                nn.Linear(current_dim, hidden_dim),
-                nn.LayerNorm(hidden_dim),
-                nn.GELU(),
-                nn.Dropout(0.1),
-            ])
+            layers.extend(
+                [
+                    nn.Linear(current_dim, hidden_dim),
+                    nn.LayerNorm(hidden_dim),
+                    nn.GELU(),
+                    nn.Dropout(0.1),
+                ]
+            )
             current_dim = hidden_dim
 
         self.encoder = nn.Sequential(*layers)
@@ -504,10 +502,7 @@ class ChessMetaController:
             confidence = confidence.item()
 
         # Build weights dictionary
-        weights = {
-            name: float(agent_probs[i])
-            for i, name in enumerate(self.AGENT_NAMES)
-        }
+        weights = {name: float(agent_probs[i]) for i, name in enumerate(self.AGENT_NAMES)}
 
         # Select primary agent
         primary_idx = torch.argmax(agent_probs).item()
@@ -594,6 +589,4 @@ class ChessMetaController:
             path: Path to load weights from
         """
         if self.neural_router is not None:
-            self.neural_router.load_state_dict(
-                torch.load(path, map_location=self.device, weights_only=True)
-            )
+            self.neural_router.load_state_dict(torch.load(path, map_location=self.device, weights_only=True))

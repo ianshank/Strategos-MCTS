@@ -12,6 +12,8 @@ import time
 
 import pytest
 
+pytest.importorskip("psutil", reason="psutil required for performance optimization tests")
+
 # =============================================================================
 # Test Markers
 # =============================================================================

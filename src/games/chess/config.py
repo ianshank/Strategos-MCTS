@@ -23,9 +23,10 @@ if TYPE_CHECKING:
 # Optional torch import for device configuration
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
-    torch = None  # type: ignore[assignment]
+    torch = None
     TORCH_AVAILABLE = False
 
 
@@ -362,9 +363,7 @@ class ChessConfig:
     trm: ChessTRMConfig = field(default_factory=ChessTRMConfig)
 
     # System settings
-    device: str = field(
-        default_factory=lambda: "cuda" if TORCH_AVAILABLE and torch.cuda.is_available() else "cpu"
-    )
+    device: str = field(default_factory=lambda: "cuda" if TORCH_AVAILABLE and torch.cuda.is_available() else "cpu")
     seed: int = 42
     use_mixed_precision: bool = True
     gradient_checkpointing: bool = False
@@ -444,11 +443,7 @@ class ChessConfig:
         assert self.training.learning_rate > 0, "Learning rate must be positive"
 
         # Validate weights sum approximately to 1
-        weight_sum = (
-            self.ensemble.hrm_weight
-            + self.ensemble.trm_weight
-            + self.ensemble.mcts_weight
-        )
+        weight_sum = self.ensemble.hrm_weight + self.ensemble.trm_weight + self.ensemble.mcts_weight
         assert 0.99 <= weight_sum <= 1.01, f"Ensemble weights must sum to 1, got {weight_sum}"
 
     @property
@@ -559,7 +554,7 @@ class ChessConfig:
             raise ValueError(f"Unknown preset: {preset}. Available: {list(presets.keys())}")
         return presets[preset]()
 
-    def to_system_config(self) -> "SystemConfig":
+    def to_system_config(self) -> SystemConfig:
         """Convert to base SystemConfig for framework compatibility."""
         from src.training.system_config import (
             HRMConfig,

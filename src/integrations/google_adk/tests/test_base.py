@@ -201,6 +201,7 @@ class TestADKAgentAdapter:
         # Mock _agent_invoke to take longer than timeout
         async def slow_invoke(request):
             import asyncio
+
             await asyncio.sleep(1)
             return ADKAgentResponse(result="Done", status="success")
 

@@ -28,9 +28,10 @@ import numpy as np
 # Optional torch import
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
-    torch = None  # type: ignore[assignment]
+    torch = None
     TORCH_AVAILABLE = False
 
 if TYPE_CHECKING:
@@ -277,10 +278,7 @@ class ChessBoardRepresentation:
         else:
             perspectives = from_perspective
 
-        tensors = [
-            self.encode(board, persp)
-            for board, persp in zip(boards, perspectives, strict=False)
-        ]
+        tensors = [self.encode(board, persp) for board, persp in zip(boards, perspectives, strict=False)]
 
         return torch.stack(tensors)
 

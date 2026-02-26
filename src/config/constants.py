@@ -141,3 +141,4 @@ DEFAULT_WANDB_MODE: Final[str] = "online"
 
 DEFAULT_LANGCHAIN_ENDPOINT: Final[str] = "https://api.smith.langchain.com"
 DEFAULT_LMSTUDIO_URL: Final[str] = "http://localhost:1234/v1"
+DEFAULT_SERVER_HOST: Final[str] = "0.0.0.0"

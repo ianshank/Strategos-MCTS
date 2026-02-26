@@ -99,10 +99,7 @@ class TestVerificationBuilderIntegration:
     def test_builder_creates_game_verifier(self) -> None:
         """Test builder creates game verifier with configuration."""
         verifier = (
-            VerificationBuilder()
-            .with_stop_on_first_error(False)
-            .with_result_verification(True)
-            .build_game_verifier()
+            VerificationBuilder().with_stop_on_first_error(False).with_result_verification(True).build_game_verifier()
         )
 
         result = verifier.verify_move_sequence(
@@ -116,10 +113,7 @@ class TestVerificationBuilderIntegration:
     def test_builder_creates_ensemble_checker(self) -> None:
         """Test builder creates ensemble checker with configuration."""
         checker = (
-            VerificationBuilder()
-            .with_agreement_threshold(0.7)
-            .with_divergence_threshold(0.4)
-            .build_ensemble_checker()
+            VerificationBuilder().with_agreement_threshold(0.7).with_divergence_threshold(0.4).build_ensemble_checker()
         )
 
         assert checker.config.agreement_threshold == 0.7
@@ -130,11 +124,7 @@ class TestVerificationBuilderIntegration:
         """Test builder with chess configuration."""
         chess_config = ChessConfig.from_preset("small")
 
-        verifier = (
-            VerificationBuilder()
-            .with_chess_config(chess_config)
-            .build_game_verifier()
-        )
+        verifier = VerificationBuilder().with_chess_config(chess_config).build_game_verifier()
 
         assert verifier is not None
 
@@ -149,9 +139,7 @@ class TestFullVerificationWorkflow:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_full_game_verification_workflow(
-        self, factory: ChessVerificationFactory
-    ) -> None:
+    async def test_full_game_verification_workflow(self, factory: ChessVerificationFactory) -> None:
         """Test complete game verification workflow."""
         # Create components
         verifier = factory.create_game_verifier()
@@ -175,18 +163,20 @@ class TestFullVerificationWorkflow:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_game_with_special_moves_verification(
-        self, factory: ChessVerificationFactory
-    ) -> None:
+    async def test_game_with_special_moves_verification(self, factory: ChessVerificationFactory) -> None:
         """Test verification of game with special moves."""
         verifier = factory.create_game_verifier()
 
         # Game with castling
         moves = [
-            "e2e4", "e7e5",
-            "g1f3", "b8c6",
-            "f1c4", "f8c5",
-            "d2d3", "g8f6",
+            "e2e4",
+            "e7e5",
+            "g1f3",
+            "b8c6",
+            "f1c4",
+            "f8c5",
+            "d2d3",
+            "g8f6",
             "e1g1",  # Kingside castling
         ]
 
@@ -197,9 +187,7 @@ class TestFullVerificationWorkflow:
         assert result.move_sequence_result.castles >= 1
 
     @pytest.mark.integration
-    def test_position_to_sequence_verification(
-        self, factory: ChessVerificationFactory
-    ) -> None:
+    def test_position_to_sequence_verification(self, factory: ChessVerificationFactory) -> None:
         """Test verification from position through sequence."""
         verifier = factory.create_game_verifier()
 
@@ -219,9 +207,7 @@ class TestFullVerificationWorkflow:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_error_recovery_workflow(
-        self, factory: ChessVerificationFactory
-    ) -> None:
+    async def test_error_recovery_workflow(self, factory: ChessVerificationFactory) -> None:
         """Test verification workflow with error recovery."""
         verifier = factory.create_game_verifier()
 
@@ -232,10 +218,7 @@ class TestFullVerificationWorkflow:
         result = await verifier.verify_full_game(moves=moves)
 
         assert result.is_valid is False
-        assert any(
-            issue.code in ("INVALID_MOVE", "INVALID_UCI_FORMAT")
-            for issue in result.issues
-        )
+        assert any(issue.code in ("INVALID_MOVE", "INVALID_UCI_FORMAT") for issue in result.issues)
 
 
 class TestCrossComponentVerification:
@@ -305,18 +288,10 @@ class TestConfigurationIntegration:
     @pytest.mark.integration
     def test_log_level_configuration(self) -> None:
         """Test that log level configuration is respected."""
-        verifier = (
-            VerificationBuilder()
-            .with_logging(True)
-            .build_game_verifier()
-        )
+        verifier = VerificationBuilder().with_logging(True).build_game_verifier()
 
         assert verifier.config.log_verifications is True
 
-        verifier_quiet = (
-            VerificationBuilder()
-            .with_logging(False)
-            .build_game_verifier()
-        )
+        verifier_quiet = VerificationBuilder().with_logging(False).build_game_verifier()
 
         assert verifier_quiet.config.log_verifications is False

@@ -48,8 +48,8 @@ class DataEngineeringAgent(ADKAgentAdapter):
         self.logs_dir.mkdir(parents=True, exist_ok=True)
 
         # Dataform configuration
-        self.dataform_repo = None
-        self.dataform_workspace = None
+        self.dataform_repo: str | None = None
+        self.dataform_workspace: str | None = None
 
     async def _agent_initialize(self) -> None:
         """Initialize Data Engineering agent resources."""
@@ -62,6 +62,7 @@ class DataEngineeringAgent(ADKAgentAdapter):
 
         # Load Dataform configuration from environment
         import os
+
         self.dataform_repo = os.getenv("DATAFORM_REPOSITORY_NAME")
         self.dataform_workspace = os.getenv("DATAFORM_WORKSPACE_NAME")
 
@@ -298,7 +299,7 @@ class DataEngineeringAgent(ADKAgentAdapter):
 ## Data Flow
 
 ### Source Tables
-{chr(10).join(f'- {table}' for table in source_tables) if source_tables else '- To be defined'}
+{chr(10).join(f"- {table}" for table in source_tables) if source_tables else "- To be defined"}
 
 ### Target Table
 {target_table or "To be defined"}
@@ -308,7 +309,7 @@ class DataEngineeringAgent(ADKAgentAdapter):
 ### Stage 1: Data Ingestion
 ```sqlx
 -- Raw data ingestion
--- Source: {', '.join(source_tables) if source_tables else 'TBD'}
+-- Source: {", ".join(source_tables) if source_tables else "TBD"}
 -- Destination: raw_{pipeline_name}
 ```
 
@@ -347,7 +348,7 @@ class DataEngineeringAgent(ADKAgentAdapter):
 ## Dependencies
 
 ### Upstream Dependencies
-{chr(10).join(f'- {table}' for table in source_tables) if source_tables else '- None'}
+{chr(10).join(f"- {table}" for table in source_tables) if source_tables else "- None"}
 
 ### Downstream Dependencies
 - To be identified based on usage
@@ -499,7 +500,7 @@ WHERE
     ) -> str:
         """Generate optimization plan."""
         return f"""
-# Pipeline Optimization: {pipeline_name or 'Pipeline'}
+# Pipeline Optimization: {pipeline_name or "Pipeline"}
 
 ## Objective
 {query}
@@ -573,35 +574,25 @@ CLUSTER BY category, region
             "description": query,
             "schema": {
                 "fields": [
-                    {
-                        "name": "id",
-                        "type": "STRING",
-                        "mode": "REQUIRED",
-                        "description": "Unique identifier"
-                    },
+                    {"name": "id", "type": "STRING", "mode": "REQUIRED", "description": "Unique identifier"},
                     {
                         "name": "created_at",
                         "type": "TIMESTAMP",
                         "mode": "REQUIRED",
-                        "description": "Record creation timestamp"
+                        "description": "Record creation timestamp",
                     },
                     {
                         "name": "updated_at",
                         "type": "TIMESTAMP",
                         "mode": "NULLABLE",
-                        "description": "Record update timestamp"
+                        "description": "Record update timestamp",
                     },
                     # Add fields based on requirements
                 ]
             },
-            "partitioning": {
-                "type": "DAY",
-                "field": "created_at"
-            },
-            "clustering": {
-                "fields": ["id"]
-            },
-            "data_requirements": data_requirements
+            "partitioning": {"type": "DAY", "field": "created_at"},
+            "clustering": {"fields": ["id"]},
+            "data_requirements": data_requirements,
         }
 
     async def design_pipeline(
@@ -696,19 +687,21 @@ CLUSTER BY category, region
     def get_capabilities(self) -> dict[str, Any]:
         """Get Data Engineering agent capabilities."""
         base_caps = super().get_capabilities()
-        base_caps.update({
-            "agent_type": "data_engineering",
-            "dataform_repo": self.dataform_repo,
-            "dataform_workspace": self.dataform_workspace,
-            "features": [
-                "pipeline_design",
-                "sqlx_generation",
-                "troubleshooting",
-                "optimization",
-                "schema_design",
-                "udf_integration",
-                "data_quality",
-            ],
-            "supported_transforms": ["table", "view", "incremental", "assertion"],
-        })
+        base_caps.update(
+            {
+                "agent_type": "data_engineering",
+                "dataform_repo": self.dataform_repo,
+                "dataform_workspace": self.dataform_workspace,
+                "features": [
+                    "pipeline_design",
+                    "sqlx_generation",
+                    "troubleshooting",
+                    "optimization",
+                    "schema_design",
+                    "udf_integration",
+                    "data_quality",
+                ],
+                "supported_transforms": ["table", "view", "incremental", "assertion"],
+            }
+        )
         return base_caps

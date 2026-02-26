@@ -80,10 +80,10 @@ class AssemblyRouter:
 
         # Statistics
         self._routing_stats = {
-            'total_routes': 0,
-            'trm_routes': 0,
-            'hrm_routes': 0,
-            'mcts_routes': 0,
+            "total_routes": 0,
+            "trm_routes": 0,
+            "hrm_routes": 0,
+            "mcts_routes": 0,
         }
 
     def route(
@@ -113,13 +113,13 @@ class AssemblyRouter:
         if features is None:
             features = self.feature_extractor.extract(query)
 
-        self._routing_stats['total_routes'] += 1
+        self._routing_stats["total_routes"] += 1
 
         # Apply routing rules
         agent, confidence, reasoning = self._apply_routing_rules(features)
 
         # Update stats
-        self._routing_stats[f'{agent}_routes'] += 1
+        self._routing_stats[f"{agent}_routes"] += 1
 
         logger.debug(f"Assembly routing: {query[:50]}... → {agent} (confidence: {confidence:.2f})")
 
@@ -153,7 +153,7 @@ class AssemblyRouter:
             return (
                 "trm",
                 0.9,
-                f"Simple query (assembly index: {assembly_idx:.1f}) with high reusability (copy number: {copy_num:.1f}) → TRM for pattern-based reasoning"
+                f"Simple query (assembly index: {assembly_idx:.1f}) with high reusability (copy number: {copy_num:.1f}) → TRM for pattern-based reasoning",
             )
 
         # Rule 2: Very high reusability (lots of known patterns) → TRM
@@ -161,23 +161,19 @@ class AssemblyRouter:
             return (
                 "trm",
                 0.85,
-                f"Very high pattern reusability (copy number: {copy_num:.1f}) → TRM can leverage existing patterns"
+                f"Very high pattern reusability (copy number: {copy_num:.1f}) → TRM can leverage existing patterns",
             )
 
         # Rule 3: Simple query → TRM
         if assembly_idx < self.simple_threshold:
-            return (
-                "trm",
-                0.8,
-                f"Simple query (assembly index: {assembly_idx:.1f}) → TRM for direct reasoning"
-            )
+            return ("trm", 0.8, f"Simple query (assembly index: {assembly_idx:.1f}) → TRM for direct reasoning")
 
         # Rule 4: Highly decomposable → HRM
         if decomp > 0.7:
             return (
                 "hrm",
                 0.9,
-                f"Highly decomposable query (score: {decomp:.2f}) with {features.graph_depth} dependency layers → HRM for hierarchical breakdown"
+                f"Highly decomposable query (score: {decomp:.2f}) with {features.graph_depth} dependency layers → HRM for hierarchical breakdown",
             )
 
         # Rule 5: Medium complexity with good decomposability → HRM
@@ -185,7 +181,7 @@ class AssemblyRouter:
             return (
                 "hrm",
                 0.85,
-                f"Medium complexity (assembly index: {assembly_idx:.1f}) with moderate decomposability ({decomp:.2f}) → HRM"
+                f"Medium complexity (assembly index: {assembly_idx:.1f}) with moderate decomposability ({decomp:.2f}) → HRM",
             )
 
         # Rule 6: High technical complexity with structured dependencies → HRM
@@ -193,7 +189,7 @@ class AssemblyRouter:
             return (
                 "hrm",
                 0.8,
-                f"Technical query (complexity: {tech_comp:.2f}) with structured {features.graph_depth}-layer hierarchy → HRM"
+                f"Technical query (complexity: {tech_comp:.2f}) with structured {features.graph_depth}-layer hierarchy → HRM",
             )
 
         # Rule 7: Very low decomposability (hard to break down) → MCTS
@@ -201,7 +197,7 @@ class AssemblyRouter:
             return (
                 "mcts",
                 0.85,
-                f"Low decomposability ({decomp:.2f}) - complex interconnected structure → MCTS for exploratory search"
+                f"Low decomposability ({decomp:.2f}) - complex interconnected structure → MCTS for exploratory search",
             )
 
         # Rule 8: High complexity → MCTS
@@ -209,14 +205,14 @@ class AssemblyRouter:
             return (
                 "mcts",
                 0.9,
-                f"High complexity (assembly index: {assembly_idx:.1f}) → MCTS for systematic exploration"
+                f"High complexity (assembly index: {assembly_idx:.1f}) → MCTS for systematic exploration",
             )
 
         # Default: Medium complexity → HRM (safe default for structured reasoning)
         return (
             "hrm",
             0.6,
-            f"Medium complexity (assembly index: {assembly_idx:.1f}) → HRM (default for structured queries)"
+            f"Medium complexity (assembly index: {assembly_idx:.1f}) → HRM (default for structured queries)",
         )
 
     def to_prediction(self, decision: RoutingDecision) -> MetaControllerPrediction:
@@ -239,9 +235,9 @@ class AssemblyRouter:
             base_prob = (1.0 - decision.confidence) / 2.0
 
         probabilities = {
-            'hrm': base_prob,
-            'trm': base_prob,
-            'mcts': base_prob,
+            "hrm": base_prob,
+            "trm": base_prob,
+            "mcts": base_prob,
         }
         probabilities[decision.agent] = decision.confidence
 
@@ -258,26 +254,26 @@ class AssemblyRouter:
         Returns:
             Dictionary of routing statistics
         """
-        stats = dict(self._routing_stats)
+        stats: dict[str, Any] = dict(self._routing_stats)
 
-        if stats['total_routes'] > 0:
-            stats['trm_rate'] = stats['trm_routes'] / stats['total_routes']
-            stats['hrm_rate'] = stats['hrm_routes'] / stats['total_routes']
-            stats['mcts_rate'] = stats['mcts_routes'] / stats['total_routes']
+        if stats["total_routes"] > 0:
+            stats["trm_rate"] = stats["trm_routes"] / stats["total_routes"]
+            stats["hrm_rate"] = stats["hrm_routes"] / stats["total_routes"]
+            stats["mcts_rate"] = stats["mcts_routes"] / stats["total_routes"]
         else:
-            stats['trm_rate'] = 0.0
-            stats['hrm_rate'] = 0.0
-            stats['mcts_rate'] = 0.0
+            stats["trm_rate"] = 0.0
+            stats["hrm_rate"] = 0.0
+            stats["mcts_rate"] = 0.0
 
         return stats
 
     def reset_statistics(self) -> None:
         """Reset routing statistics."""
         self._routing_stats = {
-            'total_routes': 0,
-            'trm_routes': 0,
-            'hrm_routes': 0,
-            'mcts_routes': 0,
+            "total_routes": 0,
+            "trm_routes": 0,
+            "hrm_routes": 0,
+            "mcts_routes": 0,
         }
 
     def explain_routing(self, query: str) -> str:

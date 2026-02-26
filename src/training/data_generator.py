@@ -6,6 +6,7 @@ that learn to select the optimal agent (HRM, TRM, or MCTS) based on system state
 """
 
 import json
+import logging
 from dataclasses import asdict
 from typing import Any
 
@@ -14,6 +15,8 @@ import torch
 
 from src.agents.meta_controller.base import MetaControllerFeatures
 from src.agents.meta_controller.utils import features_to_text, normalize_features
+
+logger = logging.getLogger(__name__)
 
 
 class MetaControllerDataGenerator:
@@ -51,6 +54,7 @@ class MetaControllerDataGenerator:
         """
         self.seed = seed
         self.rng = np.random.default_rng(seed)
+        logger.debug("MetaControllerDataGenerator initialized: seed=%d", seed)
 
     def generate_single_sample(self) -> tuple[MetaControllerFeatures, str]:
         """
@@ -165,6 +169,8 @@ class MetaControllerDataGenerator:
         if num_samples <= 0:
             raise ValueError(f"num_samples must be positive, got {num_samples}")
 
+        logger.info("Generating dataset with %d samples", num_samples)
+
         features_list: list[MetaControllerFeatures] = []
         labels_list: list[str] = []
 
@@ -173,6 +179,7 @@ class MetaControllerDataGenerator:
             features_list.append(features)
             labels_list.append(label)
 
+        logger.info("Dataset generation complete: %d samples generated", len(features_list))
         return features_list, labels_list
 
     def generate_balanced_dataset(
@@ -575,6 +582,8 @@ class MetaControllerDataGenerator:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
+        logger.info("Dataset saved to %s (%d samples)", path, len(features_list))
+
     def load_dataset(self, path: str) -> tuple[list[MetaControllerFeatures], list[str]]:
         """
         Load dataset from a JSON file.
@@ -598,6 +607,8 @@ class MetaControllerDataGenerator:
             >>> isinstance(features[0], MetaControllerFeatures)
             True
         """
+        logger.info("Loading dataset from %s", path)
+
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
 

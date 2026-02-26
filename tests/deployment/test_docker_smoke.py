@@ -116,7 +116,7 @@ def exec_in_container(
         if container.status != "running":
             # Try to restart it for the test
             container.start()
-            time.sleep(5) # Give it a moment
+            time.sleep(5)  # Give it a moment
 
         exit_code, output = container.exec_run(command)
         return exit_code, output.decode("utf-8")
@@ -173,7 +173,7 @@ def test_training_container_healthy(docker_client, training_container_name):
                 if container.attrs.get("State", {}).get("Health", {}).get("Status") == "healthy":
                     healthy = True
                     break
-            elif container.status == "exited" and container.attrs['State']['ExitCode'] == 0:
+            elif container.status == "exited" and container.attrs["State"]["ExitCode"] == 0:
                 # Successfully finished
                 healthy = True
                 break

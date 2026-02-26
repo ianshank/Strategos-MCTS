@@ -85,7 +85,7 @@ class TestAssemblyIndexCalculator:
 
         # Check cache stats
         stats = calculator.get_cache_stats()
-        assert stats['size'] > 0
+        assert stats["size"] > 0
 
     def test_invalid_input(self, calculator):
         """Test with invalid input type."""
@@ -113,10 +113,12 @@ class TestAssemblyIndexCalculator:
         # Create multiple nodes with same pattern
         for i in range(3):
             base = i * 3
-            graph.add_edges_from([
-                (base, base + 1),
-                (base, base + 2),
-            ])
+            graph.add_edges_from(
+                [
+                    (base, base + 1),
+                    (base, base + 2),
+                ]
+            )
 
         assembly_index, copy_number = calculator.calculate(graph)
 
@@ -126,17 +128,20 @@ class TestAssemblyIndexCalculator:
     def test_clear_cache(self, calculator):
         """Test cache clearing."""
         calculator.calculate("test query")
-        assert calculator.get_cache_stats()['size'] > 0
+        assert calculator.get_cache_stats()["size"] > 0
 
         calculator.clear_cache()
-        assert calculator.get_cache_stats()['size'] == 0
+        assert calculator.get_cache_stats()["size"] == 0
 
 
-@pytest.mark.parametrize("query,expected_min,expected_max", [
-    ("simple", 1, 3),
-    ("more complex query with dependencies", 3, 8),
-    ("design microservices api database cache queue async", 5, 12),
-])
+@pytest.mark.parametrize(
+    "query,expected_min,expected_max",
+    [
+        ("simple", 1, 3),
+        ("more complex query with dependencies", 3, 8),
+        ("design microservices api database cache queue async", 5, 12),
+    ],
+)
 def test_assembly_index_ranges(query, expected_min, expected_max):
     """Test assembly indices fall in expected ranges."""
     calculator = AssemblyIndexCalculator()

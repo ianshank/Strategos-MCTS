@@ -14,12 +14,15 @@ Based on principles from:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
 
 from ..training.system_config import TRMConfig
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -111,6 +114,14 @@ class TRMAgent(nn.Module):
         self.device = device
         self.output_dim = output_dim or config.latent_dim
 
+        logger.debug(
+            "TRM agent initialized: latent_dim=%d, hidden_dim=%d, num_recursions=%d, device=%s",
+            config.latent_dim,
+            config.hidden_dim,
+            config.num_recursions,
+            device,
+        )
+
         # Initial encoding
         self.encoder = nn.Sequential(
             nn.Linear(config.latent_dim, config.hidden_dim),
@@ -153,6 +164,8 @@ class TRMAgent(nn.Module):
         """
         num_recursions = num_recursions or self.config.num_recursions
 
+        logger.debug("TRM forward: input_shape=%s, num_recursions=%d", x.shape, num_recursions)
+
         # Initial encoding
         latent = self.encoder(x)
         previous_latent = latent.clone()
@@ -185,6 +198,12 @@ class TRMAgent(nn.Module):
                 if residual_norm < self.config.convergence_threshold:
                     converged = True
                     convergence_step = i + 1
+                    logger.debug(
+                        "TRM converged at recursion %d: residual_norm=%.6f, threshold=%.6f",
+                        i,
+                        residual_norm,
+                        self.config.convergence_threshold,
+                    )
                     break
 
             previous_latent = latent.clone()

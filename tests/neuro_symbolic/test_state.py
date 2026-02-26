@@ -21,6 +21,7 @@ from hypothesis import strategies as st
 # Optional torch import
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -35,10 +36,7 @@ from src.neuro_symbolic.state import (
 )
 
 # Skip marker for tests requiring torch
-requires_torch = pytest.mark.skipif(
-    not TORCH_AVAILABLE,
-    reason="torch not available"
-)
+requires_torch = pytest.mark.skipif(not TORCH_AVAILABLE, reason="torch not available")
 
 
 class TestFact:
@@ -182,10 +180,12 @@ class TestNeuroSymbolicState:
 
     def test_state_with_facts(self):
         """Test state creation with facts."""
-        facts = frozenset([
-            Fact(name="a", arguments=("x",)),
-            Fact(name="b", arguments=("y",)),
-        ])
+        facts = frozenset(
+            [
+                Fact(name="a", arguments=("x",)),
+                Fact(name="b", arguments=("y",)),
+            ]
+        )
         state = NeuroSymbolicState(state_id="s1", facts=facts)
 
         assert len(state.facts) == 2
@@ -224,11 +224,13 @@ class TestNeuroSymbolicState:
 
     def test_state_query_facts_by_name(self):
         """Test querying facts by name."""
-        facts = frozenset([
-            Fact(name="edge", arguments=("a", "b")),
-            Fact(name="edge", arguments=("b", "c")),
-            Fact(name="node", arguments=("a",)),
-        ])
+        facts = frozenset(
+            [
+                Fact(name="edge", arguments=("a", "b")),
+                Fact(name="edge", arguments=("b", "c")),
+                Fact(name="node", arguments=("a",)),
+            ]
+        )
         state = NeuroSymbolicState(state_id="s1", facts=facts)
 
         edge_facts = state.query_facts("edge")
@@ -239,9 +241,11 @@ class TestNeuroSymbolicState:
 
     def test_state_has_fact(self):
         """Test checking if state has a fact."""
-        facts = frozenset([
-            Fact(name="parent", arguments=("john", "mary")),
-        ])
+        facts = frozenset(
+            [
+                Fact(name="parent", arguments=("john", "mary")),
+            ]
+        )
         state = NeuroSymbolicState(state_id="s1", facts=facts)
 
         assert state.has_fact("parent", "john", "mary")
@@ -250,10 +254,12 @@ class TestNeuroSymbolicState:
 
     def test_state_hash_key_consistency(self):
         """Test hash key is consistent for same facts."""
-        facts = frozenset([
-            Fact(name="a", arguments=(1,)),
-            Fact(name="b", arguments=(2,)),
-        ])
+        facts = frozenset(
+            [
+                Fact(name="a", arguments=(1,)),
+                Fact(name="b", arguments=(2,)),
+            ]
+        )
         state1 = NeuroSymbolicState(state_id="s1", facts=facts)
         state2 = NeuroSymbolicState(state_id="s1", facts=facts)
 
@@ -274,9 +280,11 @@ class TestNeuroSymbolicState:
 
     def test_state_to_dict_serialization(self):
         """Test state can be serialized to dict."""
-        facts = frozenset([
-            Fact(name="test", arguments=("a", "b")),
-        ])
+        facts = frozenset(
+            [
+                Fact(name="test", arguments=("a", "b")),
+            ]
+        )
         state = NeuroSymbolicState(
             state_id="s1",
             facts=facts,
@@ -321,11 +329,13 @@ class TestNeuroSymbolicState:
 
     def test_state_fact_index_caching(self):
         """Test fact index is cached after first access."""
-        facts = frozenset([
-            Fact(name="a", arguments=(1,)),
-            Fact(name="a", arguments=(2,)),
-            Fact(name="b", arguments=(3,)),
-        ])
+        facts = frozenset(
+            [
+                Fact(name="a", arguments=(1,)),
+                Fact(name="a", arguments=(2,)),
+                Fact(name="b", arguments=(3,)),
+            ]
+        )
         state = NeuroSymbolicState(state_id="s1", facts=facts)
 
         # First access builds index
@@ -468,10 +478,12 @@ class TestSimpleStateEncoder:
     def test_encode_state_with_facts(self):
         """Test encoding state with facts."""
         encoder = SimpleStateEncoder(embedding_dim=64)
-        facts = frozenset([
-            Fact(name="a", arguments=(1,)),
-            Fact(name="b", arguments=(2,)),
-        ])
+        facts = frozenset(
+            [
+                Fact(name="a", arguments=(1,)),
+                Fact(name="b", arguments=(2,)),
+            ]
+        )
         state = NeuroSymbolicState(state_id="s1", facts=facts)
 
         embedding = encoder.encode(state)

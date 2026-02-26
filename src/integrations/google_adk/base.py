@@ -299,13 +299,10 @@ class ADKAgentFactory:
             ValueError: If agent type is not registered
         """
         if agent_type not in cls._registry:
-            raise ValueError(
-                f"Unknown agent type: {agent_type}. "
-                f"Available types: {list(cls._registry.keys())}"
-            )
+            raise ValueError(f"Unknown agent type: {agent_type}. Available types: {list(cls._registry.keys())}")
 
         agent_class = cls._registry[agent_type]
-        return agent_class(config)
+        return agent_class(config, agent_name=agent_type)
 
     @classmethod
     def list_agent_types(cls) -> list[str]:

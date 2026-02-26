@@ -58,12 +58,7 @@ class TestLLMClientFactory:
         mock_client = Mock()
         mock_create_client.return_value = mock_client
 
-        client = factory.create(
-            provider="openai",
-            model="gpt-4",
-            timeout=30.0,
-            max_retries=5
-        )
+        client = factory.create(provider="openai", model="gpt-4", timeout=30.0, max_retries=5)
 
         assert client == mock_client
         mock_create_client.assert_called_once()
@@ -104,11 +99,7 @@ class TestLLMClientFactory:
         mock_client = Mock()
         mock_create_client.return_value = mock_client
 
-        factory.create(
-            provider="anthropic",
-            custom_param="custom_value",
-            another_param=123
-        )
+        factory.create(provider="anthropic", custom_param="custom_value", another_param=123)
 
         call_kwargs = mock_create_client.call_args.kwargs
         assert call_kwargs["custom_param"] == "custom_value"

@@ -46,7 +46,7 @@ class TestAssemblyRouter:
             assert isinstance(decision, RoutingDecision)
             # Simple queries should tend toward TRM
             # (though exact routing depends on features)
-            assert decision.agent in ['trm', 'hrm']  # Reasonable options
+            assert decision.agent in ["trm", "hrm"]  # Reasonable options
             assert 0.0 <= decision.confidence <= 1.0
 
     def test_complex_query_routing(self, router):
@@ -61,7 +61,7 @@ class TestAssemblyRouter:
 
         assert isinstance(decision, RoutingDecision)
         # Complex query should route to MCTS or HRM
-        assert decision.agent in ['mcts', 'hrm']
+        assert decision.agent in ["mcts", "hrm"]
         assert decision.confidence > 0.5
 
     def test_routing_with_precomputed_features(self, router):
@@ -80,7 +80,7 @@ class TestAssemblyRouter:
 
         decision = router.route("test query", features=simple_features)
 
-        assert decision.agent == 'trm'  # Simple with high copy number → TRM
+        assert decision.agent == "trm"  # Simple with high copy number → TRM
         assert decision.confidence >= 0.8
 
     def test_high_decomposability_routing(self, router):
@@ -99,7 +99,7 @@ class TestAssemblyRouter:
 
         decision = router.route("decomposable query", features=decomposable_features)
 
-        assert decision.agent == 'hrm'  # High decomposability → HRM
+        assert decision.agent == "hrm"  # High decomposability → HRM
         assert decision.confidence >= 0.8
 
     def test_routing_explanation(self, router):
@@ -123,9 +123,9 @@ class TestAssemblyRouter:
 
         stats = router.get_statistics()
 
-        assert stats['total_routes'] == 3
-        assert stats['trm_routes'] + stats['hrm_routes'] + stats['mcts_routes'] == 3
-        assert 0.0 <= stats['trm_rate'] <= 1.0
+        assert stats["total_routes"] == 3
+        assert stats["trm_routes"] + stats["hrm_routes"] + stats["mcts_routes"] == 3
+        assert 0.0 <= stats["trm_rate"] <= 1.0
 
     def test_to_prediction_conversion(self, router):
         """Test conversion to MetaControllerPrediction format."""
@@ -159,9 +159,7 @@ class TestHybridMetaController:
             def predict(self, features):
                 # Always predict HRM with moderate confidence
                 return MetaControllerPrediction(
-                    agent='hrm',
-                    confidence=0.75,
-                    probabilities={'hrm': 0.75, 'trm': 0.15, 'mcts': 0.10}
+                    agent="hrm", confidence=0.75, probabilities={"hrm": 0.75, "trm": 0.15, "mcts": 0.10}
                 )
 
         return MockNeuralController()
@@ -193,7 +191,7 @@ class TestHybridMetaController:
             trm_confidence=0.6,
             mcts_value=0.7,
             consensus_score=0.75,
-            last_agent='hrm',
+            last_agent="hrm",
             iteration=1,
             query_length=len(query),
             has_rag_context=False,
@@ -202,7 +200,7 @@ class TestHybridMetaController:
         prediction = hybrid_controller.predict(features)
 
         assert isinstance(prediction, HybridPrediction)
-        assert prediction.agent in ['hrm', 'trm', 'mcts']
+        assert prediction.agent in ["hrm", "trm", "mcts"]
         assert 0.0 <= prediction.confidence <= 1.0
         assert prediction.neural_prediction is not None
         assert prediction.assembly_decision is not None
@@ -218,7 +216,7 @@ class TestHybridMetaController:
             trm_confidence=0.6,
             mcts_value=0.7,
             consensus_score=0.75,
-            last_agent='hrm',
+            last_agent="hrm",
             iteration=1,
             query_length=20,
             has_rag_context=False,
@@ -227,7 +225,7 @@ class TestHybridMetaController:
         # No query context → neural only
         prediction = controller.predict(features)
 
-        assert prediction.agent == 'hrm'  # Mock always predicts HRM
+        assert prediction.agent == "hrm"  # Mock always predicts HRM
         assert prediction.neural_prediction is not None
         assert prediction.assembly_decision is None
 
@@ -245,7 +243,7 @@ class TestHybridMetaController:
             trm_confidence=0.0,
             mcts_value=0.0,
             consensus_score=0.0,
-            last_agent='none',
+            last_agent="none",
             iteration=0,
             query_length=len(query),
             has_rag_context=False,
@@ -267,7 +265,7 @@ class TestHybridMetaController:
             trm_confidence=0.6,
             mcts_value=0.7,
             consensus_score=0.75,
-            last_agent='hrm',
+            last_agent="hrm",
             iteration=1,
             query_length=len(query),
             has_rag_context=False,
@@ -287,7 +285,7 @@ class TestHybridMetaController:
             trm_confidence=0.6,
             mcts_value=0.7,
             consensus_score=0.75,
-            last_agent='hrm',
+            last_agent="hrm",
             iteration=1,
             query_length=20,
             has_rag_context=False,
@@ -299,9 +297,9 @@ class TestHybridMetaController:
 
         stats = hybrid_controller.get_statistics()
 
-        assert stats['total_predictions'] == 3
-        assert 0.0 <= stats['agreement_rate'] <= 1.0
-        assert 'assembly_router' in stats
+        assert stats["total_predictions"] == 3
+        assert 0.0 <= stats["agreement_rate"] <= 1.0
+        assert "assembly_router" in stats
 
     def test_weight_adjustment(self, hybrid_controller):
         """Test dynamic weight adjustment."""
@@ -322,7 +320,7 @@ class TestHybridMetaController:
             trm_confidence=0.6,
             mcts_value=0.7,
             consensus_score=0.75,
-            last_agent='hrm',
+            last_agent="hrm",
             iteration=1,
             query_length=len(query),
             has_rag_context=False,
@@ -336,10 +334,13 @@ class TestHybridMetaController:
         assert "Assembly Routing" in prediction.explanation
 
 
-@pytest.mark.parametrize("query,expected_complexity", [
-    ("simple", "simple"),  # Simple query
-    ("Design a complex distributed microservices system", "complex"),  # Complex
-])
+@pytest.mark.parametrize(
+    "query,expected_complexity",
+    [
+        ("simple", "simple"),  # Simple query
+        ("Design a complex distributed microservices system", "complex"),  # Complex
+    ],
+)
 def test_routing_complexity_detection(query, expected_complexity):
     """Test that router correctly identifies query complexity."""
     router = AssemblyRouter()

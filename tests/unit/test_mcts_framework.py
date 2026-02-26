@@ -16,8 +16,11 @@ Focus areas:
 
 import math
 
-import numpy as np
 import pytest
+
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
+import numpy as np
 
 from src.framework.mcts.core import MCTSEngine, MCTSNode, MCTSState
 from src.framework.mcts.policies import (

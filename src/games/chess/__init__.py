@@ -34,49 +34,84 @@ Example usage:
     ```
 """
 
-from src.games.chess.action_space import ChessActionEncoder
-from src.games.chess.config import (
-    AgentType,
-    ChessActionSpaceConfig,
-    ChessBoardConfig,
-    ChessConfig,
-    ChessEnsembleConfig,
-    ChessHRMConfig,
-    ChessMCTSConfig,
-    ChessNeuralNetConfig,
-    ChessTrainingConfig,
-    ChessTRMConfig,
-    GamePhase,
-    get_chess_large_config,
-    get_chess_medium_config,
-    get_chess_small_config,
+# LLM-powered chess engine (no numpy/torch dependencies)
+from src.games.chess.llm_chess_engine import (  # noqa: F401 - re-exported
+    ChessAnalysis,
+    ChessMoveResult,
+    LLMChessEngine,
+    LLMChessHRMAgent,
+    LLMChessMCTSAgent,
+    LLMChessMetaController,
+    LLMChessTRMAgent,
+    RoutingDecision,
 )
-from src.games.chess.state import ChessGameState, create_initial_state, create_state_from_fen
 
-# Base exports always available
+# Base exports always available (LLM chess engine — no numpy required)
 __all__ = [
-    # Config
-    "AgentType",
-    "ChessActionSpaceConfig",
-    "ChessBoardConfig",
-    "ChessConfig",
-    "ChessEnsembleConfig",
-    "ChessHRMConfig",
-    "ChessMCTSConfig",
-    "ChessNeuralNetConfig",
-    "ChessTrainingConfig",
-    "ChessTRMConfig",
-    "GamePhase",
-    "get_chess_large_config",
-    "get_chess_medium_config",
-    "get_chess_small_config",
-    # Action space
-    "ChessActionEncoder",
-    # State
-    "ChessGameState",
-    "create_initial_state",
-    "create_state_from_fen",
+    # LLM Chess Engine
+    "LLMChessEngine",
+    "LLMChessHRMAgent",
+    "LLMChessTRMAgent",
+    "LLMChessMCTSAgent",
+    "LLMChessMetaController",
+    "ChessAnalysis",
+    "ChessMoveResult",
+    "RoutingDecision",
 ]
+
+# Optional numpy-dependent imports (action space, state, config)
+try:
+    from src.games.chess.action_space import ChessActionEncoder  # noqa: F401
+    from src.games.chess.config import (  # noqa: F401
+        AgentType,
+        ChessActionSpaceConfig,
+        ChessBoardConfig,
+        ChessConfig,
+        ChessEnsembleConfig,
+        ChessHRMConfig,
+        ChessMCTSConfig,
+        ChessNeuralNetConfig,
+        ChessTrainingConfig,
+        ChessTRMConfig,
+        GamePhase,
+        get_chess_large_config,
+        get_chess_medium_config,
+        get_chess_small_config,
+    )
+    from src.games.chess.state import (  # noqa: F401
+        ChessGameState,
+        create_initial_state,
+        create_state_from_fen,
+    )
+
+    __all__.extend(
+        [
+            # Config
+            "AgentType",
+            "ChessActionSpaceConfig",
+            "ChessBoardConfig",
+            "ChessConfig",
+            "ChessEnsembleConfig",
+            "ChessHRMConfig",
+            "ChessMCTSConfig",
+            "ChessNeuralNetConfig",
+            "ChessTrainingConfig",
+            "ChessTRMConfig",
+            "GamePhase",
+            "get_chess_large_config",
+            "get_chess_medium_config",
+            "get_chess_small_config",
+            # Action space
+            "ChessActionEncoder",
+            # State
+            "ChessGameState",
+            "create_initial_state",
+            "create_state_from_fen",
+        ]
+    )
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
 
 # Optional torch-dependent representation imports
 try:
@@ -84,10 +119,13 @@ try:
         ChessBoardRepresentation,
         board_to_tensor,
     )
-    __all__.extend([
-        "ChessBoardRepresentation",
-        "board_to_tensor",
-    ])
+
+    __all__.extend(
+        [
+            "ChessBoardRepresentation",
+            "board_to_tensor",
+        ]
+    )
 except ImportError:
     pass
 
@@ -108,7 +146,7 @@ try:
         ChessStateEncoder,
         EnsembleResponse,
     )
-    from src.games.chess.meta_controller import (  # noqa: F401 - re-exported
+    from src.games.chess.meta_controller import (  # type: ignore[assignment]  # noqa: F401
         ChessFeatureExtractor,
         ChessMetaController,
         ChessPositionFeatures,
@@ -124,33 +162,35 @@ try:
     )
 
     # Add torch-dependent exports
-    __all__.extend([
-        # Meta-controller
-        "ChessFeatureExtractor",
-        "ChessMetaController",
-        "ChessPositionFeatures",
-        "RoutingDecision",
-        # Ensemble agent
-        "AgentResponse",
-        "ChessEnsembleAgent",
-        "ChessStateEncoder",
-        "EnsembleResponse",
-        # Training
-        "ChessDataAugmentation",
-        "ChessOpeningBook",
-        "ChessTrainingMetrics",
-        "ChessTrainingOrchestrator",
-        "SelfPlayGame",
-        "create_chess_orchestrator",
-        # Continuous Learning
-        "ContinuousLearningConfig",
-        "ContinuousLearningSession",
-        "GameRecord",
-        "GameResult",
-        "OnlineLearner",
-        "ScoreCard",
-        "create_learning_session",
-    ])
+    __all__.extend(
+        [
+            # Meta-controller
+            "ChessFeatureExtractor",
+            "ChessMetaController",
+            "ChessPositionFeatures",
+            "RoutingDecision",
+            # Ensemble agent
+            "AgentResponse",
+            "ChessEnsembleAgent",
+            "ChessStateEncoder",
+            "EnsembleResponse",
+            # Training
+            "ChessDataAugmentation",
+            "ChessOpeningBook",
+            "ChessTrainingMetrics",
+            "ChessTrainingOrchestrator",
+            "SelfPlayGame",
+            "create_chess_orchestrator",
+            # Continuous Learning
+            "ContinuousLearningConfig",
+            "ContinuousLearningSession",
+            "GameRecord",
+            "GameResult",
+            "OnlineLearner",
+            "ScoreCard",
+            "create_learning_session",
+        ]
+    )
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -162,11 +202,14 @@ try:
         create_chess_ui,
         render_board_html,
     )
-    __all__.extend([
-        "GameSession",
-        "create_chess_ui",
-        "render_board_html",
-    ])
+
+    __all__.extend(
+        [
+            "GameSession",
+            "create_chess_ui",
+            "render_board_html",
+        ]
+    )
     UI_AVAILABLE = True
 except ImportError:
     UI_AVAILABLE = False

@@ -12,6 +12,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("psutil", reason="psutil required for observability tests")
+
 # =============================================================================
 # Test Markers
 # =============================================================================

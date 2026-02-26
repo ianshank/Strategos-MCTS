@@ -195,23 +195,29 @@ class TestFacadeDecorators:
 
     def test_traced_decorator(self):
         """Test traced decorator."""
+
         @traced("test")
         def my_func():
             return "result"
+
         assert my_func() == "result"
 
     def test_profiled_decorator(self):
         """Test profiled decorator."""
+
         @profiled("test")
         def my_func():
             return "profiled"
+
         assert my_func() == "profiled"
 
     def test_metered_decorator(self):
         """Test metered decorator."""
+
         @metered("test")
         def my_func():
             return "metered"
+
         assert my_func() == "metered"
 
 
@@ -221,24 +227,30 @@ class TestLoggedDecorator:
 
     def test_sync_function(self):
         """Test on sync function."""
+
         @logged()
         def my_func(x, y):
             return x + y
+
         assert my_func(1, 2) == 3
 
     @pytest.mark.asyncio
     async def test_async_function(self):
         """Test on async function."""
+
         @logged()
         async def async_func(x):
             return x * 2
+
         assert await async_func(5) == 10
 
     def test_captures_exception(self):
         """Test captures exceptions."""
+
         @logged()
         def fails():
             raise ValueError("Test")
+
         with pytest.raises(ValueError):
             fails()
 
@@ -249,17 +261,21 @@ class TestTimedDecorator:
 
     def test_basic(self):
         """Test basic timing."""
+
         @timed()
         def fast():
             return "fast"
+
         assert fast() == "fast"
 
     @pytest.mark.asyncio
     async def test_async(self):
         """Test async timing."""
+
         @timed()
         async def async_timed():
             return "async"
+
         assert await async_timed() == "async"
 
 
@@ -269,28 +285,34 @@ class TestRetryDecorator:
 
     def test_success_first_try(self):
         """Test success on first try."""
+
         @retry(max_attempts=3)
         def succeeds():
             return "ok"
+
         assert succeeds() == "ok"
 
     def test_success_after_retry(self):
         """Test success after retry."""
         count = [0]
+
         @retry(max_attempts=3, initial_delay=0.01)
         def eventually():
             count[0] += 1
             if count[0] < 2:
                 raise ConnectionError()
             return "ok"
+
         assert eventually() == "ok"
         assert count[0] == 2
 
     def test_all_fail(self):
         """Test all attempts fail."""
+
         @retry(max_attempts=2, initial_delay=0.01)
         def fails():
             raise ValueError("Fail")
+
         with pytest.raises(ValueError):
             fails()
 
@@ -298,12 +320,14 @@ class TestRetryDecorator:
     async def test_async_retry(self):
         """Test async retry."""
         count = [0]
+
         @retry(max_attempts=3, initial_delay=0.01)
         async def async_eventually():
             count[0] += 1
             if count[0] < 2:
                 raise ConnectionError()
             return "async_ok"
+
         assert await async_eventually() == "async_ok"
 
 
@@ -314,10 +338,12 @@ class TestCachedDecorator:
     def test_basic_caching(self):
         """Test basic caching."""
         count = [0]
+
         @cached(ttl_seconds=60)
         def expensive(x):
             count[0] += 1
             return x * 2
+
         expensive(5)
         expensive(5)
         assert count[0] == 1
@@ -325,10 +351,12 @@ class TestCachedDecorator:
     def test_different_args(self):
         """Test different args cached separately."""
         count = [0]
+
         @cached(ttl_seconds=60)
         def compute(x):
             count[0] += 1
             return x
+
         compute(1)
         compute(2)
         assert count[0] == 2
@@ -336,10 +364,12 @@ class TestCachedDecorator:
     def test_cache_clear(self):
         """Test cache clearing."""
         count = [0]
+
         @cached(ttl_seconds=60)
         def clearable():
             count[0] += 1
             return "result"
+
         clearable()
         clearable.cache_clear()
         clearable()
@@ -352,16 +382,20 @@ class TestValidateArgsDecorator:
 
     def test_valid(self):
         """Test valid args."""
+
         @validate_args(x=lambda v: v > 0)
         def positive(x):
             return x
+
         assert positive(5) == 5
 
     def test_invalid(self):
         """Test invalid args."""
+
         @validate_args(x=lambda v: v > 0)
         def positive(x):
             return x
+
         with pytest.raises(ValueError):
             positive(-1)
 
@@ -372,22 +406,28 @@ class TestDebugOnErrorDecorator:
 
     def test_no_error(self):
         """Test no error."""
+
         @debug_on_error()
         def ok():
             return "ok"
+
         assert ok() == "ok"
 
     def test_with_error(self):
         """Test with error."""
+
         @debug_on_error(reraise=True)
         def fails():
             raise RuntimeError("Test")
+
         with pytest.raises(RuntimeError):
             fails()
 
     def test_no_reraise(self):
         """Test no reraise."""
+
         @debug_on_error(reraise=False)
         def silenced():
             raise RuntimeError("Silenced")
+
         assert silenced() is None

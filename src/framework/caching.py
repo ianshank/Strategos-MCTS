@@ -210,7 +210,7 @@ class QueryCache:
         """
         found, value = await self.get(key)
         if found:
-            return value
+            return value  # type: ignore[no-any-return]
 
         # Compute outside lock to avoid blocking other operations
         start_time = time.time()
@@ -226,7 +226,7 @@ class QueryCache:
         )
 
         await self.set(key, result, ttl)
-        return result
+        return result  # type: ignore[no-any-return]
 
     async def invalidate(self, key: str) -> bool:
         """

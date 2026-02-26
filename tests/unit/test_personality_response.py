@@ -100,9 +100,7 @@ class TestPersonalityTraits:
             ("transparency", 1.1),
         ],
     )
-    def test_trait_validation_rejects_out_of_range_values(
-        self, trait_name: str, invalid_value: float
-    ) -> None:
+    def test_trait_validation_rejects_out_of_range_values(self, trait_name: str, invalid_value: float) -> None:
         """Test that trait values outside [0.0, 1.0] raise ValueError."""
         # Arrange & Act & Assert
         with pytest.raises(ValueError, match=f"Trait '{trait_name}' must be in range"):
@@ -131,9 +129,7 @@ class TestPersonalityResponseGenerator:
         assert generator.traits.loyalty == 0.95
         assert generator.traits.curiosity == 0.85
 
-    def test_initialization_with_custom_traits(
-        self, custom_traits_generator: PersonalityResponseGenerator
-    ) -> None:
+    def test_initialization_with_custom_traits(self, custom_traits_generator: PersonalityResponseGenerator) -> None:
         """Test generator initialization with custom traits."""
         # Arrange & Act
         generator = custom_traits_generator
@@ -192,9 +188,7 @@ class TestPersonalityResponseGenerator:
         generator = default_generator
 
         # Act
-        result_with_preamble = generator.generate_response(
-            sample_agent_response, sample_query, include_preamble=True
-        )
+        result_with_preamble = generator.generate_response(sample_agent_response, sample_query, include_preamble=True)
         result_without_preamble = generator.generate_response(
             sample_agent_response, sample_query, include_preamble=False
         )
@@ -306,9 +300,7 @@ class TestPersonalityResponseGenerator:
         assert isinstance(result, str)
         assert len(result) > 0
 
-    def test_ethical_closing_for_system_design_queries(
-        self, default_generator: PersonalityResponseGenerator
-    ) -> None:
+    def test_ethical_closing_for_system_design_queries(self, default_generator: PersonalityResponseGenerator) -> None:
         """Test that ethical weight adds considerations for system design queries."""
         # Arrange
         generator = default_generator

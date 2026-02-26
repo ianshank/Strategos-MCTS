@@ -12,6 +12,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark")
+
 from src.benchmark.adapters.langgraph_adapter import LangGraphBenchmarkAdapter
 from src.benchmark.config.benchmark_settings import BenchmarkSettings, reset_benchmark_settings
 from src.benchmark.evaluation.models import BenchmarkResult

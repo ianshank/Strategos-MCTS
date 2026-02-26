@@ -41,8 +41,8 @@ try:
 
     _HAS_TORCH = True
 except ImportError:
-    torch = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
+    torch = None
+    nn = None
 
 
 @dataclass
@@ -67,9 +67,7 @@ class MetaControllerTrainingConfig:
 
     # Curriculum learning
     use_curriculum: bool = True
-    curriculum_stages: list[str] = field(
-        default_factory=lambda: ["simple", "medium", "complex"]
-    )
+    curriculum_stages: list[str] = field(default_factory=lambda: ["simple", "medium", "complex"])
     epochs_per_stage: int = 3
 
     # Calibration
@@ -245,7 +243,7 @@ class MetaControllerTrainingOrchestrator:
         self._feature_importance: dict[str, float] = {}
 
         # Experiment tracker (lazy initialized)
-        self._tracker = None
+        self._tracker: Any = None
 
         # Ensure checkpoint directory exists
         self.config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
@@ -277,7 +275,7 @@ class MetaControllerTrainingOrchestrator:
         try:
             from src.agents.meta_controller.bert_controller import BERTMetaController
 
-            return BERTMetaController(
+            return BERTMetaController(  # type: ignore[call-arg]
                 num_agents=self.config.num_agents,
                 hidden_dim=self.config.hidden_dim,
                 num_layers=self.config.num_layers,
@@ -297,7 +295,7 @@ class MetaControllerTrainingOrchestrator:
         try:
             from src.agents.meta_controller.rnn_controller import RNNMetaController
 
-            return RNNMetaController(
+            return RNNMetaController(  # type: ignore[call-arg]
                 num_agents=self.config.num_agents,
                 hidden_dim=self.config.hidden_dim,
                 num_layers=self.config.num_layers,
@@ -305,6 +303,8 @@ class MetaControllerTrainingOrchestrator:
             )
         except ImportError:
             # Fallback to simple GRU classifier (defined at module level)
+            if _SimpleRNNController is None:
+                raise ImportError("PyTorch required for _SimpleRNNController")
             return _SimpleRNNController(
                 input_dim=self.config.embedding_dim,
                 hidden_dim=self.config.hidden_dim,
@@ -351,8 +351,7 @@ class MetaControllerTrainingOrchestrator:
         # Validate model was successfully initialized
         if self._model is None:
             raise RuntimeError(
-                "Model initialization failed. Check if model_type "
-                f"'{self.config.model_type}' is supported."
+                f"Model initialization failed. Check if model_type '{self.config.model_type}' is supported."
             )
 
         self.setup_optimizer()
@@ -440,6 +439,7 @@ class MetaControllerTrainingOrchestrator:
     ) -> TrainingMetrics:
         """Train for one epoch."""
         start_time = time.time()
+        assert self._model is not None, "Model not initialized"
 
         # Training phase
         self._model.train()
@@ -477,8 +477,10 @@ class MetaControllerTrainingOrchestrator:
             inputs, targets = self._prepare_batch(batch)
 
             if is_training:
+                assert self._optimizer is not None, "Optimizer not initialized"
                 self._optimizer.zero_grad()
 
+            assert self._model is not None, "Model not initialized"
             outputs = self._model(inputs)
             loss = self._criterion(outputs, targets)
 
@@ -488,6 +490,7 @@ class MetaControllerTrainingOrchestrator:
                     self._model.parameters(),
                     self.config.gradient_clip,
                 )
+                assert self._optimizer is not None, "Optimizer not initialized"
                 self._optimizer.step()
 
             total_loss += loss.item() * len(targets)
@@ -514,6 +517,7 @@ class MetaControllerTrainingOrchestrator:
 
         for batch in loader:
             inputs, targets = self._prepare_batch(batch)
+            assert self._model is not None, "Model not initialized"
             outputs = self._model(inputs)
             loss = self._criterion(outputs, targets)
 
@@ -536,9 +540,7 @@ class MetaControllerTrainingOrchestrator:
             all_confidences = torch.cat(all_confidences)
             all_predictions = torch.cat(all_predictions)
             all_targets = torch.cat(all_targets)
-            _, calibration_error = self._calibration_loss(
-                all_confidences, all_predictions, all_targets
-            )
+            _, calibration_error = self._calibration_loss(all_confidences, all_predictions, all_targets)
         else:
             calibration_error = 0.0
 
@@ -570,6 +572,7 @@ class MetaControllerTrainingOrchestrator:
 
     def _save_checkpoint(self, filename: str) -> None:
         """Save model checkpoint."""
+        assert self._model is not None, "Model not initialized"
         path = self.config.checkpoint_dir / filename
         checkpoint = {
             "epoch": self._current_epoch,
@@ -606,12 +609,10 @@ class MetaControllerTrainingOrchestrator:
         """Initialize experiment tracker."""
         if self.config.use_wandb or self.config.use_braintrust:
             try:
-                from src.training.experiment_tracker import ExperimentTracker
+                from src.training.experiment_tracker import UnifiedExperimentTracker
 
-                self._tracker = ExperimentTracker(
-                    experiment_name=self.config.experiment_name,
-                    use_wandb=self.config.use_wandb,
-                    use_braintrust=self.config.use_braintrust,
+                self._tracker = UnifiedExperimentTracker(
+                    project_name=self.config.experiment_name,
                 )
             except ImportError:
                 self._log_warning("Experiment tracker not available")
@@ -619,15 +620,17 @@ class MetaControllerTrainingOrchestrator:
     def _log_metrics(self, metrics: TrainingMetrics) -> None:
         """Log metrics to tracker."""
         if self._tracker:
-            self._tracker.log_metrics({
-                "train/loss": metrics.train_loss,
-                "train/accuracy": metrics.train_accuracy,
-                "val/loss": metrics.val_loss,
-                "val/accuracy": metrics.val_accuracy,
-                "val/calibration_error": metrics.calibration_error,
-                "learning_rate": metrics.learning_rate,
-                "epoch_time": metrics.epoch_time_seconds,
-            })
+            self._tracker.log_metrics(
+                {
+                    "train/loss": metrics.train_loss,
+                    "train/accuracy": metrics.train_accuracy,
+                    "val/loss": metrics.val_loss,
+                    "val/accuracy": metrics.val_accuracy,
+                    "val/calibration_error": metrics.calibration_error,
+                    "learning_rate": metrics.learning_rate,
+                    "epoch_time": metrics.epoch_time_seconds,
+                }
+            )
 
         self._training_history.append(metrics)
 

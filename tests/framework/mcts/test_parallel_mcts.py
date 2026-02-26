@@ -10,7 +10,6 @@ Tests cover:
 - Performance and collision metrics
 """
 
-
 import pytest
 
 from src.framework.mcts.core import MCTSState

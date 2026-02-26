@@ -2,6 +2,10 @@
 
 import math
 
+import pytest
+
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
 from src.framework.mcts.llm_guided.node import (
     LLMGuidedMCTSNode,
     NodeState,

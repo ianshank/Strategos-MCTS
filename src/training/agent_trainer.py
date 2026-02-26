@@ -368,9 +368,7 @@ class TRMTrainer:
             self.optimizer.step()
 
         # Get final residual from output
-        final_residual = (
-            trm_output.residual_norms[-1] if trm_output.residual_norms else 0.0
-        )
+        final_residual = trm_output.residual_norms[-1] if trm_output.residual_norms else 0.0
 
         # Collect metrics
         metrics.loss = loss_dict["total"]
@@ -479,31 +477,32 @@ class SelfPlayEvaluator:
             "model2_avg_mcts_value": 0.0,
         }
 
-        mcts_values = [[], []]
+        mcts_values: list[list[float]] = [[], []]
 
         while not state.is_terminal():
             current_model = models[current_model_idx]
 
             # Temporarily set the model for MCTS
-            original_model = self.mcts.policy_value_network
-            self.mcts.policy_value_network = current_model
+            original_model = self.mcts.network
+            self.mcts.network = current_model
 
             # Run MCTS search
-            action_probs, root_value = await self.mcts.search(
+            action_probs, root_node = await self.mcts.search(
                 state,
-                num_iterations=self.config.mcts_iterations,
+                num_simulations=self.config.mcts_iterations,
                 temperature=self.config.temperature,
             )
 
             # Restore original model
-            self.mcts.policy_value_network = original_model
+            self.mcts.network = original_model
 
             # Track MCTS values
+            root_value = root_node.value if root_node is not None else 0.0
             mcts_values[current_model_idx].append(root_value)
 
             # Select action (deterministic for evaluation)
             if self.config.temperature == 0:
-                action = max(action_probs, key=action_probs.get)
+                action = max(action_probs, key=lambda k: action_probs[k])
             else:
                 actions = list(action_probs.keys())
                 probs = list(action_probs.values())
@@ -532,12 +531,8 @@ class SelfPlayEvaluator:
         model2_values = mcts_values[1] if model1_starts else mcts_values[0]
 
         game_stats["moves"] = move_count
-        game_stats["model1_avg_mcts_value"] = (
-            sum(model1_values) / len(model1_values) if model1_values else 0.0
-        )
-        game_stats["model2_avg_mcts_value"] = (
-            sum(model2_values) / len(model2_values) if model2_values else 0.0
-        )
+        game_stats["model1_avg_mcts_value"] = sum(model1_values) / len(model1_values) if model1_values else 0.0
+        game_stats["model2_avg_mcts_value"] = sum(model2_values) / len(model2_values) if model2_values else 0.0
 
         return result, game_stats
 
@@ -570,7 +565,7 @@ class SelfPlayEvaluator:
 
         # Play games with alternating starting positions
         for game_idx in range(self.config.num_games):
-            model1_starts = (game_idx % 2 == 0)
+            model1_starts = game_idx % 2 == 0
 
             try:
                 result, game_stats = await self.play_game(
@@ -614,11 +609,7 @@ class SelfPlayEvaluator:
             "losses": losses,
             "draws": draws,
             "avg_game_length": avg_game_length,
-            "avg_mcts_value": (
-                sum(avg_mcts_values) / len(avg_mcts_values)
-                if avg_mcts_values
-                else 0.0
-            ),
+            "avg_mcts_value": (sum(avg_mcts_values) / len(avg_mcts_values) if avg_mcts_values else 0.0),
             "is_better": win_rate >= self.config.win_threshold,
         }
 

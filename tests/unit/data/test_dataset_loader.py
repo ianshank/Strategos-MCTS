@@ -506,9 +506,7 @@ class TestCombinedDatasetLoader:
         loader._all_samples = [
             DatasetSample(id="1", text="With steps", reasoning_steps=["s1", "s2"]),
             DatasetSample(id="2", text="Data domain", domain="data_analysis"),
-            DatasetSample(
-                id="3", text="Instruct", metadata={"source": "PRIMUS-Instruct"}, domain="security"
-            ),
+            DatasetSample(id="3", text="Instruct", metadata={"source": "PRIMUS-Instruct"}, domain="security"),
             DatasetSample(id="4", text="Plain", domain="other"),
         ]
 
@@ -610,9 +608,7 @@ class TestCombinedDatasetLoader:
 
             # Create test CSV
             with open(csv_path, "w", newline="") as f:
-                writer = csv.DictWriter(
-                    f, fieldnames=["id", "text", "domain", "difficulty", "labels", "metadata"]
-                )
+                writer = csv.DictWriter(f, fieldnames=["id", "text", "domain", "difficulty", "labels", "metadata"])
                 writer.writeheader()
                 writer.writerow(
                     {

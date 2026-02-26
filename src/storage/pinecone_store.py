@@ -16,7 +16,7 @@ try:
     PINECONE_AVAILABLE = True
 except ImportError:
     PINECONE_AVAILABLE = False
-    Pinecone = None  # type: ignore
+    Pinecone = None
 
 from src.agents.meta_controller.base import MetaControllerFeatures, MetaControllerPrediction
 from src.agents.meta_controller.utils import normalize_features
@@ -79,7 +79,7 @@ class PineconeVectorStore:
                 self._client = Pinecone(api_key=self._api_key)
                 self._index = self._client.Index(host=self._host)
                 self._is_initialized = True
-            except Exception as e:
+            except (ImportError, ValueError, ConnectionError) as e:
                 logger.warning(f"Failed to initialize Pinecone: {e}", error_type=type(e).__name__)
                 self._is_initialized = False
 
@@ -156,7 +156,7 @@ class PineconeVectorStore:
 
             return vector_id
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, RuntimeError) as e:
             logger.warning(f"Failed to store prediction in Pinecone: {e}", error_type=type(e).__name__)
             return None
 
@@ -205,7 +205,7 @@ class PineconeVectorStore:
 
             return similar_decisions
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, RuntimeError) as e:
             logger.warning(f"Failed to query Pinecone: {e}", error_type=type(e).__name__)
             return []
 
@@ -316,7 +316,7 @@ class PineconeVectorStore:
 
             return len(vectors)
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, RuntimeError) as e:
             logger.warning(f"Failed to store batch in Pinecone: {e}", error_type=type(e).__name__)
             return 0
 
@@ -335,7 +335,7 @@ class PineconeVectorStore:
         try:
             self._index.delete(delete_all=True, namespace=self.namespace)
             return True
-        except Exception as e:
+        except (ConnectionError, TimeoutError, RuntimeError) as e:
             logger.warning(f"Failed to delete namespace: {e}", error_type=type(e).__name__)
             return False
 
@@ -361,7 +361,7 @@ class PineconeVectorStore:
                 "dimension": stats.get("dimension", self.VECTOR_DIMENSION),
                 "buffered_operations": len(self._operation_buffer),
             }
-        except Exception as e:
+        except (ConnectionError, TimeoutError, RuntimeError) as e:
             return {
                 "available": True,
                 "error": str(e),
@@ -416,7 +416,7 @@ class PineconeVectorStore:
                         flushed += 1
                     else:
                         remaining_buffer.append(operation)
-            except Exception:
+            except (ConnectionError, TimeoutError, RuntimeError):
                 remaining_buffer.append(operation)
 
         self._operation_buffer = remaining_buffer

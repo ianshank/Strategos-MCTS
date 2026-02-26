@@ -327,7 +327,9 @@ class MockEnsembleAgent:
         from src.games.chess.config import AgentType
 
         return MockResponse(
-            best_move=self.default_move if self.default_move in state.get_legal_actions() else state.get_legal_actions()[0],
+            best_move=self.default_move
+            if self.default_move in state.get_legal_actions()
+            else state.get_legal_actions()[0],
             confidence=self.default_confidence,
             value_estimate=self.default_value,
             move_probabilities={self.default_move: 0.9},

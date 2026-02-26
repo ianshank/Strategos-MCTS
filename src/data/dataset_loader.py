@@ -541,7 +541,7 @@ class CombinedDatasetLoader:
             import pyarrow as pa
             import pyarrow.parquet as pq
         except ImportError as e:
-            raise ImportError("pyarrow is required for Parquet export. " "Install with: pip install pyarrow") from e
+            raise ImportError("pyarrow is required for Parquet export. Install with: pip install pyarrow") from e
 
         import json
 
@@ -614,7 +614,7 @@ class CombinedDatasetLoader:
         try:
             import pyarrow.parquet as pq
         except ImportError as e:
-            raise ImportError("pyarrow is required for Parquet import. " "Install with: pip install pyarrow") from e
+            raise ImportError("pyarrow is required for Parquet import. Install with: pip install pyarrow") from e
 
         import json
 

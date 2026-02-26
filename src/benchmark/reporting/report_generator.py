@@ -127,7 +127,7 @@ class ReportGenerator:
 
         for comp in comparisons:
             lines.append(
-                f"| {comp.metric_name} | {comp.system_a.mean:.2f} " f"| {comp.system_b.mean:.2f} | {comp.winner} |"
+                f"| {comp.metric_name} | {comp.system_a.mean:.2f} | {comp.system_b.mean:.2f} | {comp.winner} |"
             )
 
         return "\n".join(lines)
@@ -249,9 +249,7 @@ class ReportGenerator:
             for comp in comparisons:
                 if comp.metric_name == "average_score" and comp.winner != "tie":
                     diff = abs(comp.system_a.mean - comp.system_b.mean)
-                    lines.append(
-                        f"- Quality advantage: **{comp.winner}** leads by {diff:.2f} points " f"on average score"
-                    )
+                    lines.append(f"- Quality advantage: **{comp.winner}** leads by {diff:.2f} points on average score")
                 elif comp.metric_name == "latency_ms" and comp.winner != "tie":
                     faster = comp.winner
                     lines.append(f"- Speed advantage: **{faster}** has lower average latency")

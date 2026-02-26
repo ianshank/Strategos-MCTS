@@ -415,9 +415,11 @@ class TestEndToEndScenarios:
         # Process query with facts
         state = NeuroSymbolicState(
             state_id="test",
-            facts=frozenset([
-                Fact(name="human", arguments=("socrates",)),
-            ]),
+            facts=frozenset(
+                [
+                    Fact(name="human", arguments=("socrates",)),
+                ]
+            ),
         )
 
         result = await agent.process(

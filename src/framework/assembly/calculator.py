@@ -183,7 +183,7 @@ class AssemblyIndexCalculator:
             return 1.0
 
         # Count node pattern frequencies
-        node_patterns = defaultdict(int)
+        node_patterns: dict[tuple[int, int], int] = defaultdict(int)
 
         for node in graph.nodes():
             # Pattern: (in_degree, out_degree)
@@ -217,8 +217,9 @@ class AssemblyIndexCalculator:
 
         # Split on whitespace and punctuation
         import re
+
         # Keep alphanumeric and underscores, split on others
-        raw_tokens = re.findall(r'\b\w+\b', text.lower())
+        raw_tokens = re.findall(r"\b\w+\b", text.lower())
 
         # Filter out very short tokens
         tokens = [t for t in raw_tokens if len(t) > 1 or t.isalnum()]
@@ -307,14 +308,14 @@ class AssemblyIndexCalculator:
             for cycle in cycles:
                 # Remove edge with lowest weight in cycle
                 min_edge = None
-                min_weight = float('inf')
+                min_weight = float("inf")
 
                 for i in range(len(cycle)):
                     u = cycle[i]
                     v = cycle[(i + 1) % len(cycle)]
 
                     if dag.has_edge(u, v):
-                        weight = dag[u][v].get('weight', 1.0)
+                        weight = dag[u][v].get("weight", 1.0)
                         if weight < min_weight:
                             min_weight = weight
                             min_edge = (u, v)
@@ -338,7 +339,7 @@ class AssemblyIndexCalculator:
     def get_cache_stats(self) -> dict[str, int]:
         """Get cache statistics."""
         return {
-            'size': len(self._cache),
-            'max_size': self.max_cache_size,
-            'enabled': self.cache_enabled,
+            "size": len(self._cache),
+            "max_size": self.max_cache_size,
+            "enabled": self.cache_enabled,
         }

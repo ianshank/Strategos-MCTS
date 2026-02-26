@@ -12,6 +12,7 @@ Based on: "Hierarchical Reasoning for Compositional Generalization"
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 import torch
@@ -19,6 +20,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ..training.system_config import HRMConfig
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -227,6 +230,15 @@ class HRMAgent(nn.Module):
         self.config = config
         self.device = device
 
+        logger.debug(
+            "HRM agent initialized: h_dim=%d, l_dim=%d, num_h_layers=%d, num_l_layers=%d, device=%s",
+            config.h_dim,
+            config.l_dim,
+            config.num_h_layers,
+            config.num_l_layers,
+            device,
+        )
+
         # Input embedding
         self.input_proj = nn.Linear(config.h_dim, config.h_dim)
 
@@ -267,6 +279,8 @@ class HRMAgent(nn.Module):
         batch_size, seq_len, _ = x.shape
         max_steps = max_steps or self.config.max_outer_steps
 
+        logger.debug("HRM forward pass: input_shape=%s, max_steps=%d", x.shape, max_steps)
+
         # Initial projection
         h_state = self.input_proj(x)
 
@@ -305,6 +319,13 @@ class HRMAgent(nn.Module):
 
             # Halt if confident enough
             if avg_halt_prob >= self.config.halt_threshold:
+                logger.debug(
+                    "HRM halting at step %d: avg_halt_prob=%.4f, threshold=%.4f, ponder_cost=%.4f",
+                    step,
+                    avg_halt_prob,
+                    self.config.halt_threshold,
+                    total_ponder_cost,
+                )
                 break
 
             # L-module: low-level execution

@@ -12,6 +12,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("aioboto3", reason="aioboto3 required for S3 client tests")
+
 from src.storage.s3_client import S3Config, S3StorageClient
 
 # ============================================================================

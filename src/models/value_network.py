@@ -7,12 +7,15 @@ enabling efficient position evaluation without full tree search.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -92,6 +95,14 @@ class ValueNetwork(nn.Module):
         # Initialize weights
         self.apply(self._init_weights)
 
+        logger.debug(
+            "ValueNetwork initialized: state_dim=%d, hidden_dims=%s, output_activation=%s, estimate_uncertainty=%s",
+            state_dim,
+            self.hidden_dims,
+            output_activation,
+            estimate_uncertainty,
+        )
+
     def _init_weights(self, module: nn.Module) -> None:
         """Initialize network weights."""
         if isinstance(module, nn.Linear):
@@ -155,7 +166,7 @@ class ValueNetwork(nn.Module):
             if was_training:
                 self.train()
 
-            return result
+            return float(result)
 
     def evaluate_batch(self, states: torch.Tensor) -> torch.Tensor:
         """
@@ -465,7 +476,9 @@ class EnsembleValueNetwork(nn.Module):
                 state = state.unsqueeze(0)
 
             output = self.forward(state)
-            result = (output.value.item(), output.uncertainty.item())
+            value_item = output.value.item() if output.value is not None else 0.0
+            uncertainty_item = output.uncertainty.item() if output.uncertainty is not None else 0.0
+            result = (value_item, uncertainty_item)
 
             # Restore training modes
             for net, was_train in zip(self.networks, was_training, strict=True):

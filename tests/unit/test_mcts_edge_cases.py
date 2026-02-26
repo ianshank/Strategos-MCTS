@@ -8,8 +8,11 @@ Based on: MULTI_AGENT_MCTS_TEMPLATE.md Section 10
 
 from __future__ import annotations
 
-import numpy as np
 import pytest
+
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
+import numpy as np
 
 # Import MCTS components with graceful fallback
 try:

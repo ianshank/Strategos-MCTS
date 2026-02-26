@@ -6,6 +6,8 @@ Tests configuration validation, serialization, and backwards compatibility.
 
 import pytest
 
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
 from src.framework.mcts.parallel_mcts import ParallelMCTSConfig, ParallelMCTSStats
 
 

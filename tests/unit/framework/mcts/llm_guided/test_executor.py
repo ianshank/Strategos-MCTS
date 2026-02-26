@@ -1,5 +1,9 @@
 """Tests for Code Executor."""
 
+import pytest
+
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
 from src.framework.mcts.llm_guided.executor import (
     ALLOWED_IMPORTS,
     CodeExecutionResult,

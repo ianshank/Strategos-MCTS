@@ -100,7 +100,7 @@ def get_provider_class(provider: str) -> type[BaseLLMClient]:
 
     try:
         module = importlib.import_module(module_path)
-        client_class = getattr(module, class_name)
+        client_class: type[BaseLLMClient] = getattr(module, class_name)
     except ImportError as e:
         raise ImportError(f"Failed to load provider '{provider}': {e}") from e
     except AttributeError as e:

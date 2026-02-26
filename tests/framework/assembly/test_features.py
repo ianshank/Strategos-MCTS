@@ -98,8 +98,8 @@ class TestAssemblyFeatureExtractor:
         feature_dict = features.to_dict()
 
         assert isinstance(feature_dict, dict)
-        assert 'assembly_index' in feature_dict
-        assert 'decomposability_score' in feature_dict
+        assert "assembly_index" in feature_dict
+        assert "decomposability_score" in feature_dict
         assert len(feature_dict) == len(AssemblyFeatures.feature_names())
 
     def test_feature_to_array(self, extractor):
@@ -136,7 +136,7 @@ class TestAssemblyFeatureExtractor:
         assert isinstance(explanation, str)
         assert len(explanation) > 0
         # Should contain some key terms
-        assert any(term in explanation.lower() for term in ['complexity', 'decompos', 'reuse'])
+        assert any(term in explanation.lower() for term in ["complexity", "decompos", "reuse"])
 
     def test_feature_importance(self, extractor):
         """Test feature importance calculation."""
@@ -160,15 +160,18 @@ class TestAssemblyFeatureExtractor:
 
         assert isinstance(names, list)
         assert len(names) == 8
-        assert 'assembly_index' in names
-        assert 'decomposability_score' in names
+        assert "assembly_index" in names
+        assert "decomposability_score" in names
 
 
-@pytest.mark.parametrize("query,min_concepts", [
-    ("simple", 1),
-    ("complex query with many concepts", 3),
-    ("API database service cache queue async microservices", 5),
-])
+@pytest.mark.parametrize(
+    "query,min_concepts",
+    [
+        ("simple", 1),
+        ("complex query with many concepts", 3),
+        ("API database service cache queue async microservices", 5),
+    ],
+)
 def test_concept_count(query, min_concepts):
     """Test that concept counts meet minimums."""
     extractor = AssemblyFeatureExtractor()

@@ -163,10 +163,30 @@ class TestGameVerifierBenchmarks:
         """Benchmark: Long move sequence verification."""
         # Longer game sequence
         moves = [
-            "e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "g8f6",
-            "d2d3", "f8e7", "c2c3", "e8g8", "e1g1", "d7d6",
-            "h2h3", "c8e6", "c4e6", "f7e6", "b1d2", "a7a5",
-            "d2c4", "d8c8", "c1e3", "b7b6", "d1d2", "c6a7",
+            "e2e4",
+            "e7e5",
+            "g1f3",
+            "b8c6",
+            "f1c4",
+            "g8f6",
+            "d2d3",
+            "f8e7",
+            "c2c3",
+            "e8g8",
+            "e1g1",
+            "d7d6",
+            "h2h3",
+            "c8e6",
+            "c4e6",
+            "f7e6",
+            "b1d2",
+            "a7a5",
+            "d2c4",
+            "d8c8",
+            "c1e3",
+            "b7b6",
+            "d1d2",
+            "c6a7",
         ]
         initial_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -219,8 +239,16 @@ class TestActionEncoderBenchmarks:
     def test_encoding_throughput(self, encoder: ChessActionEncoder) -> None:
         """Benchmark: Move encoding throughput."""
         test_moves = [
-            "e2e4", "d2d4", "g1f3", "b1c3", "f1c4",
-            "c1f4", "e1g1", "d1d2", "a1d1", "h2h3",
+            "e2e4",
+            "d2d4",
+            "g1f3",
+            "b1c3",
+            "f1c4",
+            "c1f4",
+            "e1g1",
+            "d1d2",
+            "a1d1",
+            "h2h3",
         ]
 
         def encode_all() -> None:

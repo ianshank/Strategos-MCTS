@@ -7,7 +7,6 @@ checking agreement between HRM, TRM, and MCTS agents.
 
 from __future__ import annotations
 
-import logging
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -32,7 +31,7 @@ from src.games.chess.verification.types import (
     VerificationIssue,
     VerificationSeverity,
 )
-from src.observability.logging import get_structured_logger
+from src.observability.logging import StructuredLogger, get_structured_logger
 
 
 @dataclass
@@ -133,7 +132,7 @@ class EnsembleConsistencyChecker:
         self,
         ensemble_agent: ChessEnsembleAgent | None = None,
         config: EnsembleCheckerConfig | None = None,
-        logger: logging.Logger | None = None,
+        logger: StructuredLogger | None = None,
     ) -> None:
         """Initialize the consistency checker.
 
@@ -167,7 +166,10 @@ class EnsembleConsistencyChecker:
         Returns:
             Float threshold value
         """
-        return self._config.confidence_divergence_threshold
+        threshold = self._config.confidence_divergence_threshold
+        if threshold is None:
+            return 0.3  # Default threshold
+        return threshold
 
     async def check_position_consistency(
         self,
@@ -266,13 +268,13 @@ class EnsembleConsistencyChecker:
         )
 
         # Add issues for low agreement
-        if agreement_rate < self._config.agreement_threshold:
+        agreement_threshold = self._config.agreement_threshold or DEFAULT_AGREEMENT_THRESHOLD
+        if agreement_rate < agreement_threshold:
             issues.append(
                 VerificationIssue(
                     code="LOW_AGREEMENT",
                     message=(
-                        f"Agent agreement rate {agreement_rate:.2f} "
-                        f"below threshold {self._config.agreement_threshold}"
+                        f"Agent agreement rate {agreement_rate:.2f} below threshold {self._config.agreement_threshold}"
                     ),
                     severity=VerificationSeverity.WARNING,
                     context={
@@ -283,14 +285,13 @@ class EnsembleConsistencyChecker:
             )
 
         # Check for high divergences
+        divergence_threshold = self._config.confidence_divergence_threshold or DEFAULT_CONFIDENCE_DIVERGENCE_THRESHOLD
         for agent_name, divergence in agent_divergences.items():
-            if divergence > self._config.confidence_divergence_threshold:
+            if divergence > divergence_threshold:
                 issues.append(
                     VerificationIssue(
                         code="HIGH_DIVERGENCE",
-                        message=(
-                            f"Agent {agent_name} divergence {divergence:.2f} " f"exceeds threshold"
-                        ),
+                        message=(f"Agent {agent_name} divergence {divergence:.2f} exceeds threshold"),
                         severity=VerificationSeverity.WARNING,
                         context={
                             "agent": agent_name,
@@ -300,7 +301,8 @@ class EnsembleConsistencyChecker:
                 )
 
         # Check routing appropriateness using configurable threshold
-        if routing_consistency < self._config.routing_threshold:
+        routing_threshold = self._config.routing_threshold or DEFAULT_ROUTING_THRESHOLD
+        if routing_consistency < routing_threshold:
             issues.append(
                 VerificationIssue(
                     code="INAPPROPRIATE_ROUTING",
@@ -316,9 +318,8 @@ class EnsembleConsistencyChecker:
         check_time_ms = (time.perf_counter() - start_time) * 1000
 
         # Determine overall consistency
-        is_consistent = agreement_rate >= self._config.agreement_threshold and not any(
-            i.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL)
-            for i in issues
+        is_consistent = agreement_rate >= agreement_threshold and not any(
+            i.severity in (VerificationSeverity.ERROR, VerificationSeverity.CRITICAL) for i in issues
         )
 
         # Log if enabled

@@ -280,19 +280,11 @@ class ChessEnsembleAgent:
             Dictionary of agent responses
         """
         # Run agents concurrently
-        hrm_task = asyncio.create_task(
-            self._run_agent(AgentType.HRM, state, temperature)
-        )
-        trm_task = asyncio.create_task(
-            self._run_agent(AgentType.TRM, state, temperature)
-        )
-        mcts_task = asyncio.create_task(
-            self._run_agent(AgentType.MCTS, state, temperature)
-        )
+        hrm_task = asyncio.create_task(self._run_agent(AgentType.HRM, state, temperature))
+        trm_task = asyncio.create_task(self._run_agent(AgentType.TRM, state, temperature))
+        mcts_task = asyncio.create_task(self._run_agent(AgentType.MCTS, state, temperature))
 
-        hrm_response, trm_response, mcts_response = await asyncio.gather(
-            hrm_task, trm_task, mcts_task
-        )
+        hrm_response, trm_response, mcts_response = await asyncio.gather(hrm_task, trm_task, mcts_task)
 
         return {
             "hrm": hrm_response,

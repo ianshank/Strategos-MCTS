@@ -34,13 +34,7 @@ class TestProgressiveWideningConfig:
 
     def test_custom_configuration(self):
         """Test custom configuration values."""
-        config = ProgressiveWideningConfig(
-            k=2.0,
-            alpha=0.3,
-            adaptive=True,
-            k_min=1.0,
-            k_max=5.0
-        )
+        config = ProgressiveWideningConfig(k=2.0, alpha=0.3, adaptive=True, k_min=1.0, k_max=5.0)
 
         assert config.k == 2.0
         assert config.alpha == 0.3
@@ -131,11 +125,7 @@ class TestRAVEConfig:
 
     def test_custom_rave_configuration(self):
         """Test custom RAVE configuration."""
-        config = RAVEConfig(
-            rave_constant=500.0,
-            enable_rave=False,
-            min_visits_for_rave=10
-        )
+        config = RAVEConfig(rave_constant=500.0, enable_rave=False, min_visits_for_rave=10)
 
         assert config.rave_constant == 500.0
         assert config.enable_rave is False
@@ -367,18 +357,17 @@ class TestProgressiveWideningPerformance:
         # Test specific scenarios where expansion should be controlled
         test_cases = [
             # (visits, num_children, should_expand?)
-            (1, 0, True),    # Always expand first child
-            (2, 1, False),   # threshold=2.0, 2 is not > 2.0
-            (3, 1, True),    # threshold=2.0, 3 > 2.0
-            (4, 4, False),   # threshold=2*4^0.5=4.0, 4 is not > 4.0
-            (5, 4, True),    # threshold=2*4^0.5=4.0, 5 > 4.0
-            (10, 6, True),   # threshold=2*6^0.5≈4.9, 10 > 4.9
+            (1, 0, True),  # Always expand first child
+            (2, 1, False),  # threshold=2.0, 2 is not > 2.0
+            (3, 1, True),  # threshold=2.0, 3 > 2.0
+            (4, 4, False),  # threshold=2*4^0.5=4.0, 4 is not > 4.0
+            (5, 4, True),  # threshold=2*4^0.5=4.0, 5 > 4.0
+            (10, 6, True),  # threshold=2*6^0.5≈4.9, 10 > 4.9
         ]
 
         for visits, num_children, expected in test_cases:
             result = config.should_expand(visits, num_children)
-            assert result == expected, \
-                f"visits={visits}, children={num_children}: expected {expected}, got {result}"
+            assert result == expected, f"visits={visits}, children={num_children}: expected {expected}, got {result}"
 
     def test_min_visits_increases_with_children(self):
         """Test that required visits increase as children grow."""
@@ -392,4 +381,4 @@ class TestProgressiveWideningPerformance:
 
         # Each value should be >= previous (monotonic increase)
         for i in range(1, len(min_visits_sequence)):
-            assert min_visits_sequence[i] >= min_visits_sequence[i-1]
+            assert min_visits_sequence[i] >= min_visits_sequence[i - 1]

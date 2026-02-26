@@ -339,9 +339,7 @@ class LocalEmbeddingStore:
                 valid_indices = list(range(len(self._documents)))
                 if filter_metadata:
                     valid_indices = [
-                        i
-                        for i in valid_indices
-                        if self._matches_filter(self._documents[i].metadata, filter_metadata)
+                        i for i in valid_indices if self._matches_filter(self._documents[i].metadata, filter_metadata)
                     ]
 
                 # Get top-k indices from valid documents

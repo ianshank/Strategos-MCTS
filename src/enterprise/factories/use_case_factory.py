@@ -198,7 +198,7 @@ class EnterpriseUseCaseFactory:
         """
         if domain not in self._registry:
             available = [d.value for d in self._registry]
-            raise ValueError(f"Unknown domain: {domain.value}. " f"Registered domains: {available}")
+            raise ValueError(f"Unknown domain: {domain.value}. Registered domains: {available}")
 
         # Get configuration
         config = self._enterprise_settings.get_use_case_config(domain)
@@ -213,9 +213,7 @@ class EnterpriseUseCaseFactory:
         use_case_class = self._registry[domain]
 
         self._logger.info(
-            f"Creating use case: domain={domain.value}, "
-            f"class={use_case_class.__name__}, "
-            f"enabled={config.enabled}",
+            f"Creating use case: domain={domain.value}, class={use_case_class.__name__}, enabled={config.enabled}",
             extra={"domain": domain.value},
         )
 
@@ -312,6 +310,6 @@ class EnterpriseUseCaseFactory:
             return None
 
         # Return use case for highest scoring domain
-        best_domain = max(domain_scores, key=domain_scores.get)
-        self._logger.info(f"Detected domain from query: {best_domain.value} " f"(score={domain_scores[best_domain]})")
+        best_domain = max(domain_scores, key=lambda k: domain_scores[k])
+        self._logger.info(f"Detected domain from query: {best_domain.value} (score={domain_scores[best_domain]})")
         return self.create(best_domain)

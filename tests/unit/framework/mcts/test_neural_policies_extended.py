@@ -10,8 +10,11 @@ from __future__ import annotations
 import math
 from unittest.mock import MagicMock, patch
 
-import numpy as np
 import pytest
+
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
+import numpy as np
 
 # =============================================================================
 # Test Markers
@@ -703,9 +706,7 @@ class TestTorchNeuralRolloutPolicy:
         adapter = MagicMock()
         adapter.state_to_tensor = MagicMock(return_value=torch.zeros(1, 3, 3))
         adapter.get_action_mask = MagicMock(return_value=None)
-        adapter.tensor_to_action_priors = MagicMock(
-            return_value={"0,0": 0.2, "0,1": 0.3, "1,0": 0.5}
-        )
+        adapter.tensor_to_action_priors = MagicMock(return_value={"0,0": 0.2, "0,1": 0.3, "1,0": 0.5})
 
         policy = TorchNeuralRolloutPolicy(network=network, state_adapter=adapter)
 

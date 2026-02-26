@@ -93,9 +93,7 @@ class Settings(BaseSettings):
         default="http://localhost:1234/v1", description="LM Studio API base URL for local inference"
     )
 
-    LMSTUDIO_MODEL: str | None = Field(
-        default=None, description="LM Studio model identifier (e.g., liquid/lfm2-1.2b)"
-    )
+    LMSTUDIO_MODEL: str | None = Field(default=None, description="LM Studio model identifier (e.g., liquid/lfm2-1.2b)")
 
     # MCTS Configuration with bounds validation
     MCTS_ENABLED: bool = Field(default=True, description="Enable MCTS for agent decision-making")
@@ -104,9 +102,7 @@ class Settings(BaseSettings):
         default=MCTSImplementation.BASELINE, description="MCTS implementation variant to use"
     )
 
-    MCTS_ITERATIONS: int = Field(
-        default=100, ge=1, le=10000, description="Number of MCTS iterations (1-10000)"
-    )
+    MCTS_ITERATIONS: int = Field(default=100, ge=1, le=10000, description="Number of MCTS iterations (1-10000)")
 
     MCTS_C: float = Field(
         default=1.414,
@@ -116,9 +112,7 @@ class Settings(BaseSettings):
     )
 
     # Random seed for reproducibility
-    SEED: int | None = Field(
-        default=None, ge=0, description="Random seed for reproducibility (optional)"
-    )
+    SEED: int | None = Field(default=None, ge=0, description="Random seed for reproducibility (optional)")
 
     # LangSmith Configuration for tracing and evaluation
     LANGSMITH_API_KEY: SecretStr | None = Field(
@@ -129,9 +123,7 @@ class Settings(BaseSettings):
 
     LANGCHAIN_TRACING_V2: bool = Field(default=False, description="Enable LangChain tracing v2")
 
-    LANGCHAIN_ENDPOINT: str = Field(
-        default="https://api.smith.langchain.com", description="LangChain API endpoint"
-    )
+    LANGCHAIN_ENDPOINT: str = Field(default="https://api.smith.langchain.com", description="LangChain API endpoint")
 
     # Weights & Biases Configuration for experiment tracking
     WANDB_API_KEY: SecretStr | None = Field(
@@ -155,25 +147,17 @@ class Settings(BaseSettings):
     # S3 Storage Configuration
     S3_BUCKET: str | None = Field(default=None, description="S3 bucket name for artifact storage")
 
-    S3_PREFIX: str = Field(
-        default="mcts-artifacts", description="S3 key prefix for stored artifacts"
-    )
+    S3_PREFIX: str = Field(default="mcts-artifacts", description="S3 key prefix for stored artifacts")
 
     S3_REGION: str = Field(default="us-east-1", description="AWS region for S3 bucket")
 
     # Network Configuration (security)
-    HTTP_TIMEOUT_SECONDS: int = Field(
-        default=30, ge=1, le=300, description="HTTP request timeout in seconds"
-    )
+    HTTP_TIMEOUT_SECONDS: int = Field(default=30, ge=1, le=300, description="HTTP request timeout in seconds")
 
-    HTTP_MAX_RETRIES: int = Field(
-        default=3, ge=0, le=10, description="Maximum HTTP request retries"
-    )
+    HTTP_MAX_RETRIES: int = Field(default=3, ge=0, le=10, description="Maximum HTTP request retries")
 
     # LLM Provider-Specific Timeouts (seconds)
-    OPENAI_TIMEOUT: float = Field(
-        default=60.0, ge=1.0, le=600.0, description="OpenAI API request timeout in seconds"
-    )
+    OPENAI_TIMEOUT: float = Field(default=60.0, ge=1.0, le=600.0, description="OpenAI API request timeout in seconds")
 
     ANTHROPIC_TIMEOUT: float = Field(
         default=120.0, ge=1.0, le=600.0, description="Anthropic API request timeout in seconds"
@@ -194,9 +178,7 @@ class Settings(BaseSettings):
         description="Allowed CORS origins. Empty list means allow all (dev only).",
     )
 
-    CORS_ALLOW_CREDENTIALS: bool = Field(
-        default=True, description="Allow credentials in CORS requests"
-    )
+    CORS_ALLOW_CREDENTIALS: bool = Field(default=True, description="Allow credentials in CORS requests")
 
     # Rate Limit Response Configuration
     RATE_LIMIT_RETRY_AFTER_SECONDS: int = Field(
@@ -228,14 +210,10 @@ class Settings(BaseSettings):
         default=5, ge=1, le=100, description="Number of top documents to retrieve for RAG"
     )
 
-    FRAMEWORK_ENABLE_PARALLEL_AGENTS: bool = Field(
-        default=True, description="Enable parallel agent execution"
-    )
+    FRAMEWORK_ENABLE_PARALLEL_AGENTS: bool = Field(default=True, description="Enable parallel agent execution")
 
     # LLM Generation Configuration
-    LLM_TEMPERATURE: float = Field(
-        default=0.7, ge=0.0, le=2.0, description="Temperature for LLM generation"
-    )
+    LLM_TEMPERATURE: float = Field(default=0.7, ge=0.0, le=2.0, description="Temperature for LLM generation")
 
     # Confidence Thresholds
     CONFIDENCE_WITH_RAG: float = Field(
@@ -246,9 +224,7 @@ class Settings(BaseSettings):
         default=0.7, ge=0.0, le=1.0, description="Confidence score when RAG is disabled"
     )
 
-    CONFIDENCE_ON_ERROR: float = Field(
-        default=0.3, ge=0.0, le=1.0, description="Confidence score on error responses"
-    )
+    CONFIDENCE_ON_ERROR: float = Field(default=0.3, ge=0.0, le=1.0, description="Confidence score on error responses")
 
     # Error Response Configuration
     ERROR_QUERY_PREVIEW_LENGTH: int = Field(
@@ -256,23 +232,15 @@ class Settings(BaseSettings):
     )
 
     # HRM Agent Configuration
-    HRM_H_DIM: int = Field(
-        default=512, ge=1, le=4096, description="HRM high-level hidden dimension"
-    )
+    HRM_H_DIM: int = Field(default=512, ge=1, le=4096, description="HRM high-level hidden dimension")
 
     HRM_L_DIM: int = Field(default=256, ge=1, le=4096, description="HRM low-level hidden dimension")
 
-    HRM_NUM_H_LAYERS: int = Field(
-        default=2, ge=1, le=10, description="Number of HRM high-level layers"
-    )
+    HRM_NUM_H_LAYERS: int = Field(default=2, ge=1, le=10, description="Number of HRM high-level layers")
 
-    HRM_NUM_L_LAYERS: int = Field(
-        default=4, ge=1, le=10, description="Number of HRM low-level layers"
-    )
+    HRM_NUM_L_LAYERS: int = Field(default=4, ge=1, le=10, description="Number of HRM low-level layers")
 
-    HRM_MAX_OUTER_STEPS: int = Field(
-        default=10, ge=1, le=100, description="Maximum outer steps for HRM"
-    )
+    HRM_MAX_OUTER_STEPS: int = Field(default=10, ge=1, le=100, description="Maximum outer steps for HRM")
 
     HRM_HALT_THRESHOLD: float = Field(
         default=0.95, ge=0.0, le=1.0, description="HRM halt threshold for adaptive computation"
@@ -283,51 +251,33 @@ class Settings(BaseSettings):
 
     TRM_HIDDEN_DIM: int = Field(default=512, ge=1, le=4096, description="TRM hidden dimension")
 
-    TRM_NUM_RECURSIONS: int = Field(
-        default=16, ge=1, le=100, description="Number of TRM recursions"
-    )
+    TRM_NUM_RECURSIONS: int = Field(default=16, ge=1, le=100, description="Number of TRM recursions")
 
-    TRM_CONVERGENCE_THRESHOLD: float = Field(
-        default=0.01, ge=0.0, le=1.0, description="TRM convergence threshold"
-    )
+    TRM_CONVERGENCE_THRESHOLD: float = Field(default=0.01, ge=0.0, le=1.0, description="TRM convergence threshold")
 
     # Meta-Controller Configuration
-    META_CONTROLLER_TYPE: str = Field(
-        default="rnn", description="Meta-controller type: rnn, bert, hybrid, assembly"
-    )
+    META_CONTROLLER_TYPE: str = Field(default="rnn", description="Meta-controller type: rnn, bert, hybrid, assembly")
 
-    META_CONTROLLER_INPUT_DIM: int = Field(
-        default=10, ge=1, le=1024, description="Meta-controller input dimension"
-    )
+    META_CONTROLLER_INPUT_DIM: int = Field(default=10, ge=1, le=1024, description="Meta-controller input dimension")
 
-    META_CONTROLLER_HIDDEN_DIM: int = Field(
-        default=64, ge=1, le=1024, description="Meta-controller hidden dimension"
-    )
+    META_CONTROLLER_HIDDEN_DIM: int = Field(default=64, ge=1, le=1024, description="Meta-controller hidden dimension")
 
-    META_CONTROLLER_NUM_LAYERS: int = Field(
-        default=1, ge=1, le=10, description="Number of meta-controller layers"
-    )
+    META_CONTROLLER_NUM_LAYERS: int = Field(default=1, ge=1, le=10, description="Number of meta-controller layers")
 
     META_CONTROLLER_NUM_AGENTS: int = Field(
         default=3, ge=1, le=20, description="Number of agents for meta-controller routing"
     )
 
-    META_CONTROLLER_DROPOUT: float = Field(
-        default=0.1, ge=0.0, le=1.0, description="Meta-controller dropout rate"
-    )
+    META_CONTROLLER_DROPOUT: float = Field(default=0.1, ge=0.0, le=1.0, description="Meta-controller dropout rate")
 
     # Hybrid Agent Cost Tracking
     HYBRID_NEURAL_COST_PER_CALL: float = Field(
         default=0.000001, ge=0.0, description="Neural network cost per inference call (USD)"
     )
 
-    HYBRID_LLM_COST_PER_1K_TOKENS: float = Field(
-        default=0.03, ge=0.0, description="LLM cost per 1000 tokens (USD)"
-    )
+    HYBRID_LLM_COST_PER_1K_TOKENS: float = Field(default=0.03, ge=0.0, description="LLM cost per 1000 tokens (USD)")
 
-    HYBRID_MODE: str = Field(
-        default="auto", description="Hybrid agent mode: auto, neural_only, llm_only, adaptive"
-    )
+    HYBRID_MODE: str = Field(default="auto", description="Hybrid agent mode: auto, neural_only, llm_only, adaptive")
 
     HYBRID_POLICY_CONFIDENCE_THRESHOLD: float = Field(
         default=0.8, ge=0.0, le=1.0, description="Policy network confidence threshold"
@@ -346,17 +296,13 @@ class Settings(BaseSettings):
         default=0.5, ge=0.0, le=1.0, description="Progressive widening exponent alpha"
     )
 
-    MCTS_MAX_PARALLEL_ROLLOUTS: int = Field(
-        default=4, ge=1, le=32, description="Maximum parallel MCTS rollouts"
-    )
+    MCTS_MAX_PARALLEL_ROLLOUTS: int = Field(default=4, ge=1, le=32, description="Maximum parallel MCTS rollouts")
 
     MCTS_CACHE_SIZE_LIMIT: int = Field(
         default=10000, ge=100, le=1000000, description="MCTS simulation cache size limit"
     )
 
-    MCTS_MAX_ROLLOUT_DEPTH: int = Field(
-        default=50, ge=1, le=500, description="Maximum MCTS rollout depth"
-    )
+    MCTS_MAX_ROLLOUT_DEPTH: int = Field(default=50, ge=1, le=500, description="Maximum MCTS rollout depth")
 
     # ========================================
     # Chess / Stockfish Engine Configuration
@@ -366,23 +312,17 @@ class Settings(BaseSettings):
         default=None, description="Path to Stockfish executable (auto-detected if not set)"
     )
 
-    STOCKFISH_HASH_SIZE_MB: int = Field(
-        default=128, ge=1, le=4096, description="Stockfish hash table size in MB"
-    )
+    STOCKFISH_HASH_SIZE_MB: int = Field(default=128, ge=1, le=4096, description="Stockfish hash table size in MB")
 
     STOCKFISH_THREADS: int = Field(default=1, ge=1, le=64, description="Stockfish thread count")
 
-    STOCKFISH_DEFAULT_DEPTH: int = Field(
-        default=20, ge=1, le=100, description="Stockfish default search depth"
-    )
+    STOCKFISH_DEFAULT_DEPTH: int = Field(default=20, ge=1, le=100, description="Stockfish default search depth")
 
     STOCKFISH_TIME_LIMIT_MS: int = Field(
         default=1000, ge=100, le=60000, description="Stockfish time limit per move in ms"
     )
 
-    STOCKFISH_MULTIPV: int = Field(
-        default=1, ge=1, le=10, description="Stockfish multi-PV lines to analyze"
-    )
+    STOCKFISH_MULTIPV: int = Field(default=1, ge=1, le=10, description="Stockfish multi-PV lines to analyze")
 
     # ========================================
     # Chess Verification Configuration
@@ -429,33 +369,21 @@ class Settings(BaseSettings):
         default=0.4, ge=0.0, le=1.0, description="Score for phase-mismatched agent choice"
     )
 
-    CHESS_ROUTING_SCORE_DEFAULT: float = Field(
-        default=0.5, ge=0.0, le=1.0, description="Default routing score"
-    )
+    CHESS_ROUTING_SCORE_DEFAULT: float = Field(default=0.5, ge=0.0, le=1.0, description="Default routing score")
 
     # ========================================
     # Chess Piece Values (Centipawns)
     # ========================================
 
-    CHESS_PIECE_VALUE_PAWN: int = Field(
-        default=100, ge=50, le=200, description="Pawn value in centipawns"
-    )
+    CHESS_PIECE_VALUE_PAWN: int = Field(default=100, ge=50, le=200, description="Pawn value in centipawns")
 
-    CHESS_PIECE_VALUE_KNIGHT: int = Field(
-        default=320, ge=250, le=400, description="Knight value in centipawns"
-    )
+    CHESS_PIECE_VALUE_KNIGHT: int = Field(default=320, ge=250, le=400, description="Knight value in centipawns")
 
-    CHESS_PIECE_VALUE_BISHOP: int = Field(
-        default=330, ge=250, le=400, description="Bishop value in centipawns"
-    )
+    CHESS_PIECE_VALUE_BISHOP: int = Field(default=330, ge=250, le=400, description="Bishop value in centipawns")
 
-    CHESS_PIECE_VALUE_ROOK: int = Field(
-        default=500, ge=400, le=600, description="Rook value in centipawns"
-    )
+    CHESS_PIECE_VALUE_ROOK: int = Field(default=500, ge=400, le=600, description="Rook value in centipawns")
 
-    CHESS_PIECE_VALUE_QUEEN: int = Field(
-        default=900, ge=800, le=1100, description="Queen value in centipawns"
-    )
+    CHESS_PIECE_VALUE_QUEEN: int = Field(default=900, ge=800, le=1100, description="Queen value in centipawns")
 
     # Chess FEN Logging Configuration
     CHESS_FEN_LOG_TRUNCATE_LENGTH: int = Field(
@@ -586,9 +514,7 @@ class Settings(BaseSettings):
             if len(v) < 3 or len(v) > 63:
                 raise ValueError("S3 bucket name must be 3-63 characters long")
             if not v.replace("-", "").replace(".", "").isalnum():
-                raise ValueError(
-                    "S3 bucket name can only contain lowercase letters, numbers, hyphens, and periods"
-                )
+                raise ValueError("S3 bucket name can only contain lowercase letters, numbers, hyphens, and periods")
             if v.startswith("-") or v.endswith("-"):
                 raise ValueError("S3 bucket name cannot start or end with a hyphen")
         return v
@@ -619,9 +545,9 @@ class Settings(BaseSettings):
         Returns the secret value - use with caution to avoid logging.
         """
         if self.LLM_PROVIDER == LLMProvider.OPENAI and self.OPENAI_API_KEY:
-            return self.OPENAI_API_KEY.get_secret_value()
+            return str(self.OPENAI_API_KEY.get_secret_value())
         elif self.LLM_PROVIDER == LLMProvider.ANTHROPIC and self.ANTHROPIC_API_KEY:
-            return self.ANTHROPIC_API_KEY.get_secret_value()
+            return str(self.ANTHROPIC_API_KEY.get_secret_value())
         return None
 
     def safe_dict(self) -> dict:
@@ -630,7 +556,7 @@ class Settings(BaseSettings):
 
         Safe for logging and display purposes.
         """
-        data = self.model_dump()
+        data: dict = self.model_dump()
         # Mask all sensitive fields
         secret_fields = [
             "OPENAI_API_KEY",
@@ -652,7 +578,7 @@ class Settings(BaseSettings):
         Returns the secret value - use with caution to avoid logging.
         """
         if self.BRAINTRUST_API_KEY:
-            return self.BRAINTRUST_API_KEY.get_secret_value()
+            return str(self.BRAINTRUST_API_KEY.get_secret_value())
         return None
 
     def get_pinecone_api_key(self) -> str | None:
@@ -662,7 +588,7 @@ class Settings(BaseSettings):
         Returns the secret value - use with caution to avoid logging.
         """
         if self.PINECONE_API_KEY:
-            return self.PINECONE_API_KEY.get_secret_value()
+            return str(self.PINECONE_API_KEY.get_secret_value())
         return None
 
     def get_langsmith_api_key(self) -> str | None:
@@ -672,7 +598,7 @@ class Settings(BaseSettings):
         Returns the secret value - use with caution to avoid logging.
         """
         if self.LANGSMITH_API_KEY:
-            return self.LANGSMITH_API_KEY.get_secret_value()
+            return str(self.LANGSMITH_API_KEY.get_secret_value())
         return None
 
     def get_wandb_api_key(self) -> str | None:
@@ -682,7 +608,7 @@ class Settings(BaseSettings):
         Returns the secret value - use with caution to avoid logging.
         """
         if self.WANDB_API_KEY:
-            return self.WANDB_API_KEY.get_secret_value()
+            return str(self.WANDB_API_KEY.get_secret_value())
         return None
 
     def __repr__(self) -> str:

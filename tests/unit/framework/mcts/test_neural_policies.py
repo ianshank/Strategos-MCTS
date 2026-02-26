@@ -14,8 +14,11 @@ from __future__ import annotations
 import math
 from unittest.mock import MagicMock
 
-import numpy as np
 import pytest
+
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
+import numpy as np
 
 # =============================================================================
 # Test Markers

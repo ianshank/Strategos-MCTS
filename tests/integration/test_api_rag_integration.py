@@ -85,9 +85,7 @@ class TestFrameworkServiceRAGIntegration:
         return retriever
 
     @pytest.mark.asyncio
-    async def test_service_initialization_with_rag(
-        self, mock_settings, mock_framework_config
-    ):
+    async def test_service_initialization_with_rag(self, mock_settings, mock_framework_config):
         """Test service initialization includes RAG retriever."""
         from src.api.framework_service import FrameworkService
 
@@ -103,11 +101,13 @@ class TestFrameworkServiceRAGIntegration:
             )
 
             # Mock the initialization components via internal imports
-            with patch.object(service, 'initialize') as mock_init:
+            with patch.object(service, "initialize") as mock_init:
+
                 async def mock_initialize():
                     import logging
 
                     from src.api.framework_service import FrameworkState, LightweightFramework, MockLLMClient
+
                     service._state = FrameworkState.READY
                     service._start_time = 1000.0
                     service._framework = LightweightFramework(
@@ -125,9 +125,7 @@ class TestFrameworkServiceRAGIntegration:
                 assert service._state.value == "ready"
 
     @pytest.mark.asyncio
-    async def test_query_processing_with_rag_context(
-        self, mock_settings, mock_framework_config, mock_rag_retriever
-    ):
+    async def test_query_processing_with_rag_context(self, mock_settings, mock_framework_config, mock_rag_retriever):
         """Test query processing includes RAG context."""
         from src.api.framework_service import (
             FrameworkService,
@@ -151,6 +149,7 @@ class TestFrameworkServiceRAGIntegration:
 
         # Create lightweight framework with RAG
         import logging
+
         service._framework = LightweightFramework(
             llm_client=MockLLMClient(),
             config=mock_framework_config,
@@ -172,9 +171,7 @@ class TestFrameworkServiceRAGIntegration:
         assert result.processing_time_ms > 0
 
     @pytest.mark.asyncio
-    async def test_query_without_rag(
-        self, mock_settings, mock_framework_config
-    ):
+    async def test_query_without_rag(self, mock_settings, mock_framework_config):
         """Test query processing without RAG."""
         from src.api.framework_service import (
             FrameworkService,
@@ -197,6 +194,7 @@ class TestFrameworkServiceRAGIntegration:
         service._rag_retriever = None
 
         import logging
+
         service._framework = LightweightFramework(
             llm_client=MockLLMClient(),
             config=mock_framework_config,
@@ -214,9 +212,7 @@ class TestFrameworkServiceRAGIntegration:
         assert result.response is not None
 
     @pytest.mark.asyncio
-    async def test_health_check_includes_rag_status(
-        self, mock_settings, mock_framework_config, mock_rag_retriever
-    ):
+    async def test_health_check_includes_rag_status(self, mock_settings, mock_framework_config, mock_rag_retriever):
         """Test health check includes RAG availability status."""
         from src.api.framework_service import FrameworkService, FrameworkState
 
@@ -240,9 +236,7 @@ class TestFrameworkServiceRAGIntegration:
         assert health["status"] == "ready"
 
     @pytest.mark.asyncio
-    async def test_query_with_rag_failure_graceful_degradation(
-        self, mock_settings, mock_framework_config
-    ):
+    async def test_query_with_rag_failure_graceful_degradation(self, mock_settings, mock_framework_config):
         """Test graceful degradation when RAG fails."""
         from src.api.framework_service import (
             FrameworkService,
@@ -272,6 +266,7 @@ class TestFrameworkServiceRAGIntegration:
         service._rag_retriever = failing_retriever
 
         import logging
+
         service._framework = LightweightFramework(
             llm_client=MockLLMClient(),
             config=mock_framework_config,
@@ -352,6 +347,7 @@ class TestLightweightFrameworkWithRAG:
         rag_retriever.retrieve = mock_retrieve
 
         import logging
+
         framework = LightweightFramework(
             llm_client=mock_llm_client,
             config=mock_config,
@@ -373,6 +369,7 @@ class TestLightweightFrameworkWithRAG:
         import logging
 
         from src.api.framework_service import LightweightFramework
+
         framework = LightweightFramework(
             llm_client=mock_llm_client,
             config=mock_config,
@@ -388,13 +385,12 @@ class TestLightweightFrameworkWithRAG:
         assert result["metadata"]["rag_context_used"] is False
 
     @pytest.mark.asyncio
-    async def test_mcts_stats_included_when_enabled(
-        self, mock_config, mock_llm_client
-    ):
+    async def test_mcts_stats_included_when_enabled(self, mock_config, mock_llm_client):
         """Test MCTS stats are included when enabled."""
         import logging
 
         from src.api.framework_service import LightweightFramework
+
         framework = LightweightFramework(
             llm_client=mock_llm_client,
             config=mock_config,
@@ -410,13 +406,12 @@ class TestLightweightFrameworkWithRAG:
         assert result["state"]["mcts_stats"]["iterations"] == mock_config.mcts_iterations
 
     @pytest.mark.asyncio
-    async def test_mcts_stats_none_when_disabled(
-        self, mock_config, mock_llm_client
-    ):
+    async def test_mcts_stats_none_when_disabled(self, mock_config, mock_llm_client):
         """Test MCTS stats are None when disabled."""
         import logging
 
         from src.api.framework_service import LightweightFramework
+
         framework = LightweightFramework(
             llm_client=mock_llm_client,
             config=mock_config,
@@ -468,6 +463,7 @@ class TestEndToEndQueryFlow:
 
         # Set up framework manually
         import logging
+
         service._state = FrameworkState.READY
         service._start_time = 1000.0
         service._framework = LightweightFramework(

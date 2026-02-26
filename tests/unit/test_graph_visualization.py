@@ -13,6 +13,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
 # =============================================================================
 # Test Markers
 # =============================================================================
@@ -51,19 +53,13 @@ def mock_integrated_framework(mock_graph_builder):
 
     # Bind actual visualization methods
     framework.get_graph = lambda: graph_module.IntegratedFramework.get_graph(framework)
-    framework.get_graph_structure = lambda: graph_module.IntegratedFramework.get_graph_structure(
-        framework
-    )
+    framework.get_graph_structure = lambda: graph_module.IntegratedFramework.get_graph_structure(framework)
     framework.get_graph_mermaid = lambda **kwargs: graph_module.IntegratedFramework.get_graph_mermaid(
         framework, **kwargs
     )
-    framework.draw_mermaid = lambda **kwargs: graph_module.IntegratedFramework.draw_mermaid(
-        framework, **kwargs
-    )
-    framework.get_execution_trace_mermaid = (
-        lambda *args, **kwargs: graph_module.IntegratedFramework.get_execution_trace_mermaid(
-            framework, *args, **kwargs
-        )
+    framework.draw_mermaid = lambda **kwargs: graph_module.IntegratedFramework.draw_mermaid(framework, **kwargs)
+    framework.get_execution_trace_mermaid = lambda *args, **kwargs: (
+        graph_module.IntegratedFramework.get_execution_trace_mermaid(framework, *args, **kwargs)
     )
 
     return framework
@@ -312,9 +308,7 @@ class TestGetExecutionTraceMermaid:
         execution_path = ["entry", "hrm_agent", "synthesize"]
         timings = {"entry": 15.5, "hrm_agent": 250.0}
 
-        mermaid = mock_integrated_framework.get_execution_trace_mermaid(
-            execution_path, timings=timings
-        )
+        mermaid = mock_integrated_framework.get_execution_trace_mermaid(execution_path, timings=timings)
 
         # Timing is shown for the source node in each transition
         assert "15.5ms" in mermaid

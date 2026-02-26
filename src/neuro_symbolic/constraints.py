@@ -16,6 +16,7 @@ Best Practices 2025:
 from __future__ import annotations
 
 import hashlib
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -25,6 +26,8 @@ from typing import Any, TypeVar
 
 from .config import ConstraintConfig, ConstraintEnforcement
 from .state import NeuroSymbolicState
+
+logger = logging.getLogger(__name__)
 
 
 class ConstraintSatisfactionLevel(Enum):
@@ -533,10 +536,12 @@ class ConstraintValidator:
     def add_constraint(self, constraint: Constraint) -> None:
         """Add a constraint to the validator."""
         if len(self.constraints) >= self.config.max_constraints_per_state:
+            logger.warning("Maximum constraints exceeded: %d", self.config.max_constraints_per_state)
             raise ValueError(f"Maximum constraints exceeded: {self.config.max_constraints_per_state}")
         self.constraints[constraint.constraint_id] = constraint
         if self.config.precompile_constraints:
             constraint.compile()
+        logger.debug("Constraint added: id=%s, name=%s", constraint.constraint_id, constraint.name)
 
     def remove_constraint(self, constraint_id: str) -> None:
         """Remove a constraint by ID."""
@@ -595,6 +600,11 @@ class ConstraintValidator:
 
             if result.is_violated and constraint.enforcement == ConstraintEnforcement.HARD:
                 all_satisfied = False
+                logger.debug(
+                    "Hard constraint violated: id=%s, message=%s",
+                    constraint.constraint_id,
+                    result.message,
+                )
                 # Early exit for hard constraint violation
                 break
 

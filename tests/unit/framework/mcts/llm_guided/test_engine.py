@@ -6,6 +6,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
 from src.framework.mcts.llm_guided.config import (
     LLMGuidedMCTSConfig,
     LLMGuidedMCTSPreset,

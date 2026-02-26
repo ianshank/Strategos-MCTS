@@ -87,9 +87,7 @@ class EnterpriseGraphBuilder:
     def _load_use_cases(self) -> None:
         """Load all enabled enterprise use cases."""
         self._use_cases = self._factory.create_all_enabled()
-        self._logger.info(
-            f"Loaded {len(self._use_cases)} enterprise use cases: " f"{[d.value for d in self._use_cases]}"
-        )
+        self._logger.info(f"Loaded {len(self._use_cases)} enterprise use cases: {[d.value for d in self._use_cases]}")
 
     @property
     def use_cases(self) -> dict[EnterpriseDomain, UseCaseProtocol]:

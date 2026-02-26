@@ -291,9 +291,7 @@ class TestADKAdapterInvocation:
     """Tests for ADK adapter invocation."""
 
     @pytest.mark.asyncio
-    async def test_adapter_invoke_returns_response(
-        self, mock_adk_adapter, adk_request
-    ):
+    async def test_adapter_invoke_returns_response(self, mock_adk_adapter, adk_request):
         """Test adapter invocation returns proper response."""
         await mock_adk_adapter.initialize()
 
@@ -304,9 +302,7 @@ class TestADKAdapterInvocation:
         assert response.session_id == adk_request.session_id
 
     @pytest.mark.asyncio
-    async def test_adapter_invoke_initializes_if_needed(
-        self, mock_adk_adapter, adk_request
-    ):
+    async def test_adapter_invoke_initializes_if_needed(self, mock_adk_adapter, adk_request):
         """Test adapter auto-initializes on first invocation."""
 
         # Patch invoke to check auto-init

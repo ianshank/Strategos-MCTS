@@ -225,9 +225,7 @@ class TestMockEnsembleAgent:
         """Test mock agent tracks calls."""
         agent = create_mock_ensemble_agent()
         state1 = initial_position()
-        state2 = ChessGameState.from_fen(
-            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
-        )
+        state2 = ChessGameState.from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1")
 
         await agent.get_best_move(state1, temperature=0.0)
         await agent.get_best_move(state2, temperature=0.5)

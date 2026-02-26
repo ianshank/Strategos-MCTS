@@ -144,10 +144,12 @@ class TestRAGRetriever:
         """Create mock Pinecone store."""
         store = MagicMock()
         store.is_available = True
-        store.find_similar_decisions = MagicMock(return_value=[
-            {"score": 0.95, "metadata": {"content": "Result 1"}},
-            {"score": 0.85, "metadata": {"content": "Result 2"}},
-        ])
+        store.find_similar_decisions = MagicMock(
+            return_value=[
+                {"score": 0.95, "metadata": {"content": "Result 1"}},
+                {"score": 0.85, "metadata": {"content": "Result 2"}},
+            ]
+        )
         return store
 
     def test_init_without_backends(self, mock_settings):

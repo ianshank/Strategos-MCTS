@@ -32,12 +32,9 @@ def safe_torch_load():
     """Fixture to set up safe torch loading for all tests in the module."""
     if hasattr(torch.serialization, "add_safe_globals"):
         import numpy as np
+
         # Add all needed numpy types
-        torch.serialization.add_safe_globals([
-            np._core.multiarray.scalar,
-            np.dtype,
-            np.dtypes.Float64DType
-        ])
+        torch.serialization.add_safe_globals([np._core.multiarray.scalar, np.dtype, np.dtypes.Float64DType])
 
 
 @pytest.fixture
@@ -61,12 +58,7 @@ def production_config():
 @pytest.mark.integration
 def test_deployed_models_exist(production_models_dir):
     """Verify all required models are deployed."""
-    required_models = [
-        "hrm_production.pt",
-        "trm_production.pt",
-        "mcts_production.pt",
-        "meta_production.pt"
-    ]
+    required_models = ["hrm_production.pt", "trm_production.pt", "mcts_production.pt", "meta_production.pt"]
 
     missing = []
     for model in required_models:

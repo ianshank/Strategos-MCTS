@@ -276,7 +276,7 @@ class AsyncProfiler:
         if session_id and session_id in self._sessions:
             self._sessions[session_id].cpu_samples.append(cpu_percent)
 
-        return cpu_percent
+        return float(cpu_percent)
 
     def add_marker(
         self,
@@ -360,13 +360,13 @@ class MemoryProfiler:
 
     def set_baseline(self) -> float:
         """Set current memory as baseline."""
-        self._baseline = self._process.memory_info().rss / (1024 * 1024)
+        self._baseline = float(self._process.memory_info().rss / (1024 * 1024))
         self.logger.info(f"Memory baseline set: {self._baseline:.2f} MB")
         return self._baseline
 
     def get_current(self) -> float:
         """Get current memory usage in MB."""
-        return self._process.memory_info().rss / (1024 * 1024)
+        return float(self._process.memory_info().rss / (1024 * 1024))
 
     def get_delta(self) -> float:
         """Get memory change from baseline."""
@@ -482,7 +482,7 @@ def generate_performance_report(session_id: str | None = None) -> dict[str, Any]
     """
     profiler = AsyncProfiler.get_instance()
 
-    report = {
+    report: dict[str, Any] = {
         "report_time": datetime.utcnow().isoformat(),
         "timing_summary": profiler.get_timing_summary(),
     }
@@ -502,7 +502,7 @@ def generate_performance_report(session_id: str | None = None) -> dict[str, Any]
 
         # Compute session-specific stats
         if session.timings:
-            session_times = {}
+            session_times: dict[str, list[float]] = {}
             for timing in session.timings:
                 if timing.name not in session_times:
                     session_times[timing.name] = []

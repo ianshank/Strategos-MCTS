@@ -269,30 +269,30 @@ class DeepSearchAgent(ADKAgentAdapter):
     def _format_research_plan(self, plan: dict[str, Any]) -> str:
         """Format research plan for human review."""
         return f"""
-# Research Plan: {plan['topic']}
+# Research Plan: {plan["topic"]}
 
 ## Objectives
-{chr(10).join(f'{i+1}. {obj}' for i, obj in enumerate(plan['objectives']))}
+{chr(10).join(f"{i + 1}. {obj}" for i, obj in enumerate(plan["objectives"]))}
 
 ## Research Questions
-{chr(10).join(f'{i+1}. {q}' for i, q in enumerate(plan['research_questions']))}
+{chr(10).join(f"{i + 1}. {q}" for i, q in enumerate(plan["research_questions"]))}
 
 ## Search Strategy
 
 ### Initial Queries
-{chr(10).join(f'- {q}' for q in plan['search_strategy']['initial_queries'])}
+{chr(10).join(f"- {q}" for q in plan["search_strategy"]["initial_queries"])}
 
 ### Refinement
-- **Cycles**: {plan['search_strategy']['refinement_cycles']}
-- **Sources per Query**: {plan['search_strategy']['sources_per_query']}
+- **Cycles**: {plan["search_strategy"]["refinement_cycles"]}
+- **Sources per Query**: {plan["search_strategy"]["sources_per_query"]}
 
 ## Report Structure
-{chr(10).join(f'{i+1}. {section}' for i, section in enumerate(plan['report_structure']['sections']))}
+{chr(10).join(f"{i + 1}. {section}" for i, section in enumerate(plan["report_structure"]["sections"]))}
 
 ## Quality Criteria
-- **Minimum Citations**: {plan['quality_criteria']['citation_count_min']}
-- **Source Diversity**: {plan['quality_criteria']['source_diversity']}
-- **Recency**: {plan['quality_criteria']['recency_weight']}
+- **Minimum Citations**: {plan["quality_criteria"]["citation_count_min"]}
+- **Source Diversity**: {plan["quality_criteria"]["source_diversity"]}
+- **Recency**: {plan["quality_criteria"]["recency_weight"]}
 
 ---
 **Next Step**: Approve this plan to begin autonomous research execution
@@ -326,11 +326,11 @@ refinement, and critical evaluation.
 This research employed a multi-phase search approach:
 
 1. **Initial Exploration**
-{chr(10).join(f'   - {q}' for q in research_plan['search_strategy']['initial_queries'])}
+{chr(10).join(f"   - {q}" for q in research_plan["search_strategy"]["initial_queries"])}
 
 2. **Iterative Refinement**
-   - Number of refinement cycles: {research_plan['search_strategy']['refinement_cycles']}
-   - Sources evaluated per query: {research_plan['search_strategy']['sources_per_query']}
+   - Number of refinement cycles: {research_plan["search_strategy"]["refinement_cycles"]}
+   - Sources evaluated per query: {research_plan["search_strategy"]["sources_per_query"]}
 
 3. **Critical Evaluation**
    - Source credibility assessment
@@ -338,7 +338,7 @@ This research employed a multi-phase search approach:
    - Gap identification and targeted searches
 
 ### Quality Assurance
-- Minimum {research_plan['quality_criteria']['citation_count_min']} authoritative citations
+- Minimum {research_plan["quality_criteria"]["citation_count_min"]} authoritative citations
 - High source diversity across different perspectives
 - Emphasis on recent developments and current state
 
@@ -548,26 +548,28 @@ findings suggest [implications] and point toward [future considerations].
     def get_capabilities(self) -> dict[str, Any]:
         """Get Deep Search agent capabilities."""
         base_caps = super().get_capabilities()
-        base_caps.update({
-            "agent_type": "deep_search",
-            "supports_streaming": False,  # Could be implemented
-            "workflow_phases": ["planning", "execution", "full"],
-            "features": [
-                "human_in_loop_planning",
-                "autonomous_research",
-                "iterative_refinement",
-                "critique_cycles",
-                "inline_citations",
-                "multi_agent_collaboration",
-                "web_search",
-            ],
-            "report_sections": [
-                "executive_summary",
-                "methodology",
-                "findings",
-                "analysis",
-                "conclusions",
-                "references",
-            ],
-        })
+        base_caps.update(
+            {
+                "agent_type": "deep_search",
+                "supports_streaming": False,  # Could be implemented
+                "workflow_phases": ["planning", "execution", "full"],
+                "features": [
+                    "human_in_loop_planning",
+                    "autonomous_research",
+                    "iterative_refinement",
+                    "critique_cycles",
+                    "inline_citations",
+                    "multi_agent_collaboration",
+                    "web_search",
+                ],
+                "report_sections": [
+                    "executive_summary",
+                    "methodology",
+                    "findings",
+                    "analysis",
+                    "conclusions",
+                    "references",
+                ],
+            }
+        )
         return base_caps

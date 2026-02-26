@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from src.adapters.llm.base import LLMClient
 
+from src.adapters.llm.base import LLMResponse
+
 from ...config.enterprise_settings import MADueDiligenceConfig, get_enterprise_settings
 from .state import (
     IdentifiedRisk,
@@ -105,8 +107,9 @@ class DocumentAnalysisAgent:
         # Call LLM if available
         if self._llm:
             try:
-                response = await self._llm.generate(prompt=prompt, temperature=0.3)
-                findings = self._parse_findings(response.content)
+                result = await self._llm.generate(prompt=prompt, temperature=0.3)
+                assert isinstance(result, LLMResponse), "Expected LLMResponse, not stream"
+                findings = self._parse_findings(result.text)
             except Exception as e:
                 self._logger.error(f"LLM call failed: {e}")
                 findings = self._generate_mock_findings(domain_state)
@@ -147,9 +150,9 @@ Risks Already Identified: {len(state.risks_identified)}
 Query: {query}
 
 Document Content (if available):
-{context.get('document_content', 'No specific document provided')}
+{context.get("document_content", "No specific document provided")}
 
-MCTS Recommended Action: {context.get('mcts_action', 'None')}
+MCTS Recommended Action: {context.get("mcts_action", "None")}
 
 Extract and provide:
 1. Key financial terms and conditions
@@ -247,7 +250,7 @@ class RiskIdentificationAgent:
             extra={"existing_risks": len(domain_state.risks_identified)},
         )
 
-        risks = []
+        risks: list[IdentifiedRisk] = []
         refinement_rounds = self._config.get("max_refinement_rounds", 3)
 
         for round_num in range(refinement_rounds):
@@ -552,4 +555,4 @@ class ComplianceCheckAgent:
     def _compute_confidence(self, results: dict[str, Any]) -> float:
         """Compute confidence based on checks performed."""
         total_checks = sum(r.get("checks_performed", 0) for r in results.values())
-        return min(0.5 + total_checks * 0.05, 0.9)
+        return float(min(0.5 + total_checks * 0.05, 0.9))

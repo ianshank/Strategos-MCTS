@@ -21,6 +21,7 @@ import uuid
 from contextvars import ContextVar
 from datetime import datetime
 from functools import wraps
+from typing import Any
 
 import psutil
 
@@ -89,7 +90,7 @@ def sanitize_dict(data: dict) -> dict:
         "private_key",
     }
 
-    result = {}
+    result: dict[str, Any] = {}
     for key, value in data.items():
         key_lower = key.lower().replace("-", "_")
         if key_lower in sensitive_keys:
@@ -132,12 +133,11 @@ class JSONFormatter(logging.Formatter):
         super().__init__()
         self.include_hostname = include_hostname
         self.include_process = include_process
+        self.hostname: str | None = None
         if include_hostname:
             import socket
 
             self.hostname = socket.gethostname()
-        else:
-            self.hostname = None
 
     def format(self, record: logging.LogRecord) -> str:
         log_data = {
@@ -186,7 +186,7 @@ class JSONFormatter(logging.Formatter):
             }
 
         # Add any extra fields (sanitized)
-        extra_fields = {}
+        extra_fields: dict[str, Any] = {}
         for key, value in record.__dict__.items():
             if key not in {
                 "name",
@@ -254,7 +254,7 @@ def setup_logging(
         log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
 
     # Base configuration
-    config = {
+    config: dict[str, Any] = {
         "version": 1,
         "disable_existing_loggers": False,
         "filters": {
@@ -402,19 +402,18 @@ def get_logger(name: str) -> logging.Logger:
 class LogContext:
     """Context manager for adding temporary log context."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         self.kwargs = kwargs
-        self._old_metadata = None
+        self._old_metadata: dict[Any, Any] = {}
 
-    def __enter__(self):
+    def __enter__(self) -> "LogContext":
         self._old_metadata = get_request_metadata().copy()
         new_metadata = {**self._old_metadata, **self.kwargs}
         set_request_metadata(new_metadata)
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         set_request_metadata(self._old_metadata)
-        return False
 
 
 def log_execution_time(logger: logging.Logger | None = None, level: int = logging.INFO):

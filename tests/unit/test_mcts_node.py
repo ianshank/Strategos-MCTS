@@ -2,6 +2,10 @@
 Unit tests for MCTS Node and Core Logic.
 """
 
+import pytest
+
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
 from src.framework.mcts.core import MCTSNode, MCTSState
 from src.framework.mcts.policies import ucb1
 
@@ -59,12 +63,12 @@ class TestMCTSNode:
         # Child 1: high value, moderate visits
         child1 = root.add_child("a1", MCTSState("c1"))
         child1.visits = 20
-        child1.value_sum = 18.0 # mean 0.9
+        child1.value_sum = 18.0  # mean 0.9
 
         # Child 2: low value, low visits (high exploration)
         child2 = root.add_child("a2", MCTSState("c2"))
         child2.visits = 2
-        child2.value_sum = 0.2 # mean 0.1
+        child2.value_sum = 0.2  # mean 0.1
 
         # Select
         selected = root.select_child(exploration_weight=1.414)
@@ -79,8 +83,8 @@ class TestMCTSNode:
     def test_state_hashing(self):
         """Test that states can be hashed correctly for caching."""
         s1 = MCTSState(state_id="s1", features={"a": 1, "b": 2})
-        s2 = MCTSState(state_id="s1", features={"b": 2, "a": 1}) # Same content, diff order
-        s3 = MCTSState(state_id="s1", features={"a": 2}) # Diff content
+        s2 = MCTSState(state_id="s1", features={"b": 2, "a": 1})  # Same content, diff order
+        s3 = MCTSState(state_id="s1", features={"a": 2})  # Diff content
 
         assert s1.to_hash_key() == s2.to_hash_key()
         assert s1.to_hash_key() != s3.to_hash_key()

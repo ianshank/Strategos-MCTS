@@ -23,7 +23,7 @@ try:
     _HAS_HTTPX = True
 except ImportError:
     _HAS_HTTPX = False
-    httpx = None  # type: ignore[assignment]
+    httpx = None
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -154,9 +154,7 @@ class PoolMetrics:
                 "total": self.requests_total,
                 "successful": self.requests_successful,
                 "failed": self.requests_failed,
-                "success_rate": (
-                    self.requests_successful / self.requests_total if self.requests_total > 0 else 0.0
-                ),
+                "success_rate": (self.requests_successful / self.requests_total if self.requests_total > 0 else 0.0),
             },
             "retries_total": self.retries_total,
             "latency": latency_stats,
@@ -198,10 +196,7 @@ class ConnectionPool:
             config: Pool configuration (uses defaults if not provided)
         """
         if not _HAS_HTTPX:
-            raise ImportError(
-                "httpx is required for connection pooling. "
-                "Install it with: pip install httpx"
-            )
+            raise ImportError("httpx is required for connection pooling. Install it with: pip install httpx")
 
         self.config = config or ConnectionPoolConfig()
         self._client: AsyncClient | None = None
@@ -270,10 +265,7 @@ class ConnectionPool:
                 )
 
                 # Check for retryable status codes
-                if (
-                    response.status_code in self.config.retry_status_codes
-                    and attempt < self.config.max_retries
-                ):
+                if response.status_code in self.config.retry_status_codes and attempt < self.config.max_retries:
                     retries += 1
                     backoff = self.config.retry_backoff_factor * (2**attempt)
                     logger.warning(
@@ -353,7 +345,7 @@ class ConnectionPool:
             else:
                 self._metrics.health_checks_failed += 1
 
-            return healthy
+            return bool(healthy)
         except Exception as e:
             logger.warning("Health check failed for %s: %s", url, e)
             self._metrics.health_checks_failed += 1

@@ -13,6 +13,8 @@ from unittest.mock import patch
 
 import pytest
 
+pytest.importorskip("psutil", reason="psutil required for observability tests")
+
 from src.observability.debug import (
     MCTSDebugger,
     disable_verbose_debugging,

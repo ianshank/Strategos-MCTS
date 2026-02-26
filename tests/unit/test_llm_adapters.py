@@ -11,8 +11,11 @@ Tests:
 
 from unittest.mock import AsyncMock, Mock, patch
 
-import httpx
 import pytest
+
+pytest.importorskip("httpx", reason="httpx required for HTTP client tests")
+
+import httpx
 
 # Import adapters (with fallback if not available)
 try:

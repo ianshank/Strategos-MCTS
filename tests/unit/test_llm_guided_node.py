@@ -126,15 +126,9 @@ class TestLLMGuidedMCTSNode:
         """Multiple children can be added."""
         root = create_root_node("test", seed=42)
 
-        child1 = root.add_child(
-            NodeState(code="a", problem="test"), action="a"
-        )
-        child2 = root.add_child(
-            NodeState(code="b", problem="test"), action="b"
-        )
-        child3 = root.add_child(
-            NodeState(code="c", problem="test"), action="c"
-        )
+        child1 = root.add_child(NodeState(code="a", problem="test"), action="a")
+        child2 = root.add_child(NodeState(code="b", problem="test"), action="b")
+        child3 = root.add_child(NodeState(code="c", problem="test"), action="c")
 
         assert len(root.children) == 3
         assert child1 in root.children
@@ -339,9 +333,7 @@ class TestMCTSPolicy:
         root = create_root_node("test", seed=42)
 
         for i in range(5):
-            child = root.add_child(
-                NodeState(code=str(i), problem="test"), action=f"action_{i}"
-            )
+            child = root.add_child(NodeState(code=str(i), problem="test"), action=f"action_{i}")
             child.visits = (i + 1) * 10
 
         policy = root.compute_mcts_policy()

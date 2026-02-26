@@ -78,7 +78,6 @@ def mock_gpu():
         patch("torch.cuda.get_device_name", return_value="NVIDIA GeForce RTX 4080"),
         patch("torch.cuda.get_device_properties") as mock_props,
     ):
-
         # Mock device properties
         mock_device = Mock()
         mock_device.total_memory = 16 * 1024 * 1024 * 1024  # 16GB
@@ -234,7 +233,6 @@ async def test_verification_script_executes(demo_config, mock_external_services)
             patch("scripts.verify_external_services.PineconeVerifier.verify") as mock_pinecone,
             patch("scripts.verify_external_services.WandBVerifier.verify") as mock_wandb,
         ):
-
             from scripts.verify_external_services import (
                 ServiceStatus,
                 VerificationResult,

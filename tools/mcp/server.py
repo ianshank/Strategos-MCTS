@@ -118,6 +118,7 @@ class MCPServer:
         self.artifacts: dict[str, dict] = {}
         self.run_history: list[dict] = []
         self._llm_client = None
+        self._chess_engine = None  # Lazy-initialised by chess tools
 
     async def initialize(self):
         """Initialize the framework and LLM client."""
@@ -141,7 +142,9 @@ class MCPServer:
 
     def get_tools(self) -> list[dict]:
         """Return list of available tools with schemas."""
-        return [
+        from src.games.chess.mcp_chess_tools import get_chess_tool_definitions
+
+        base_tools = [
             {
                 "name": "run_mcts",
                 "description": "Execute MCTS search with the multi-agent framework",
@@ -173,9 +176,14 @@ class MCPServer:
                 "inputSchema": {"type": "object", "properties": {}},
             },
         ]
+        # Append chess-specific tools
+        base_tools.extend(get_chess_tool_definitions())
+        return base_tools
 
     async def call_tool(self, name: str, arguments: dict) -> dict:
         """Execute a tool by name with given arguments."""
+        from src.games.chess.mcp_chess_tools import CHESS_TOOL_HANDLERS, dispatch_chess_tool
+
         tools = {
             "run_mcts": self._run_mcts,
             "query_agent": self._query_agent,
@@ -185,10 +193,14 @@ class MCPServer:
             "health_check": self._health_check,
         }
 
-        if name not in tools:
-            raise ValueError(f"Unknown tool: {name}")
+        if name in tools:
+            return await tools[name](arguments)
 
-        return await tools[name](arguments)
+        # Delegate to chess tools if recognised
+        if name in CHESS_TOOL_HANDLERS:
+            return await dispatch_chess_tool(name, arguments, engine=self._chess_engine)
+
+        raise ValueError(f"Unknown tool: {name}")
 
     async def _run_mcts(self, args: dict) -> dict:
         """Run MCTS search."""
@@ -403,7 +415,7 @@ class MCPServer:
                 tool_name = request.params.get("name")
                 if not isinstance(tool_name, str):
                     raise ValueError("Tool name must be a string")
-                
+
                 tool_args = request.params.get("arguments", {})
                 if not isinstance(tool_args, dict):
                     raise ValueError("Tool arguments must be a dictionary")

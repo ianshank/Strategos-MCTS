@@ -121,6 +121,7 @@ def mock_mcts():
 @pytest.fixture
 def mock_game_state_factory():
     """Create a mock game state factory for testing."""
+
     def create_state():
         state = MagicMock()
         # Simulate a game that ends after a few moves
@@ -157,32 +158,38 @@ def game_results_candidate_wins():
     results = []
     # 15 wins, 3 losses, 2 draws = 20 games
     for i in range(15):
-        results.append(GameResult(
-            outcome=GameOutcome.WIN,
-            game_length=30 + i,
-            model1_avg_value=0.7,
-            model2_avg_value=0.4,
-            model1_started=(i % 2 == 0),
-            duration_seconds=5.0,
-        ))
+        results.append(
+            GameResult(
+                outcome=GameOutcome.WIN,
+                game_length=30 + i,
+                model1_avg_value=0.7,
+                model2_avg_value=0.4,
+                model1_started=(i % 2 == 0),
+                duration_seconds=5.0,
+            )
+        )
     for i in range(3):
-        results.append(GameResult(
-            outcome=GameOutcome.LOSS,
-            game_length=25 + i,
-            model1_avg_value=0.3,
-            model2_avg_value=0.6,
-            model1_started=(i % 2 == 1),
-            duration_seconds=4.0,
-        ))
+        results.append(
+            GameResult(
+                outcome=GameOutcome.LOSS,
+                game_length=25 + i,
+                model1_avg_value=0.3,
+                model2_avg_value=0.6,
+                model1_started=(i % 2 == 1),
+                duration_seconds=4.0,
+            )
+        )
     for i in range(2):
-        results.append(GameResult(
-            outcome=GameOutcome.DRAW,
-            game_length=50,
-            model1_avg_value=0.5,
-            model2_avg_value=0.5,
-            model1_started=(i % 2 == 0),
-            duration_seconds=6.0,
-        ))
+        results.append(
+            GameResult(
+                outcome=GameOutcome.DRAW,
+                game_length=50,
+                model1_avg_value=0.5,
+                model2_avg_value=0.5,
+                model1_started=(i % 2 == 0),
+                duration_seconds=6.0,
+            )
+        )
     return results
 
 
@@ -192,32 +199,38 @@ def game_results_baseline_wins():
     results = []
     # 5 wins, 12 losses, 3 draws = 20 games
     for i in range(5):
-        results.append(GameResult(
-            outcome=GameOutcome.WIN,
-            game_length=30 + i,
-            model1_avg_value=0.7,
-            model2_avg_value=0.4,
-            model1_started=(i % 2 == 0),
-            duration_seconds=5.0,
-        ))
+        results.append(
+            GameResult(
+                outcome=GameOutcome.WIN,
+                game_length=30 + i,
+                model1_avg_value=0.7,
+                model2_avg_value=0.4,
+                model1_started=(i % 2 == 0),
+                duration_seconds=5.0,
+            )
+        )
     for i in range(12):
-        results.append(GameResult(
-            outcome=GameOutcome.LOSS,
-            game_length=25 + i,
-            model1_avg_value=0.3,
-            model2_avg_value=0.6,
-            model1_started=(i % 2 == 1),
-            duration_seconds=4.0,
-        ))
+        results.append(
+            GameResult(
+                outcome=GameOutcome.LOSS,
+                game_length=25 + i,
+                model1_avg_value=0.3,
+                model2_avg_value=0.6,
+                model1_started=(i % 2 == 1),
+                duration_seconds=4.0,
+            )
+        )
     for i in range(3):
-        results.append(GameResult(
-            outcome=GameOutcome.DRAW,
-            game_length=50,
-            model1_avg_value=0.5,
-            model2_avg_value=0.5,
-            model1_started=(i % 2 == 0),
-            duration_seconds=6.0,
-        ))
+        results.append(
+            GameResult(
+                outcome=GameOutcome.DRAW,
+                game_length=50,
+                model1_avg_value=0.5,
+                model2_avg_value=0.5,
+                model1_started=(i % 2 == 0),
+                duration_seconds=6.0,
+            )
+        )
     return results
 
 
@@ -227,32 +240,38 @@ def game_results_draw():
     results = []
     # 8 wins, 8 losses, 4 draws = 20 games (roughly 50% win rate)
     for i in range(8):
-        results.append(GameResult(
-            outcome=GameOutcome.WIN,
-            game_length=30 + i,
-            model1_avg_value=0.6,
-            model2_avg_value=0.4,
-            model1_started=(i % 2 == 0),
-            duration_seconds=5.0,
-        ))
+        results.append(
+            GameResult(
+                outcome=GameOutcome.WIN,
+                game_length=30 + i,
+                model1_avg_value=0.6,
+                model2_avg_value=0.4,
+                model1_started=(i % 2 == 0),
+                duration_seconds=5.0,
+            )
+        )
     for i in range(8):
-        results.append(GameResult(
-            outcome=GameOutcome.LOSS,
-            game_length=30 + i,
-            model1_avg_value=0.4,
-            model2_avg_value=0.6,
-            model1_started=(i % 2 == 1),
-            duration_seconds=5.0,
-        ))
+        results.append(
+            GameResult(
+                outcome=GameOutcome.LOSS,
+                game_length=30 + i,
+                model1_avg_value=0.4,
+                model2_avg_value=0.6,
+                model1_started=(i % 2 == 1),
+                duration_seconds=5.0,
+            )
+        )
     for i in range(4):
-        results.append(GameResult(
-            outcome=GameOutcome.DRAW,
-            game_length=50,
-            model1_avg_value=0.5,
-            model2_avg_value=0.5,
-            model1_started=(i % 2 == 0),
-            duration_seconds=6.0,
-        ))
+        results.append(
+            GameResult(
+                outcome=GameOutcome.DRAW,
+                game_length=50,
+                model1_avg_value=0.5,
+                model2_avg_value=0.5,
+                model1_started=(i % 2 == 0),
+                duration_seconds=6.0,
+            )
+        )
     return results
 
 
@@ -578,23 +597,17 @@ class TestEvaluationService:
     def test_wilson_score_interval_edge_cases(self, evaluation_service):
         """Test Wilson score interval with edge cases."""
         # Zero games
-        ci_low, ci_high = evaluation_service._wilson_score_interval(
-            successes=0, total=0, confidence=0.95
-        )
+        ci_low, ci_high = evaluation_service._wilson_score_interval(successes=0, total=0, confidence=0.95)
         assert ci_low == 0.0
         assert ci_high == 0.0
 
         # All successes
-        ci_low, ci_high = evaluation_service._wilson_score_interval(
-            successes=100, total=100, confidence=0.95
-        )
+        ci_low, ci_high = evaluation_service._wilson_score_interval(successes=100, total=100, confidence=0.95)
         assert ci_low > 0.9
         assert ci_high <= 1.0
 
         # No successes
-        ci_low, ci_high = evaluation_service._wilson_score_interval(
-            successes=0, total=100, confidence=0.95
-        )
+        ci_low, ci_high = evaluation_service._wilson_score_interval(successes=0, total=100, confidence=0.95)
         assert ci_low >= 0.0
         assert ci_high < 0.1
 
@@ -1017,9 +1030,7 @@ class TestEdgeCases:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    async def test_evaluate_models_without_state_fn_raises(
-        self, evaluation_service, mock_mcts, simple_model
-    ):
+    async def test_evaluate_models_without_state_fn_raises(self, evaluation_service, mock_mcts, simple_model):
         """Test that evaluate_models raises without initial state function."""
         evaluation_service.set_mcts(mock_mcts)
 
@@ -1112,6 +1123,7 @@ class TestFactoryFunction:
     @pytest.mark.unit
     def test_create_evaluation_service(self, mock_settings, mock_mcts, mock_logger):
         """Test factory function creates service correctly."""
+
         def mock_state_fn():
             return MagicMock()
 
@@ -1185,15 +1197,16 @@ class TestStatisticalMethods:
         assert cdf_neg < 0.01
 
     @pytest.mark.unit
-    @pytest.mark.parametrize("win_rate,games,expected_significant", [
-        (0.75, 100, True),   # Clear win, many games
-        (0.52, 30, False),   # Close to 50%, few games
-        (0.90, 50, True),    # Very high win rate
-        (0.55, 20, False),   # Not enough games for significance
-    ])
-    def test_significance_parametrized(
-        self, evaluation_service, win_rate, games, expected_significant
-    ):
+    @pytest.mark.parametrize(
+        "win_rate,games,expected_significant",
+        [
+            (0.75, 100, True),  # Clear win, many games
+            (0.52, 30, False),  # Close to 50%, few games
+            (0.90, 50, True),  # Very high win rate
+            (0.55, 20, False),  # Not enough games for significance
+        ],
+    )
+    def test_significance_parametrized(self, evaluation_service, win_rate, games, expected_significant):
         """Test significance testing with various parameters."""
         is_significant, _ = evaluation_service._test_significance(
             win_rate=win_rate,
@@ -1201,10 +1214,9 @@ class TestStatisticalMethods:
             null_hypothesis=0.5,
         )
         # Check consistency with expectation (allowing for edge cases)
-        if games >= evaluation_service._config.min_games_for_significance:
-            # For games above threshold, verify the direction matches
-            if abs(win_rate - 0.5) > 0.2:
-                assert is_significant == expected_significant
+        if games >= evaluation_service._config.min_games_for_significance and abs(win_rate - 0.5) > 0.2:
+            # For games above threshold with clear direction, verify the match
+            assert is_significant == expected_significant
 
 
 # =============================================================================

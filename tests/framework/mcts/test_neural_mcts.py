@@ -11,7 +11,6 @@ Tests cover:
 - Temperature-based action selection
 """
 
-
 import numpy as np
 import pytest
 

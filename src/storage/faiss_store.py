@@ -217,7 +217,7 @@ class FAISSVectorStore:
                 )
                 return True
 
-            except Exception as e:
+            except (RuntimeError, OSError) as e:
                 self._log_error("Failed to initialize FAISS store", error=str(e))
                 return False
 
@@ -244,7 +244,7 @@ class FAISSVectorStore:
                 gpu_resource = faiss.StandardGpuResources()
                 index = faiss.index_cpu_to_gpu(gpu_resource, 0, index)
                 self._log_info("FAISS index moved to GPU")
-            except Exception as e:
+            except (RuntimeError, OSError) as e:
                 self._log_warning("Failed to move index to GPU, using CPU", error=str(e))
 
         return index
@@ -308,9 +308,12 @@ class FAISSVectorStore:
                 embeddings = np.vstack(all_embeddings).astype("float32")
 
                 # Train IVF index if needed (first time with enough data)
-                if self._index_type == IndexType.IVF_FLAT:
-                    if not self._index.is_trained and len(embeddings) >= FAISSStoreDefaults.IVF_NLIST:
-                        self._index.train(embeddings)
+                if (
+                    self._index_type == IndexType.IVF_FLAT
+                    and not self._index.is_trained
+                    and len(embeddings) >= FAISSStoreDefaults.IVF_NLIST
+                ):
+                    self._index.train(embeddings)
 
                 # Add embeddings to index
                 start_id = self._next_id
@@ -339,7 +342,7 @@ class FAISSVectorStore:
 
                 return added
 
-            except Exception as e:
+            except (ValueError, TypeError, RuntimeError) as e:
                 self._log_error("Failed to add documents", error=str(e))
                 return 0
 
@@ -380,11 +383,15 @@ class FAISSVectorStore:
 
             try:
                 # Encode query
-                query_embedding = self._model.encode(
-                    query,
-                    convert_to_numpy=True,
-                    normalize_embeddings=True,
-                ).astype("float32").reshape(1, -1)
+                query_embedding = (
+                    self._model.encode(
+                        query,
+                        convert_to_numpy=True,
+                        normalize_embeddings=True,
+                    )
+                    .astype("float32")
+                    .reshape(1, -1)
+                )
 
                 # Search FAISS index
                 # For IVF, we might need to search more to apply filters
@@ -415,19 +422,21 @@ class FAISSVectorStore:
                     if filter_metadata and not self._matches_filter(doc.metadata, filter_metadata):
                         continue
 
-                    results.append({
-                        "content": doc.content,
-                        "score": similarity,
-                        "metadata": doc.metadata,
-                        "id": doc.id,
-                    })
+                    results.append(
+                        {
+                            "content": doc.content,
+                            "score": similarity,
+                            "metadata": doc.metadata,
+                            "id": doc.id,
+                        }
+                    )
 
                     if len(results) >= top_k:
                         break
 
                 return results
 
-            except Exception as e:
+            except (ValueError, TypeError, RuntimeError) as e:
                 self._log_error("Search failed", error=str(e))
                 return []
 
@@ -489,9 +498,12 @@ class FAISSVectorStore:
                 new_index = self._create_index()
 
                 # Train if needed
-                if self._index_type == IndexType.IVF_FLAT:
-                    if not new_index.is_trained and len(embeddings) >= FAISSStoreDefaults.IVF_NLIST:
-                        new_index.train(embeddings)
+                if (
+                    self._index_type == IndexType.IVF_FLAT
+                    and not new_index.is_trained
+                    and len(embeddings) >= FAISSStoreDefaults.IVF_NLIST
+                ):
+                    new_index.train(embeddings)
 
                 # Add all embeddings
                 new_index.add(embeddings)
@@ -516,7 +528,7 @@ class FAISSVectorStore:
                 self._log_info("Rebuilt FAISS index", document_count=len(docs))
                 return True
 
-            except Exception as e:
+            except (ValueError, TypeError, RuntimeError) as e:
                 self._log_error("Failed to rebuild index", error=str(e))
                 return False
 
@@ -566,7 +578,7 @@ class FAISSVectorStore:
 
             self._log_debug("Saved FAISS store", path=str(self._persist_dir))
 
-        except Exception as e:
+        except (OSError, ValueError) as e:
             self._log_error("Failed to save FAISS store", error=str(e))
 
     def _load_if_exists(self) -> bool:
@@ -612,7 +624,7 @@ class FAISSVectorStore:
             )
             return True
 
-        except Exception as e:
+        except (OSError, ValueError) as e:
             self._log_error("Failed to load FAISS store", error=str(e))
             return False
 

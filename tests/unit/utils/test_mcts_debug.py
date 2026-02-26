@@ -9,6 +9,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from unittest.mock import MagicMock
 
+import pytest
+
+pytest.importorskip("numpy", reason="numpy required for MCTS framework")
+
 from src.utils.mcts_debug import (
     MCTSDebugger,
     NodeStats,
@@ -176,6 +180,7 @@ class TestMCTSDebugger:
 
     def test_format_tree_with_mock_tree(self) -> None:
         """Test formatting tree with mock tree structure."""
+
         # Create mock tree structure
         @dataclass
         class MockNode:
@@ -209,6 +214,7 @@ class TestMCTSDebugger:
 
     def test_to_json_with_tree(self) -> None:
         """Test JSON export with mock tree."""
+
         @dataclass
         class MockNode:
             visits: int
@@ -235,6 +241,7 @@ class TestMCTSDebugger:
 
     def test_get_node_stats(self) -> None:
         """Test getting statistics for a node."""
+
         @dataclass
         class MockNode:
             depth: int = 2

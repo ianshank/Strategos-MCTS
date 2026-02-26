@@ -174,9 +174,7 @@ class TestLightweightFramework:
         assert result["metadata"]["agents_used"] == ["lightweight"]
 
     @pytest.mark.asyncio
-    async def test_process_includes_mcts_stats_when_enabled(
-        self, mock_llm_client, mock_config
-    ):
+    async def test_process_includes_mcts_stats_when_enabled(self, mock_llm_client, mock_config):
         """Test that MCTS stats are included when MCTS is enabled."""
         import logging
 
@@ -195,9 +193,7 @@ class TestLightweightFramework:
         assert result["state"]["mcts_stats"]["iterations"] == 100
 
     @pytest.mark.asyncio
-    async def test_process_no_mcts_stats_when_disabled(
-        self, mock_llm_client, mock_config
-    ):
+    async def test_process_no_mcts_stats_when_disabled(self, mock_llm_client, mock_config):
         """Test that MCTS stats are None when MCTS is disabled."""
         import logging
 
@@ -256,9 +252,7 @@ class TestFrameworkService:
         # Reset any existing instance
         await FrameworkService.reset_instance()
 
-        service1 = await FrameworkService.get_instance(
-            config=mock_config, settings=mock_settings
-        )
+        service1 = await FrameworkService.get_instance(config=mock_config, settings=mock_settings)
         service2 = await FrameworkService.get_instance()
 
         assert service1 is service2
@@ -280,9 +274,7 @@ class TestFrameworkService:
         assert health["status"] == FrameworkState.UNINITIALIZED.value
 
     @pytest.mark.asyncio
-    async def test_process_query_requires_initialization(
-        self, mock_config, mock_settings
-    ):
+    async def test_process_query_requires_initialization(self, mock_config, mock_settings):
         """Test that process_query initializes if needed."""
         service = FrameworkService(config=mock_config, settings=mock_settings)
 
@@ -298,7 +290,6 @@ class TestFrameworkService:
             )
             return True
 
-
         service.initialize = mock_init
 
         result = await service.process_query("Test query")
@@ -307,9 +298,7 @@ class TestFrameworkService:
         assert result.response is not None
 
     @pytest.mark.asyncio
-    async def test_process_query_validates_empty_query(
-        self, mock_config, mock_settings
-    ):
+    async def test_process_query_validates_empty_query(self, mock_config, mock_settings):
         """Test that empty query raises ValueError."""
         service = FrameworkService(config=mock_config, settings=mock_settings)
 

@@ -23,10 +23,11 @@ import numpy as np
 try:
     import torch
     import torch.nn.functional as F
+
     TORCH_AVAILABLE = True
 except ImportError:
-    torch = None  # type: ignore[assignment]
-    F = None  # type: ignore[assignment]
+    torch = None
+    F = None
     TORCH_AVAILABLE = False
 
 if TYPE_CHECKING:
@@ -110,10 +111,7 @@ class ScoreCard:
 
         # Update averages
         self.avg_game_length = self.total_moves / self.total_games
-        self.avg_game_time_ms = (
-            (self.avg_game_time_ms * (self.total_games - 1) + game_time_ms)
-            / self.total_games
-        )
+        self.avg_game_time_ms = (self.avg_game_time_ms * (self.total_games - 1) + game_time_ms) / self.total_games
 
         # Update win/loss/draw counts
         if result == GameResult.WHITE_WIN:
@@ -312,7 +310,7 @@ class OnlineLearner:
 
         # Trim buffer if too large
         if len(self.experience_buffer) > self.max_buffer_size:
-            self.experience_buffer = self.experience_buffer[-self.max_buffer_size:]
+            self.experience_buffer = self.experience_buffer[-self.max_buffer_size :]
 
     def add_game_experience(
         self,
@@ -370,9 +368,7 @@ class OnlineLearner:
         policy_logits, values = self.network(states)
 
         # Calculate losses
-        policy_loss = -torch.mean(
-            torch.sum(target_policies * F.log_softmax(policy_logits, dim=-1), dim=-1)
-        )
+        policy_loss = -torch.mean(torch.sum(target_policies * F.log_softmax(policy_logits, dim=-1), dim=-1))
         value_loss = F.mse_loss(values, target_values)
         total_loss = policy_loss + value_loss
 
@@ -384,7 +380,7 @@ class OnlineLearner:
 
         self.network.eval()
 
-        return total_loss.item()
+        return float(total_loss.item())
 
     def get_buffer_size(self) -> int:
         """Get current buffer size."""
@@ -438,6 +434,7 @@ class ContinuousLearningSession:
         """Lazy load the ensemble agent."""
         if self._agent is None:
             from src.games.chess.ensemble_agent import ChessEnsembleAgent
+
             self._agent = ChessEnsembleAgent(self.chess_config)
             self.learner.set_network(self._agent.policy_value_net)
         return self._agent
@@ -458,9 +455,7 @@ class ContinuousLearningSession:
 
         elif config.temperature_schedule == "linear_decay":
             progress = min(1.0, game_number / config.temperature_decay_games)
-            return config.initial_temperature - progress * (
-                config.initial_temperature - config.final_temperature
-            )
+            return config.initial_temperature - progress * (config.initial_temperature - config.final_temperature)
 
         elif config.temperature_schedule == "step":
             if game_number < config.temperature_decay_games // 2:
