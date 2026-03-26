@@ -575,6 +575,9 @@ class TestVerifiedGamePlayDecorator:
             result.moves = ["e2e4", "e7e5"]
             return result
 
-        with patch("src.games.chess.observability.decorators.get_chess_logger"):
+        mock_settings = MagicMock()
+        mock_settings.LOG_LEVEL = MagicMock(value="INFO")
+        with patch("src.games.chess.observability.decorators.get_chess_logger"), \
+             patch("src.games.chess.verification.factory.get_settings", return_value=mock_settings):
             result = await play_game_async()
             assert result.moves == ["e2e4", "e7e5"]
