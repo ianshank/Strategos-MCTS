@@ -83,12 +83,19 @@ class MCTSConfig:
     max_children_per_node: int = 50
     """Maximum children per node (action branching limit)."""
 
-    # Early termination
+    # Early termination (visit-fraction based)
     early_termination_threshold: float = 0.95
     """Stop if best action has this fraction of total visits."""
 
     min_iterations_before_termination: int = 50
     """Minimum iterations before early termination check."""
+
+    # Early termination (value-convergence based)
+    early_stop_threshold: float = 0.01
+    """Minimum change in best action value to continue search. Set to 0 to disable."""
+
+    early_stop_patience: int = 10
+    """Number of consecutive iterations with no improvement before stopping."""
 
     # Value bounds
     min_value: float = 0.0
@@ -156,13 +163,19 @@ class MCTSConfig:
         if self.max_children_per_node < 1:
             errors.append("max_children_per_node must be >= 1")
 
-        # Early termination
+        # Early termination (visit-fraction based)
         if not 0 < self.early_termination_threshold <= 1:
             errors.append("early_termination_threshold must be in (0, 1]")
         if self.min_iterations_before_termination < 1:
             errors.append("min_iterations_before_termination must be >= 1")
         if self.min_iterations_before_termination > self.num_iterations:
             errors.append("min_iterations_before_termination must be <= num_iterations")
+
+        # Early termination (value-convergence based)
+        if self.early_stop_threshold < 0:
+            errors.append("early_stop_threshold must be >= 0")
+        if self.early_stop_patience < 1:
+            errors.append("early_stop_patience must be >= 1")
 
         # Value bounds
         if self.min_value >= self.max_value:

@@ -433,9 +433,16 @@ class MCTSEngine:
         selection_policy: SelectionPolicy = SelectionPolicy.MAX_VISITS,
         early_termination_threshold: float = 0.95,
         min_iterations_before_termination: int = 50,
+        early_stop_threshold: float = 0.0,
+        early_stop_patience: int = 10,
     ) -> tuple[str | None, dict[str, Any]]:
         """
         Run MCTS search for specified number of iterations with early termination.
+
+        Supports two early termination strategies:
+        1. Visit-fraction based: stops when best action has a dominant fraction of visits.
+        2. Value-convergence based: stops when best action value has stabilized
+           (change < early_stop_threshold for early_stop_patience consecutive iterations).
 
         Args:
             root: Root node to search from
@@ -447,6 +454,8 @@ class MCTSEngine:
             selection_policy: Policy for final action selection
             early_termination_threshold: Stop if best action has this fraction of visits
             min_iterations_before_termination: Minimum iterations before checking termination
+            early_stop_threshold: Minimum change in best action value to continue (0 disables)
+            early_stop_patience: Consecutive iterations with no improvement before stopping
 
         Returns:
             Tuple of (best_action, statistics_dict)
@@ -469,6 +478,12 @@ class MCTSEngine:
         # Track actual iterations run
         iterations_run = 0
         early_terminated = False
+        termination_reason = ""
+
+        # Value-convergence early stop tracking
+        prev_best_value: float | None = None
+        convergence_counter = 0
+        value_convergence_enabled = early_stop_threshold > 0
 
         # Run iterations with early termination check
         for iteration in range(num_iterations):
@@ -481,13 +496,40 @@ class MCTSEngine:
             )
             iterations_run = iteration + 1
 
-            # Check for early termination after minimum iterations
+            # Check for visit-fraction early termination after minimum iterations
             if iterations_run >= min_iterations_before_termination and self._should_terminate_early(
                 root,
                 early_termination_threshold,
             ):
                 early_terminated = True
+                termination_reason = "visit_threshold_reached"
                 break
+
+            # Check for value-convergence early termination
+            if value_convergence_enabled and root.children:
+                best_child = max(root.children, key=lambda c: c.visits)
+                current_best_value = best_child.value
+
+                if prev_best_value is not None:
+                    value_change = abs(current_best_value - prev_best_value)
+                    if value_change < early_stop_threshold:
+                        convergence_counter += 1
+                    else:
+                        convergence_counter = 0
+
+                    if convergence_counter >= early_stop_patience:
+                        early_terminated = True
+                        termination_reason = "value_converged"
+                        logger.info(
+                            "MCTS early stop: best value converged (change < %.4f for %d iterations) at iteration %d/%d",
+                            early_stop_threshold,
+                            early_stop_patience,
+                            iterations_run,
+                            num_iterations,
+                        )
+                        break
+
+                prev_best_value = current_best_value
 
         # Select best action based on policy
         best_action = self._select_best_action(root, selection_policy)
@@ -497,11 +539,13 @@ class MCTSEngine:
 
         # Add early termination info to stats
         stats["early_terminated"] = early_terminated
+        stats["early_stopped"] = early_terminated and termination_reason == "value_converged"
         stats["iterations_run"] = iterations_run
         stats["max_iterations"] = num_iterations
         if early_terminated:
-            stats["termination_reason"] = "visit_threshold_reached"
-            logger.info("MCTS search early-terminated at iteration %d/%d", iterations_run, num_iterations)
+            stats["termination_reason"] = termination_reason
+            if termination_reason == "visit_threshold_reached":
+                logger.info("MCTS search early-terminated at iteration %d/%d", iterations_run, num_iterations)
 
         logger.info(
             "MCTS search complete: best_action=%s, iterations=%d, cache_hit_rate=%.2f",
