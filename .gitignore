@@ -231,3 +231,4 @@ benchmark_output/
 benchmark_results/
 benchmark_report.md
 benchmark_results.json
+.claude/worktrees/
