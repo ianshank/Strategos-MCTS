@@ -256,30 +256,29 @@ This API provides access to a sophisticated multi-agent reasoning framework that
     lifespan=lifespan,
 )
 
-# CORS middleware - configured from settings at app creation time
-# Note: CORS settings are read once when the module is imported. Changes to
-# CORS_ALLOWED_ORIGINS or CORS_ALLOW_CREDENTIALS environment variables require
-# a server restart to take effect. For testing, use reset_settings() before
-# importing this module, or mock the middleware directly.
-# If CORS_ALLOWED_ORIGINS is empty/falsy, default to ["*"] for development
-# Security: Credentials are disabled whenever wildcard origins are used
+# CORS middleware - secure by default, only enabled when explicitly configured.
+# CORS settings are read once at import time. Changes require a server restart.
+# Set CORS_ALLOWED_ORIGINS env var (comma-separated) to enable CORS.
+# Security: credentials are disabled whenever wildcard origins are used.
 _cors_settings = get_settings()
-_cors_origins = _cors_settings.CORS_ALLOWED_ORIGINS or ["*"]
-_has_wildcard_origin = "*" in _cors_origins
-if _has_wildcard_origin:
-    # Normalize to explicit wildcard-only configuration and disable credentials
-    _cors_origins = ["*"]
-    _cors_allow_credentials = False
-else:
-    _cors_allow_credentials = _cors_settings.CORS_ALLOW_CREDENTIALS
+_cors_origins = _cors_settings.CORS_ALLOWED_ORIGINS
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_cors_origins,
-    allow_credentials=_cors_allow_credentials,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if _cors_origins:
+    _has_wildcard_origin = "*" in _cors_origins
+    if _has_wildcard_origin:
+        # Normalize to explicit wildcard-only and disable credentials
+        _cors_origins = ["*"]
+        _cors_allow_credentials = False
+    else:
+        _cors_allow_credentials = _cors_settings.CORS_ALLOW_CREDENTIALS
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_credentials=_cors_allow_credentials,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 # Middleware for metrics
