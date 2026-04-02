@@ -5,8 +5,6 @@ Tests the local LLM server client including health checks,
 model listing, error handling, retry logic, and streaming.
 """
 
-from __future__ import annotations
-
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -601,7 +599,7 @@ class TestLMStudioGenerateStream:
         """Test streaming payload includes max_tokens, stop, and extra kwargs."""
         _build_stream_mocks(client, ["data: [DONE]"])
 
-        gen = await client.generate(
+        result = await client.generate(
             prompt="test",
             stream=True,
             max_tokens=50,
@@ -610,18 +608,21 @@ class TestLMStudioGenerateStream:
             top_k=40,
             repeat_penalty=1.1,
         )
-        # Consume the generator to trigger the actual stream call
-        async for _ in gen:
-            pass
+
+        # Consume the iterator so the stream() call actually happens
+        _ = [chunk async for chunk in result]
 
         mock_http = client._client
         call_args = mock_http.stream.call_args
         assert call_args is not None, "stream() was never called"
-        # stream("POST", url, json=payload) - json is a keyword arg
-        payload = call_args.kwargs.get("json", {})
+        payload = call_args.kwargs.get("json")
+        assert payload is not None
         assert payload["stream"] is True
         assert payload["max_tokens"] == 50
         assert payload["stop"] == ["END"]
+        assert payload["top_p"] == 0.95
+        assert payload["top_k"] == 40
+        assert payload["repeat_penalty"] == 1.1
 
     @pytest.mark.asyncio
     async def test_stream_error_status_raises(self, client):
