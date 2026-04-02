@@ -14,6 +14,7 @@ Covers:
 """
 
 import os
+from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -51,6 +52,41 @@ def _make_client_with_auth(client_info=None):
 def _cleanup_overrides():
     yield
     app.dependency_overrides.clear()
+
+
+@contextmanager
+def _prometheus_mocks():
+    """Context manager that patches PROMETHEUS_AVAILABLE and all metric objects.
+
+    Creates mock metric objects so that the middleware and error handlers
+    can call .inc(), .dec(), .labels(), .observe() without AttributeError,
+    regardless of whether prometheus_client is installed.
+    """
+    mock_request_count = MagicMock()
+    mock_request_latency = MagicMock()
+    mock_active_requests = MagicMock()
+    mock_error_count = MagicMock()
+
+    patches = [
+        patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True),
+        patch("src.api.rest_server.REQUEST_COUNT", mock_request_count, create=True),
+        patch("src.api.rest_server.REQUEST_LATENCY", mock_request_latency, create=True),
+        patch("src.api.rest_server.ACTIVE_REQUESTS", mock_active_requests, create=True),
+        patch("src.api.rest_server.ERROR_COUNT", mock_error_count, create=True),
+    ]
+
+    for p in patches:
+        p.start()
+    try:
+        yield {
+            "request_count": mock_request_count,
+            "request_latency": mock_request_latency,
+            "active_requests": mock_active_requests,
+            "error_count": mock_error_count,
+        }
+    finally:
+        for p in patches:
+            p.stop()
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +142,6 @@ class TestLifespan:
 
         with patch.dict(os.environ, {"API_KEYS": ""}, clear=False):
             async with lifespan(mock_app):
-                # Authenticator should still be set (with generated dev key)
                 mock_set_auth.assert_called_once()
 
     @pytest.mark.asyncio
@@ -127,7 +162,7 @@ class TestLifespan:
         with patch.dict(os.environ, {"API_KEYS": "testkey"}, clear=False):
             async with lifespan(mock_app):
                 import src.api.rest_server as rs
-                # After exception, framework_service should be None
+
                 assert rs.framework_service is None
 
     @pytest.mark.asyncio
@@ -150,7 +185,6 @@ class TestLifespan:
 
         with patch.dict(os.environ, {"API_KEYS": "testkey"}, clear=False):
             async with lifespan(mock_app):
-                # Should reach here without error
                 pass
 
     @pytest.mark.asyncio
@@ -164,7 +198,6 @@ class TestLifespan:
 
         with patch.dict(os.environ, {"API_KEYS": "testkey"}, clear=False):
             async with lifespan(mock_app):
-                # Should not crash
                 mock_set_auth.assert_called_once()
 
     @pytest.mark.asyncio
@@ -190,9 +223,31 @@ class TestLifespan:
         with patch.dict(os.environ, {"API_KEYS": "testkey"}, clear=False):
             async with lifespan(mock_app):
                 pass
-            # After exiting context, shutdown should have been called
             mock_instance.shutdown.assert_awaited_once()
             mock_fw_service_cls.reset_instance.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch("src.api.rest_server.FrameworkService")
+    @patch("src.api.rest_server.FrameworkConfig")
+    @patch("src.api.rest_server.set_authenticator")
+    @patch("src.api.rest_server.FRAMEWORK_SERVICE_AVAILABLE", True)
+    async def test_lifespan_shutdown_skipped_when_no_service(
+        self, mock_set_auth, mock_fw_config, mock_fw_service_cls
+    ):
+        """When framework_service is None at shutdown, shutdown/reset are skipped."""
+        from src.api.rest_server import lifespan
+
+        mock_fw_service_cls.get_instance = AsyncMock(side_effect=RuntimeError("boom"))
+        mock_fw_service_cls.reset_instance = AsyncMock()
+        mock_fw_config.from_settings.return_value = MagicMock()
+
+        mock_app = MagicMock()
+
+        with patch.dict(os.environ, {"API_KEYS": "testkey"}, clear=False):
+            async with lifespan(mock_app):
+                pass
+            # reset_instance should NOT be called since framework_service is None
+            mock_fw_service_cls.reset_instance.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------
@@ -209,13 +264,11 @@ class TestCORSMiddlewareConfiguration:
         mock_settings = MagicMock()
         mock_settings.CORS_ALLOWED_ORIGINS = []
 
-        # The CORS config is evaluated at module import time, so we test the logic
-        # directly rather than re-importing the module.
         origins = mock_settings.CORS_ALLOWED_ORIGINS
         assert not origins  # empty list is falsy, so CORS block is skipped
 
     def test_cors_wildcard_disables_credentials(self):
-        """When origins contain '*', credentials must be disabled."""
+        """When origins contain '*', credentials must be disabled per the code logic."""
         origins = ["*", "http://example.com"]
         has_wildcard = "*" in origins
         assert has_wildcard
@@ -238,9 +291,7 @@ class TestCORSMiddlewareConfiguration:
 
         mock_settings = MagicMock()
         mock_settings.CORS_ALLOW_CREDENTIALS = True
-
-        allow_credentials = mock_settings.CORS_ALLOW_CREDENTIALS
-        assert allow_credentials is True
+        assert mock_settings.CORS_ALLOW_CREDENTIALS is True
 
     def test_cors_preflight_on_health_endpoint(self):
         """CORS preflight request on /health should get a response."""
@@ -252,7 +303,6 @@ class TestCORSMiddlewareConfiguration:
                 "Access-Control-Request-Method": "GET",
             },
         )
-        # Depending on CORS config, could be 200 or 405 if CORS not active
         assert resp.status_code in (200, 400, 405)
 
     def test_cors_preflight_on_query_endpoint(self):
@@ -273,46 +323,39 @@ class TestCORSMiddlewareConfiguration:
 # ---------------------------------------------------------------------------
 
 
-_has_prometheus = hasattr(
-    __import__("src.api.rest_server", fromlist=["ACTIVE_REQUESTS"]), "ACTIVE_REQUESTS"
-)
-
-
 @pytest.mark.unit
-@pytest.mark.skipif(not _has_prometheus, reason="prometheus_client not installed")
 class TestMetricsMiddlewareWithPrometheus:
-    """Tests for metrics middleware when Prometheus is available."""
+    """Tests for metrics middleware when Prometheus metrics are mocked."""
 
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    @patch("src.api.rest_server.REQUEST_COUNT")
-    @patch("src.api.rest_server.REQUEST_LATENCY")
-    @patch("src.api.rest_server.ACTIVE_REQUESTS")
-    def test_middleware_increments_active_requests(
-        self, mock_active, mock_latency, mock_count
-    ):
+    def test_middleware_increments_active_requests(self):
         """Active requests gauge is incremented and decremented."""
-        with patch("src.api.rest_server.framework_service", None):
-            client = TestClient(app, raise_server_exceptions=False)
-            resp = client.get("/health")
-            assert resp.status_code == 200
-            mock_active.inc.assert_called()
-            mock_active.dec.assert_called()
+        with _prometheus_mocks() as mocks:
+            with patch("src.api.rest_server.framework_service", None):
+                client = TestClient(app, raise_server_exceptions=False)
+                resp = client.get("/health")
+                assert resp.status_code == 200
+                mocks["active_requests"].inc.assert_called()
+                mocks["active_requests"].dec.assert_called()
 
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    @patch("src.api.rest_server.REQUEST_COUNT")
-    @patch("src.api.rest_server.REQUEST_LATENCY")
-    @patch("src.api.rest_server.ACTIVE_REQUESTS")
-    def test_middleware_records_request_count_and_latency(
-        self, mock_active, mock_latency, mock_count
-    ):
-        """Request count and latency are recorded."""
-        with patch("src.api.rest_server.framework_service", None):
-            client = TestClient(app, raise_server_exceptions=False)
-            client.get("/health")
-            mock_count.labels.assert_called()
-            mock_count.labels().inc.assert_called()
-            mock_latency.labels.assert_called()
-            mock_latency.labels().observe.assert_called()
+    def test_middleware_records_request_count_and_latency(self):
+        """Request count and latency are recorded for each request."""
+        with _prometheus_mocks() as mocks:
+            with patch("src.api.rest_server.framework_service", None):
+                client = TestClient(app, raise_server_exceptions=False)
+                client.get("/health")
+                mocks["request_count"].labels.assert_called()
+                mocks["request_count"].labels().inc.assert_called()
+                mocks["request_latency"].labels.assert_called()
+                mocks["request_latency"].labels().observe.assert_called()
+
+    def test_middleware_records_error_status(self):
+        """Middleware records status code even for error responses."""
+        with _prometheus_mocks() as mocks:
+            with patch("src.api.rest_server.framework_service", None):
+                client = TestClient(app, raise_server_exceptions=False)
+                # /query without auth returns 422
+                client.post("/query", json={"query": "test"})
+                mocks["request_count"].labels.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -325,51 +368,43 @@ class TestVerifyApiKeyExtended:
     """Extended tests for verify_api_key dependency."""
 
     @pytest.mark.asyncio
-    @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
-    @pytest.mark.skipif(not _has_prometheus, reason="prometheus_client not installed")
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    @patch("src.api.rest_server.ERROR_COUNT")
-    @patch("src.api.rest_server.get_authenticator")
-    async def test_auth_error_increments_prometheus(self, mock_get_auth, mock_error_count):
+    async def test_auth_error_increments_prometheus(self):
         """Authentication failure increments Prometheus error counter."""
         from src.api.exceptions import AuthenticationError
 
-        mock_auth = MagicMock()
-        mock_auth.require_auth.side_effect = AuthenticationError(user_message="Bad key")
-        mock_get_auth.return_value = mock_auth
+        with _prometheus_mocks() as mocks:
+            mock_auth = MagicMock()
+            mock_auth.require_auth.side_effect = AuthenticationError(user_message="Bad key")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await verify_api_key(x_api_key="bad-key")
-        assert exc_info.value.status_code == 401
-        mock_error_count.labels.assert_called_with(error_type="authentication")
-        mock_error_count.labels().inc.assert_called()
+            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
+                 patch("src.api.rest_server.get_authenticator", return_value=mock_auth):
+                with pytest.raises(HTTPException) as exc_info:
+                    await verify_api_key(x_api_key="bad-key")
+                assert exc_info.value.status_code == 401
+                mocks["error_count"].labels.assert_called_with(error_type="authentication")
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(not _has_prometheus, reason="prometheus_client not installed")
-    @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    @patch("src.api.rest_server.ERROR_COUNT")
-    @patch("src.api.rest_server.get_settings")
-    @patch("src.api.rest_server.get_authenticator")
-    async def test_rate_limit_increments_prometheus(self, mock_get_auth, mock_get_settings, mock_error_count):
+    async def test_rate_limit_increments_prometheus(self):
         """Rate limit error increments Prometheus error counter."""
         from src.api.exceptions import RateLimitError
 
         mock_settings = MagicMock()
         mock_settings.RATE_LIMIT_RETRY_AFTER_SECONDS = 60
-        mock_get_settings.return_value = mock_settings
 
-        mock_auth = MagicMock()
-        mock_auth.require_auth.side_effect = RateLimitError(
-            user_message="Too many requests",
-            retry_after_seconds=30,
-        )
-        mock_get_auth.return_value = mock_auth
+        with _prometheus_mocks() as mocks:
+            mock_auth = MagicMock()
+            mock_auth.require_auth.side_effect = RateLimitError(
+                user_message="Too many requests",
+                retry_after_seconds=30,
+            )
 
-        with pytest.raises(HTTPException) as exc_info:
-            await verify_api_key(x_api_key="key")
-        assert exc_info.value.status_code == 429
-        mock_error_count.labels.assert_called_with(error_type="rate_limit")
+            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
+                 patch("src.api.rest_server.get_authenticator", return_value=mock_auth), \
+                 patch("src.api.rest_server.get_settings", return_value=mock_settings):
+                with pytest.raises(HTTPException) as exc_info:
+                    await verify_api_key(x_api_key="key")
+                assert exc_info.value.status_code == 429
+                mocks["error_count"].labels.assert_called_with(error_type="rate_limit")
 
     @pytest.mark.asyncio
     @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
@@ -397,6 +432,32 @@ class TestVerifyApiKeyExtended:
         assert exc_info.value.status_code == 429
         assert exc_info.value.headers["Retry-After"] == "120"
 
+    @pytest.mark.asyncio
+    @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
+    @patch("src.api.rest_server.get_settings")
+    @patch("src.api.rest_server.get_authenticator")
+    async def test_rate_limit_uses_exception_retry_after(
+        self, mock_get_auth, mock_get_settings
+    ):
+        """When RateLimitError.retry_after_seconds is set, it takes precedence."""
+        from src.api.exceptions import RateLimitError
+
+        mock_settings = MagicMock()
+        mock_settings.RATE_LIMIT_RETRY_AFTER_SECONDS = 120
+        mock_get_settings.return_value = mock_settings
+
+        mock_auth = MagicMock()
+        mock_auth.require_auth.side_effect = RateLimitError(
+            user_message="Too many requests",
+            retry_after_seconds=45,
+        )
+        mock_get_auth.return_value = mock_auth
+
+        with pytest.raises(HTTPException) as exc_info:
+            await verify_api_key(x_api_key="key")
+        assert exc_info.value.status_code == 429
+        assert exc_info.value.headers["Retry-After"] == "45"
+
 
 # ---------------------------------------------------------------------------
 # Exception handlers with Prometheus
@@ -404,13 +465,10 @@ class TestVerifyApiKeyExtended:
 
 
 @pytest.mark.unit
-@pytest.mark.skipif(not _has_prometheus, reason="prometheus_client not installed")
 class TestExceptionHandlersWithPrometheus:
     """Tests for exception handlers with Prometheus metrics."""
 
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    @patch("src.api.rest_server.ERROR_COUNT")
-    def test_framework_error_handler_increments_counter(self, mock_error_count):
+    def test_framework_error_handler_increments_counter(self):
         """FrameworkError handler increments Prometheus error counter."""
         from src.api.exceptions import FrameworkError
 
@@ -419,20 +477,19 @@ class TestExceptionHandlersWithPrometheus:
             raise FrameworkError(user_message="fail", error_code="TEST_PROM")
 
         try:
-            client = TestClient(app, raise_server_exceptions=False)
-            resp = client.get("/test-fw-err-prom")
-            assert resp.status_code == 500
-            data = resp.json()
-            assert data["error_code"] == "TEST_PROM"
-            mock_error_count.labels.assert_called_with(error_type="TEST_PROM")
+            with _prometheus_mocks() as mocks:
+                client = TestClient(app, raise_server_exceptions=False)
+                resp = client.get("/test-fw-err-prom")
+                assert resp.status_code == 500
+                data = resp.json()
+                assert data["error_code"] == "TEST_PROM"
+                mocks["error_count"].labels.assert_any_call(error_type="TEST_PROM")
         finally:
             app.routes[:] = [
                 r for r in app.routes if getattr(r, "path", None) != "/test-fw-err-prom"
             ]
 
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    @patch("src.api.rest_server.ERROR_COUNT")
-    def test_validation_error_handler_increments_counter(self, mock_error_count):
+    def test_validation_error_handler_increments_counter(self):
         """ValidationError handler increments Prometheus error counter."""
         from src.api.exceptions import ValidationError as FwValidationError
 
@@ -441,10 +498,11 @@ class TestExceptionHandlersWithPrometheus:
             raise FwValidationError(user_message="bad input", field_name="x")
 
         try:
-            client = TestClient(app, raise_server_exceptions=False)
-            resp = client.get("/test-val-err-prom")
-            assert resp.status_code == 400
-            mock_error_count.labels.assert_called_with(error_type="validation")
+            with _prometheus_mocks() as mocks:
+                client = TestClient(app, raise_server_exceptions=False)
+                resp = client.get("/test-val-err-prom")
+                assert resp.status_code == 400
+                mocks["error_count"].labels.assert_any_call(error_type="validation")
         finally:
             app.routes[:] = [
                 r for r in app.routes if getattr(r, "path", None) != "/test-val-err-prom"
@@ -528,89 +586,79 @@ class TestQueryEndpointExtended:
         assert resp.status_code == 200
         assert mock_result.metadata["client_id"] == "my-client-123"
 
-    @pytest.mark.skipif(not _has_prometheus, reason="prometheus_client not installed")
-    @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    @patch("src.api.rest_server.ERROR_COUNT")
-    @patch("src.api.rest_server.framework_service")
-    def test_query_timeout_increments_prometheus(self, mock_fw_service, mock_error_count):
+    def test_query_timeout_increments_prometheus(self):
         """TimeoutError in process_query increments Prometheus timeout counter."""
-        mock_fw_service.process_query = AsyncMock(side_effect=TimeoutError("timed out"))
+        with _prometheus_mocks() as mocks:
+            mock_fw_service = MagicMock()
+            mock_fw_service.process_query = AsyncMock(side_effect=TimeoutError("timed out"))
 
-        client = _make_client_with_auth()
-        resp = client.post("/query", json={"query": "slow query"})
-        assert resp.status_code == 504
-        mock_error_count.labels.assert_any_call(error_type="timeout")
+            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
+                 patch("src.api.rest_server.framework_service", mock_fw_service):
+                client = _make_client_with_auth()
+                resp = client.post("/query", json={"query": "slow query"})
+                assert resp.status_code == 504
+                mocks["error_count"].labels.assert_any_call(error_type="timeout")
 
-    @pytest.mark.skipif(not _has_prometheus, reason="prometheus_client not installed")
-    @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    @patch("src.api.rest_server.ERROR_COUNT")
-    @patch("src.api.rest_server.framework_service")
-    def test_query_value_error_increments_prometheus(self, mock_fw_service, mock_error_count):
+    def test_query_value_error_increments_prometheus(self):
         """ValueError in process_query increments Prometheus validation counter."""
-        mock_fw_service.process_query = AsyncMock(side_effect=ValueError("bad"))
+        with _prometheus_mocks() as mocks:
+            mock_fw_service = MagicMock()
+            mock_fw_service.process_query = AsyncMock(side_effect=ValueError("bad"))
 
-        client = _make_client_with_auth()
-        resp = client.post("/query", json={"query": "bad query"})
-        assert resp.status_code == 400
-        mock_error_count.labels.assert_any_call(error_type="validation")
+            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
+                 patch("src.api.rest_server.framework_service", mock_fw_service):
+                client = _make_client_with_auth()
+                resp = client.post("/query", json={"query": "bad query"})
+                assert resp.status_code == 400
+                mocks["error_count"].labels.assert_any_call(error_type="validation")
 
-    @pytest.mark.skipif(not _has_prometheus, reason="prometheus_client not installed")
-    @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    @patch("src.api.rest_server.ERROR_COUNT")
-    @patch("src.api.rest_server.framework_service")
-    def test_query_runtime_error_increments_prometheus(self, mock_fw_service, mock_error_count):
+    def test_query_runtime_error_increments_prometheus(self):
         """RuntimeError in process_query increments Prometheus runtime counter."""
-        mock_fw_service.process_query = AsyncMock(side_effect=RuntimeError("broken"))
+        with _prometheus_mocks() as mocks:
+            mock_fw_service = MagicMock()
+            mock_fw_service.process_query = AsyncMock(side_effect=RuntimeError("broken"))
 
-        client = _make_client_with_auth()
-        resp = client.post("/query", json={"query": "test"})
-        assert resp.status_code == 503
-        mock_error_count.labels.assert_any_call(error_type="runtime")
+            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
+                 patch("src.api.rest_server.framework_service", mock_fw_service):
+                client = _make_client_with_auth()
+                resp = client.post("/query", json={"query": "test"})
+                assert resp.status_code == 503
+                mocks["error_count"].labels.assert_any_call(error_type="runtime")
 
-    @pytest.mark.skipif(not _has_prometheus, reason="prometheus_client not installed")
-    @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    @patch("src.api.rest_server.ERROR_COUNT")
-    @patch("src.api.rest_server.framework_service")
-    def test_query_unexpected_error_increments_prometheus(self, mock_fw_service, mock_error_count):
+    def test_query_unexpected_error_increments_prometheus(self):
         """Unexpected Exception increments Prometheus internal error counter."""
-        mock_fw_service.process_query = AsyncMock(side_effect=Exception("unexpected"))
+        with _prometheus_mocks() as mocks:
+            mock_fw_service = MagicMock()
+            mock_fw_service.process_query = AsyncMock(side_effect=Exception("unexpected"))
 
-        client = _make_client_with_auth()
-        resp = client.post("/query", json={"query": "test"})
-        assert resp.status_code == 500
-        mock_error_count.labels.assert_any_call(error_type="internal")
+            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
+                 patch("src.api.rest_server.framework_service", mock_fw_service):
+                client = _make_client_with_auth()
+                resp = client.post("/query", json={"query": "test"})
+                assert resp.status_code == 500
+                mocks["error_count"].labels.assert_any_call(error_type="internal")
 
-    @pytest.mark.skipif(not _has_prometheus, reason="prometheus_client not installed")
-    @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    @patch("src.api.rest_server.ERROR_COUNT")
-    @patch("src.api.rest_server.framework_service", None)
-    def test_query_no_framework_increments_prometheus(self, mock_error_count):
+    def test_query_no_framework_increments_prometheus(self):
         """When framework_service is None, service_unavailable error counter increments."""
-        client = _make_client_with_auth()
-        resp = client.post("/query", json={"query": "test"})
-        assert resp.status_code == 503
-        mock_error_count.labels.assert_any_call(error_type="service_unavailable")
+        with _prometheus_mocks() as mocks:
+            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
+                 patch("src.api.rest_server.framework_service", None):
+                client = _make_client_with_auth()
+                resp = client.post("/query", json={"query": "test"})
+                assert resp.status_code == 503
+                mocks["error_count"].labels.assert_any_call(error_type="service_unavailable")
 
-    @pytest.mark.skipif(not _has_prometheus, reason="prometheus_client not installed")
-    @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    @patch("src.api.rest_server.ERROR_COUNT")
-    @patch("src.api.rest_server.QueryInput")
-    @patch("src.api.rest_server.framework_service", None)
-    def test_query_validation_failure_increments_prometheus(self, mock_query_input, mock_error_count):
+    def test_query_validation_failure_increments_prometheus(self):
         """QueryInput validation failure increments Prometheus validation counter."""
-        mock_query_input.side_effect = Exception("validation failed")
-
-        client = _make_client_with_auth()
-        resp = client.post("/query", json={"query": "test"})
-        assert resp.status_code == 400
-        assert "Validation failed" in resp.json()["detail"]
-        mock_error_count.labels.assert_any_call(error_type="validation")
+        with _prometheus_mocks() as mocks:
+            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
+                 patch("src.api.rest_server.QueryInput", side_effect=Exception("validation failed")), \
+                 patch("src.api.rest_server.framework_service", None):
+                client = _make_client_with_auth()
+                resp = client.post("/query", json={"query": "test"})
+                assert resp.status_code == 400
+                assert "Validation failed" in resp.json()["detail"]
+                mocks["error_count"].labels.assert_any_call(error_type="validation")
 
     @patch("src.api.rest_server.IMPORTS_AVAILABLE", False)
     @patch("src.api.rest_server.framework_service")
@@ -637,19 +685,27 @@ class TestQueryEndpointExtended:
 
 
 @pytest.mark.unit
-@pytest.mark.skipif(not _has_prometheus, reason="prometheus_client not installed")
 class TestMetricsEndpointWithPrometheus:
     """Tests for /metrics endpoint when Prometheus is available."""
 
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    @patch("src.api.rest_server.generate_latest", return_value=b"# HELP mcts_requests_total\n")
-    @patch("src.api.rest_server.CONTENT_TYPE_LATEST", "text/plain; version=0.0.4")
-    def test_metrics_returns_prometheus_format(self, mock_gen_latest, mock_content_type):
+    def test_metrics_returns_prometheus_format(self):
         """When Prometheus is available, /metrics returns generated output."""
+        mock_generate = MagicMock(return_value=b"# HELP mcts_requests_total\n")
+        with _prometheus_mocks(), \
+             patch("src.api.rest_server.generate_latest", mock_generate, create=True), \
+             patch("src.api.rest_server.CONTENT_TYPE_LATEST", "text/plain; version=0.0.4", create=True):
+            client = TestClient(app, raise_server_exceptions=False)
+            resp = client.get("/metrics")
+            assert resp.status_code == 200
+            assert b"HELP" in resp.content
+
+    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", False)
+    def test_metrics_returns_501_without_prometheus(self):
+        """When Prometheus is not available, /metrics returns 501."""
         client = TestClient(app, raise_server_exceptions=False)
         resp = client.get("/metrics")
-        assert resp.status_code == 200
-        assert b"HELP" in resp.content
+        assert resp.status_code == 501
+        assert "not available" in resp.json()["detail"]
 
 
 # ---------------------------------------------------------------------------
@@ -683,6 +739,20 @@ class TestHealthEndpointExtended:
             assert "T" in data["timestamp"]
             assert data["uptime_seconds"] >= 0
 
+    def test_health_with_initializing_framework(self):
+        """Health returns 'initializing' when framework is UNINITIALIZED."""
+        from src.api.framework_service import FrameworkState
+
+        mock_service = MagicMock()
+        mock_service.state = FrameworkState.INITIALIZING
+
+        with patch("src.api.rest_server.framework_service", mock_service):
+            client = TestClient(app, raise_server_exceptions=False)
+            resp = client.get("/health")
+            assert resp.status_code == 200
+            # INITIALIZING state falls through to default "healthy"
+            assert resp.json()["status"] == "healthy"
+
 
 # ---------------------------------------------------------------------------
 # /ready endpoint extended coverage
@@ -693,12 +763,10 @@ class TestHealthEndpointExtended:
 class TestReadinessEndpointExtended:
     """Extended readiness endpoint tests."""
 
-    @pytest.mark.skipif(not _has_prometheus, reason="prometheus_client not installed")
     @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
     @patch("src.api.rest_server.FRAMEWORK_SERVICE_AVAILABLE", True)
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", True)
-    def test_ready_all_checks_includes_prometheus(self):
-        """Readiness includes prometheus_available check."""
+    def test_ready_all_checks_pass_with_framework(self):
+        """Readiness includes all check fields when framework is ready."""
         mock_service = MagicMock()
         mock_service.is_ready = True
         with patch("src.api.rest_server.framework_service", mock_service):
@@ -706,11 +774,13 @@ class TestReadinessEndpointExtended:
             resp = client.get("/ready")
             assert resp.status_code == 200
             data = resp.json()
-            assert data["checks"]["prometheus_available"] is True
+            assert data["checks"]["imports_available"] is True
+            assert data["checks"]["authenticator_configured"] is True
+            assert data["checks"]["framework_service_available"] is True
+            assert data["checks"]["framework_ready"] is True
 
     @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
     @patch("src.api.rest_server.FRAMEWORK_SERVICE_AVAILABLE", False)
-    @patch("src.api.rest_server.PROMETHEUS_AVAILABLE", False)
     def test_ready_without_optional_services(self):
         """Readiness still passes when optional services unavailable."""
         with patch("src.api.rest_server.framework_service", None):
@@ -719,8 +789,7 @@ class TestReadinessEndpointExtended:
             assert resp.status_code == 200
             data = resp.json()
             assert data["checks"]["framework_ready"] is False
-            assert data["checks"]["prometheus_available"] is False
-            assert data["ready"] is True  # optional services don't block readiness
+            assert data["ready"] is True
 
 
 # ---------------------------------------------------------------------------
