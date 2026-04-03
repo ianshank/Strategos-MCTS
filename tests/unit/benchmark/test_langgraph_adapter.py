@@ -355,20 +355,12 @@ class TestHealthCheck:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_health_check_exception_returns_false(self, settings: BenchmarkSettings) -> None:
+    async def test_health_check_import_failure_returns_false(self, settings: BenchmarkSettings) -> None:
         adapter = LangGraphBenchmarkAdapter(settings=settings)
-        with patch.object(adapter, "is_available", new_callable=lambda: property(lambda self: (_ for _ in ()).throw(RuntimeError("boom")))):
-            # If is_available raises, health_check should return False
-            # Actually let's mock it more cleanly
-            pass
-
-        # Simpler: mock the import to fail
-        with patch("src.benchmark.adapters.langgraph_adapter.LangGraphBenchmarkAdapter.is_available", new_callable=property, return_value=True):
-            with patch("src.framework.mcts.core.MCTSEngine", side_effect=ImportError("no module")):
-                adapter2 = LangGraphBenchmarkAdapter(settings=settings)
-                # health_check catches exceptions
-                result = await adapter2.health_check()
-                assert isinstance(result, bool)
+        with patch.dict("sys.modules", {"src.framework.mcts.core": None}):
+            result = await adapter.health_check()
+            # Should return False when MCTS import fails
+            assert result is False
 
 
 @pytest.mark.unit

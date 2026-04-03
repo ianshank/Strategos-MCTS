@@ -382,12 +382,14 @@ class TestLLMChessMCTSAgent:
 
     @pytest.mark.asyncio
     async def test_no_strategies_fallback(self, mock_llm_client):
-        """When all strategies raise exceptions, agent returns fallback."""
+        """When all strategies raise exceptions, agent returns fallback move."""
         mock_llm_client.generate.side_effect = Exception("LLM error")
         agent = LLMChessMCTSAgent(mock_llm_client, strategies=["tactical"])
         result = await agent.process(query=STARTING_FEN)
-        # on_error path produces success=False
-        assert result["metadata"]["success"] is False
+        # The _process_impl catches strategy exceptions via gather(return_exceptions=True)
+        # and returns a fallback result with confidence 0.0
+        assert result["metadata"]["confidence"] == 0.0
+        assert result["metadata"]["move"] == "e2e4"
 
     @pytest.mark.asyncio
     async def test_best_strategy_selected_by_score(self, mock_llm_client):
