@@ -7,7 +7,6 @@ dataset splitting, and persistence (save/load).
 """
 
 import json
-from unittest.mock import patch
 
 import numpy as np
 import pytest

@@ -36,7 +36,7 @@ try:
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
-    torch = None
+    torch = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -463,7 +463,7 @@ class SimpleStateEncoder:
 
     def _hash_string(self, s: str) -> int:
         """Hash string to vocabulary index."""
-        return int(hashlib.md5(s.encode()).hexdigest(), 16) % self.vocab_size
+        return int(hashlib.md5(s.encode(), usedforsecurity=False).hexdigest(), 16) % self.vocab_size
 
     def encode(self, state: NeuroSymbolicState) -> Any:  # torch.Tensor
         """Encode state to embedding vector."""

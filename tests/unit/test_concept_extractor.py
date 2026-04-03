@@ -1,7 +1,7 @@
 """Unit tests for ConceptExtractor and Concept dataclass."""
 
-import pytest
 import networkx as nx
+import pytest
 
 from src.framework.assembly.concept_extractor import Concept, ConceptExtractor
 

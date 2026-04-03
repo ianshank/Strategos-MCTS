@@ -227,14 +227,14 @@ class NeuralMCTSNode:
             return {a: (prob if a in best_actions else 0.0) for a in self.children}
 
         # Temperature-scaled visits
-        visits = np.array([child.visit_count for child in self.children.values()])
+        visit_counts = np.array([child.visit_count for child in self.children.values()])
         actions = list(self.children.keys())
 
         if temperature != 1.0:
-            visits = visits ** (1.0 / temperature)
+            visit_counts = visit_counts ** (1.0 / temperature)
 
         # Normalize to probabilities
-        probs = visits / visits.sum()
+        probs = visit_counts / visit_counts.sum()
 
         return dict(zip(actions, probs, strict=True))
 

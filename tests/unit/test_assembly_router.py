@@ -222,7 +222,7 @@ class TestRouteMethod:
         mock_extractor_cls.return_value = mock_extractor
 
         router = AssemblyRouter()
-        decision = router.route("test query")
+        router.route("test query")
         mock_extractor.extract.assert_called_once_with("test query")
 
     @patch("src.agents.meta_controller.assembly_router.AssemblyFeatureExtractor")

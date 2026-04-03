@@ -272,7 +272,7 @@ class TestSimpleStateEncoder:
     """Tests for SimpleStateEncoder (requires torch)."""
 
     def test_encode(self):
-        torch = pytest.importorskip("torch")
+        pytest.importorskip("torch")
         from src.neuro_symbolic.state import SimpleStateEncoder
 
         encoder = SimpleStateEncoder(embedding_dim=32, vocab_size=100)
@@ -282,7 +282,7 @@ class TestSimpleStateEncoder:
         assert embedding.shape == (32,)
 
     def test_encode_empty_state(self):
-        torch = pytest.importorskip("torch")
+        pytest.importorskip("torch")
         from src.neuro_symbolic.state import SimpleStateEncoder
 
         encoder = SimpleStateEncoder(embedding_dim=32)

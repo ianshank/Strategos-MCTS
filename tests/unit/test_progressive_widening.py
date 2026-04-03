@@ -5,13 +5,12 @@ Tests ProgressiveWideningConfig, RAVEConfig, RAVENode,
 ProgressiveWideningEngine, and utility functions.
 """
 
-import math
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock
 
 import numpy as np
 import pytest
 
-from src.framework.mcts.core import MCTSNode, MCTSState
+from src.framework.mcts.core import MCTSState
 from src.framework.mcts.progressive_widening import (
     ProgressiveWideningConfig,
     ProgressiveWideningEngine,
@@ -238,7 +237,7 @@ class TestProgressiveWideningEngine:
         node = RAVENode(state=_make_state(), rng=engine.rng)
         node.visits = 1
 
-        result = engine.expand(node, lambda s: [], lambda s, a: s)
+        engine.expand(node, lambda s: [], lambda s, a: s)
         assert node.terminal is True
 
     @pytest.mark.asyncio

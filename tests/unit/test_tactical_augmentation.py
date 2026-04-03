@@ -114,7 +114,7 @@ class TestTacticalAugmenter:
     # --- Individual technique tests ---
 
     def test_augment_urgency_high(self):
-        aug = TacticalAugmenter(seed=42)
+        TacticalAugmenter(seed=42)
         # Run multiple times to get different urgency levels
         results = set()
         for seed in range(100):

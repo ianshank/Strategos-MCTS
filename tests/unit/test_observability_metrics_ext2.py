@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 import time
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -426,7 +426,7 @@ class TestExportPrometheusFormat:
 
     @patch("src.observability.metrics.psutil.Process")
     def test_export_with_prometheus_available(self, mock_process):
-        from src.observability.metrics import MetricsCollector, PROMETHEUS_AVAILABLE
+        from src.observability.metrics import PROMETHEUS_AVAILABLE, MetricsCollector
 
         mc = MetricsCollector()
         result = mc.export_prometheus_format()
@@ -472,7 +472,7 @@ class TestStartPrometheusServer:
 
     @patch("src.observability.metrics.psutil.Process")
     def test_start_server(self, mock_process):
-        from src.observability.metrics import MetricsCollector, PROMETHEUS_AVAILABLE
+        from src.observability.metrics import PROMETHEUS_AVAILABLE, MetricsCollector
 
         if not PROMETHEUS_AVAILABLE:
             pytest.skip("prometheus_client not installed")

@@ -21,7 +21,6 @@ Focuses on missed lines:
 
 import os
 import time
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -160,7 +159,6 @@ class TestBraintrustTrackerOnlineMode:
 
         # The fallback calls init_experiment recursively in offline mode
         # Set _offline_mode after the exception to simulate the fallback
-        original_init = tracker.init_experiment
 
         call_count = [0]
 
@@ -373,7 +371,7 @@ class TestBraintrustTrackerOnlineMode:
         mock_exp.flush = MagicMock()
         tracker._experiment = mock_exp
 
-        summary = tracker.end_experiment()
+        tracker.end_experiment()
         mock_exp.flush.assert_called_once()
         assert tracker._experiment is None
 
@@ -383,7 +381,7 @@ class TestBraintrustTrackerOnlineMode:
         tracker._experiment.close = MagicMock(side_effect=RuntimeError("fail"))
 
         # Should not raise
-        summary = tracker.end_experiment()
+        tracker.end_experiment()
         assert tracker._experiment is None
 
 
@@ -701,7 +699,7 @@ class TestWandBTrackerInit:
         """API key provided triggers _initialize_client."""
         with patch.object(WandBTracker, "_initialize_client") as mock_init:
             with patch.dict(os.environ, {}, clear=True):
-                tracker = WandBTracker(api_key="test-key")
+                WandBTracker(api_key="test-key")
                 mock_init.assert_called_once()
 
     def test_init_with_entity(self):

@@ -9,7 +9,6 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
@@ -21,7 +20,6 @@ from src.api.inference_server import (
     PolicyValueRequest,
     PolicyValueResponse,
 )
-
 
 # ---------------------------------------------------------------------------
 # Request/Response model tests

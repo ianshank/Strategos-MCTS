@@ -6,8 +6,7 @@ Covers: main() call, KeyboardInterrupt handling.
 
 from __future__ import annotations
 
-import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -24,6 +23,7 @@ class TestBenchmarkMain:
 
         # Import and execute the module code
         import importlib
+
         import src.benchmark.__main__ as mod
 
         importlib.reload(mod)
@@ -47,6 +47,7 @@ class TestBenchmarkMain:
         mock_main.return_value = None
 
         import importlib
+
         import src.benchmark.__main__ as mod
 
         # Should not raise

@@ -22,8 +22,6 @@ pydantic_settings = pytest.importorskip("pydantic_settings")
 from src.api.rag_retriever import (  # noqa: E402
     RAGRetriever,
     RAGRetrieverDefaults,
-    RetrievalResult,
-    RetrievedDocument,
 )
 
 

@@ -4,8 +4,7 @@ Tests for neural-guided MCTS module.
 Tests GameState, NeuralMCTSNode, and NeuralMCTS classes.
 """
 
-import math
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest

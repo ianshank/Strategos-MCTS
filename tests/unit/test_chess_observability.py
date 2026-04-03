@@ -10,9 +10,6 @@ Tests cover:
 
 from __future__ import annotations
 
-import asyncio
-import logging
-from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -23,7 +20,6 @@ from src.games.chess.observability.metrics import (
     ChessVerificationMetrics,
     PhaseRoutingStats,
 )
-
 
 # ---------------------------------------------------------------------------
 # ChessVerificationMetrics tests
@@ -289,7 +285,7 @@ class TestChessVerificationLogger:
         assert logger._logger.name == "chess.test"
 
     def test_log_game_verification(self) -> None:
-        chess = pytest.importorskip("chess", reason="python-chess required")
+        pytest.importorskip("chess", reason="python-chess required")
         from src.games.chess.observability.logger import ChessVerificationLogger
         from src.games.chess.verification.types import GameResult, GameVerificationResult
 

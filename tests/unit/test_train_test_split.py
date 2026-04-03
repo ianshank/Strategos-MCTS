@@ -211,6 +211,7 @@ class TestStratifiedSplitter:
         assert "math" in train_domains
         assert "science" in train_domains
         assert "math" in val_domains or "science" in val_domains
+        assert "math" in test_domains or "science" in test_domains
 
     def test_stratified_split_empty(self):
         splitter = StratifiedSplitter()

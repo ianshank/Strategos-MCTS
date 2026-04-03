@@ -1,6 +1,5 @@
 """Unit tests for src/training/train_rnn.py."""
 
-from unittest.mock import MagicMock, patch
 
 import pytest
 import torch

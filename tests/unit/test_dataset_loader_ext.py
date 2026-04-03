@@ -7,12 +7,12 @@ CombinedDatasetLoader, and the module-level load_dataset function.
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import json
 import tempfile
 from pathlib import Path
-from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -23,7 +23,6 @@ from src.data.dataset_loader import (
     DatasetStatistics,
     PRIMUSLoader,
 )
-
 
 # ---------------------------------------------------------------------------
 # DatasetSample
@@ -345,7 +344,5 @@ class TestCombinedDatasetLoader:
             with patch.dict("sys.modules", {"pyarrow": None, "pyarrow.parquet": None}):
                 # The import error should propagate from _export_parquet
                 # but we need the actual code path to hit the import
-                try:
+                with contextlib.suppress(ImportError, ModuleNotFoundError):
                     loader.export_for_training(path, format="parquet")
-                except (ImportError, ModuleNotFoundError):
-                    pass  # expected

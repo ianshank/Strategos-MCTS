@@ -462,7 +462,7 @@ class TestCreateTrainingTracker:
                 BraintrustTracker, "is_available",
                 new_callable=lambda: property(lambda self: True),
             ):
-                tracker = create_training_tracker(model_type="bert", config={"epochs": 10})
+                create_training_tracker(model_type="bert", config={"epochs": 10})
                 mock_start.assert_called_once()
                 call_kwargs = mock_start.call_args[1]
                 assert call_kwargs["experiment_name"].startswith("bert_training_")

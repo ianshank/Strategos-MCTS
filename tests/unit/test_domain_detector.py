@@ -13,7 +13,6 @@ from src.enterprise.base.domain_detector import (
     DetectionResult,
     DomainDetector,
     DomainPattern,
-    get_domain_detector,
 )
 from src.enterprise.config.enterprise_settings import (
     DomainDetectorConfig,

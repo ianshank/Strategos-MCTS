@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from pydantic import ValidationError
 
 from src.games.chess.mcp_chess_tools import (
     CHESS_TOOL_HANDLERS,
@@ -18,7 +19,6 @@ from src.games.chess.mcp_chess_tools import (
     handle_game_status,
     handle_position_features,
 )
-
 
 VALID_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -35,7 +35,7 @@ class TestInputModels:
         assert inp.depth == 16
 
     def test_analyze_position_invalid_fen(self):
-        with pytest.raises(Exception):
+        with pytest.raises((ValueError, ValidationError)):
             AnalyzePositionInput(fen="invalid fen string")
 
     def test_suggest_moves_default(self):
@@ -47,7 +47,7 @@ class TestInputModels:
         assert inp.move == "e2e4"
 
     def test_evaluate_move_invalid(self):
-        with pytest.raises(Exception):
+        with pytest.raises((ValueError, ValidationError)):
             EvaluateMoveInput(fen=VALID_FEN, move="zzzz")
 
     def test_game_status_input(self):
@@ -93,7 +93,7 @@ class TestHandleGameStatus:
 
     @pytest.mark.asyncio
     async def test_invalid_fen(self):
-        with pytest.raises(Exception):
+        with pytest.raises((ValueError, KeyError, RuntimeError)):
             await handle_game_status({"fen": "invalid"})
 
 

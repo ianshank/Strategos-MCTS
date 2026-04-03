@@ -5,17 +5,13 @@ Tests LLMResponse, TokenBucketRateLimiter, LLMClient protocol,
 and BaseLLMClient abstract class.
 """
 
-import asyncio
 import time
-from collections.abc import AsyncIterator
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.adapters.llm.base import (
     BaseLLMClient,
-    LLMClient,
     LLMResponse,
     TokenBucketRateLimiter,
 )

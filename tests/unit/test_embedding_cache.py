@@ -165,7 +165,8 @@ class TestCreateEmbeddingCache:
         assert isinstance(cache, EmbeddingCache)
 
     def test_factory_with_compute_fn(self):
-        fn = lambda text: np.zeros(10)
+        def fn(text):
+            return np.zeros(10)
         cache = create_embedding_cache(compute_fn=fn)
         assert cache._compute_fn is fn
 

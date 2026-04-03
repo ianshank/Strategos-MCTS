@@ -6,17 +6,15 @@ ADK node handler, IntegratedFramework, streaming, visualization, and draw_mermai
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from dataclasses import dataclass
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 pytest.importorskip("numpy", reason="numpy required for MCTS framework")
 
-from src.framework.graph import AgentState, GraphBuilder, IntegratedFramework
-from src.framework.mcts.config import ConfigPreset, MCTSConfig, create_preset_config
+from src.framework.graph import GraphBuilder, IntegratedFramework
+from src.framework.mcts.config import ConfigPreset, create_preset_config
 
 pytestmark = [pytest.mark.unit]
 
@@ -28,18 +26,18 @@ pytestmark = [pytest.mark.unit]
 
 def _make_builder(**overrides):
     """Create a GraphBuilder with mocked dependencies."""
-    defaults = dict(
-        hrm_agent=AsyncMock(),
-        trm_agent=AsyncMock(),
-        model_adapter=AsyncMock(),
-        logger=logging.getLogger("test_graph_ext2"),
-        vector_store=None,
-        mcts_config=create_preset_config(ConfigPreset.BALANCED),
-        top_k_retrieval=5,
-        max_iterations=3,
-        consensus_threshold=0.75,
-        enable_parallel_agents=True,
-    )
+    defaults = {
+        "hrm_agent": AsyncMock(),
+        "trm_agent": AsyncMock(),
+        "model_adapter": AsyncMock(),
+        "logger": logging.getLogger("test_graph_ext2"),
+        "vector_store": None,
+        "mcts_config": create_preset_config(ConfigPreset.BALANCED),
+        "top_k_retrieval": 5,
+        "max_iterations": 3,
+        "consensus_threshold": 0.75,
+        "enable_parallel_agents": True,
+    }
     defaults.update(overrides)
     return GraphBuilder(**defaults)
 
@@ -327,7 +325,7 @@ class TestNeuralRouteDecision:
 
         mock_features = MagicMock()
         with patch.object(builder, "_extract_meta_controller_features", return_value=mock_features):
-            with patch.object(builder, "_rule_based_route_decision", return_value="aggregate") as mock_rb:
+            with patch.object(builder, "_rule_based_route_decision", return_value="aggregate"):
                 result = builder._neural_route_decision(
                     {"query": "test", "iteration": 0, "hrm_results": {"response": "done"}}
                 )
@@ -540,10 +538,9 @@ class TestBuildGraph:
             with patch("src.framework.graph.END", "END"):
                 mock_agent = MagicMock()
                 builder = _make_builder(adk_agents={"deep_search": mock_agent})
-                result = builder.build_graph()
+                builder.build_graph()
 
         # Verify ADK node was added
-        add_node_calls = [str(c) for c in mock_workflow.add_node.call_args_list]
         node_names = [c[0][0] for c in mock_workflow.add_node.call_args_list]
         assert "adk_deep_search" in node_names
 
@@ -557,7 +554,7 @@ class TestBuildGraph:
                 builder = _make_builder()
                 builder.use_symbolic_reasoning = True
                 builder.symbolic_extension = MagicMock()
-                result = builder.build_graph()
+                builder.build_graph()
 
         node_names = [c[0][0] for c in mock_workflow.add_node.call_args_list]
         assert "symbolic_agent" in node_names
@@ -576,7 +573,10 @@ class TestIntegratedFramework:
         mock_adapter = AsyncMock()
         mock_logger = logging.getLogger("test_int")
 
-        with patch("src.framework.graph.StateGraph", None):
+        with (
+            patch("src.framework.graph.StateGraph", None),
+            patch.dict("sys.modules", {"src.framework.agents.llm_hrm": None, "src.framework.agents.llm_trm": None}),
+        ):
             fw = IntegratedFramework(
                 model_adapter=mock_adapter,
                 logger=mock_logger,
@@ -819,7 +819,6 @@ class TestVisualization:
         with patch("src.framework.graph.IntegratedFramework.get_graph_mermaid", return_value="flowchart TD"):
             with pytest.raises(RuntimeError, match="Diagram rendering failed"):
                 with patch.dict("sys.modules", {"httpx": MagicMock()}):
-                    import importlib
                     mock_httpx = MagicMock()
                     mock_client = MagicMock()
                     mock_client.__enter__ = MagicMock(return_value=mock_client)

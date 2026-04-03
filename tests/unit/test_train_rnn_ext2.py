@@ -194,7 +194,6 @@ class TestRNNTrainerEarlyStopping:
 
         # Force validation to get worse after epoch 1
         call_count = 0
-        original_validate = trainer.validate
 
         def mock_validate(loader):
             nonlocal call_count

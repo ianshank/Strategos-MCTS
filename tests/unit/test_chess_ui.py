@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
+
+chess = pytest.importorskip("chess", reason="python-chess not installed")
 
 # Mock gradio before importing ui module
 sys.modules.setdefault("gradio", MagicMock())
@@ -607,8 +609,9 @@ class TestContinuousLearningFunctions:
         assert "No learning session active" in html
 
     def test_render_learning_status_with_session(self):
+        from datetime import timedelta
+
         import src.games.chess.ui as ui_mod
-        from datetime import datetime, timedelta
 
         mock_session = MagicMock()
         mock_session.scorecard = ScoreCard()
@@ -625,8 +628,9 @@ class TestContinuousLearningFunctions:
             ui_mod._learning_session = None
 
     def test_render_learning_status_paused(self):
-        import src.games.chess.ui as ui_mod
         from datetime import timedelta
+
+        import src.games.chess.ui as ui_mod
 
         mock_session = MagicMock()
         mock_session.scorecard = ScoreCard()
@@ -642,8 +646,9 @@ class TestContinuousLearningFunctions:
             ui_mod._learning_session = None
 
     def test_render_learning_status_stopped(self):
-        import src.games.chess.ui as ui_mod
         from datetime import timedelta
+
+        import src.games.chess.ui as ui_mod
 
         mock_session = MagicMock()
         mock_session.scorecard = ScoreCard()
@@ -689,8 +694,9 @@ class TestContinuousLearningFunctions:
             ui_mod._learning_session = None
 
     def test_stop_running_session(self):
-        import src.games.chess.ui as ui_mod
         from datetime import timedelta
+
+        import src.games.chess.ui as ui_mod
 
         mock_session = MagicMock()
         mock_session.is_running = True
@@ -707,8 +713,9 @@ class TestContinuousLearningFunctions:
             ui_mod._learning_session = None
 
     def test_pause_running_session(self):
-        import src.games.chess.ui as ui_mod
         from datetime import timedelta
+
+        import src.games.chess.ui as ui_mod
 
         mock_session = MagicMock()
         mock_session.is_running = True
@@ -725,8 +732,9 @@ class TestContinuousLearningFunctions:
             ui_mod._learning_session = None
 
     def test_resume_paused_session(self):
-        import src.games.chess.ui as ui_mod
         from datetime import timedelta
+
+        import src.games.chess.ui as ui_mod
 
         mock_session = MagicMock()
         mock_session.is_running = True
@@ -743,8 +751,9 @@ class TestContinuousLearningFunctions:
             ui_mod._learning_session = None
 
     def test_start_when_already_running(self):
-        import src.games.chess.ui as ui_mod
         from datetime import timedelta
+
+        import src.games.chess.ui as ui_mod
 
         mock_session = MagicMock()
         mock_session.is_running = True

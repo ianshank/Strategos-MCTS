@@ -5,7 +5,6 @@ Tests BaseDomainState, exception hierarchy, DomainAgentProtocol,
 and BaseUseCase patterns.
 """
 
-import copy
 
 import pytest
 

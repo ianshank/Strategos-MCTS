@@ -1,7 +1,7 @@
 """Unit tests for neuro-symbolic reasoning module."""
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -18,7 +18,6 @@ from src.neuro_symbolic.reasoning import (
     SymbolicReasoningAgent,
 )
 from src.neuro_symbolic.state import Fact, NeuroSymbolicState, SymbolicFactType
-
 
 # ---------------------------------------------------------------------------
 # Predicate tests

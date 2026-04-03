@@ -5,7 +5,6 @@ Tests ResidualBlock, PolicyHead, ValueHead, PolicyValueNetwork,
 AlphaZeroLoss, MLPPolicyValueNetwork, and create_policy_value_network factory.
 """
 
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -25,16 +24,16 @@ from src.training.system_config import NeuralNetworkConfig
 
 def _small_config(**overrides):
     """Create a small NeuralNetworkConfig for fast tests."""
-    defaults = dict(
-        num_res_blocks=2,
-        num_channels=16,
-        policy_conv_channels=2,
-        value_conv_channels=1,
-        value_fc_hidden=16,
-        use_batch_norm=True,
-        input_channels=3,
-        action_size=10,
-    )
+    defaults = {
+        "num_res_blocks": 2,
+        "num_channels": 16,
+        "policy_conv_channels": 2,
+        "value_conv_channels": 1,
+        "value_fc_hidden": 16,
+        "use_batch_norm": True,
+        "input_channels": 3,
+        "action_size": 10,
+    }
     defaults.update(overrides)
     return NeuralNetworkConfig(**defaults)
 

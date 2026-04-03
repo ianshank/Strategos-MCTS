@@ -6,7 +6,7 @@ Tests CodeExecutionResult, CodeExecutor validation, execution, and safety.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -18,7 +18,6 @@ from src.framework.mcts.llm_guided.executor import (
     CodeExecutionResult,
     CodeExecutor,
     ImportChecker,
-    TimeoutException,
     _create_safe_import,
     create_executor_from_config,
 )

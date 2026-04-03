@@ -5,7 +5,6 @@ Tests BERTMetaController initialization, prediction, model save/load,
 and ImportError handling when dependencies are missing.
 """
 
-import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -15,12 +14,12 @@ from src.agents.meta_controller.base import MetaControllerFeatures
 
 
 def _make_features(**overrides):
-    defaults = dict(
-        hrm_confidence=0.5, trm_confidence=0.3, mcts_value=0.2,
-        consensus_score=0.7, last_agent="none", iteration=0,
-        query_length=50, has_rag_context=False,
-        rag_relevance_score=0.0, is_technical_query=False,
-    )
+    defaults = {
+        "hrm_confidence": 0.5, "trm_confidence": 0.3, "mcts_value": 0.2,
+        "consensus_score": 0.7, "last_agent": "none", "iteration": 0,
+        "query_length": 50, "has_rag_context": False,
+        "rag_relevance_score": 0.0, "is_technical_query": False,
+    }
     defaults.update(overrides)
     return MetaControllerFeatures(**defaults)
 
@@ -38,8 +37,8 @@ class TestBERTMetaControllerImportErrors:
     def test_raises_when_peft_missing(self):
         with patch("src.agents.meta_controller.bert_controller._TRANSFORMERS_AVAILABLE", True), \
              patch("src.agents.meta_controller.bert_controller._PEFT_AVAILABLE", False), \
-             patch("src.agents.meta_controller.bert_controller.AutoTokenizer") as mock_tok, \
-             patch("src.agents.meta_controller.bert_controller.AutoModelForSequenceClassification") as mock_model:
+             patch("src.agents.meta_controller.bert_controller.AutoTokenizer"), \
+             patch("src.agents.meta_controller.bert_controller.AutoModelForSequenceClassification"):
             from src.agents.meta_controller.bert_controller import BERTMetaController
             with pytest.raises(ImportError, match="peft"):
                 BERTMetaController(device="cpu", use_lora=True)

@@ -31,12 +31,12 @@ def _make_state(facts=None, metadata=None, state_id="test"):
 
 
 def _make_config(**overrides):
-    defaults = dict(
-        max_constraints_per_state=100,
-        precompile_constraints=True,
-        enable_conflict_analysis=True,
-        min_satisfaction_ratio=0.8,
-    )
+    defaults = {
+        "max_constraints_per_state": 100,
+        "precompile_constraints": True,
+        "enable_conflict_analysis": True,
+        "min_satisfaction_ratio": 0.8,
+    }
     defaults.update(overrides)
     return ConstraintConfig(**defaults)
 

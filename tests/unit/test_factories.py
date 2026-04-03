@@ -5,7 +5,7 @@ Tests LLMClientFactory, AgentFactory, MCTSEngineFactory,
 MetaControllerFactory, HybridAgentFactory, and FrameworkFactory.
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -87,14 +87,14 @@ class TestLLMClientFactory:
     def test_create_from_settings(self, mock_create):
         mock_create.return_value = MagicMock()
         factory = LLMClientFactory(settings=_mock_settings())
-        result = factory.create_from_settings()
+        factory.create_from_settings()
         mock_create.assert_called_once()
 
     @patch("src.adapters.llm.create_client")
     def test_create_with_provider(self, mock_create_client):
         mock_create_client.return_value = MagicMock()
         factory = LLMClientFactory(settings=_mock_settings())
-        result = factory.create(provider="openai", model="gpt-4")
+        factory.create(provider="openai", model="gpt-4")
         mock_create_client.assert_called_once()
         call_kwargs = mock_create_client.call_args
         assert call_kwargs.kwargs["provider"] == "openai"
@@ -119,7 +119,7 @@ class TestAgentFactory:
         mock_config_cls.__dataclass_fields__ = {}
 
         factory = AgentFactory(llm_client=MagicMock(), settings=_mock_settings())
-        result = factory.create_hrm_agent(h_dim=256, l_dim=128)
+        factory.create_hrm_agent(h_dim=256, l_dim=128)
         mock_create.assert_called_once()
 
     @patch("src.agents.trm_agent.create_trm_agent")
@@ -130,7 +130,7 @@ class TestAgentFactory:
         mock_config_cls.__dataclass_fields__ = {}
 
         factory = AgentFactory(llm_client=MagicMock(), settings=_mock_settings())
-        result = factory.create_trm_agent(latent_dim=256, output_dim=10)
+        factory.create_trm_agent(latent_dim=256, output_dim=10)
         mock_create.assert_called_once()
 
 
@@ -147,7 +147,7 @@ class TestMCTSEngineFactory:
     def test_create_with_defaults(self, mock_engine):
         mock_engine.return_value = MagicMock()
         factory = MCTSEngineFactory(settings=_mock_settings())
-        result = factory.create()
+        factory.create()
         mock_engine.assert_called_once()
         call_kwargs = mock_engine.call_args.kwargs
         assert call_kwargs["seed"] == 42
@@ -189,14 +189,14 @@ class TestMetaControllerFactory:
     def test_create_rnn(self, mock_rnn):
         mock_rnn.return_value = MagicMock()
         factory = MetaControllerFactory(settings=_mock_settings())
-        result = factory.create(controller_type="rnn")
+        factory.create(controller_type="rnn")
         mock_rnn.assert_called_once()
 
     @patch("src.agents.meta_controller.bert_controller.BERTMetaController")
     def test_create_bert(self, mock_bert):
         mock_bert.return_value = MagicMock()
         factory = MetaControllerFactory(settings=_mock_settings())
-        result = factory.create(controller_type="bert")
+        factory.create(controller_type="bert")
         mock_bert.assert_called_once()
 
     @patch("src.agents.meta_controller.rnn_controller.RNNMetaController")
@@ -205,14 +205,14 @@ class TestMetaControllerFactory:
         mock_rnn.return_value = MagicMock()
         mock_hybrid.return_value = MagicMock()
         factory = MetaControllerFactory(settings=_mock_settings())
-        result = factory.create(controller_type="hybrid")
+        factory.create(controller_type="hybrid")
         mock_hybrid.assert_called_once()
 
     @patch("src.agents.meta_controller.assembly_router.AssemblyRouter")
     def test_create_assembly(self, mock_assembly):
         mock_assembly.return_value = MagicMock()
         factory = MetaControllerFactory(settings=_mock_settings())
-        result = factory.create(controller_type="assembly")
+        factory.create(controller_type="assembly")
         mock_assembly.assert_called_once()
 
     def test_create_unknown_type(self):
@@ -236,7 +236,7 @@ class TestHybridAgentFactory:
         mock_agent.return_value = MagicMock()
 
         factory = HybridAgentFactory(llm_client=MagicMock(), settings=_mock_settings())
-        result = factory.create(mode="auto")
+        factory.create(mode="auto")
         mock_agent.assert_called_once()
 
     @patch("src.agents.hybrid_agent.HybridAgent")
@@ -290,5 +290,5 @@ class TestFrameworkFactory:
     def test_create_meta_controller(self, mock_rnn):
         mock_rnn.return_value = MagicMock()
         factory = FrameworkFactory(settings=_mock_settings())
-        result = factory.create_meta_controller(controller_type="rnn")
+        factory.create_meta_controller(controller_type="rnn")
         mock_rnn.assert_called_once()

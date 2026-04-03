@@ -6,7 +6,6 @@ exception handlers, middleware, and lifespan management.
 """
 
 import os
-import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -34,7 +33,6 @@ from src.api.rest_server import (  # noqa: E402
     app,
     verify_api_key,
 )
-
 
 # ---------------------------------------------------------------------------
 # Request/Response model tests

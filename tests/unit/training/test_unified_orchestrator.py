@@ -6,23 +6,16 @@ path setup, memory utilities, checkpointing, early stopping,
 and training iteration logic.
 """
 
-import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
 import torch.nn as nn
 
 from src.training.system_config import (
-    HRMConfig,
-    MCTSConfig,
-    NeuralNetworkConfig,
     SystemConfig,
-    TrainingConfig,
-    TRMConfig,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures: mock all heavy components so tests are fast and isolated
@@ -173,7 +166,7 @@ class TestSetupPaths:
 
     def test_paths_created(self, tmp_config):
         """Test all directories are created."""
-        orch = _build_orchestrator_with_mocks(tmp_config)
+        _build_orchestrator_with_mocks(tmp_config)
         assert Path(tmp_config.checkpoint_dir).exists()
         assert Path(tmp_config.data_dir).exists()
         assert Path(tmp_config.log_dir).exists()
@@ -410,7 +403,7 @@ class TestLoadCheckpoint:
     def test_load_nonexistent_file(self, tmp_config):
         """Test loading nonexistent checkpoint raises error."""
         orch = _build_orchestrator_with_mocks(tmp_config)
-        with pytest.raises(Exception):
+        with pytest.raises((FileNotFoundError, OSError, RuntimeError)):
             orch.load_checkpoint("/nonexistent/checkpoint.pt")
 
     def test_load_checkpoint_restores_state(self, tmp_config):

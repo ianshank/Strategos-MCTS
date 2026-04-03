@@ -6,7 +6,6 @@ Tests AssemblyFeatures dataclass and AssemblyFeatureExtractor class.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -20,16 +19,16 @@ class TestAssemblyFeatures:
     """Tests for AssemblyFeatures dataclass."""
 
     def _make_features(self, **overrides) -> AssemblyFeatures:
-        defaults = dict(
-            assembly_index=5.0,
-            copy_number=2.0,
-            decomposability_score=0.75,
-            graph_depth=3,
-            constraint_count=4,
-            concept_count=6,
-            technical_complexity=0.5,
-            normalized_assembly_index=0.25,
-        )
+        defaults = {
+            "assembly_index": 5.0,
+            "copy_number": 2.0,
+            "decomposability_score": 0.75,
+            "graph_depth": 3,
+            "constraint_count": 4,
+            "concept_count": 6,
+            "technical_complexity": 0.5,
+            "normalized_assembly_index": 0.25,
+        }
         defaults.update(overrides)
         return AssemblyFeatures(**defaults)
 

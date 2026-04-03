@@ -5,7 +5,6 @@ Targets uncovered lines: 176, 352-383, 435-440, 468, 484-612, 624-638, 656-737.
 
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -13,7 +12,6 @@ import numpy as np
 import pytest
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from src.games.chess.continuous_learning import (
     ContinuousLearningConfig,
@@ -685,7 +683,7 @@ class TestRunSession:
         def progress_cb(game_num, total, sc):
             progress_calls.append((game_num, total))
 
-        scorecard = await session.run_session(max_games=4, progress_callback=progress_cb)
+        await session.run_session(max_games=4, progress_callback=progress_cb)
 
         assert len(game_complete_calls) == 4
         # Learning happens at game 2 and 4 (min_games=2, every 2)
@@ -727,7 +725,7 @@ class TestRunSession:
         session.play_single_game = mock_play
 
         # Should not raise, exception is caught
-        scorecard = await session.run_session(max_games=5)
+        await session.run_session(max_games=5)
         assert not session.is_running
 
     @pytest.mark.asyncio
@@ -768,6 +766,6 @@ class TestRunSession:
 
         session.play_single_game = mock_play
 
-        scorecard = await session.run_session(max_games=1)
+        await session.run_session(max_games=1)
         assert len(complete_calls) == 1
         assert not session.is_running

@@ -5,9 +5,8 @@ Tests PerformanceMetrics, PerformanceMonitor, and TimingContext.
 """
 
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import numpy as np
 import pytest
 
 from src.training.performance_monitor import (
@@ -15,7 +14,6 @@ from src.training.performance_monitor import (
     PerformanceMonitor,
     TimingContext,
 )
-
 
 # ---------------------------------------------------------------------------
 # PerformanceMetrics tests

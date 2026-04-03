@@ -16,8 +16,6 @@ import asyncio
 import sys
 import types
 from pathlib import Path
-from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -31,6 +29,11 @@ sys.modules.setdefault("google", _google_pkg)
 sys.modules.setdefault("google.adk", _google_adk)
 sys.modules.setdefault("google.genai", _google_genai)
 
+from src.integrations.google_adk.agents.academic_research import AcademicResearchAgent
+from src.integrations.google_adk.agents.data_engineering import DataEngineeringAgent
+from src.integrations.google_adk.agents.data_science import DataScienceAgent
+from src.integrations.google_adk.agents.deep_search import DeepSearchAgent
+from src.integrations.google_adk.agents.ml_engineering import MLEngineeringAgent
 from src.integrations.google_adk.base import (
     ADKAgentAdapter,
     ADKAgentFactory,
@@ -39,12 +42,6 @@ from src.integrations.google_adk.base import (
     ADKBackend,
     ADKConfig,
 )
-from src.integrations.google_adk.agents.academic_research import AcademicResearchAgent
-from src.integrations.google_adk.agents.data_engineering import DataEngineeringAgent
-from src.integrations.google_adk.agents.data_science import DataScienceAgent
-from src.integrations.google_adk.agents.deep_search import DeepSearchAgent
-from src.integrations.google_adk.agents.ml_engineering import MLEngineeringAgent
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────
 

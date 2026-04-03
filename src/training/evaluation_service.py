@@ -463,7 +463,7 @@ class EvaluationService:
                 else:
                     actions = list(action_probs.keys())
                     probs = list(action_probs.values())
-                    action_idx = torch.multinomial(torch.tensor(probs), num_samples=1).item()
+                    action_idx = int(torch.multinomial(torch.tensor(probs), num_samples=1).item())
                     action = actions[action_idx]
 
                 state = state.apply_action(action)

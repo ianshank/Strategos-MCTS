@@ -13,7 +13,7 @@ import json
 import tempfile
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -21,11 +21,9 @@ from src.data.dataset_loader import (
     CombinedDatasetLoader,
     DABStepLoader,
     DatasetSample,
-    DatasetStatistics,
     PRIMUSLoader,
     load_dataset,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -38,7 +36,7 @@ def _make_hf_dataset(items: list[dict[str, Any]], splits: list[str] | None = Non
     mock_ds = MagicMock()
     mock_ds.keys.return_value = splits
     mock_ds.__contains__ = lambda self, key: key in splits
-    for split in splits:
+    for _split in splits:
         mock_ds.__getitem__ = lambda self, key, _items=items: _items if key in splits else []
     # Make it iterable per split
     mock_ds.__getitem__ = lambda self, key: items if key in splits else []
@@ -81,7 +79,7 @@ class TestDABStepLoaderLoad:
         ]
         mock_ds = _make_dict_dataset(items, {"train": items})
 
-        with patch("src.data.dataset_loader.DABStepLoader.load") as mock_load:
+        with patch("src.data.dataset_loader.DABStepLoader.load"):
             # Instead, let's test by actually calling with mocked datasets lib
             pass
 
@@ -150,7 +148,7 @@ class TestDABStepLoaderLoad:
     def test_load_generic_exception(self):
         """Lines 151-153: generic exception re-raised."""
         loader = DABStepLoader(cache_dir="/tmp/test")
-        with patch.dict("sys.modules", {"datasets": MagicMock()}) as mods:
+        with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
             sys.modules["datasets"].load_dataset.side_effect = RuntimeError("network error")
             with pytest.raises(RuntimeError, match="network error"):
@@ -659,7 +657,7 @@ class TestModuleLevelLoadDataset:
         """Lines 683-702: successful load."""
         mock_hf_load = MagicMock(return_value="mock_dataset")
 
-        with patch.dict("sys.modules", {"datasets": MagicMock()}) as mods:
+        with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
             sys.modules["datasets"].load_dataset = mock_hf_load
 

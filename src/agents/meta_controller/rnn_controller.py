@@ -116,7 +116,7 @@ class RNNMetaControllerModel(nn.Module):
         dropped = self.dropout(final_hidden)
 
         # Apply linear layer to get logits
-        logits = self.fc(dropped)
+        logits: torch.Tensor = self.fc(dropped)
 
         return logits
 
@@ -268,7 +268,7 @@ class RNNMetaController(AbstractMetaController):
             probabilities = F.softmax(logits, dim=-1)
 
             # Get predicted agent index (argmax)
-            predicted_idx = torch.argmax(probabilities, dim=-1).item()
+            predicted_idx: int = int(torch.argmax(probabilities, dim=-1).item())
 
             # Extract confidence for selected agent
             confidence = probabilities[0, predicted_idx].item()

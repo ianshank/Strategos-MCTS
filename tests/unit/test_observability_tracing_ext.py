@@ -16,7 +16,6 @@ Covers:
 Uses @patch on the actual tracing module instead of sys.modules mocking.
 """
 
-import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -273,7 +272,7 @@ class TestTraceSpanExtended:
                 attributes={"key": "val"},
                 record_exception=False,
                 set_status_on_exception=False,
-            ) as span:
+            ):
                 pass
         call_kwargs = mock_tracer.start_as_current_span.call_args
         assert call_kwargs[1]["kind"] == SpanKind.CLIENT
@@ -396,7 +395,7 @@ class TestTraceOperationExtended:
             mock_span.set_attribute.assert_any_call("function.kwargs_count", 1)
 
     def test_sync_decorator_sets_ok_status(self):
-        from src.observability.tracing import Status, StatusCode, trace_operation
+        from src.observability.tracing import trace_operation
 
         mock_span = MagicMock()
         mock_tracer = MagicMock()

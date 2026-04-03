@@ -75,6 +75,7 @@ class PolicyNetwork(nn.Module):
         self.use_batch_norm = use_batch_norm
 
         # Select activation function
+        self.activation_fn: nn.Module
         if activation == "relu":
             self.activation_fn = nn.ReLU()
         elif activation == "gelu":
@@ -85,7 +86,7 @@ class PolicyNetwork(nn.Module):
             raise ValueError(f"Unknown activation: {activation}")
 
         # Build feature extraction layers
-        layers = []
+        layers: list[nn.Module] = []
         prev_dim = state_dim
 
         for hidden_dim in self.hidden_dims:
@@ -198,11 +199,13 @@ class PolicyNetwork(nn.Module):
             log_probs = F.log_softmax(policy_logits, dim=-1)
 
             # Select action
-            action = torch.argmax(probs, dim=-1).item() if deterministic else torch.multinomial(probs, 1).item()
+            action_idx: int = int(
+                torch.argmax(probs, dim=-1).item() if deterministic else torch.multinomial(probs, 1).item()
+            )
 
             # Get log probability and confidence
-            log_prob = log_probs[0, action].item()
-            confidence = probs[0, action].item()
+            log_prob = log_probs[0, action_idx].item()
+            confidence = probs[0, action_idx].item()
 
             # Compute entropy
             entropy = -(probs * log_probs).sum(dim=-1).item()
@@ -211,7 +214,7 @@ class PolicyNetwork(nn.Module):
             if was_training:
                 self.train()
 
-            return ActionSelection(action=action, log_prob=log_prob, confidence=confidence, entropy=entropy)
+            return ActionSelection(action=action_idx, log_prob=log_prob, confidence=confidence, entropy=entropy)
 
     def get_action_probs(self, state: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:
         """
@@ -240,7 +243,7 @@ class PolicyNetwork(nn.Module):
 
             return probs
 
-    def evaluate_actions(self, state: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def evaluate_actions(self, state: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor | None]:
         """
         Evaluate log probabilities of given actions (for training).
 
@@ -361,8 +364,9 @@ class PolicyLoss(nn.Module):
             loss_dict["entropy"] = entropy.item()
 
         # L2 regularization
+        l2_reg: torch.Tensor
         if model is not None and self.l2_weight > 0:
-            l2_reg = sum(p.pow(2).sum() for p in model.parameters() if p.requires_grad)
+            l2_reg = torch.stack([p.pow(2).sum() for p in model.parameters() if p.requires_grad]).sum()
             loss_dict["l2"] = l2_reg.item()
         else:
             l2_reg = torch.tensor(0.0, device=policy_output.policy_logits.device)

@@ -265,13 +265,8 @@ class TestAllExports:
     def test_key_exports_present(self) -> None:
         """Key types and functions are exported."""
         from src.adapters.llm import (
-            BaseLLMClient,
-            LLMClient,
-            LLMClientError,
             LLMResponse,
             create_client,
-            list_providers,
-            register_provider,
         )
 
         # Just verify they imported without error

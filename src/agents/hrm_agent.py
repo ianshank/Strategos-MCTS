@@ -151,7 +151,8 @@ class HModule(nn.Module):
 
     def decompose(self, x: torch.Tensor) -> torch.Tensor:
         """Generate subproblem representations."""
-        return self.decompose_head(x)
+        result: torch.Tensor = self.decompose_head(x)
+        return result
 
 
 class LModule(nn.Module):
@@ -305,7 +306,7 @@ class HRMAgent(nn.Module):
 
             # Generate subproblem decomposition if requested
             if return_decomposition:
-                subproblem_repr = self.h_module[0].decompose(h_state)
+                subproblem_repr = self.h_module[0].decompose(h_state)  # type: ignore[operator]
                 # Create subproblem entries (simplified)
                 for i in range(min(3, seq_len)):  # Top 3 subproblems
                     subproblems.append(

@@ -5,8 +5,8 @@ Tests AssemblyIndexCalculator including string assembly, graph assembly,
 copy number, tokenization, caching, and cycle breaking.
 """
 
-import pytest
 import networkx as nx
+import pytest
 
 from src.framework.assembly.calculator import AssemblyIndexCalculator
 

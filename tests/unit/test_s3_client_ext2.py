@@ -17,13 +17,11 @@ from __future__ import annotations
 
 import json
 from contextlib import asynccontextmanager
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.storage.s3_client import S3Config, S3StorageClient
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -349,7 +347,7 @@ class TestStoreTraces:
         client._initialized = True
 
         big_traces = {"data": "y" * 2000}
-        result = await client.store_traces("sess-1", big_traces)
+        await client.store_traces("sess-1", big_traces)
 
         call_kwargs = s3_mock.put_object.call_args.kwargs
         assert call_kwargs["Key"].endswith(".gz")
@@ -395,7 +393,7 @@ class TestStoreLogs:
         client._initialized = True
 
         entries = [{"level": "INFO", "msg": "x" * 500} for _ in range(10)]
-        result = await client.store_logs("sess-1", entries)
+        await client.store_logs("sess-1", entries)
 
         call_kwargs = s3_mock.put_object.call_args.kwargs
         assert call_kwargs["Key"].endswith(".gz")
@@ -439,7 +437,7 @@ class TestStoreCheckpoint:
         client._session = session
         client._initialized = True
 
-        result = await client.store_checkpoint("sess-1", {"state": "done"}, checkpoint_name="final")
+        await client.store_checkpoint("sess-1", {"state": "done"}, checkpoint_name="final")
 
         call_kwargs = s3_mock.put_object.call_args.kwargs
         assert call_kwargs["Metadata"]["checkpoint_name"] == "final"
@@ -456,7 +454,7 @@ class TestStoreCheckpoint:
         client._initialized = True
 
         big_data = {"state": "x" * 2000}
-        result = await client.store_checkpoint("sess-1", big_data)
+        await client.store_checkpoint("sess-1", big_data)
 
         call_kwargs = s3_mock.put_object.call_args.kwargs
         assert call_kwargs["Key"].endswith(".gz")

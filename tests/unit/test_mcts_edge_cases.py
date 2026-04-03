@@ -362,10 +362,10 @@ class TestTimeoutHandler:
 
     def test_budget_tracking(self):
         """Test budget tracking functionality."""
-        from src.framework.mcts.edge_cases import BudgetConfig
+        from src.framework.mcts.edge_cases import BudgetConfig, TimeoutConfig
 
         config = BudgetConfig(token_budget=1000, max_nodes=100)
-        handler = TimeoutHandler(budget_config=config)
+        handler = TimeoutHandler(timeout_config=TimeoutConfig(), budget_config=config)
 
         # Record some usage
         handler.record_tokens(500)
@@ -378,10 +378,10 @@ class TestTimeoutHandler:
 
     def test_budget_exhaustion(self):
         """Test budget exhaustion detection."""
-        from src.framework.mcts.edge_cases import BudgetConfig
+        from src.framework.mcts.edge_cases import BudgetConfig, TimeoutConfig
 
         config = BudgetConfig(token_budget=100)
-        handler = TimeoutHandler(budget_config=config)
+        handler = TimeoutHandler(timeout_config=TimeoutConfig(), budget_config=config)
 
         handler.record_tokens(150)
 

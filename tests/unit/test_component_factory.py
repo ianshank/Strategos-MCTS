@@ -1371,5 +1371,634 @@ class TestProtocols:
         assert hasattr(mock_loader, "get_statistics")
 
 
+# ============================================================================
+# Additional Coverage Tests - Augmented Buffer, Singleton Hits, DataLoader
+# convenience methods, MetricsCollector branches, Protocol isinstance checks
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestTrainerFactoryAugmentedBuffer:
+    """Tests for augmented replay buffer creation."""
+
+    def test_create_replay_buffer_augmented(self, mock_settings, mock_logger, trainer_config):
+        """Test creating augmented replay buffer with augmentation function."""
+        import sys
+
+        from src.framework.component_factory import TrainerFactory
+
+        factory = TrainerFactory(settings=mock_settings, logger=mock_logger, config=trainer_config)
+
+        mock_augmentation_fn = MagicMock()
+
+        mock_buffer_module = MagicMock()
+        mock_augmented_class = MagicMock()
+        mock_augmented_instance = MagicMock()
+        mock_augmented_class.return_value = mock_augmented_instance
+        mock_buffer_module.ReplayBuffer = MagicMock()
+        mock_buffer_module.PrioritizedReplayBuffer = MagicMock()
+        mock_buffer_module.AugmentedReplayBuffer = mock_augmented_class
+
+        with patch.dict(sys.modules, {"src.training.replay_buffer": mock_buffer_module}):
+            buffer = factory.create_replay_buffer(
+                buffer_type="augmented",
+                capacity=TEST_BUFFER_CAPACITY,
+                augmentation_fn=mock_augmentation_fn,
+                use_singleton=False,
+            )
+
+            mock_augmented_class.assert_called_once_with(
+                capacity=TEST_BUFFER_CAPACITY,
+                augmentation_fn=mock_augmentation_fn,
+            )
+            assert buffer is mock_augmented_instance
+
+
+@pytest.mark.unit
+class TestExperimentTrackerSingletonCacheHit:
+    """Tests for experiment tracker singleton cache hit path."""
+
+    def test_experiment_tracker_singleton_caching(self, mock_settings, mock_logger, metrics_config):
+        """Test that experiment trackers are cached and returned on second call."""
+        import sys
+
+        from src.framework.component_factory import MetricsFactory
+
+        MetricsFactory.clear_singleton_cache()
+
+        factory = MetricsFactory(settings=mock_settings, logger=mock_logger, config=metrics_config)
+
+        mock_tracker_module = MagicMock()
+        mock_bt_class = MagicMock()
+        mock_bt_instance = MagicMock()
+        mock_bt_class.return_value = mock_bt_instance
+        mock_tracker_module.BraintrustTracker = mock_bt_class
+        mock_tracker_module.WandBTracker = MagicMock()
+        mock_tracker_module.UnifiedExperimentTracker = MagicMock()
+
+        with patch.dict(sys.modules, {"src.training.experiment_tracker": mock_tracker_module}):
+            # First call creates new tracker
+            tracker1 = factory.create_experiment_tracker(
+                platform="braintrust",
+                project_name=TEST_PROJECT_NAME,
+                use_singleton=True,
+            )
+
+            # Second call should return cached tracker
+            tracker2 = factory.create_experiment_tracker(
+                platform="braintrust",
+                project_name=TEST_PROJECT_NAME,
+                use_singleton=True,
+            )
+
+            assert mock_bt_class.call_count == 1
+            assert tracker1 is tracker2
+
+
+@pytest.mark.unit
+class TestMetricsCollectorBranches:
+    """Tests for MetricsCollector branch coverage."""
+
+    def test_log_metric_with_log_metric_attr(self, mock_logger):
+        """Test log_metric when tracker has log_metric attribute."""
+        from src.framework.component_factory import MetricsCollector
+
+        mock_tracker = MagicMock()
+        mock_tracker.log_metric = MagicMock()
+        # Ensure hasattr(mock_tracker, "log_metric") returns True
+        collector = MetricsCollector(experiment_tracker=mock_tracker, logger=mock_logger)
+
+        collector.log_metric("loss", 0.5, step=1)
+
+        mock_tracker.log_metric.assert_called_once_with("loss", 0.5, step=1)
+
+    def test_log_metric_with_log_attr_only(self, mock_logger):
+        """Test log_metric when tracker only has log attribute (no log_metric)."""
+        from src.framework.component_factory import MetricsCollector
+
+        mock_tracker = MagicMock(spec=[])
+        mock_tracker.log = MagicMock()
+        # Remove log_metric so hasattr returns False
+        collector = MetricsCollector(experiment_tracker=mock_tracker, logger=mock_logger)
+
+        collector.log_metric("loss", 0.5, step=1)
+
+        mock_tracker.log.assert_called_once_with({"loss": 0.5}, step=1)
+
+    def test_log_metric_no_tracker(self, mock_logger):
+        """Test log_metric when no tracker is configured."""
+        from src.framework.component_factory import MetricsCollector
+
+        collector = MetricsCollector(logger=mock_logger)
+
+        # Should not raise
+        collector.log_metric("loss", 0.5, step=1)
+
+    def test_log_training_step(self, mock_logger):
+        """Test log_training_step with tracker that has log_training_step."""
+        import sys
+
+        from src.framework.component_factory import MetricsCollector
+
+        mock_tracker = MagicMock()
+        mock_tracker.log_training_step = MagicMock()
+        mock_monitor = MagicMock()
+
+        collector = MetricsCollector(
+            performance_monitor=mock_monitor,
+            experiment_tracker=mock_tracker,
+            logger=mock_logger,
+        )
+
+        mock_metrics_module = MagicMock()
+        mock_training_metrics_class = MagicMock()
+        mock_training_metrics_instance = MagicMock()
+        mock_training_metrics_class.return_value = mock_training_metrics_instance
+        mock_metrics_module.TrainingMetrics = mock_training_metrics_class
+
+        with patch.dict(sys.modules, {"src.training.experiment_tracker": mock_metrics_module}):
+            collector.log_training_step(epoch=1, loss=0.5, accuracy=0.9, learning_rate=0.001, step=10)
+
+        mock_tracker.log_training_step.assert_called_once()
+        mock_monitor.log_loss.assert_called_once()
+
+    def test_log_training_step_with_log_metrics(self, mock_logger):
+        """Test log_training_step when tracker has log_metrics instead of log_training_step."""
+        import sys
+
+        from src.framework.component_factory import MetricsCollector
+
+        # Create tracker without log_training_step but with log_metrics
+        mock_tracker = MagicMock(spec=[])
+        mock_tracker.log_metrics = MagicMock()
+
+        collector = MetricsCollector(
+            experiment_tracker=mock_tracker,
+            logger=mock_logger,
+        )
+
+        mock_metrics_module = MagicMock()
+        mock_training_metrics_class = MagicMock()
+        mock_training_metrics_instance = MagicMock()
+        mock_training_metrics_class.return_value = mock_training_metrics_instance
+        mock_metrics_module.TrainingMetrics = mock_training_metrics_class
+
+        with patch.dict(sys.modules, {"src.training.experiment_tracker": mock_metrics_module}):
+            collector.log_training_step(epoch=1, loss=0.5)
+
+        mock_tracker.log_metrics.assert_called_once()
+
+    def test_log_training_step_no_tracker_no_monitor(self, mock_logger):
+        """Test log_training_step with no tracker and no monitor."""
+        import sys
+
+        from src.framework.component_factory import MetricsCollector
+
+        collector = MetricsCollector(logger=mock_logger)
+
+        mock_metrics_module = MagicMock()
+        mock_metrics_module.TrainingMetrics = MagicMock(return_value=MagicMock())
+
+        with patch.dict(sys.modules, {"src.training.experiment_tracker": mock_metrics_module}):
+            # Should not raise
+            collector.log_training_step(epoch=1, loss=0.5)
+
+    def test_log_inference_no_monitor(self, mock_logger):
+        """Test log_inference when no monitor is configured."""
+        from src.framework.component_factory import MetricsCollector
+
+        collector = MetricsCollector(logger=mock_logger)
+
+        # Should not raise
+        collector.log_inference(total_time_ms=45.5)
+
+    def test_log_memory(self, mock_logger):
+        """Test log_memory with monitor."""
+        from src.framework.component_factory import MetricsCollector
+
+        mock_monitor = MagicMock()
+
+        collector = MetricsCollector(
+            performance_monitor=mock_monitor,
+            logger=mock_logger,
+        )
+
+        collector.log_memory()
+
+        mock_monitor.log_memory.assert_called_once()
+
+    def test_log_memory_no_monitor(self, mock_logger):
+        """Test log_memory when no monitor is configured."""
+        from src.framework.component_factory import MetricsCollector
+
+        collector = MetricsCollector(logger=mock_logger)
+
+        # Should not raise
+        collector.log_memory()
+
+    def test_print_summary(self, mock_logger):
+        """Test print_summary with monitor."""
+        from src.framework.component_factory import MetricsCollector
+
+        mock_monitor = MagicMock()
+
+        collector = MetricsCollector(
+            performance_monitor=mock_monitor,
+            logger=mock_logger,
+        )
+
+        collector.print_summary()
+
+        mock_monitor.print_summary.assert_called_once()
+
+    def test_print_summary_no_monitor(self, mock_logger):
+        """Test print_summary when no monitor is configured."""
+        from src.framework.component_factory import MetricsCollector
+
+        collector = MetricsCollector(logger=mock_logger)
+
+        # Should not raise
+        collector.print_summary()
+
+    def test_get_stats_no_tracker_summary(self, mock_logger):
+        """Test get_stats when tracker has no get_summary method."""
+        from src.framework.component_factory import MetricsCollector
+
+        mock_tracker = MagicMock(spec=[])
+        # No get_summary attribute
+
+        collector = MetricsCollector(
+            experiment_tracker=mock_tracker,
+            logger=mock_logger,
+        )
+
+        stats = collector.get_stats()
+
+        assert "experiment" not in stats
+
+
+@pytest.mark.unit
+class TestDataLoaderFactorySingletonCacheHits:
+    """Tests for data loader singleton cache hit paths."""
+
+    def test_primus_loader_singleton_caching(self, mock_settings, mock_logger, data_loader_config):
+        """Test that PRIMUS loader is cached when use_singleton=True."""
+        from src.framework.component_factory import DataLoaderFactory
+
+        DataLoaderFactory.clear_singleton_cache()
+
+        factory = DataLoaderFactory(settings=mock_settings, logger=mock_logger, config=data_loader_config)
+
+        with patch("src.data.dataset_loader.PRIMUSLoader") as mock_loader_class:
+            mock_loader_instance = MagicMock()
+            mock_loader_class.return_value = mock_loader_instance
+
+            loader1 = factory.create_primus_loader(use_singleton=True)
+            loader2 = factory.create_primus_loader(use_singleton=True)
+
+            assert mock_loader_class.call_count == 1
+            assert loader1 is loader2
+
+    def test_combined_loader_singleton_caching(self, mock_settings, mock_logger, data_loader_config):
+        """Test that combined loader is cached when use_singleton=True."""
+        from src.framework.component_factory import DataLoaderFactory
+
+        DataLoaderFactory.clear_singleton_cache()
+
+        factory = DataLoaderFactory(settings=mock_settings, logger=mock_logger, config=data_loader_config)
+
+        with patch("src.data.dataset_loader.CombinedDatasetLoader") as mock_loader_class:
+            mock_loader_instance = MagicMock()
+            mock_loader_class.return_value = mock_loader_instance
+
+            loader1 = factory.create_combined_loader(use_singleton=True)
+            loader2 = factory.create_combined_loader(use_singleton=True)
+
+            assert mock_loader_class.call_count == 1
+            assert loader1 is loader2
+
+
+@pytest.mark.unit
+class TestDataLoaderFactoryLoadDatasetBranches:
+    """Tests for load_dataset convenience method - all dataset types."""
+
+    def test_load_dataset_primus_seed(self, mock_settings, mock_logger, data_loader_config):
+        """Test load_dataset for primus_seed."""
+        from src.framework.component_factory import DataLoaderFactory
+
+        factory = DataLoaderFactory(settings=mock_settings, logger=mock_logger, config=data_loader_config)
+
+        with patch("src.data.dataset_loader.PRIMUSLoader") as mock_loader_class:
+            mock_loader_instance = MagicMock()
+            mock_loader_instance.load_seed.return_value = [MagicMock(), MagicMock(), MagicMock()]
+            mock_loader_class.return_value = mock_loader_instance
+
+            samples = factory.load_dataset("primus_seed", max_samples=50)
+
+            mock_loader_instance.load_seed.assert_called_once_with(max_samples=50)
+            assert len(samples) == 3
+
+    def test_load_dataset_primus_instruct(self, mock_settings, mock_logger, data_loader_config):
+        """Test load_dataset for primus_instruct."""
+        from src.framework.component_factory import DataLoaderFactory
+
+        factory = DataLoaderFactory(settings=mock_settings, logger=mock_logger, config=data_loader_config)
+
+        with patch("src.data.dataset_loader.PRIMUSLoader") as mock_loader_class:
+            mock_loader_instance = MagicMock()
+            mock_loader_instance.load_instruct.return_value = [MagicMock()]
+            mock_loader_class.return_value = mock_loader_instance
+
+            samples = factory.load_dataset("primus_instruct")
+
+            mock_loader_instance.load_instruct.assert_called_once()
+            assert len(samples) == 1
+
+    def test_load_dataset_combined(self, mock_settings, mock_logger, data_loader_config):
+        """Test load_dataset for combined datasets."""
+        from src.framework.component_factory import DataLoaderFactory
+
+        factory = DataLoaderFactory(settings=mock_settings, logger=mock_logger, config=data_loader_config)
+
+        with patch("src.data.dataset_loader.CombinedDatasetLoader") as mock_loader_class:
+            mock_loader_instance = MagicMock()
+            mock_loader_instance.load_all.return_value = [MagicMock(), MagicMock()]
+            mock_loader_class.return_value = mock_loader_instance
+
+            samples = factory.load_dataset("combined", max_samples=100)
+
+            mock_loader_instance.load_all.assert_called_once_with(
+                primus_max_samples=100,
+                include_instruct=data_loader_config.include_instruct,
+            )
+            assert len(samples) == 2
+
+    def test_load_dataset_uses_config_max_samples(self, mock_settings, mock_logger):
+        """Test load_dataset falls back to config max_samples when not provided."""
+        from src.framework.component_factory import DataLoaderConfig, DataLoaderFactory
+
+        config = DataLoaderConfig(
+            cache_dir=TEST_CACHE_DIR,
+            max_samples=200,
+        )
+        factory = DataLoaderFactory(settings=mock_settings, logger=mock_logger, config=config)
+
+        with patch("src.data.dataset_loader.PRIMUSLoader") as mock_loader_class:
+            mock_loader_instance = MagicMock()
+            mock_loader_instance.load_seed.return_value = []
+            mock_loader_class.return_value = mock_loader_instance
+
+            factory.load_dataset("primus_seed")
+
+            mock_loader_instance.load_seed.assert_called_once_with(max_samples=200)
+
+
+@pytest.mark.unit
+class TestProtocolIsinstance:
+    """Tests for runtime_checkable protocol isinstance checks."""
+
+    def test_component_protocol_isinstance(self):
+        """Test ComponentProtocol isinstance check."""
+        from src.framework.component_factory import ComponentProtocol
+
+        class MyComponent:
+            def __init__(self, **kwargs):
+                pass
+
+        assert isinstance(MyComponent(), ComponentProtocol)
+
+    def test_trainer_protocol_isinstance(self):
+        """Test TrainerProtocol isinstance check."""
+        from src.framework.component_factory import TrainerProtocol
+
+        class MyTrainer:
+            async def train_step(self, *args, **kwargs):
+                pass
+
+            async def train_epoch(self, data_loader):
+                return {}
+
+        assert isinstance(MyTrainer(), TrainerProtocol)
+
+    def test_metrics_collector_protocol_isinstance(self):
+        """Test MetricsCollectorProtocol isinstance check."""
+        from src.framework.component_factory import MetricsCollectorProtocol
+
+        class MyCollector:
+            def log_metric(self, name, value, **kwargs):
+                pass
+
+            def get_stats(self):
+                return {}
+
+        assert isinstance(MyCollector(), MetricsCollectorProtocol)
+
+    def test_data_loader_protocol_isinstance(self):
+        """Test DataLoaderProtocol isinstance check."""
+        from src.framework.component_factory import DataLoaderProtocol
+
+        class MyLoader:
+            def load(self, split, **kwargs):
+                return []
+
+            def get_statistics(self):
+                return {}
+
+        assert isinstance(MyLoader(), DataLoaderProtocol)
+
+
+@pytest.mark.unit
+class TestTrainerConfigFromSettingsEdgeCases:
+    """Additional edge-case tests for config from_settings."""
+
+    def test_trainer_config_from_settings_with_s3_bucket(self):
+        """Test TrainerConfig.from_settings when S3_BUCKET is set."""
+        from src.framework.component_factory import TrainerConfig
+
+        mock_settings = MagicMock()
+        mock_settings.MCTS_MAX_PARALLEL_ROLLOUTS = 4
+        mock_settings.MCTS_IMPL.value = "neural"
+        mock_settings.MCTS_ITERATIONS = 200
+        mock_settings.S3_BUCKET = "my-bucket"
+        mock_settings.S3_PREFIX = "experiment-1"
+
+        config = TrainerConfig.from_settings(mock_settings)
+
+        assert config.device == "cuda"
+        assert config.checkpoint_dir == "experiment-1"
+
+    def test_trainer_config_from_settings_baseline_no_s3(self):
+        """Test TrainerConfig.from_settings with baseline impl and no S3."""
+        from src.framework.component_factory import TrainerConfig
+
+        mock_settings = MagicMock()
+        mock_settings.MCTS_MAX_PARALLEL_ROLLOUTS = 2
+        mock_settings.MCTS_IMPL.value = "baseline"
+        mock_settings.MCTS_ITERATIONS = 50
+        mock_settings.S3_BUCKET = None
+        mock_settings.S3_PREFIX = "unused"
+
+        config = TrainerConfig.from_settings(mock_settings)
+
+        assert config.device == "cpu"
+        assert config.checkpoint_dir == "checkpoints"
+
+    def test_metrics_config_from_settings_online_mode(self):
+        """Test MetricsConfig.from_settings with online wandb mode."""
+        from src.framework.component_factory import MetricsConfig
+
+        mock_settings = MagicMock()
+        mock_settings.WANDB_PROJECT = "online-project"
+        mock_settings.WANDB_ENTITY = None
+        mock_settings.WANDB_MODE = "online"
+
+        config = MetricsConfig.from_settings(mock_settings)
+
+        assert config.offline_mode is False
+        assert config.wandb_entity is None
+
+
+@pytest.mark.unit
+class TestHRMTrainerCustomConfig:
+    """Test HRM trainer creation with custom parameter overrides."""
+
+    def test_create_hrm_trainer_all_custom_params(
+        self, mock_settings, mock_logger, trainer_config, mock_hrm_agent, mock_optimizer, mock_loss_fn
+    ):
+        """Test creating HRM trainer with all custom overrides."""
+        import sys
+
+        from src.framework.component_factory import TrainerFactory
+
+        factory = TrainerFactory(settings=mock_settings, logger=mock_logger, config=trainer_config)
+
+        mock_trainer_module = MagicMock()
+        mock_hrm_trainer_class = MagicMock()
+        mock_trainer_instance = MagicMock()
+        mock_hrm_trainer_class.return_value = mock_trainer_instance
+        mock_config_class = MagicMock()
+        mock_config_instance = MagicMock()
+        mock_config_class.return_value = mock_config_instance
+        mock_trainer_module.HRMTrainer = mock_hrm_trainer_class
+        mock_trainer_module.HRMTrainingConfig = mock_config_class
+
+        custom_scaler = MagicMock()
+
+        with patch.dict(sys.modules, {"src.training.agent_trainer": mock_trainer_module}):
+            trainer = factory.create_hrm_trainer(
+                agent=mock_hrm_agent,
+                optimizer=mock_optimizer,
+                loss_fn=mock_loss_fn,
+                batch_size=64,
+                num_batches=20,
+                gradient_clip_norm=0.5,
+                ponder_weight=0.05,
+                consistency_weight=0.2,
+                use_mixed_precision=True,
+                device="cuda",
+                scaler=custom_scaler,
+            )
+
+            assert trainer is mock_trainer_instance
+            config_call_kwargs = mock_config_class.call_args.kwargs
+            assert config_call_kwargs["batch_size"] == 64
+            assert config_call_kwargs["num_batches"] == 20
+            assert config_call_kwargs["gradient_clip_norm"] == 0.5
+            assert config_call_kwargs["ponder_weight"] == 0.05
+            assert config_call_kwargs["consistency_weight"] == 0.2
+            assert config_call_kwargs["use_mixed_precision"] is True
+
+            trainer_call_kwargs = mock_hrm_trainer_class.call_args.kwargs
+            assert trainer_call_kwargs["device"] == "cuda"
+            assert trainer_call_kwargs["scaler"] is custom_scaler
+
+
+@pytest.mark.unit
+class TestTRMTrainerCustomConfig:
+    """Test TRM trainer creation with custom parameter overrides."""
+
+    def test_create_trm_trainer_all_custom_params(
+        self, mock_settings, mock_logger, trainer_config, mock_trm_agent, mock_optimizer, mock_loss_fn
+    ):
+        """Test creating TRM trainer with all custom overrides."""
+        import sys
+
+        from src.framework.component_factory import TrainerFactory
+
+        factory = TrainerFactory(settings=mock_settings, logger=mock_logger, config=trainer_config)
+
+        mock_trainer_module = MagicMock()
+        mock_trm_trainer_class = MagicMock()
+        mock_trainer_instance = MagicMock()
+        mock_trm_trainer_class.return_value = mock_trainer_instance
+        mock_config_class = MagicMock()
+        mock_config_instance = MagicMock()
+        mock_config_class.return_value = mock_config_instance
+        mock_trainer_module.TRMTrainer = mock_trm_trainer_class
+        mock_trainer_module.TRMTrainingConfig = mock_config_class
+
+        with patch.dict(sys.modules, {"src.training.agent_trainer": mock_trainer_module}):
+            trainer = factory.create_trm_trainer(
+                agent=mock_trm_agent,
+                optimizer=mock_optimizer,
+                loss_fn=mock_loss_fn,
+                batch_size=128,
+                num_batches=30,
+                gradient_clip_norm=2.0,
+                supervision_weight_decay=0.8,
+                use_mixed_precision=True,
+                device="cuda:1",
+                scaler=MagicMock(),
+            )
+
+            assert trainer is mock_trainer_instance
+            config_call_kwargs = mock_config_class.call_args.kwargs
+            assert config_call_kwargs["batch_size"] == 128
+            assert config_call_kwargs["supervision_weight_decay"] == 0.8
+
+
+@pytest.mark.unit
+class TestConvenienceFunctionsNoSettings:
+    """Test convenience functions when no settings are provided (use defaults)."""
+
+    def test_create_trainer_factory_no_settings(self):
+        """Test create_trainer_factory without explicit settings."""
+        from src.framework.component_factory import create_trainer_factory
+
+        mock_settings = MagicMock()
+        mock_settings.MCTS_MAX_PARALLEL_ROLLOUTS = 2
+        mock_settings.MCTS_IMPL.value = "baseline"
+        mock_settings.MCTS_ITERATIONS = 100
+        mock_settings.S3_BUCKET = None
+
+        with patch("src.framework.component_factory.get_settings", return_value=mock_settings):
+            factory = create_trainer_factory()
+            assert factory is not None
+
+    def test_create_metrics_factory_no_settings(self):
+        """Test create_metrics_factory without explicit settings."""
+        from src.framework.component_factory import create_metrics_factory
+
+        mock_settings = MagicMock()
+        mock_settings.WANDB_PROJECT = "test"
+        mock_settings.WANDB_ENTITY = None
+        mock_settings.WANDB_MODE = "offline"
+
+        with patch("src.framework.component_factory.get_settings", return_value=mock_settings):
+            factory = create_metrics_factory()
+            assert factory is not None
+
+    def test_create_data_loader_factory_no_settings(self):
+        """Test create_data_loader_factory without explicit settings."""
+        from src.framework.component_factory import create_data_loader_factory
+
+        mock_settings = MagicMock()
+        mock_settings.MCTS_MAX_PARALLEL_ROLLOUTS = 2
+
+        with patch("src.framework.component_factory.get_settings", return_value=mock_settings):
+            factory = create_data_loader_factory()
+            assert factory is not None
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

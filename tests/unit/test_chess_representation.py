@@ -1,7 +1,7 @@
 """Unit tests for src/games/chess/representation.py."""
 
-from unittest.mock import MagicMock, patch, PropertyMock
 import sys
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -61,7 +61,6 @@ def mock_torch():
                     arr[self._idx][key] = val
 
             # Override __getitem__ to return plane mocks for integer indices
-            original_getitem = tensor.__getitem__
 
             def smart_getitem(idx):
                 if isinstance(idx, int):
@@ -146,20 +145,21 @@ class TestChessBoardRepresentationEncode:
     @pytest.fixture(autouse=True)
     def skip_if_no_torch(self):
         try:
-            import torch
+            import torch  # noqa: F401
         except ImportError:
             pytest.skip("torch not available")
 
     @pytest.fixture(autouse=True)
     def skip_if_no_chess(self):
         try:
-            import chess
+            import chess  # noqa: F401
         except ImportError:
             pytest.skip("chess library not available")
 
     def test_encode_initial_position(self):
         import chess
         import torch
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -170,6 +170,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_encode_white_perspective(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -186,6 +187,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_encode_black_perspective(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -199,6 +201,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_encode_side_to_move_white(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -209,6 +212,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_encode_side_to_move_black(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -220,6 +224,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_encode_castling_rights_initial(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -231,6 +236,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_encode_no_castling_rights(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -242,6 +248,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_encode_en_passant(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -253,6 +260,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_encode_halfmove_clock(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -264,6 +272,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_encode_fullmove_number(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -275,6 +284,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_encode_castling_flipped(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -291,6 +301,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_encode_batch(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -300,6 +311,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_encode_batch_different_perspectives(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -309,6 +321,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_decode_piece_planes(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -329,6 +342,7 @@ class TestChessBoardRepresentationEncode:
 
     def test_encode_with_history(self):
         import chess
+
         from src.games.chess.config import ChessBoardConfig
         from src.games.chess.representation import ChessBoardRepresentation
 
@@ -347,13 +361,14 @@ class TestBoardToTensor:
     @pytest.fixture(autouse=True)
     def skip_if_no_deps(self):
         try:
-            import torch
-            import chess
+            import chess  # noqa: F401
+            import torch  # noqa: F401
         except ImportError:
             pytest.skip("torch or chess not available")
 
     def test_board_to_tensor(self):
         import chess
+
         from src.games.chess.representation import board_to_tensor
 
         board = chess.Board()
@@ -362,6 +377,7 @@ class TestBoardToTensor:
 
     def test_board_to_tensor_black_perspective(self):
         import chess
+
         from src.games.chess.representation import board_to_tensor
 
         board = chess.Board()
@@ -374,12 +390,13 @@ class TestTensorToNumpy:
     @pytest.fixture(autouse=True)
     def skip_if_no_torch(self):
         try:
-            import torch
+            import torch  # noqa: F401
         except ImportError:
             pytest.skip("torch not available")
 
     def test_tensor_to_numpy(self):
         import torch
+
         from src.games.chess.representation import tensor_to_numpy
 
         tensor = torch.zeros(22, 8, 8)
@@ -389,6 +406,7 @@ class TestTensorToNumpy:
 
     def test_tensor_to_numpy_values(self):
         import torch
+
         from src.games.chess.representation import tensor_to_numpy
 
         tensor = torch.ones(2, 3, 4)
@@ -403,13 +421,14 @@ class TestEnPassantFlipped:
     @pytest.fixture(autouse=True)
     def skip_if_no_deps(self):
         try:
-            import torch
-            import chess
+            import chess  # noqa: F401
+            import torch  # noqa: F401
         except ImportError:
             pytest.skip("torch or chess not available")
 
     def test_en_passant_flipped(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -428,13 +447,14 @@ class TestRepetitionPlanes:
     @pytest.fixture(autouse=True)
     def skip_if_no_deps(self):
         try:
-            import torch
-            import chess
+            import chess  # noqa: F401
+            import torch  # noqa: F401
         except ImportError:
             pytest.skip("torch or chess not available")
 
     def test_no_two_fold_repetition(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()
@@ -446,6 +466,7 @@ class TestRepetitionPlanes:
 
     def test_repetition_detection(self):
         import chess
+
         from src.games.chess.representation import ChessBoardRepresentation
 
         rep = ChessBoardRepresentation()

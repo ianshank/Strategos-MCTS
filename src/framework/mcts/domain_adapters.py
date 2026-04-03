@@ -131,7 +131,7 @@ class BaseDomainAdapter(ABC):
             return idx
         except ValueError:
             # Hash-based index for string actions
-            idx = int(hashlib.md5(action.encode()).hexdigest()[:8], 16) % self.action_space_size
+            idx = int(hashlib.md5(action.encode(), usedforsecurity=False).hexdigest()[:8], 16) % self.action_space_size
             self._action_to_index[action] = idx
             self._index_to_action[idx] = action
             return idx

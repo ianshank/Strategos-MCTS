@@ -11,9 +11,8 @@ Tests:
 - SequentialAgent
 """
 
-import asyncio
 import logging
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -22,8 +21,6 @@ from src.framework.agents.base import (
     AgentContext,
     AgentResult,
     AsyncAgentBase,
-    CompositeAgent,
-    MetricsCollector,
     NoOpMetricsCollector,
     ParallelAgent,
     SequentialAgent,

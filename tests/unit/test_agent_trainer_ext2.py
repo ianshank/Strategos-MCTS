@@ -38,7 +38,6 @@ from src.training.agent_trainer import (
     create_data_loader_from_buffer,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -931,12 +930,10 @@ class TestCreateDataLoaderFromBuffer:
         assert not isinstance(loader, DummyDataLoader)
 
         # Should be iterable and yield batches
-        batch_count = 0
-        for states, targets in loader:
+        for batch_count, (states, targets) in enumerate(loader):
             assert states.shape[0] == 2
             assert targets.shape[0] == 2
-            batch_count += 1
-            if batch_count >= 2:
+            if batch_count >= 1:
                 break
 
     def test_buffer_data_loader_stops_after_num_batches(self):

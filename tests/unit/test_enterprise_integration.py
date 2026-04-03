@@ -8,7 +8,7 @@ EnterpriseMetaControllerAdapter (meta_controller_adapter.py).
 from __future__ import annotations
 
 import logging
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -21,7 +21,6 @@ from src.enterprise.integration.meta_controller_adapter import (
     EnterpriseMetaControllerAdapter,
     EnterpriseMetaControllerFeatures,
 )
-
 
 # ---------------------------------------------------------------------------
 # EnterpriseAgentState
@@ -338,7 +337,7 @@ class TestEnterpriseMetaControllerAdapter:
     # -- init --
 
     def test_init_sets_threshold(self, mock_detector):
-        adapter = EnterpriseMetaControllerAdapter(
+        EnterpriseMetaControllerAdapter(
             domain_detection_threshold=0.1,
             domain_detector=mock_detector,
         )

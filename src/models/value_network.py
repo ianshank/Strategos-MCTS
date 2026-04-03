@@ -65,7 +65,7 @@ class ValueNetwork(nn.Module):
         self.estimate_uncertainty = estimate_uncertainty
 
         # Build feature extraction layers
-        layers = []
+        layers: list[nn.Module] = []
         prev_dim = state_dim
 
         for hidden_dim in self.hidden_dims:
@@ -90,7 +90,7 @@ class ValueNetwork(nn.Module):
                 nn.Softplus(),  # Ensure positive
             )
         else:
-            self.uncertainty_head = None
+            self.uncertainty_head = None  # type: ignore[assignment]
 
         # Initialize weights
         self.apply(self._init_weights)
@@ -313,9 +313,9 @@ class ValueLoss(nn.Module):
             loss_dict["uncertainty"] = uncertainty_loss.item()
 
         # L2 regularization
-        l2_reg = torch.tensor(0.0, device=predictions.device)
+        l2_reg: torch.Tensor = torch.tensor(0.0, device=predictions.device)
         if model is not None and self.l2_weight > 0:
-            l2_reg = sum(p.pow(2).sum() for p in model.parameters() if p.requires_grad)
+            l2_reg = torch.stack([p.pow(2).sum() for p in model.parameters() if p.requires_grad]).sum()
             loss_dict["l2"] = l2_reg.item()
 
         # Combine losses
@@ -441,17 +441,17 @@ class EnsembleValueNetwork(nn.Module):
             ValueOutput with mean prediction and uncertainty estimate
         """
         # Get predictions from all networks
-        predictions = []
+        pred_list = []
         for network in self.networks:
             output = network(state)
-            predictions.append(output.value)
+            pred_list.append(output.value)
 
         # Stack predictions
-        predictions = torch.stack(predictions, dim=0)  # [num_networks, batch, 1]
+        stacked = torch.stack(pred_list, dim=0)  # [num_networks, batch, 1]
 
         # Compute mean and std
-        mean_value = predictions.mean(dim=0)
-        uncertainty = predictions.std(dim=0)
+        mean_value = stacked.mean(dim=0)
+        uncertainty = stacked.std(dim=0)
 
         return ValueOutput(value=mean_value, uncertainty=uncertainty)
 

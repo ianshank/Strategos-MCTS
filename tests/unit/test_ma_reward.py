@@ -12,18 +12,15 @@ Tests cover:
 
 from __future__ import annotations
 
-from unittest.mock import patch
-
 import pytest
 
 from src.enterprise.config.enterprise_settings import MADueDiligenceConfig
 from src.enterprise.use_cases.ma_due_diligence.reward import MADueDiligenceReward
 from src.enterprise.use_cases.ma_due_diligence.state import (
-    DueDiligencePhase,
+    AnalyzedDocument,
     IdentifiedRisk,
     MADueDiligenceState,
     RiskLevel,
-    AnalyzedDocument,
 )
 
 

@@ -74,7 +74,8 @@ class RecursiveBlock(nn.Module):
         """
         # Residual connection with learned scaling
         residual = self.transform(x)
-        return x + self.residual_scale * residual
+        result: torch.Tensor = x + self.residual_scale * residual
+        return result
 
 
 class DeepSupervisionHead(nn.Module):
@@ -94,7 +95,8 @@ class DeepSupervisionHead(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Generate prediction from latent state."""
-        return self.head(x)
+        result: torch.Tensor = self.head(x)
+        return result
 
 
 class TRMAgent(nn.Module):
@@ -398,8 +400,12 @@ class TRMRefinementWrapper:
         output = self.trm_agent(predictions, num_recursions=num_iterations, check_convergence=True)
 
         if return_path:
-            return output.final_prediction, output.intermediate_predictions
-        return output.final_prediction
+            result: torch.Tensor | tuple[torch.Tensor, list[torch.Tensor]] = (
+                output.final_prediction, output.intermediate_predictions
+            )
+            return result
+        final: torch.Tensor = output.final_prediction
+        return final
 
     def get_refinement_stats(self, predictions: torch.Tensor) -> dict:
         """Get statistics about the refinement process."""

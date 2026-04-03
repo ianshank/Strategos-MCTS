@@ -22,13 +22,13 @@ os.environ.setdefault("OPENAI_API_KEY", "sk-test-key-for-testing-only")
 os.environ.setdefault("LLM_PROVIDER", "openai")
 
 try:
-    import torch
+    import torch  # noqa: F401
 
     from src.framework.mcts.game_states import (
         DecisionState,
         PlanningState,
         ReasoningState,
-        create_game_state,
+        create_game_state,  # noqa: F401
     )
 
     GAME_STATES_AVAILABLE = True

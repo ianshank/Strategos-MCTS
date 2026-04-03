@@ -253,7 +253,7 @@ class BERTMetaController(AbstractMetaController):
             probabilities = torch.nn.functional.softmax(logits, dim=-1)
 
             # Get predicted agent index (argmax)
-            predicted_idx = torch.argmax(probabilities, dim=-1).item()
+            predicted_idx: int = int(torch.argmax(probabilities, dim=-1).item())
 
             # Extract confidence for selected agent
             confidence = probabilities[0, predicted_idx].item()

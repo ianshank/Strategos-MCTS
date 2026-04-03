@@ -16,18 +16,18 @@ from src.agents.meta_controller.rnn_controller import (
 
 
 def _make_features(**overrides):
-    defaults = dict(
-        hrm_confidence=0.5,
-        trm_confidence=0.3,
-        mcts_value=0.2,
-        consensus_score=0.7,
-        last_agent="none",
-        iteration=0,
-        query_length=50,
-        has_rag_context=False,
-        rag_relevance_score=0.0,
-        is_technical_query=False,
-    )
+    defaults = {
+        "hrm_confidence": 0.5,
+        "trm_confidence": 0.3,
+        "mcts_value": 0.2,
+        "consensus_score": 0.7,
+        "last_agent": "none",
+        "iteration": 0,
+        "query_length": 50,
+        "has_rag_context": False,
+        "rag_relevance_score": 0.0,
+        "is_technical_query": False,
+    }
     defaults.update(overrides)
     return MetaControllerFeatures(**defaults)
 

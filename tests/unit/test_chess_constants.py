@@ -29,7 +29,7 @@ class TestChessConstantValues:
     def test_invalid_pawn_ranks(self) -> None:
         from src.games.chess.constants import INVALID_PAWN_RANKS
 
-        assert INVALID_PAWN_RANKS == frozenset({0, 7})
+        assert frozenset({0, 7}) == INVALID_PAWN_RANKS
         assert isinstance(INVALID_PAWN_RANKS, frozenset)
 
     def test_default_stockfish_executables(self) -> None:

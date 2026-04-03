@@ -15,9 +15,7 @@ Focuses on:
 """
 
 import asyncio
-import sys
-from contextlib import contextmanager
-from unittest.mock import MagicMock, PropertyMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -183,8 +181,8 @@ class TestGetTracerExt2:
         mgr = TracingManager.get_instance()
         mgr._initialized = True
 
-        t1 = get_tracer("svc1")
-        t2 = get_tracer("svc2")
+        get_tracer("svc1")
+        get_tracer("svc2")
         assert mock_trace.get_tracer.call_count == 2
 
 
@@ -238,7 +236,7 @@ class TestTraceSpanExt2:
         mock_tracer, mock_span = _make_mock_tracer_and_span()
 
         with patch("src.observability.tracing.get_tracer", return_value=mock_tracer):
-            with trace_span("test.op") as span:
+            with trace_span("test.op"):
                 pass
 
         call_kwargs = mock_tracer.start_as_current_span.call_args
@@ -250,7 +248,7 @@ class TestTraceSpanExt2:
 
         with patch("src.observability.tracing.get_tracer", return_value=mock_tracer):
             with pytest.raises(ValueError, match="boom"):
-                with trace_span("test.op") as span:
+                with trace_span("test.op"):
                     raise ValueError("boom")
 
     def test_trace_span_record_exception_param(self):
@@ -258,7 +256,7 @@ class TestTraceSpanExt2:
         mock_tracer, mock_span = _make_mock_tracer_and_span()
 
         with patch("src.observability.tracing.get_tracer", return_value=mock_tracer):
-            with trace_span("test.op", record_exception=False) as span:
+            with trace_span("test.op", record_exception=False):
                 pass
 
         call_kwargs = mock_tracer.start_as_current_span.call_args
@@ -269,7 +267,7 @@ class TestTraceSpanExt2:
         mock_tracer, mock_span = _make_mock_tracer_and_span()
 
         with patch("src.observability.tracing.get_tracer", return_value=mock_tracer):
-            with trace_span("op", set_status_on_exception=False) as span:
+            with trace_span("op", set_status_on_exception=False):
                 pass
 
         call_kwargs = mock_tracer.start_as_current_span.call_args
@@ -291,7 +289,7 @@ class TestAsyncTraceSpanExt2:
 
         async def _run():
             with patch("src.observability.tracing.get_tracer", return_value=mock_tracer):
-                async with async_trace_span("async.op") as span:
+                async with async_trace_span("async.op"):
                     pass
 
         asyncio.run(_run())
@@ -304,7 +302,7 @@ class TestAsyncTraceSpanExt2:
 
         async def _run():
             with patch("src.observability.tracing.get_tracer", return_value=mock_tracer):
-                async with async_trace_span("op") as span:
+                async with async_trace_span("op"):
                     raise RuntimeError("async boom")
 
         with pytest.raises(RuntimeError, match="async boom"):
@@ -316,7 +314,7 @@ class TestAsyncTraceSpanExt2:
 
         async def _run():
             with patch("src.observability.tracing.get_tracer", return_value=mock_tracer):
-                async with async_trace_span("op", record_exception=False) as span:
+                async with async_trace_span("op", record_exception=False):
                     pass
 
         asyncio.run(_run())
@@ -329,7 +327,7 @@ class TestAsyncTraceSpanExt2:
 
         async def _run():
             with patch("src.observability.tracing.get_tracer", return_value=mock_tracer):
-                async with async_trace_span("op", set_status_on_exception=False) as span:
+                async with async_trace_span("op", set_status_on_exception=False):
                     pass
 
         asyncio.run(_run())

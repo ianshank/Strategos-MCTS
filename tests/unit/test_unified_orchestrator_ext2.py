@@ -1,6 +1,5 @@
 """Extended tests for src/training/unified_orchestrator.py covering async methods."""
 
-import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -348,7 +347,7 @@ class TestExecuteIteration:
         orch.monitor.alert_if_slow = MagicMock()
         orch.best_win_rate = 0.0
 
-        metrics = await orch.train_iteration(1)
+        await orch.train_iteration(1)
         # HRM and TRM should have been called since orch has hrm_agent and trm_agent
         orch._train_hrm_agent.assert_called_once()
         orch._train_trm_agent.assert_called_once()

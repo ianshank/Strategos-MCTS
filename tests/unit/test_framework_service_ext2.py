@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from dataclasses import dataclass
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -23,31 +22,28 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.api.framework_service import (
-    FlexibleLogger,
     FrameworkConfig,
     FrameworkProtocol,
     FrameworkService,
     FrameworkState,
     LightweightFramework,
-    MockLLMClient,
-    QueryResult,
     get_framework_service,
 )
 
 
 def _make_config(**overrides: Any) -> FrameworkConfig:
     """Helper to create a FrameworkConfig with sensible defaults."""
-    defaults = dict(
-        mcts_enabled=True,
-        mcts_iterations=50,
-        mcts_exploration_weight=1.414,
-        seed=42,
-        max_iterations=5,
-        consensus_threshold=0.7,
-        top_k_retrieval=3,
-        enable_parallel_agents=False,
-        timeout_seconds=10.0,
-    )
+    defaults = {
+        "mcts_enabled": True,
+        "mcts_iterations": 50,
+        "mcts_exploration_weight": 1.414,
+        "seed": 42,
+        "max_iterations": 5,
+        "consensus_threshold": 0.7,
+        "top_k_retrieval": 3,
+        "enable_parallel_agents": False,
+        "timeout_seconds": 10.0,
+    }
     defaults.update(overrides)
     return FrameworkConfig(**defaults)
 
@@ -329,7 +325,7 @@ class TestFrameworkServiceProcessQuery:
         """mcts_iterations override is added to config (line 510)."""
         service = self._make_ready_service()
 
-        result = await service.process_query("test", mcts_iterations=200)
+        await service.process_query("test", mcts_iterations=200)
 
         call_kwargs = service._framework.process.call_args
         config_passed = call_kwargs.kwargs.get("config") or call_kwargs[1].get("config")
@@ -417,7 +413,7 @@ class TestFrameworkServiceProcessQuery:
         """When use_mcts is None, uses config default (line 451)."""
         service = self._make_ready_service()
         # Config has mcts_enabled=True
-        result = await service.process_query("test", use_mcts=None)
+        await service.process_query("test", use_mcts=None)
 
         call_kwargs = service._framework.process.call_args
         assert call_kwargs.kwargs["use_mcts"] is True

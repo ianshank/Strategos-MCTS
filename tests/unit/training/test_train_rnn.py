@@ -5,7 +5,7 @@ Tests RNNTrainer initialization, data loading, training epoch,
 validation, early stopping, and model saving.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import torch

@@ -5,13 +5,11 @@ Tests ParallelMCTSStats, ParallelMCTSConfig, VirtualLossNode,
 and ParallelMCTSEngine initialization.
 """
 
-import math
-from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
 import pytest
 
-from src.framework.mcts.core import MCTSNode, MCTSState
+from src.framework.mcts.core import MCTSState
 from src.framework.mcts.parallel_mcts import (
     ParallelMCTSConfig,
     ParallelMCTSEngine,

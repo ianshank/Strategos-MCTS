@@ -5,9 +5,8 @@ Tests BaseDomainState, exception hierarchy, BaseUseCase patterns,
 and result synthesis.
 """
 
-import copy
 import logging
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 

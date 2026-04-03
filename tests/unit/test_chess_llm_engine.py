@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-from dataclasses import dataclass, field
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -476,7 +473,6 @@ class TestLLMChessEngine:
         engine = LLMChessEngine(adapter)
 
         # Make one agent fail
-        original_process = engine.hrm_agent.process
 
         async def failing_process(**kwargs):
             raise RuntimeError("HRM failed")

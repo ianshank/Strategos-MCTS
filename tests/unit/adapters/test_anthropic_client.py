@@ -18,7 +18,6 @@ Covers:
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -28,24 +27,20 @@ pytest.importorskip("httpx", reason="httpx required for HTTP client tests")
 import httpx
 
 from src.adapters.llm.anthropic_client import AnthropicClient
-from src.adapters.llm.base import LLMResponse, LLMToolResponse
+from src.adapters.llm.base import LLMToolResponse
 from src.adapters.llm.exceptions import (
-    CircuitBreakerOpenError,
     LLMAuthenticationError,
     LLMClientError,
     LLMConnectionError,
     LLMContentFilterError,
     LLMContextLengthError,
-    LLMInvalidRequestError,
     LLMModelNotFoundError,
     LLMQuotaExceededError,
     LLMRateLimitError,
-    LLMResponseParseError,
     LLMServerError,
     LLMStreamError,
     LLMTimeoutError,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

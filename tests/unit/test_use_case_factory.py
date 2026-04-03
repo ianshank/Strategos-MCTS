@@ -5,12 +5,11 @@ Tests EnterpriseUseCaseFactory: registration, creation, query-based detection,
 and create_all_enabled functionality.
 """
 
-import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.enterprise.base.use_case import BaseUseCase, BaseDomainState
+from src.enterprise.base.use_case import BaseDomainState, BaseUseCase
 from src.enterprise.config.enterprise_settings import (
     BaseUseCaseConfig,
     EnterpriseDomain,
@@ -132,16 +131,15 @@ class TestEnterpriseUseCaseFactory:
     def test_settings_lazy_load(self, enterprise_settings):
         """Test settings property lazy loads if None."""
         with patch.object(EnterpriseUseCaseFactory, "_auto_register"):
-            f = EnterpriseUseCaseFactory(
+            factory = EnterpriseUseCaseFactory(
                 settings=None,
                 enterprise_settings=enterprise_settings,
             )
-        with patch("src.enterprise.factories.use_case_factory.get_enterprise_settings"):
+        with patch("src.config.settings.get_settings") as mock_get:
+            mock_get.return_value = MagicMock()
             # Access settings property triggers lazy load
-            with patch("src.config.settings.get_settings") as mock_get:
-                mock_get.return_value = MagicMock()
-                result = f.settings
-                mock_get.assert_called_once()
+            _ = factory.settings
+            mock_get.assert_called_once()
 
     # --- create() ---
 

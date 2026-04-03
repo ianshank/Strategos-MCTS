@@ -7,7 +7,6 @@ their configs, process methods, confidence scoring, and
 internal helpers.
 """
 
-import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -26,20 +25,19 @@ from src.enterprise.use_cases.ma_due_diligence.state import (
     RiskLevel,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 def _make_state(**overrides) -> MADueDiligenceState:
-    defaults = dict(
-        state_id="test_state",
-        domain="ma_due_diligence",
-        phase=DueDiligencePhase.INITIAL_SCREENING,
-        target_company="TargetCo",
-        acquirer_company="AcquirerCo",
-        deal_value=200_000_000,
-    )
+    defaults = {
+        "state_id": "test_state",
+        "domain": "ma_due_diligence",
+        "phase": DueDiligencePhase.INITIAL_SCREENING,
+        "target_company": "TargetCo",
+        "acquirer_company": "AcquirerCo",
+        "deal_value": 200_000_000,
+    }
     defaults.update(overrides)
     return MADueDiligenceState(**defaults)
 

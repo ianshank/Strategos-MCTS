@@ -5,9 +5,7 @@ Tests ExperienceBuffer, DataCollector, and LLMDataCollector
 including persistence, statistics, trajectory handling, and dataset creation.
 """
 
-import os
-import tempfile
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 import torch

@@ -11,11 +11,6 @@ Covers missed lines including:
 
 from __future__ import annotations
 
-import asyncio
-from collections import defaultdict
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import numpy as np
 import pytest
 
@@ -24,7 +19,6 @@ from src.framework.mcts.parallel_mcts import (
     LeafParallelMCTSEngine,
     ParallelMCTSConfig,
     ParallelMCTSEngine,
-    ParallelMCTSStats,
     RootParallelMCTSEngine,
     VirtualLossNode,
     create_parallel_mcts,

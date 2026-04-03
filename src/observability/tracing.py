@@ -98,6 +98,7 @@ class TracingManager:
         self._provider = TracerProvider(resource=resource)
 
         # Configure exporter based on type
+        processor: BatchSpanProcessor | SimpleSpanProcessor | None
         if exporter_type.lower() == "otlp":
             exporter = OTLPSpanExporter(
                 endpoint=otlp_endpoint,
@@ -105,8 +106,7 @@ class TracingManager:
             )
             processor = BatchSpanProcessor(exporter)
         elif exporter_type.lower() == "console":
-            exporter = ConsoleSpanExporter()
-            processor = SimpleSpanProcessor(exporter)
+            processor = SimpleSpanProcessor(ConsoleSpanExporter())
         elif exporter_type.lower() == "none":
             processor = None
         else:
@@ -368,7 +368,7 @@ def record_agent_execution(
     """
     current_span = trace.get_current_span()
     if current_span:
-        attrs = {
+        attrs: dict[str, str | bool | int | float] = {
             "agent.name": agent_name,
             "agent.confidence": confidence,
             "agent.execution_time_ms": execution_time_ms,

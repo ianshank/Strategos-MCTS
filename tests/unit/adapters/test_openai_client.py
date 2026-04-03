@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import time
 from collections.abc import AsyncIterator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest

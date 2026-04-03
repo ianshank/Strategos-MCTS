@@ -14,9 +14,11 @@ Tests cover:
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+
+chess = pytest.importorskip("chess", reason="python-chess not installed")
 
 from src.games.chess.verification.types import (
     BatchVerificationResult,
@@ -30,7 +32,6 @@ from src.games.chess.verification.types import (
     VerificationIssue,
     VerificationSeverity,
 )
-
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -389,7 +390,7 @@ class TestMoveValidatorConfig:
 class TestMoveValidator:
     """Test MoveValidator with real chess library."""
 
-    def _make_validator(self, validate_encoding: bool = False) -> "MoveValidator":
+    def _make_validator(self, validate_encoding: bool = False) -> MoveValidator:  # noqa: F821
         from src.games.chess.verification.move_validator import MoveValidator, MoveValidatorConfig
 
         config = MoveValidatorConfig(validate_encoding=validate_encoding, validate_legality=True)
@@ -440,11 +441,11 @@ class TestMoveValidator:
         from src.games.chess.state import ChessGameState
 
         # Italian Game position with capture possible
-        state = ChessGameState.from_fen("r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3")
+        ChessGameState.from_fen("r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3")
         validator = self._make_validator()
         # Nxe4 is not legal here, but d7d5 is, or check a known capture
         # Let's use a position where a capture is clearly legal
-        state2 = ChessGameState.from_fen("rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2")
+        ChessGameState.from_fen("rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2")
         # In this position, no direct captures. Use a simpler test:
         state3 = ChessGameState.from_fen("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2")
         result = validator.validate_move(state3, "e4d5")
@@ -555,7 +556,7 @@ class TestEnsembleCheckerConfig:
 class TestEnsembleConsistencyChecker:
     """Test EnsembleConsistencyChecker."""
 
-    def _make_checker(self, agent=None) -> "EnsembleConsistencyChecker":
+    def _make_checker(self, agent=None) -> EnsembleConsistencyChecker:  # noqa: F821
         from src.games.chess.verification.ensemble_checker import (
             EnsembleCheckerConfig,
             EnsembleConsistencyChecker,
@@ -693,7 +694,7 @@ class TestGameVerifierConfig:
 class TestChessGameVerifier:
     """Test ChessGameVerifier."""
 
-    def _make_verifier(self, **kwargs) -> "ChessGameVerifier":
+    def _make_verifier(self, **kwargs) -> ChessGameVerifier:  # noqa: F821
         from src.games.chess.verification.game_verifier import ChessGameVerifier, GameVerifierConfig
         from src.games.chess.verification.move_validator import MoveValidator, MoveValidatorConfig
 
@@ -833,7 +834,7 @@ class TestCreateGameVerifier:
 class TestChessVerificationFactory:
     """Test ChessVerificationFactory."""
 
-    def _make_factory(self) -> "ChessVerificationFactory":
+    def _make_factory(self) -> ChessVerificationFactory:  # noqa: F821
         from src.games.chess.verification.factory import ChessVerificationFactory
 
         mock_settings = MagicMock()

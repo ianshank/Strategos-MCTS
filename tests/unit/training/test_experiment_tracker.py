@@ -1,8 +1,6 @@
 """Unit tests for src/training/experiment_tracker module."""
 
 import os
-import time
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest

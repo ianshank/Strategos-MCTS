@@ -335,7 +335,7 @@ class RAGContextProvider:
     def _cache_key(self, problem: str, current_code: str | None) -> str:
         """Generate cache key."""
         content = problem + (current_code or "")
-        return hashlib.md5(content.encode()).hexdigest()
+        return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()
 
     def _evict_expired_entries(self) -> int:
         """Remove expired entries from cache. Returns count of removed entries."""

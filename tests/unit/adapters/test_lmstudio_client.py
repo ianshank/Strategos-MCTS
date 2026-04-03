@@ -6,7 +6,7 @@ model listing, error handling, retry logic, and streaming.
 """
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
@@ -465,3 +465,285 @@ class TestLMStudioClose:
 
         await client.close()
         mock_http.aclose.assert_not_called()
+
+
+def _build_stream_mocks(
+    client: LMStudioClient,
+    sse_lines: list[str],
+    status_code: int = 200,
+) -> None:
+    """Wire up mock httpx client for streaming with the given SSE lines."""
+    mock_response = AsyncMock()
+    mock_response.status_code = status_code
+
+    async def mock_aiter_lines():
+        for line in sse_lines:
+            yield line
+
+    mock_response.aiter_lines = mock_aiter_lines
+
+    async def mock_aread():
+        return b""
+
+    mock_response.aread = mock_aread
+    mock_response.text = "error"
+    mock_response.json = MagicMock(side_effect=json.JSONDecodeError("", "", 0))
+
+    mock_http = AsyncMock(spec=httpx.AsyncClient)
+    mock_http.is_closed = False
+
+    stream_cm = AsyncMock()
+    stream_cm.__aenter__ = AsyncMock(return_value=mock_response)
+    stream_cm.__aexit__ = AsyncMock(return_value=False)
+    mock_http.stream.return_value = stream_cm
+
+    client._client = mock_http
+
+
+@pytest.mark.unit
+class TestLMStudioGenerateWithTools:
+    """Tests for generation with tools parameter."""
+
+    @pytest.mark.asyncio
+    async def test_generate_with_tools_logs_warning(self, client, mock_success_response):
+        """Test that passing tools triggers a warning log and includes tools in payload."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_success_response
+
+        mock_http = AsyncMock()
+        mock_http.post = AsyncMock(return_value=mock_response)
+        mock_http.is_closed = False
+        client._client = mock_http
+
+        tools = [{"type": "function", "function": {"name": "get_weather"}}]
+        result = await client.generate(prompt="What is the weather?", tools=tools)
+
+        assert result.text == "Hello from local model"
+        call_payload = mock_http.post.call_args[1]["json"]
+        assert call_payload["tools"] == tools
+
+
+@pytest.mark.unit
+class TestLMStudioGenerateStream:
+    """Tests for streaming generation."""
+
+    @pytest.mark.asyncio
+    async def test_stream_returns_async_iterator(self, client):
+        """Test streaming returns an async iterator that yields content chunks."""
+        _build_stream_mocks(
+            client,
+            [
+                'data: {"choices":[{"delta":{"content":"Hello"}}]}',
+                'data: {"choices":[{"delta":{"content":" world"}}]}',
+                "data: [DONE]",
+            ],
+        )
+
+        result = await client.generate(prompt="Hello", stream=True)
+        chunks = [chunk async for chunk in result]
+        assert chunks == ["Hello", " world"]
+
+    @pytest.mark.asyncio
+    async def test_stream_skips_empty_content(self, client):
+        """Test streaming skips chunks with empty content."""
+        _build_stream_mocks(
+            client,
+            [
+                'data: {"choices":[{"delta":{"content":""}}]}',
+                'data: {"choices":[{"delta":{"content":"Hello"}}]}',
+                'data: {"choices":[{"delta":{}}]}',
+                "data: [DONE]",
+            ],
+        )
+
+        result = await client.generate(prompt="test", stream=True)
+        chunks = [chunk async for chunk in result]
+        assert chunks == ["Hello"]
+
+    @pytest.mark.asyncio
+    async def test_stream_ignores_non_data_lines(self, client):
+        """Test streaming ignores lines that don't start with 'data: '."""
+        _build_stream_mocks(
+            client,
+            [
+                ": comment line",
+                "",
+                'data: {"choices":[{"delta":{"content":"OK"}}]}',
+                "data: [DONE]",
+            ],
+        )
+
+        result = await client.generate(prompt="test", stream=True)
+        chunks = [chunk async for chunk in result]
+        assert chunks == ["OK"]
+
+    @pytest.mark.asyncio
+    async def test_stream_handles_malformed_json(self, client):
+        """Test streaming gracefully skips malformed JSON chunks."""
+        _build_stream_mocks(
+            client,
+            [
+                "data: {not valid json}",
+                'data: {"choices":[{"delta":{"content":"good"}}]}',
+                "data: [DONE]",
+            ],
+        )
+
+        result = await client.generate(prompt="test", stream=True)
+        chunks = [chunk async for chunk in result]
+        assert chunks == ["good"]
+
+    @pytest.mark.asyncio
+    async def test_stream_payload_includes_optional_params(self, client):
+        """Test streaming payload includes max_tokens, stop, and extra kwargs."""
+        _build_stream_mocks(client, ["data: [DONE]"])
+
+        result = await client.generate(
+            prompt="test",
+            stream=True,
+            max_tokens=50,
+            stop=["END"],
+            top_p=0.95,
+            top_k=40,
+            repeat_penalty=1.1,
+        )
+
+        # Consume the iterator so the stream() call actually happens
+        _ = [chunk async for chunk in result]
+
+        mock_http = client._client
+        call_args = mock_http.stream.call_args
+        assert call_args is not None, "stream() was never called"
+        payload = call_args.kwargs.get("json")
+        assert payload is not None
+        assert payload["stream"] is True
+        assert payload["max_tokens"] == 50
+        assert payload["stop"] == ["END"]
+        assert payload["top_p"] == 0.95
+        assert payload["top_k"] == 40
+        assert payload["repeat_penalty"] == 1.1
+
+    @pytest.mark.asyncio
+    async def test_stream_error_status_raises(self, client):
+        """Test streaming raises error on non-200 status code."""
+        _build_stream_mocks(client, [], status_code=500)
+
+        result = await client.generate(prompt="test", stream=True)
+        with pytest.raises(LLMServerError):
+            _ = [chunk async for chunk in result]
+
+    @pytest.mark.asyncio
+    async def test_stream_timeout_raises_timeout_error(self, client):
+        """Test streaming raises LLMTimeoutError on timeout."""
+        mock_http = AsyncMock(spec=httpx.AsyncClient)
+        mock_http.is_closed = False
+
+        stream_cm = AsyncMock()
+        stream_cm.__aenter__ = AsyncMock(side_effect=httpx.TimeoutException("Timeout"))
+        stream_cm.__aexit__ = AsyncMock(return_value=False)
+        mock_http.stream.return_value = stream_cm
+        client._client = mock_http
+
+        result = await client.generate(prompt="test", stream=True)
+        with pytest.raises(LLMTimeoutError):
+            _ = [chunk async for chunk in result]
+
+    @pytest.mark.asyncio
+    async def test_stream_connect_error_raises_connection_error(self, client):
+        """Test streaming raises LLMConnectionError on connection failure."""
+        mock_http = AsyncMock(spec=httpx.AsyncClient)
+        mock_http.is_closed = False
+
+        stream_cm = AsyncMock()
+        stream_cm.__aenter__ = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
+        stream_cm.__aexit__ = AsyncMock(return_value=False)
+        mock_http.stream.return_value = stream_cm
+        client._client = mock_http
+
+        result = await client.generate(prompt="test", stream=True)
+        with pytest.raises(LLMConnectionError):
+            _ = [chunk async for chunk in result]
+
+    @pytest.mark.asyncio
+    async def test_stream_unexpected_error_raises_stream_error(self, client):
+        """Test streaming raises LLMStreamError on unexpected exceptions."""
+        mock_http = AsyncMock(spec=httpx.AsyncClient)
+        mock_http.is_closed = False
+
+        stream_cm = AsyncMock()
+        stream_cm.__aenter__ = AsyncMock(side_effect=RuntimeError("Unexpected"))
+        stream_cm.__aexit__ = AsyncMock(return_value=False)
+        mock_http.stream.return_value = stream_cm
+        client._client = mock_http
+
+        result = await client.generate(prompt="test", stream=True)
+        with pytest.raises(LLMStreamError):
+            _ = [chunk async for chunk in result]
+
+    @pytest.mark.asyncio
+    async def test_stream_reraises_llm_client_error(self, client):
+        """Test streaming re-raises LLMClientError subclasses without wrapping."""
+        mock_http = AsyncMock(spec=httpx.AsyncClient)
+        mock_http.is_closed = False
+
+        original_error = LLMClientError("test error", "lmstudio")
+        stream_cm = AsyncMock()
+        stream_cm.__aenter__ = AsyncMock(side_effect=original_error)
+        stream_cm.__aexit__ = AsyncMock(return_value=False)
+        mock_http.stream.return_value = stream_cm
+        client._client = mock_http
+
+        result = await client.generate(prompt="test", stream=True)
+        with pytest.raises(LLMClientError, match="test error"):
+            _ = [chunk async for chunk in result]
+
+    @pytest.mark.asyncio
+    async def test_stream_multiple_chunks_concatenated(self, client):
+        """Test streaming yields multiple content chunks in order."""
+        _build_stream_mocks(
+            client,
+            [
+                'data: {"choices":[{"delta":{"content":"A"}}]}',
+                'data: {"choices":[{"delta":{"content":"B"}}]}',
+                'data: {"choices":[{"delta":{"content":"C"}}]}',
+                "data: [DONE]",
+            ],
+        )
+
+        result = await client.generate(prompt="test", stream=True)
+        chunks = [chunk async for chunk in result]
+        assert "".join(chunks) == "ABC"
+
+
+@pytest.mark.unit
+class TestLMStudioGenerateExtraKwargs:
+    """Tests for extra kwargs in non-streaming generation."""
+
+    @pytest.mark.asyncio
+    async def test_generate_passes_extra_kwargs(self, client, mock_success_response):
+        """Test that extra kwargs like repeat_penalty, frequency_penalty are forwarded."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_success_response
+
+        mock_http = AsyncMock()
+        mock_http.post = AsyncMock(return_value=mock_response)
+        mock_http.is_closed = False
+        client._client = mock_http
+
+        await client.generate(
+            prompt="Hello",
+            top_k=50,
+            repeat_penalty=1.2,
+            presence_penalty=0.5,
+            frequency_penalty=0.3,
+        )
+
+        call_payload = mock_http.post.call_args[1]["json"]
+        assert call_payload["top_k"] == 50
+        assert call_payload["repeat_penalty"] == 1.2
+        assert call_payload["presence_penalty"] == 0.5
+        assert call_payload["frequency_penalty"] == 0.3

@@ -4,7 +4,6 @@ Unit tests for src/api/local_embedding_store.py.
 
 import hashlib
 import logging
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -117,8 +116,9 @@ class TestLocalEmbeddingStore:
         assert store.initialize() is True
 
     def test_initialize_success(self):
-        import src.api.local_embedding_store as mod
         import numpy as np
+
+        import src.api.local_embedding_store as mod
 
         orig_np = mod._HAS_NUMPY
         orig_st = mod._HAS_SENTENCE_TRANSFORMERS
@@ -196,7 +196,7 @@ class TestLocalEmbeddingStore:
     def test_generate_doc_id(self):
         store = self._make_store()
         doc_id = store._generate_doc_id("hello world")
-        expected = hashlib.sha256("hello world".encode()).hexdigest()[:16]
+        expected = hashlib.sha256(b"hello world").hexdigest()[:16]
         assert doc_id == expected
 
     def test_generate_doc_id_deterministic(self):
@@ -348,6 +348,7 @@ class TestLocalEmbeddingStore:
 
     def test_search_success(self):
         import numpy as np
+
         from src.api.local_embedding_store import LocalDocument
 
         store = self._make_store()
@@ -375,6 +376,7 @@ class TestLocalEmbeddingStore:
 
     def test_search_with_min_score(self):
         import numpy as np
+
         from src.api.local_embedding_store import LocalDocument
 
         store = self._make_store()
@@ -397,6 +399,7 @@ class TestLocalEmbeddingStore:
 
     def test_search_with_metadata_filter(self):
         import numpy as np
+
         from src.api.local_embedding_store import LocalDocument
 
         store = self._make_store()
@@ -420,6 +423,7 @@ class TestLocalEmbeddingStore:
 
     def test_search_model_none(self):
         import numpy as np
+
         from src.api.local_embedding_store import LocalDocument
 
         store = self._make_store()
@@ -432,6 +436,7 @@ class TestLocalEmbeddingStore:
 
     def test_search_exception(self):
         import numpy as np
+
         from src.api.local_embedding_store import LocalDocument
 
         store = self._make_store()
@@ -448,6 +453,7 @@ class TestLocalEmbeddingStore:
 
     def test_remove_document_success(self):
         import numpy as np
+
         from src.api.local_embedding_store import LocalDocument
 
         store = self._make_store()
@@ -469,6 +475,7 @@ class TestLocalEmbeddingStore:
 
     def test_remove_last_document(self):
         import numpy as np
+
         from src.api.local_embedding_store import LocalDocument
 
         store = self._make_store()
@@ -492,6 +499,7 @@ class TestLocalEmbeddingStore:
 
     def test_clear(self):
         import numpy as np
+
         from src.api.local_embedding_store import LocalDocument
 
         store = self._make_store()

@@ -11,13 +11,11 @@ Tests the neuro-symbolic integration layer including:
 """
 
 import asyncio
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.neuro_symbolic.config import ConstraintConfig, NeuroSymbolicConfig
-from src.neuro_symbolic.constraints import ConstraintResult, ConstraintSatisfactionLevel
+from src.neuro_symbolic.config import NeuroSymbolicConfig
 from src.neuro_symbolic.integration import (
     HybridConfidenceAggregator,
     NeuroSymbolicMCTSConfig,
@@ -28,7 +26,6 @@ from src.neuro_symbolic.integration import (
     extend_graph_builder,
 )
 from src.neuro_symbolic.state import Fact, NeuroSymbolicState, SymbolicFactType
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

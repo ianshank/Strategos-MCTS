@@ -7,14 +7,12 @@ the setup_logging helper. All heavy dependencies (torch, transformers,
 datasets, BERTMetaController) are mocked.
 """
 
-import argparse
 import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers: mock out the heavy imports that train_bert_lora pulls in
@@ -297,6 +295,7 @@ class TestEvaluate:
     @patch("src.training.train_bert_lora.Dataset")
     def test_evaluate_returns_metrics(self, mock_dataset_cls):
         import torch
+
         from src.training.train_bert_lora import BERTLoRATrainer
 
         mock_ds = MagicMock()
@@ -331,6 +330,7 @@ class TestEvaluate:
     @patch("src.training.train_bert_lora.Dataset")
     def test_evaluate_correct_predictions(self, mock_dataset_cls):
         import torch
+
         from src.training.train_bert_lora import BERTLoRATrainer
 
         mock_ds = MagicMock()

@@ -1,6 +1,7 @@
 """Unit tests for src/training/unified_orchestrator.py."""
 
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 
@@ -42,10 +43,10 @@ class TestUnifiedTrainingOrchestratorInit:
         mock_pv,
     ):
         """Test that __init__ creates all required components."""
-        from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
-
         # Setup mocks
         import torch
+
+        from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
 
         dummy_param = torch.nn.Parameter(torch.randn(2, 2))
 
@@ -95,9 +96,9 @@ class TestUnifiedTrainingOrchestratorInit:
         tmp_path,
     ):
         """Test that _setup_paths creates checkpoint, data, and log directories."""
-        from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
-
         import torch
+
+        from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
 
         dummy_param = torch.nn.Parameter(torch.randn(2, 2))
 
@@ -147,6 +148,7 @@ class TestUnifiedTrainingOrchestratorInit:
     ):
         """Test that _setup_optimizers creates correct scheduler for cosine LR schedule."""
         import torch
+
         from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
 
         mock_pv_net = MagicMock()
@@ -197,6 +199,7 @@ class TestUnifiedTrainingOrchestratorInit:
     ):
         """Test that _setup_optimizers creates StepLR scheduler for step schedule."""
         import torch
+
         from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
 
         param = torch.nn.Parameter(torch.randn(2, 2))
@@ -246,6 +249,7 @@ class TestUnifiedTrainingOrchestratorInit:
     ):
         """Test that constant LR schedule results in no scheduler."""
         import torch
+
         from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
 
         param = torch.nn.Parameter(torch.randn(2, 2))
@@ -299,8 +303,9 @@ class TestComputeGradientNorm:
     ):
         """Test gradient norm computation returns correct value."""
         import torch
-        from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
+
         from src.training.system_config import SystemConfig
+        from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
 
         param = torch.nn.Parameter(torch.randn(2, 2))
         mock_pv_net = MagicMock()
@@ -355,8 +360,9 @@ class TestComputeGradientNorm:
     ):
         """Test gradient norm when no gradients are computed returns 0."""
         import torch
-        from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
+
         from src.training.system_config import SystemConfig
+        from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
 
         param = torch.nn.Parameter(torch.randn(2, 2))
         mock_pv_net = MagicMock()
@@ -393,8 +399,9 @@ class TestShouldEarlyStop:
 
     def _make_orchestrator(self, tmp_path, checkpoint_interval=1, patience=3, min_delta=0.01):
         """Helper to create an orchestrator with mocked components."""
-        import torch
         from unittest.mock import patch as _patch
+
+        import torch
 
         patches = [
             _patch("src.training.unified_orchestrator.create_policy_value_network"),
@@ -419,8 +426,8 @@ class TestShouldEarlyStop:
                 m.parameters.return_value = [torch.nn.Parameter(torch.randn(2, 2))]
                 mock.return_value = m
 
-        from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
         from src.training.system_config import SystemConfig
+        from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
 
         config = SystemConfig(device="cpu", use_wandb=False, use_mixed_precision=False)
         config.training.checkpoint_interval = checkpoint_interval
@@ -488,8 +495,9 @@ class TestGetMemoryUtilization:
     ):
         """Test that _get_memory_utilization returns CPU memory metrics."""
         import torch
-        from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
+
         from src.training.system_config import SystemConfig
+        from src.training.unified_orchestrator import UnifiedTrainingOrchestrator
 
         param = torch.nn.Parameter(torch.randn(2, 2))
         mock_pv_net = MagicMock()

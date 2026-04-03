@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -20,6 +19,7 @@ pytestmark = [
     pytest.mark.skipif(not _TORCH_AVAILABLE, reason="PyTorch not available"),
 ]
 
+from src.framework.mcts.llm_guided.training.metrics import TrainingMetrics
 from src.framework.mcts.llm_guided.training.trainer import (
     DistillationTrainer,
     DistillationTrainerConfig,
@@ -28,8 +28,6 @@ from src.framework.mcts.llm_guided.training.trainer import (
     TrainingCheckpoint,
     create_trainer,
 )
-from src.framework.mcts.llm_guided.training.metrics import TrainingMetrics
-
 
 # ---------------------------------------------------------------------------
 # DistillationTrainerConfig tests

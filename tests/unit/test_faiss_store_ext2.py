@@ -8,9 +8,8 @@ structured logging, and create_faiss_store factory.
 from __future__ import annotations
 
 import json
-import threading
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -22,7 +21,6 @@ from src.storage.faiss_store import (
     IndexType,
     create_faiss_store,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -192,7 +190,7 @@ class TestCreateIndex:
 
         store = FAISSVectorStore(index_type=IndexType.FLAT_IP, embedding_dim=4, use_gpu=True)
         store._use_gpu = True  # Force GPU usage
-        result = store._create_index()
+        store._create_index()
         mock_faiss.index_cpu_to_gpu.assert_called_once_with(mock_gpu_res, 0, mock_index)
 
     @patch("src.storage.faiss_store._HAS_FAISS_GPU", True)

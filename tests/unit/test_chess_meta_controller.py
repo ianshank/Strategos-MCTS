@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import tempfile
-from unittest.mock import MagicMock, patch
-
 import pytest
+
+chess = pytest.importorskip("chess", reason="python-chess not installed")
 import torch
 
 from src.games.chess.config import AgentType, ChessEnsembleConfig, GamePhase
@@ -17,38 +16,37 @@ from src.games.chess.meta_controller import (
     RoutingDecision,
 )
 
-
 # ---------- Helper fixtures ----------
 
 def _make_features(**overrides) -> ChessPositionFeatures:
     """Create ChessPositionFeatures with sensible defaults, allowing overrides."""
-    defaults = dict(
-        game_phase=GamePhase.MIDDLEGAME,
-        move_number=20,
-        is_opening=False,
-        is_middlegame=True,
-        is_endgame=False,
-        total_material=50,
-        material_balance=0,
-        has_queens=True,
-        is_material_imbalanced=False,
-        is_check=False,
-        num_legal_moves=30,
-        has_captures=True,
-        has_promotions=False,
-        is_forcing=False,
-        center_control=0.5,
-        king_safety=0.7,
-        pawn_structure_complexity=0.3,
-        time_pressure=False,
-    )
+    defaults = {
+        "game_phase": GamePhase.MIDDLEGAME,
+        "move_number": 20,
+        "is_opening": False,
+        "is_middlegame": True,
+        "is_endgame": False,
+        "total_material": 50,
+        "material_balance": 0,
+        "has_queens": True,
+        "is_material_imbalanced": False,
+        "is_check": False,
+        "num_legal_moves": 30,
+        "has_captures": True,
+        "has_promotions": False,
+        "is_forcing": False,
+        "center_control": 0.5,
+        "king_safety": 0.7,
+        "pawn_structure_complexity": 0.3,
+        "time_pressure": False,
+    }
     defaults.update(overrides)
     return ChessPositionFeatures(**defaults)
 
 
 def _make_config(**overrides) -> ChessEnsembleConfig:
     """Create a ChessEnsembleConfig with use_learned_routing=False by default."""
-    defaults = dict(use_learned_routing=False)
+    defaults = {"use_learned_routing": False}
     defaults.update(overrides)
     return ChessEnsembleConfig(**defaults)
 
@@ -121,7 +119,6 @@ class TestChessFeatureExtractor:
     """Tests for ChessFeatureExtractor."""
 
     def test_extract_starting_position(self):
-        import chess
         from src.games.chess.state import ChessGameState
 
         state = ChessGameState.from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")

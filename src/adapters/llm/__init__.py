@@ -148,13 +148,12 @@ def create_client(
         # Local LM Studio
         client = create_client("lmstudio", base_url="http://localhost:1234/v1")
 
-        # With custom settings
+        # With custom settings (use environment variables for keys)
         client = create_client(
             "openai",
-            api_key="sk-...",
+            api_key=os.environ["OPENAI_API_KEY"],
             timeout=120.0,
             max_retries=5,
-            organization="org-..."
         )
     """
     client_class = get_provider_class(provider)

@@ -8,7 +8,6 @@ traced decorator on async functions, and convenience functions.
 
 from __future__ import annotations
 
-import asyncio
 import os
 from unittest.mock import MagicMock, patch
 
@@ -453,8 +452,6 @@ class TestFacadeDecoratorsExtended:
                 failing()
 
             # Should have been called with success=False label
-            call_labels = mock_counter.call_args[1].get("labels", mock_counter.call_args[0][-1] if len(mock_counter.call_args[0]) > 1 else {})
-            # Verify the counter was called
             assert mock_counter.called
 
 

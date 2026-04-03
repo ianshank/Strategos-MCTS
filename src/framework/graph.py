@@ -1118,17 +1118,17 @@ class IntegratedFramework:
         self.vector_store = vector_store
         self.adk_agents = adk_agents or {}
 
-        # Import agents (would be real imports in production)
+        # Import LLM-backed agents for graph processing
         try:
-            from improved_hrm_agent import HRMAgent
-            from improved_trm_agent import TRMAgent
+            from src.framework.agents.llm_hrm import LLMHRMAgent
+            from src.framework.agents.llm_trm import LLMTRMAgent
 
-            self.hrm_agent = HRMAgent(
+            self.hrm_agent = LLMHRMAgent(
                 model_adapter=model_adapter,
                 logger=logger,
                 **(hrm_config or {}),
             )
-            self.trm_agent = TRMAgent(
+            self.trm_agent = LLMTRMAgent(
                 model_adapter=model_adapter,
                 logger=logger,
                 **(trm_config or {}),
@@ -1136,7 +1136,7 @@ class IntegratedFramework:
         except ImportError:
             self.hrm_agent = None
             self.trm_agent = None
-            self.logger.warning("Could not import HRM/TRM agents")
+            self.logger.warning("Could not import LLM HRM/TRM agents")
 
         # Build graph
         self.graph_builder = GraphBuilder(

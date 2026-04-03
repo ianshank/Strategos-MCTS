@@ -412,7 +412,7 @@ class TestTrackAgentRequestDecorator:
 
         with (
             patch.object(AGENT_REQUESTS_TOTAL, "labels", return_value=MagicMock()) as mock_counter,
-            patch.object(AGENT_REQUEST_LATENCY, "labels", return_value=MagicMock()) as mock_hist,
+            patch.object(AGENT_REQUEST_LATENCY, "labels", return_value=MagicMock()),
         ):
             result = asyncio.run(my_async_func())
             assert result == "async_result"

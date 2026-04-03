@@ -5,8 +5,7 @@ Tests TrainingConfig, TrainingMetrics, PolicyDataset, ValueDataset,
 NeuralTrainer, and convenience functions.
 """
 
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 import torch
@@ -20,7 +19,6 @@ from src.training.neural_trainer import (
     TrainingMetrics,
     ValueDataset,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -52,7 +50,6 @@ def _make_trainer_with_mock_forward(config, model=None, loss_fn=None):
     trainer = NeuralTrainer(model, loss_fn, config, model_name="test_model")
 
     # Patch _forward_batch to avoid PolicyNetwork/ValueNetwork isinstance checks
-    original_forward = trainer._forward_batch
 
     def generic_forward(batch):
         states = batch[0]

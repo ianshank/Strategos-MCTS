@@ -3,15 +3,12 @@ Unit tests for src/framework/assembly/substructure_library.py.
 """
 
 import json
-import pickle
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
 from src.framework.assembly.substructure_library import Match, SubstructureLibrary
-
 
 # ---------------------------------------------------------------------------
 # Match dataclass tests

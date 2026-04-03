@@ -89,7 +89,7 @@ class MetricsCollector:
         self._agent_metrics: dict[str, AgentMetrics] = {}
         self._node_timings: dict[str, list[float]] = defaultdict(list)
         self._request_latencies: list[float] = []
-        self._memory_samples: list[dict[str, float]] = []
+        self._memory_samples: list[dict[str, str | int | float]] = []
         self._start_time = datetime.utcnow()
         self._process = psutil.Process()
 
@@ -291,7 +291,7 @@ class MetricsCollector:
         if self._prometheus_initialized:
             self._prom_request_latency.observe(latency_ms)
 
-    def sample_system_metrics(self) -> dict[str, float]:
+    def sample_system_metrics(self) -> dict[str, str | int | float]:
         """Sample current system metrics."""
         memory_info = self._process.memory_info()
         cpu_percent = self._process.cpu_percent()

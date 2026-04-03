@@ -7,7 +7,6 @@ state updates from agents, final analysis generation, and the
 async process entry point.
 """
 
-import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -18,10 +17,8 @@ from src.enterprise.use_cases.ma_due_diligence.state import (
     IdentifiedRisk,
     MADueDiligenceState,
     RiskLevel,
-    SynergyOpportunity,
 )
 from src.enterprise.use_cases.ma_due_diligence.use_case import MADueDiligence
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -29,15 +26,15 @@ from src.enterprise.use_cases.ma_due_diligence.use_case import MADueDiligence
 
 def _make_state(**overrides) -> MADueDiligenceState:
     """Build a minimal MADueDiligenceState for tests."""
-    defaults = dict(
-        state_id="test_state",
-        domain="ma_due_diligence",
-        phase=DueDiligencePhase.INITIAL_SCREENING,
-        target_company="TargetCo",
-        acquirer_company="AcquirerCo",
-        deal_value=200_000_000,
-        deal_rationale="Strategic acquisition",
-    )
+    defaults = {
+        "state_id": "test_state",
+        "domain": "ma_due_diligence",
+        "phase": DueDiligencePhase.INITIAL_SCREENING,
+        "target_company": "TargetCo",
+        "acquirer_company": "AcquirerCo",
+        "deal_value": 200_000_000,
+        "deal_rationale": "Strategic acquisition",
+    }
     defaults.update(overrides)
     return MADueDiligenceState(**defaults)
 

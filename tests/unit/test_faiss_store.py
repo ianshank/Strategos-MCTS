@@ -156,7 +156,7 @@ class TestFAISSVectorStoreHelpers:
     def test_generate_doc_id(self):
         store = FAISSVectorStore()
         doc_id = store._generate_doc_id("hello world")
-        expected = hashlib.sha256("hello world".encode()).hexdigest()[:16]
+        expected = hashlib.sha256(b"hello world").hexdigest()[:16]
         assert doc_id == expected
 
     def test_generate_doc_id_deterministic(self):

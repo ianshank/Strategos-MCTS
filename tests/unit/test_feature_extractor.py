@@ -176,7 +176,6 @@ class TestFeatureExtractor:
         mock_st_cls.return_value = mock_model
         # Make encode succeed during init (for prototypes) but fail during extract
         call_count = [0]
-        original_encode = mock_model.encode
 
         def encode_side_effect(*args, **kwargs):
             call_count[0] += 1

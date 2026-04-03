@@ -30,7 +30,8 @@ class TestGreedyRolloutPolicy:
 
     @pytest.mark.asyncio
     async def test_evaluate_uses_heuristic(self):
-        heuristic = lambda state: 0.7
+        def heuristic(state):
+            return 0.7
         policy = GreedyRolloutPolicy(heuristic_fn=heuristic, noise_scale=0.0)
         rng = np.random.default_rng(42)
         value = await policy.evaluate(_make_state(), rng)
@@ -38,7 +39,8 @@ class TestGreedyRolloutPolicy:
 
     @pytest.mark.asyncio
     async def test_evaluate_adds_noise(self):
-        heuristic = lambda state: 0.5
+        def heuristic(state):
+            return 0.5
         policy = GreedyRolloutPolicy(heuristic_fn=heuristic, noise_scale=0.1)
         rng = np.random.default_rng(42)
         values = [await policy.evaluate(_make_state(), rng) for _ in range(20)]
@@ -49,7 +51,8 @@ class TestGreedyRolloutPolicy:
 
     @pytest.mark.asyncio
     async def test_evaluate_clamps_to_bounds(self):
-        heuristic = lambda state: 0.99
+        def heuristic(state):
+            return 0.99
         policy = GreedyRolloutPolicy(heuristic_fn=heuristic, noise_scale=0.05)
         rng = np.random.default_rng(42)
         for _ in range(20):
@@ -63,7 +66,8 @@ class TestHybridRolloutPolicy:
 
     @pytest.mark.asyncio
     async def test_evaluate_with_heuristic(self):
-        heuristic = lambda state: 0.8
+        def heuristic(state):
+            return 0.8
         policy = HybridRolloutPolicy(heuristic_fn=heuristic, heuristic_weight=0.7, random_weight=0.3)
         rng = np.random.default_rng(42)
         value = await policy.evaluate(_make_state(), rng)
@@ -83,7 +87,8 @@ class TestHybridRolloutPolicy:
 
     @pytest.mark.asyncio
     async def test_evaluate_deterministic_seed(self):
-        heuristic = lambda state: 0.6
+        def heuristic(state):
+            return 0.6
         policy = HybridRolloutPolicy(heuristic_fn=heuristic, noise_scale=0.1)
         rng1 = np.random.default_rng(42)
         rng2 = np.random.default_rng(42)

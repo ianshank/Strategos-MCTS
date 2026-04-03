@@ -191,7 +191,7 @@ class TestOnlineLearner:
     def test_buffer_trimming(self):
         learner = self._make_learner()
         learner.max_buffer_size = 5
-        for i in range(10):
+        for _i in range(10):
             learner.add_experience(torch.randn(12, 8, 8), np.zeros(100), 0.0)
         assert len(learner.experience_buffer) == 5
 

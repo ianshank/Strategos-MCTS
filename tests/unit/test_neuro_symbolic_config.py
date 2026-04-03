@@ -5,8 +5,6 @@ Tests all config dataclasses, preset configurations,
 serialization, and validation.
 """
 
-import json
-import os
 
 import pytest
 

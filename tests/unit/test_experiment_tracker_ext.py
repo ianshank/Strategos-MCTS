@@ -11,14 +11,12 @@ Covers methods and branches not tested in tests/unit/training/test_experiment_tr
 
 import os
 import time
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.training.experiment_tracker import (
     BraintrustTracker,
-    ExperimentConfig,
     TrainingMetrics,
     UnifiedExperimentTracker,
     WandBTracker,
@@ -71,7 +69,7 @@ class TestBraintrustTrackerExtended:
         with _clean_env():
             os.environ.pop("BRAINTRUST_API_KEY", None)
             tracker = BraintrustTracker(api_key=None)
-            exp_id = tracker.init_experiment(
+            tracker.init_experiment(
                 "exp",
                 metadata={"version": "2.0"},
             )
