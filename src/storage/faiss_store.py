@@ -637,24 +637,30 @@ class FAISSVectorStore:
         """Check if document metadata matches filter criteria."""
         return all(metadata.get(key) == value for key, value in filter_metadata.items())
 
-    # Logging helper
-    def _log(self, level: int, message: str, **kwargs: Any) -> None:
-        if _HAS_STRUCTURED_LOGGING:
-            self._logger.log(level, message, **kwargs)
-        else:
-            self._logger.log(level, f"{message} {kwargs}" if kwargs else message)
-
+    # Logging helpers
     def _log_debug(self, message: str, **kwargs: Any) -> None:
-        self._log(logging.DEBUG, message, **kwargs)
+        if _HAS_STRUCTURED_LOGGING:
+            self._logger.debug(message, **kwargs)
+        else:
+            self._logger.debug(f"{message} {kwargs}" if kwargs else message)
 
     def _log_info(self, message: str, **kwargs: Any) -> None:
-        self._log(logging.INFO, message, **kwargs)
+        if _HAS_STRUCTURED_LOGGING:
+            self._logger.info(message, **kwargs)
+        else:
+            self._logger.info(f"{message} {kwargs}" if kwargs else message)
 
     def _log_warning(self, message: str, **kwargs: Any) -> None:
-        self._log(logging.WARNING, message, **kwargs)
+        if _HAS_STRUCTURED_LOGGING:
+            self._logger.warning(message, **kwargs)
+        else:
+            self._logger.warning(f"{message} {kwargs}" if kwargs else message)
 
     def _log_error(self, message: str, **kwargs: Any) -> None:
-        self._log(logging.ERROR, message, **kwargs)
+        if _HAS_STRUCTURED_LOGGING:
+            self._logger.error(message, **kwargs)
+        else:
+            self._logger.error(f"{message} {kwargs}" if kwargs else message)
 
     @property
     def is_available(self) -> bool:
