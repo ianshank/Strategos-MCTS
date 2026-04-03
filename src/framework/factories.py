@@ -21,6 +21,7 @@ import logging
 from typing import Any, Protocol
 
 from src.adapters.llm.base import LLMClient
+from src.config.constants import DEFAULT_OPENAI_MODEL
 from src.config.settings import Settings, get_settings
 
 
@@ -109,11 +110,11 @@ class LLMClientFactory:
     def _get_default_model(self, provider: str) -> str:
         """Get default model for a provider."""
         defaults = {
-            "openai": "gpt-4-turbo-preview",
+            "openai": DEFAULT_OPENAI_MODEL,
             "anthropic": "claude-3-sonnet-20240229",
             "lmstudio": "local-model",
         }
-        return defaults.get(provider, "gpt-4-turbo-preview")
+        return defaults.get(provider, DEFAULT_OPENAI_MODEL)
 
 
 class AgentFactory:

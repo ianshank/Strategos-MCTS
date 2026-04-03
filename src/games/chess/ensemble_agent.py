@@ -356,7 +356,6 @@ class ChessEnsembleAgent:
         hrm_confidence = hrm_output.convergence_path[-1] if hrm_output.convergence_path else 0.5
 
         # Get move probabilities
-        # legal_moves = state.get_legal_actions()  # Unused
         from_black = state.current_player == -1
 
         move_probs = self.action_encoder.filter_policy_to_legal(

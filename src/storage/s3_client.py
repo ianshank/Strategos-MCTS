@@ -29,6 +29,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from src.config.constants import DEFAULT_S3_BUCKET_NAME, DEFAULT_S3_REGION
 from src.observability.logging import get_structured_logger
 
 
@@ -36,8 +37,8 @@ from src.observability.logging import get_structured_logger
 class S3Config:
     """Configuration for S3 storage client."""
 
-    bucket_name: str = field(default_factory=lambda: os.environ.get("S3_BUCKET_NAME", "mcts-framework-storage"))
-    region_name: str = field(default_factory=lambda: os.environ.get("AWS_REGION", "us-east-1"))
+    bucket_name: str = field(default_factory=lambda: os.environ.get("S3_BUCKET_NAME", DEFAULT_S3_BUCKET_NAME))
+    region_name: str = field(default_factory=lambda: os.environ.get("AWS_REGION", DEFAULT_S3_REGION))
     endpoint_url: str | None = field(default_factory=lambda: os.environ.get("S3_ENDPOINT_URL"))
 
     # Retry configuration

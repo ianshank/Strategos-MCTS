@@ -30,6 +30,13 @@ from opentelemetry.sdk.trace.export import (
 from opentelemetry.trace import Span, SpanKind, Status, StatusCode
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
+from src.config.constants import (
+    DEFAULT_ENVIRONMENT,
+    DEFAULT_OTEL_SERVICE_NAME,
+    DEFAULT_OTLP_ENDPOINT,
+    SERVICE_VERSION,
+)
+
 from .logging import get_correlation_id
 
 
@@ -78,15 +85,15 @@ class TracingManager:
             return
 
         # Get configuration from environment or parameters
-        service_name = service_name or os.environ.get("OTEL_SERVICE_NAME", "mcts-framework")
-        otlp_endpoint = otlp_endpoint or os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317")
+        service_name = service_name or os.environ.get("OTEL_SERVICE_NAME", DEFAULT_OTEL_SERVICE_NAME)
+        otlp_endpoint = otlp_endpoint or os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", DEFAULT_OTLP_ENDPOINT)
         exporter_type = exporter_type or os.environ.get("OTEL_EXPORTER_TYPE", "otlp")
 
         # Build resource attributes
         resource_attrs = {
             SERVICE_NAME: service_name,
-            "service.version": os.environ.get("SERVICE_VERSION", "0.1.0"),
-            "deployment.environment": os.environ.get("ENVIRONMENT", "development"),
+            "service.version": os.environ.get("SERVICE_VERSION", SERVICE_VERSION),
+            "deployment.environment": os.environ.get("ENVIRONMENT", DEFAULT_ENVIRONMENT),
         }
 
         if additional_resources:

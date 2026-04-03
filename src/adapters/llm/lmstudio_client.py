@@ -12,7 +12,7 @@ from typing import Any
 
 import httpx
 
-from src.config.constants import DEFAULT_LMSTUDIO_URL
+from src.config.constants import DEFAULT_LMSTUDIO_TIMEOUT, DEFAULT_LMSTUDIO_URL
 
 from .base import BaseLLMClient, LLMResponse
 from .exceptions import (
@@ -48,7 +48,7 @@ class LMStudioClient(BaseLLMClient):
         api_key: str | None = None,  # Not required for local
         model: str | None = None,
         base_url: str | None = None,
-        timeout: float = 300.0,  # Long timeout for local inference
+        timeout: float = DEFAULT_LMSTUDIO_TIMEOUT,  # Long timeout for local inference
         max_retries: int = 2,  # Fewer retries for local
         # Rate limiting
         rate_limit_per_minute: int | None = None,

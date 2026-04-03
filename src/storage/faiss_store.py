@@ -20,10 +20,7 @@ import logging
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
-
-if TYPE_CHECKING:
-    pass
+from typing import Any, Final
 
 # Module-level logger
 logger: logging.Logger = logging.getLogger(__name__)
@@ -640,30 +637,24 @@ class FAISSVectorStore:
         """Check if document metadata matches filter criteria."""
         return all(metadata.get(key) == value for key, value in filter_metadata.items())
 
-    # Logging helpers
-    def _log_debug(self, message: str, **kwargs: Any) -> None:
+    # Logging helper
+    def _log(self, level: int, message: str, **kwargs: Any) -> None:
         if _HAS_STRUCTURED_LOGGING:
-            self._logger.debug(message, **kwargs)
+            self._logger.log(level, message, **kwargs)
         else:
-            self._logger.debug(f"{message} {kwargs}" if kwargs else message)
+            self._logger.log(level, f"{message} {kwargs}" if kwargs else message)
+
+    def _log_debug(self, message: str, **kwargs: Any) -> None:
+        self._log(logging.DEBUG, message, **kwargs)
 
     def _log_info(self, message: str, **kwargs: Any) -> None:
-        if _HAS_STRUCTURED_LOGGING:
-            self._logger.info(message, **kwargs)
-        else:
-            self._logger.info(f"{message} {kwargs}" if kwargs else message)
+        self._log(logging.INFO, message, **kwargs)
 
     def _log_warning(self, message: str, **kwargs: Any) -> None:
-        if _HAS_STRUCTURED_LOGGING:
-            self._logger.warning(message, **kwargs)
-        else:
-            self._logger.warning(f"{message} {kwargs}" if kwargs else message)
+        self._log(logging.WARNING, message, **kwargs)
 
     def _log_error(self, message: str, **kwargs: Any) -> None:
-        if _HAS_STRUCTURED_LOGGING:
-            self._logger.error(message, **kwargs)
-        else:
-            self._logger.error(f"{message} {kwargs}" if kwargs else message)
+        self._log(logging.ERROR, message, **kwargs)
 
     @property
     def is_available(self) -> bool:
