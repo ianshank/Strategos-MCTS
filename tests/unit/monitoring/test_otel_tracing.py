@@ -330,14 +330,26 @@ class TestTraceSpan:
                 raise ValueError("test error")
 
     def test_trace_span_works_with_dummy_tracer(self):
-        """Test trace_span works gracefully with DummyTracer."""
+        """Test trace_span works gracefully with a dummy/fallback tracer."""
         import src.monitoring.otel_tracing as mod
 
         mod._tracer = None
 
-        with patch.object(mod, "OTEL_AVAILABLE", False):
+        from contextlib import contextmanager as _cm
+
+        class _FallbackTracer:
+            def start_as_current_span(self, *_a, **_k):
+                @_cm
+                def ctx():
+                    yield None
+                return ctx()
+
+        with (
+            patch.object(mod, "OTEL_AVAILABLE", False),
+            patch.object(mod, "DummyTracer", _FallbackTracer, create=True),
+        ):
             with mod.trace_span("test.dummy") as span:
-                # DummyTracer yields None
+                # Fallback tracer yields None
                 assert span is None
 
     def test_trace_span_no_attributes(self, mock_tracer, mock_span):
