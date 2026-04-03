@@ -100,15 +100,20 @@ def mock_pinecone_client(mock_pinecone_index: MagicMock) -> MagicMock:
 
 
 @pytest.fixture
-def available_store(mock_pinecone_client: MagicMock, mock_pinecone_index: MagicMock) -> "PineconeVectorStore":
+def available_store(mock_pinecone_client: MagicMock, mock_pinecone_index: MagicMock, monkeypatch: pytest.MonkeyPatch):
     """Create a PineconeVectorStore that is initialized and available."""
+    import src.storage.pinecone_store as ps
     from src.storage.pinecone_store import PineconeVectorStore
 
-    with patch("src.storage.pinecone_store.PINECONE_AVAILABLE", True):
-        store = PineconeVectorStore(api_key="test-key", host="test-host", auto_init=False)
-        store._client = mock_pinecone_client
-        store._index = mock_pinecone_index
-        store._is_initialized = True
+    monkeypatch.setattr(ps, "PINECONE_AVAILABLE", True)
+    store = PineconeVectorStore.__new__(PineconeVectorStore)
+    store._api_key = "test-key"
+    store._host = "test-host"
+    store.namespace = "meta_controller"
+    store._client = mock_pinecone_client
+    store._index = mock_pinecone_index
+    store._is_initialized = True
+    store._operation_buffer = []
     return store
 
 
