@@ -63,6 +63,19 @@ except ImportError:
 # =============================================================================
 
 
+collect_ignore_glob = []
+
+# Conditionally skip test modules that require optional dependencies
+try:
+    import fastapi  # noqa: F401
+except ImportError:
+    collect_ignore_glob += [
+        "unit/test_inference_server.py",
+        "unit/test_rest_server.py",
+        "unit/test_rest_server_ext.py",
+    ]
+
+
 def pytest_configure(config):
     """Configure pytest with custom markers and settings."""
     # Register custom markers - comprehensive list for all test categories

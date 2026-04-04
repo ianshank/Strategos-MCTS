@@ -64,7 +64,9 @@ def mock_framework():
     @dataclass
     class MockAgentResult:
         agent_name: str = "MCTS (Monte Carlo Tree Search)"
-        response: str = "This is a complete mock response for testing purposes. The MCTS analysis has determined that the optimal approach involves strategic exploration of the decision tree to identify the best course of action."
+        response: str = (
+            "This is a complete mock response for testing purposes. The MCTS analysis has determined that the optimal approach involves strategic exploration of the decision tree to identify the best course of action."
+        )
         confidence: float = 0.88
         reasoning_steps: list = None
         execution_time_ms: float = 125.5

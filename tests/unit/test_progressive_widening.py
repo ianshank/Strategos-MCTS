@@ -292,9 +292,7 @@ class TestProgressiveWideningEngine:
         assert root.rave_visits == {}
 
     def test_adapt_progressive_widening_high_variance(self):
-        engine = ProgressiveWideningEngine(
-            pw_config=ProgressiveWideningConfig(k=1.0, adaptive=True, k_min=0.5)
-        )
+        engine = ProgressiveWideningEngine(pw_config=ProgressiveWideningConfig(k=1.0, adaptive=True, k_min=0.5))
         rng = engine.rng
         root = RAVENode(state=_make_state(), rng=rng)
 
@@ -311,9 +309,7 @@ class TestProgressiveWideningEngine:
         assert engine.pw_config.k < initial_k  # k should decrease (high variance -> explore more)
 
     def test_adapt_progressive_widening_low_variance(self):
-        engine = ProgressiveWideningEngine(
-            pw_config=ProgressiveWideningConfig(k=1.0, adaptive=True, k_max=3.0)
-        )
+        engine = ProgressiveWideningEngine(pw_config=ProgressiveWideningConfig(k=1.0, adaptive=True, k_max=3.0))
         rng = engine.rng
         root = RAVENode(state=_make_state(), rng=rng)
 
@@ -418,9 +414,7 @@ class TestProgressiveWideningEngine:
 
     @pytest.mark.asyncio
     async def test_run_iteration_with_adaptive(self):
-        engine = ProgressiveWideningEngine(
-            pw_config=ProgressiveWideningConfig(adaptive=True)
-        )
+        engine = ProgressiveWideningEngine(pw_config=ProgressiveWideningConfig(adaptive=True))
         rng = engine.rng
         root = RAVENode(state=_make_state(), rng=rng)
         root.available_actions = ["a1", "a2"]

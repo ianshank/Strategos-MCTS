@@ -245,9 +245,7 @@ class TestHRMAdapter:
         from src.framework.mcts.llm_guided.integration import HRMAdapter
 
         mock_llm = AsyncMock()
-        mock_llm.complete.return_value = json.dumps(
-            {"subproblems": ["a"], "levels": [0], "confidences": [0.9]}
-        )
+        mock_llm.complete.return_value = json.dumps({"subproblems": ["a"], "levels": [0], "confidences": [0.9]})
         adapter = HRMAdapter(llm_client=mock_llm)
         await adapter.decompose("problem", context="extra context")
 

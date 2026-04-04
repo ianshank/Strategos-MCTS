@@ -226,7 +226,7 @@ branch = true
 show_missing = true
 skip_covered = false
 precision = 2
-fail_under = 50.0  # Set realistic initial coverage threshold (gradually increase as coverage improves)
+fail_under = 85.0  # Enforced minimum coverage threshold
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

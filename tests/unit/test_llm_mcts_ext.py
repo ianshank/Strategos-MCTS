@@ -447,13 +447,17 @@ class TestPipelineConsensusIntegration:
             best_response="response",
             best_score=0.8,
             all_strategies={"direct": 0.8, "refinement": 0.7, "analogy": 0.6},
-            tree_stats={"total_iterations": 5, "total_llm_calls": 5,
-                        "total_tokens": 100, "strategy_visits": {},
-                        "strategy_values": {}, "provider": "mock"},
+            tree_stats={
+                "total_iterations": 5,
+                "total_llm_calls": 5,
+                "total_tokens": 100,
+                "strategy_visits": {},
+                "strategy_values": {},
+                "provider": "mock",
+            },
             llm_calls=[
                 # Only "direct" calls - no "refinement" or "analogy" calls
-                LLMCall(strategy="direct", prompt="p", response="r", score=0.8,
-                        latency_ms=1.0, tokens_used=10),
+                LLMCall(strategy="direct", prompt="p", response="r", score=0.8, latency_ms=1.0, tokens_used=10),
             ],
             total_time_ms=10.0,
             iterations_run=5,

@@ -20,10 +20,7 @@ import logging
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
-
-if TYPE_CHECKING:
-    pass
+from typing import Any, Final
 
 # Module-level logger
 logger: logging.Logger = logging.getLogger(__name__)

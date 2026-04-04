@@ -499,18 +499,6 @@ class ContinuousLearningSession:
             if not self.is_running:
                 break
 
-            # Repetition check (simple string based)
-            # Efficiently track position occurrences
-            # Repetition check (simple string based)
-            # Efficiently track position occurrences
-            # pos_key = state.fen.split(' ')[0]  # Just board state (unused)
-            # In a real heavy implementation, we'd use a transposition table or similar
-            # For now, we rely on the positions list but this is O(N) checking per move which is slow for long games
-            # Optimization: Use a localized counter if needed, but for < 150 moves list scan is acceptable for now
-            # Actually, let's implement a proper counter
-
-            # (Note: This is just a placeholder comment for the thought process, implementing below)
-
             move_start = time.time()
 
             # Get move from agent

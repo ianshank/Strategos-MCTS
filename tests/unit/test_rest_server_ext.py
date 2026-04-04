@@ -205,9 +205,7 @@ class TestLifespan:
     @patch("src.api.rest_server.FrameworkConfig")
     @patch("src.api.rest_server.set_authenticator")
     @patch("src.api.rest_server.FRAMEWORK_SERVICE_AVAILABLE", True)
-    async def test_lifespan_shutdown_calls_service_shutdown(
-        self, mock_set_auth, mock_fw_config, mock_fw_service_cls
-    ):
+    async def test_lifespan_shutdown_calls_service_shutdown(self, mock_set_auth, mock_fw_config, mock_fw_service_cls):
         """Shutdown path calls framework_service.shutdown and reset_instance."""
         from src.api.rest_server import lifespan
 
@@ -231,9 +229,7 @@ class TestLifespan:
     @patch("src.api.rest_server.FrameworkConfig")
     @patch("src.api.rest_server.set_authenticator")
     @patch("src.api.rest_server.FRAMEWORK_SERVICE_AVAILABLE", True)
-    async def test_lifespan_shutdown_skipped_when_no_service(
-        self, mock_set_auth, mock_fw_config, mock_fw_service_cls
-    ):
+    async def test_lifespan_shutdown_skipped_when_no_service(self, mock_set_auth, mock_fw_config, mock_fw_service_cls):
         """When framework_service is None at shutdown, shutdown/reset are skipped."""
         from src.api.rest_server import lifespan
 
@@ -376,8 +372,10 @@ class TestVerifyApiKeyExtended:
             mock_auth = MagicMock()
             mock_auth.require_auth.side_effect = AuthenticationError(user_message="Bad key")
 
-            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
-                 patch("src.api.rest_server.get_authenticator", return_value=mock_auth):
+            with (
+                patch("src.api.rest_server.IMPORTS_AVAILABLE", True),
+                patch("src.api.rest_server.get_authenticator", return_value=mock_auth),
+            ):
                 with pytest.raises(HTTPException) as exc_info:
                     await verify_api_key(x_api_key="bad-key")
                 assert exc_info.value.status_code == 401
@@ -398,9 +396,11 @@ class TestVerifyApiKeyExtended:
                 retry_after_seconds=30,
             )
 
-            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
-                 patch("src.api.rest_server.get_authenticator", return_value=mock_auth), \
-                 patch("src.api.rest_server.get_settings", return_value=mock_settings):
+            with (
+                patch("src.api.rest_server.IMPORTS_AVAILABLE", True),
+                patch("src.api.rest_server.get_authenticator", return_value=mock_auth),
+                patch("src.api.rest_server.get_settings", return_value=mock_settings),
+            ):
                 with pytest.raises(HTTPException) as exc_info:
                     await verify_api_key(x_api_key="key")
                 assert exc_info.value.status_code == 429
@@ -410,9 +410,7 @@ class TestVerifyApiKeyExtended:
     @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
     @patch("src.api.rest_server.get_settings")
     @patch("src.api.rest_server.get_authenticator")
-    async def test_rate_limit_uses_settings_fallback_when_retry_after_is_none(
-        self, mock_get_auth, mock_get_settings
-    ):
+    async def test_rate_limit_uses_settings_fallback_when_retry_after_is_none(self, mock_get_auth, mock_get_settings):
         """When RateLimitError.retry_after_seconds is None, fall back to settings."""
         from src.api.exceptions import RateLimitError
 
@@ -436,9 +434,7 @@ class TestVerifyApiKeyExtended:
     @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
     @patch("src.api.rest_server.get_settings")
     @patch("src.api.rest_server.get_authenticator")
-    async def test_rate_limit_uses_exception_retry_after(
-        self, mock_get_auth, mock_get_settings
-    ):
+    async def test_rate_limit_uses_exception_retry_after(self, mock_get_auth, mock_get_settings):
         """When RateLimitError.retry_after_seconds is set, it takes precedence."""
         from src.api.exceptions import RateLimitError
 
@@ -485,9 +481,7 @@ class TestExceptionHandlersWithPrometheus:
                 assert data["error_code"] == "TEST_PROM"
                 mocks["error_count"].labels.assert_any_call(error_type="TEST_PROM")
         finally:
-            app.routes[:] = [
-                r for r in app.routes if getattr(r, "path", None) != "/test-fw-err-prom"
-            ]
+            app.routes[:] = [r for r in app.routes if getattr(r, "path", None) != "/test-fw-err-prom"]
 
     def test_validation_error_handler_increments_counter(self):
         """ValidationError handler increments Prometheus error counter."""
@@ -504,9 +498,7 @@ class TestExceptionHandlersWithPrometheus:
                 assert resp.status_code == 400
                 mocks["error_count"].labels.assert_any_call(error_type="validation")
         finally:
-            app.routes[:] = [
-                r for r in app.routes if getattr(r, "path", None) != "/test-val-err-prom"
-            ]
+            app.routes[:] = [r for r in app.routes if getattr(r, "path", None) != "/test-val-err-prom"]
 
 
 # ---------------------------------------------------------------------------
@@ -532,12 +524,15 @@ class TestQueryEndpointExtended:
         mock_fw_service.process_query = AsyncMock(return_value=mock_result)
 
         client = _make_client_with_auth()
-        resp = client.post("/query", json={
-            "query": "test query",
-            "use_mcts": True,
-            "use_rag": False,
-            "mcts_iterations": 50,
-        })
+        resp = client.post(
+            "/query",
+            json={
+                "query": "test query",
+                "use_mcts": True,
+                "use_rag": False,
+                "mcts_iterations": 50,
+            },
+        )
         assert resp.status_code == 200
         call_kwargs = mock_fw_service.process_query.call_args[1]
         assert call_kwargs["mcts_iterations"] == 50
@@ -557,10 +552,13 @@ class TestQueryEndpointExtended:
         mock_fw_service.process_query = AsyncMock(return_value=mock_result)
 
         client = _make_client_with_auth()
-        resp = client.post("/query", json={
-            "query": "test",
-            "thread_id": "session-42",
-        })
+        resp = client.post(
+            "/query",
+            json={
+                "query": "test",
+                "thread_id": "session-42",
+            },
+        )
         assert resp.status_code == 200
         call_kwargs = mock_fw_service.process_query.call_args[1]
         assert call_kwargs["thread_id"] == "session-42"
@@ -592,8 +590,10 @@ class TestQueryEndpointExtended:
             mock_fw_service = MagicMock()
             mock_fw_service.process_query = AsyncMock(side_effect=TimeoutError("timed out"))
 
-            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
-                 patch("src.api.rest_server.framework_service", mock_fw_service):
+            with (
+                patch("src.api.rest_server.IMPORTS_AVAILABLE", True),
+                patch("src.api.rest_server.framework_service", mock_fw_service),
+            ):
                 client = _make_client_with_auth()
                 resp = client.post("/query", json={"query": "slow query"})
                 assert resp.status_code == 504
@@ -605,8 +605,10 @@ class TestQueryEndpointExtended:
             mock_fw_service = MagicMock()
             mock_fw_service.process_query = AsyncMock(side_effect=ValueError("bad"))
 
-            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
-                 patch("src.api.rest_server.framework_service", mock_fw_service):
+            with (
+                patch("src.api.rest_server.IMPORTS_AVAILABLE", True),
+                patch("src.api.rest_server.framework_service", mock_fw_service),
+            ):
                 client = _make_client_with_auth()
                 resp = client.post("/query", json={"query": "bad query"})
                 assert resp.status_code == 400
@@ -618,8 +620,10 @@ class TestQueryEndpointExtended:
             mock_fw_service = MagicMock()
             mock_fw_service.process_query = AsyncMock(side_effect=RuntimeError("broken"))
 
-            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
-                 patch("src.api.rest_server.framework_service", mock_fw_service):
+            with (
+                patch("src.api.rest_server.IMPORTS_AVAILABLE", True),
+                patch("src.api.rest_server.framework_service", mock_fw_service),
+            ):
                 client = _make_client_with_auth()
                 resp = client.post("/query", json={"query": "test"})
                 assert resp.status_code == 503
@@ -631,8 +635,10 @@ class TestQueryEndpointExtended:
             mock_fw_service = MagicMock()
             mock_fw_service.process_query = AsyncMock(side_effect=Exception("unexpected"))
 
-            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
-                 patch("src.api.rest_server.framework_service", mock_fw_service):
+            with (
+                patch("src.api.rest_server.IMPORTS_AVAILABLE", True),
+                patch("src.api.rest_server.framework_service", mock_fw_service),
+            ):
                 client = _make_client_with_auth()
                 resp = client.post("/query", json={"query": "test"})
                 assert resp.status_code == 500
@@ -641,8 +647,10 @@ class TestQueryEndpointExtended:
     def test_query_no_framework_increments_prometheus(self):
         """When framework_service is None, service_unavailable error counter increments."""
         with _prometheus_mocks() as mocks:
-            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
-                 patch("src.api.rest_server.framework_service", None):
+            with (
+                patch("src.api.rest_server.IMPORTS_AVAILABLE", True),
+                patch("src.api.rest_server.framework_service", None),
+            ):
                 client = _make_client_with_auth()
                 resp = client.post("/query", json={"query": "test"})
                 assert resp.status_code == 503
@@ -651,9 +659,11 @@ class TestQueryEndpointExtended:
     def test_query_validation_failure_increments_prometheus(self):
         """QueryInput validation failure increments Prometheus validation counter."""
         with _prometheus_mocks() as mocks:
-            with patch("src.api.rest_server.IMPORTS_AVAILABLE", True), \
-                 patch("src.api.rest_server.QueryInput", side_effect=Exception("validation failed")), \
-                 patch("src.api.rest_server.framework_service", None):
+            with (
+                patch("src.api.rest_server.IMPORTS_AVAILABLE", True),
+                patch("src.api.rest_server.QueryInput", side_effect=Exception("validation failed")),
+                patch("src.api.rest_server.framework_service", None),
+            ):
                 client = _make_client_with_auth()
                 resp = client.post("/query", json={"query": "test"})
                 assert resp.status_code == 400
@@ -691,9 +701,11 @@ class TestMetricsEndpointWithPrometheus:
     def test_metrics_returns_prometheus_format(self):
         """When Prometheus is available, /metrics returns generated output."""
         mock_generate = MagicMock(return_value=b"# HELP mcts_requests_total\n")
-        with _prometheus_mocks(), \
-             patch("src.api.rest_server.generate_latest", mock_generate, create=True), \
-             patch("src.api.rest_server.CONTENT_TYPE_LATEST", "text/plain; version=0.0.4", create=True):
+        with (
+            _prometheus_mocks(),
+            patch("src.api.rest_server.generate_latest", mock_generate, create=True),
+            patch("src.api.rest_server.CONTENT_TYPE_LATEST", "text/plain; version=0.0.4", create=True),
+        ):
             client = TestClient(app, raise_server_exceptions=False)
             resp = client.get("/metrics")
             assert resp.status_code == 200

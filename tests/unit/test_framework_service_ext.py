@@ -407,15 +407,17 @@ class TestFrameworkService:
         service._state = FrameworkState.READY
 
         mock_framework = AsyncMock()
-        mock_framework.process = AsyncMock(return_value={
-            "response": "Answer",
-            "metadata": {
-                "consensus_score": 0.9,
-                "agents_used": ["agent1"],
-                "iterations": 1,
-            },
-            "state": {},
-        })
+        mock_framework.process = AsyncMock(
+            return_value={
+                "response": "Answer",
+                "metadata": {
+                    "consensus_score": 0.9,
+                    "agents_used": ["agent1"],
+                    "iterations": 1,
+                },
+                "state": {},
+            }
+        )
         service._framework = mock_framework
 
         result = await service.process_query("What is AI?")

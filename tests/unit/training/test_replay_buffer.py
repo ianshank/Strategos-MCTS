@@ -286,26 +286,20 @@ class TestBoardGameAugmentation:
 
     def test_rotate_90_state_shape(self, board_state, board_policy):
         """Test 90-degree rotation preserves shape."""
-        rotated_state, rotated_policy = BoardGameAugmentation.rotate_90(
-            board_state, board_policy, board_size=8
-        )
+        rotated_state, rotated_policy = BoardGameAugmentation.rotate_90(board_state, board_policy, board_size=8)
         assert rotated_state.shape == board_state.shape
         assert len(rotated_policy) == len(board_policy)
 
     def test_flip_horizontal_state_shape(self, board_state, board_policy):
         """Test horizontal flip preserves shape."""
-        flipped_state, flipped_policy = BoardGameAugmentation.flip_horizontal(
-            board_state, board_policy, board_size=8
-        )
+        flipped_state, flipped_policy = BoardGameAugmentation.flip_horizontal(board_state, board_policy, board_size=8)
         assert flipped_state.shape == board_state.shape
         assert len(flipped_policy) == len(board_policy)
 
     def test_random_symmetry_preserves_shape(self, board_state, board_policy):
         """Test random symmetry always preserves shape."""
         for _ in range(10):
-            aug_state, aug_policy = BoardGameAugmentation.random_symmetry(
-                board_state, board_policy, board_size=8
-            )
+            aug_state, aug_policy = BoardGameAugmentation.random_symmetry(board_state, board_policy, board_size=8)
             assert aug_state.shape == board_state.shape
 
     def test_rotate_90_non_board_policy_unchanged(self, board_state):

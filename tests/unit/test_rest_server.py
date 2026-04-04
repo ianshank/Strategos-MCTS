@@ -110,13 +110,9 @@ class TestQueryResponse:
 
     def test_confidence_bounds(self):
         with pytest.raises(ValidationError):
-            QueryResponse(
-                response="x", confidence=-0.1, agents_used=[], processing_time_ms=0.0
-            )
+            QueryResponse(response="x", confidence=-0.1, agents_used=[], processing_time_ms=0.0)
         with pytest.raises(ValidationError):
-            QueryResponse(
-                response="x", confidence=1.1, agents_used=[], processing_time_ms=0.0
-            )
+            QueryResponse(response="x", confidence=1.1, agents_used=[], processing_time_ms=0.0)
 
     def test_with_mcts_stats(self):
         resp = QueryResponse(
@@ -209,9 +205,7 @@ class TestVerifyApiKey:
         from src.api.exceptions import AuthenticationError
 
         mock_auth = MagicMock()
-        mock_auth.require_auth.side_effect = AuthenticationError(
-            user_message="Invalid API key"
-        )
+        mock_auth.require_auth.side_effect = AuthenticationError(user_message="Invalid API key")
         mock_get_auth.return_value = mock_auth
 
         with pytest.raises(HTTPException) as exc_info:
@@ -402,9 +396,7 @@ class TestQueryEndpoint:
     @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
     @patch("src.api.rest_server.framework_service")
     def test_query_timeout_returns_504(self, mock_fw_service):
-        mock_fw_service.process_query = AsyncMock(
-            side_effect=TimeoutError("timed out")
-        )
+        mock_fw_service.process_query = AsyncMock(side_effect=TimeoutError("timed out"))
 
         client = self._make_client_with_auth()
         resp = client.post("/query", json={"query": "slow query"})
@@ -414,9 +406,7 @@ class TestQueryEndpoint:
     @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
     @patch("src.api.rest_server.framework_service")
     def test_query_value_error_returns_400(self, mock_fw_service):
-        mock_fw_service.process_query = AsyncMock(
-            side_effect=ValueError("bad input")
-        )
+        mock_fw_service.process_query = AsyncMock(side_effect=ValueError("bad input"))
 
         client = self._make_client_with_auth()
         resp = client.post("/query", json={"query": "bad query"})
@@ -425,9 +415,7 @@ class TestQueryEndpoint:
     @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
     @patch("src.api.rest_server.framework_service")
     def test_query_runtime_error_returns_503(self, mock_fw_service):
-        mock_fw_service.process_query = AsyncMock(
-            side_effect=RuntimeError("broken")
-        )
+        mock_fw_service.process_query = AsyncMock(side_effect=RuntimeError("broken"))
 
         client = self._make_client_with_auth()
         resp = client.post("/query", json={"query": "test"})
@@ -436,9 +424,7 @@ class TestQueryEndpoint:
     @patch("src.api.rest_server.IMPORTS_AVAILABLE", True)
     @patch("src.api.rest_server.framework_service")
     def test_query_unexpected_error_returns_500(self, mock_fw_service):
-        mock_fw_service.process_query = AsyncMock(
-            side_effect=Exception("unexpected")
-        )
+        mock_fw_service.process_query = AsyncMock(side_effect=Exception("unexpected"))
 
         client = self._make_client_with_auth()
         resp = client.post("/query", json={"query": "test"})

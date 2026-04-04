@@ -16,7 +16,7 @@ import math
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import Any, TypedDict
 
 import numpy as np
 
@@ -38,9 +38,6 @@ from .config import LLMGuidedMCTSConfig, LLMGuidedMCTSPreset, create_llm_mcts_pr
 from .data_collector import TrainingDataCollector
 from .executor import CodeExecutionResult, CodeExecutor
 from .node import LLMGuidedMCTSNode, NodeState, NodeStatus, create_root_node
-
-if TYPE_CHECKING:
-    pass
 
 logger = get_structured_logger(__name__)
 

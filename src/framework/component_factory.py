@@ -294,16 +294,16 @@ class TrainerFactory:
         training_config = HRMTrainingConfig(
             batch_size=batch_size if batch_size is not None else self._config.batch_size,
             num_batches=num_batches if num_batches is not None else self._config.num_batches,
-            gradient_clip_norm=gradient_clip_norm
-            if gradient_clip_norm is not None
-            else self._config.gradient_clip_norm,
+            gradient_clip_norm=(
+                gradient_clip_norm if gradient_clip_norm is not None else self._config.gradient_clip_norm
+            ),
             ponder_weight=ponder_weight if ponder_weight is not None else self._config.ponder_weight,
-            consistency_weight=consistency_weight
-            if consistency_weight is not None
-            else self._config.consistency_weight,
-            use_mixed_precision=use_mixed_precision
-            if use_mixed_precision is not None
-            else self._config.use_mixed_precision,
+            consistency_weight=(
+                consistency_weight if consistency_weight is not None else self._config.consistency_weight
+            ),
+            use_mixed_precision=(
+                use_mixed_precision if use_mixed_precision is not None else self._config.use_mixed_precision
+            ),
         )
 
         trainer_device = device if device is not None else self._config.device
@@ -369,15 +369,17 @@ class TrainerFactory:
         training_config = TRMTrainingConfig(
             batch_size=batch_size if batch_size is not None else self._config.batch_size,
             num_batches=num_batches if num_batches is not None else self._config.num_batches,
-            gradient_clip_norm=gradient_clip_norm
-            if gradient_clip_norm is not None
-            else self._config.gradient_clip_norm,
-            supervision_weight_decay=supervision_weight_decay
-            if supervision_weight_decay is not None
-            else self._config.supervision_weight_decay,
-            use_mixed_precision=use_mixed_precision
-            if use_mixed_precision is not None
-            else self._config.use_mixed_precision,
+            gradient_clip_norm=(
+                gradient_clip_norm if gradient_clip_norm is not None else self._config.gradient_clip_norm
+            ),
+            supervision_weight_decay=(
+                supervision_weight_decay
+                if supervision_weight_decay is not None
+                else self._config.supervision_weight_decay
+            ),
+            use_mixed_precision=(
+                use_mixed_precision if use_mixed_precision is not None else self._config.use_mixed_precision
+            ),
         )
 
         trainer_device = device if device is not None else self._config.device

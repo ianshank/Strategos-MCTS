@@ -14,15 +14,12 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import Any, Protocol
 
 from src.observability.logging import get_structured_logger
 
 from .humaneval import HumanEvalBenchmark, HumanEvalProblem
 from .metrics import BenchmarkMetrics, ProblemResult, aggregate_metrics
-
-if TYPE_CHECKING:
-    pass
 
 logger = get_structured_logger(__name__)
 

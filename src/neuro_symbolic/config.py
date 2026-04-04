@@ -28,7 +28,7 @@ try:
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
-    torch = None  # type: ignore[assignment]
+    torch = None
 
 
 class SolverBackend(Enum):

@@ -87,6 +87,7 @@ class TestDABStepLoaderLoad:
         loader = DABStepLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             mock_datasets_mod = sys.modules["datasets"]
             mock_datasets_mod.load_dataset.return_value = mock_ds
 
@@ -109,6 +110,7 @@ class TestDABStepLoaderLoad:
         loader = DABStepLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.return_value = mock_ds
             samples = loader.load(split="train", difficulty="hard")
             assert len(samples) == 1
@@ -122,6 +124,7 @@ class TestDABStepLoaderLoad:
         loader = DABStepLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.return_value = mock_ds
             samples = loader.load(split="train")  # train not available
             assert len(samples) == 1
@@ -134,6 +137,7 @@ class TestDABStepLoaderLoad:
         loader = DABStepLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.return_value = mock_ds
             samples = loader.load(split="train")
             assert samples[0].text == "fallback text"
@@ -150,6 +154,7 @@ class TestDABStepLoaderLoad:
         loader = DABStepLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.side_effect = RuntimeError("network error")
             with pytest.raises(RuntimeError, match="network error"):
                 loader.load()
@@ -175,6 +180,7 @@ class TestPRIMUSLoaderLoad:
         loader = PRIMUSLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.return_value = mock_ds
 
             samples = loader.load(split="train", dataset_type="seed", streaming=False)
@@ -185,9 +191,7 @@ class TestPRIMUSLoaderLoad:
 
     def test_load_seed_streaming(self):
         """Streaming seed load with max_samples (lines 249-258)."""
-        items = [
-            {"text": f"doc {i}", "domain": "wikipedia"} for i in range(10)
-        ]
+        items = [{"text": f"doc {i}", "domain": "wikipedia"} for i in range(10)]
 
         mock_ds = MagicMock()
         mock_ds.__contains__ = lambda self, key: key == "train"
@@ -197,11 +201,10 @@ class TestPRIMUSLoaderLoad:
         loader = PRIMUSLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.return_value = mock_ds
 
-            samples = loader.load(
-                dataset_type="seed", streaming=True, max_samples=3
-            )
+            samples = loader.load(dataset_type="seed", streaming=True, max_samples=3)
             assert len(samples) == 3
 
     def test_load_instruct(self):
@@ -214,6 +217,7 @@ class TestPRIMUSLoaderLoad:
         loader = PRIMUSLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.return_value = mock_ds
 
             samples = loader.load(dataset_type="instruct", streaming=False)
@@ -233,11 +237,10 @@ class TestPRIMUSLoaderLoad:
         loader = PRIMUSLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.return_value = mock_ds
 
-            samples = loader.load(
-                dataset_type="seed", domains=["mitre_attack"], streaming=False
-            )
+            samples = loader.load(dataset_type="seed", domains=["mitre_attack"], streaming=False)
             assert len(samples) == 1
             assert samples[0].domain == "mitre_attack"
 
@@ -249,11 +252,10 @@ class TestPRIMUSLoaderLoad:
         loader = PRIMUSLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.return_value = mock_ds
 
-            samples = loader.load(
-                dataset_type="seed", max_samples=3, streaming=False
-            )
+            samples = loader.load(dataset_type="seed", max_samples=3, streaming=False)
             assert len(samples) == 3
 
     def test_load_split_not_found(self):
@@ -264,6 +266,7 @@ class TestPRIMUSLoaderLoad:
         loader = PRIMUSLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.return_value = mock_ds
 
             samples = loader.load(split="train", dataset_type="seed", streaming=False)
@@ -281,6 +284,7 @@ class TestPRIMUSLoaderLoad:
         loader = PRIMUSLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.side_effect = RuntimeError(
                 "This is a gated dataset and requires authentication"
             )
@@ -292,6 +296,7 @@ class TestPRIMUSLoaderLoad:
         loader = PRIMUSLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.side_effect = ValueError("bad data")
             with pytest.raises(ValueError, match="bad data"):
                 loader.load()
@@ -321,6 +326,7 @@ class TestPRIMUSLoaderLoad:
         loader = PRIMUSLoader(cache_dir="/tmp/test")
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.return_value = mock_ds
 
             samples = loader.load(dataset_type="seed", streaming=False)
@@ -343,9 +349,11 @@ class TestCombinedDatasetLoaderLoadAll:
         primus_instruct = [DatasetSample(id="i1", text="instruct")]
 
         loader = CombinedDatasetLoader(cache_dir="/tmp/test")
-        with patch.object(loader.dabstep_loader, "load", return_value=dabstep_samples), \
-             patch.object(loader.primus_loader, "load_seed", return_value=primus_seed), \
-             patch.object(loader.primus_loader, "load_instruct", return_value=primus_instruct):
+        with (
+            patch.object(loader.dabstep_loader, "load", return_value=dabstep_samples),
+            patch.object(loader.primus_loader, "load_seed", return_value=primus_seed),
+            patch.object(loader.primus_loader, "load_instruct", return_value=primus_instruct),
+        ):
 
             result = loader.load_all(include_instruct=True)
             assert len(result) == 3
@@ -356,16 +364,20 @@ class TestCombinedDatasetLoaderLoadAll:
         primus_seed = [DatasetSample(id="p1", text="seed")]
 
         loader = CombinedDatasetLoader(cache_dir="/tmp/test")
-        with patch.object(loader.dabstep_loader, "load", return_value=dabstep_samples), \
-             patch.object(loader.primus_loader, "load_seed", return_value=primus_seed):
+        with (
+            patch.object(loader.dabstep_loader, "load", return_value=dabstep_samples),
+            patch.object(loader.primus_loader, "load_seed", return_value=primus_seed),
+        ):
 
             result = loader.load_all(include_instruct=False)
             assert len(result) == 2
 
     def test_load_all_custom_params(self):
         loader = CombinedDatasetLoader(cache_dir="/tmp/test")
-        with patch.object(loader.dabstep_loader, "load", return_value=[]) as mock_dab, \
-             patch.object(loader.primus_loader, "load_seed", return_value=[]) as mock_seed:
+        with (
+            patch.object(loader.dabstep_loader, "load", return_value=[]) as mock_dab,
+            patch.object(loader.primus_loader, "load_seed", return_value=[]) as mock_seed,
+        ):
 
             loader.load_all(
                 dabstep_split="validation",
@@ -390,8 +402,7 @@ class TestCombinedExportFormats:
         loader = CombinedDatasetLoader()
         loader._all_samples = [
             DatasetSample(
-                id="s1", text="Hello", domain="math", difficulty="easy",
-                labels=["a", "b"], metadata={"key": "val"}
+                id="s1", text="Hello", domain="math", difficulty="easy", labels=["a", "b"], metadata={"key": "val"}
             ),
             DatasetSample(id="s2", text="World", domain=None, difficulty=None),
         ]
@@ -415,13 +426,11 @@ class TestCombinedExportFormats:
         """Lines 546-564: Parquet export with mock pyarrow."""
         loader = CombinedDatasetLoader()
         loader._all_samples = [
-            DatasetSample(
-                id="s1", text="Hello", domain="math", difficulty="easy",
-                labels=["a"], metadata={"k": "v"}
-            ),
+            DatasetSample(id="s1", text="Hello", domain="math", difficulty="easy", labels=["a"], metadata={"k": "v"}),
         ]
 
         import types
+
         mock_pa = types.ModuleType("pyarrow")
         mock_pq = types.ModuleType("pyarrow.parquet")
 
@@ -434,6 +443,7 @@ class TestCombinedExportFormats:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "test.parquet"
             import sys
+
             old_pa = sys.modules.get("pyarrow")
             old_pq = sys.modules.get("pyarrow.parquet")
             sys.modules["pyarrow"] = mock_pa
@@ -490,26 +500,28 @@ class TestLoadFromCSV:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "test.csv"
             with open(path, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(
-                    f, fieldnames=["id", "text", "domain", "difficulty", "labels", "metadata"]
-                )
+                writer = csv.DictWriter(f, fieldnames=["id", "text", "domain", "difficulty", "labels", "metadata"])
                 writer.writeheader()
-                writer.writerow({
-                    "id": "s1",
-                    "text": "Sample text",
-                    "domain": "math",
-                    "difficulty": "easy",
-                    "labels": json.dumps(["tag1", "tag2"]),
-                    "metadata": json.dumps({"source": "test"}),
-                })
-                writer.writerow({
-                    "id": "s2",
-                    "text": "No extras",
-                    "domain": "",
-                    "difficulty": "",
-                    "labels": "",
-                    "metadata": "",
-                })
+                writer.writerow(
+                    {
+                        "id": "s1",
+                        "text": "Sample text",
+                        "domain": "math",
+                        "difficulty": "easy",
+                        "labels": json.dumps(["tag1", "tag2"]),
+                        "metadata": json.dumps({"source": "test"}),
+                    }
+                )
+                writer.writerow(
+                    {
+                        "id": "s2",
+                        "text": "No extras",
+                        "domain": "",
+                        "difficulty": "",
+                        "labels": "",
+                        "metadata": "",
+                    }
+                )
 
             samples = CombinedDatasetLoader.load_from_csv(str(path))
             assert len(samples) == 2
@@ -525,14 +537,18 @@ class TestLoadFromCSV:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "test.csv"
             with open(path, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(
-                    f, fieldnames=["id", "text", "domain", "difficulty", "labels", "metadata"]
-                )
+                writer = csv.DictWriter(f, fieldnames=["id", "text", "domain", "difficulty", "labels", "metadata"])
                 writer.writeheader()
-                writer.writerow({
-                    "id": "x1", "text": "hi", "domain": "d", "difficulty": "e",
-                    "labels": "[]", "metadata": "{}",
-                })
+                writer.writerow(
+                    {
+                        "id": "x1",
+                        "text": "hi",
+                        "domain": "d",
+                        "difficulty": "e",
+                        "labels": "[]",
+                        "metadata": "{}",
+                    }
+                )
 
             samples = CombinedDatasetLoader.load_from_csv(path)
             assert len(samples) == 1
@@ -551,6 +567,7 @@ class TestLoadFromParquet:
         """Set up pyarrow module mocks and return cleanup info."""
         import sys
         import types
+
         mock_pa = types.ModuleType("pyarrow")
         mock_pa.parquet = mock_pq_module  # type: ignore
         old_pa = sys.modules.get("pyarrow")
@@ -561,6 +578,7 @@ class TestLoadFromParquet:
 
     def _cleanup_pyarrow_mocks(self, old_pa, old_pq):
         import sys
+
         if old_pa is not None:
             sys.modules["pyarrow"] = old_pa
         else:
@@ -572,6 +590,7 @@ class TestLoadFromParquet:
 
     def test_load_from_parquet_success(self):
         import types
+
         mock_pq = types.ModuleType("pyarrow.parquet")
 
         mock_table = MagicMock()
@@ -602,6 +621,7 @@ class TestLoadFromParquet:
 
     def test_load_from_parquet_missing_pyarrow(self):
         import sys
+
         old_pa = sys.modules.get("pyarrow")
         old_pq = sys.modules.get("pyarrow.parquet")
         sys.modules["pyarrow"] = None  # type: ignore
@@ -622,6 +642,7 @@ class TestLoadFromParquet:
     def test_load_from_parquet_missing_optional_columns(self):
         """Handles missing domain/difficulty/labels/metadata columns."""
         import types
+
         mock_pq = types.ModuleType("pyarrow.parquet")
 
         mock_table = MagicMock()
@@ -659,6 +680,7 @@ class TestModuleLevelLoadDataset:
 
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset = mock_hf_load
 
             result = load_dataset("adyen/DABstep", split="train")
@@ -674,6 +696,7 @@ class TestModuleLevelLoadDataset:
 
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset = mock_hf_load
 
             load_dataset("test/dataset", split="train", cache_dir="/tmp/cache")
@@ -686,6 +709,7 @@ class TestModuleLevelLoadDataset:
 
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset = mock_hf_load
 
             load_dataset("test/dataset", split="test", streaming=True)
@@ -703,6 +727,7 @@ class TestModuleLevelLoadDataset:
         """Lines 709-711: generic exception re-raised."""
         with patch.dict("sys.modules", {"datasets": MagicMock()}):
             import sys
+
             sys.modules["datasets"].load_dataset.side_effect = RuntimeError("network error")
 
             with pytest.raises(RuntimeError, match="network error"):

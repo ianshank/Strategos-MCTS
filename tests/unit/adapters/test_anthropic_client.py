@@ -318,9 +318,9 @@ class TestGenerateStreamBranch:
         # Build a mock streaming response
         async def _mock_aiter_lines():
             lines = [
-                'event: content_block_delta',
+                "event: content_block_delta",
                 'data: {"type": "content_block_delta", "delta": {"type": "text_delta", "text": "Hello"}}',
-                '',
+                "",
                 'data: {"type": "content_block_delta", "delta": {"type": "text_delta", "text": " world"}}',
                 'data: {"type": "message_stop"}',
             ]
@@ -337,6 +337,7 @@ class TestGenerateStreamBranch:
         class _StreamCM:
             async def __aenter__(self_inner):
                 return mock_response
+
             async def __aexit__(self_inner, *args):
                 pass
 
@@ -359,6 +360,7 @@ class TestGenerateStreamBranch:
     @pytest.mark.asyncio
     async def test_stream_with_system_and_stop(self, client: AnthropicClient) -> None:
         """Stream payload includes system and stop_sequences."""
+
         async def _mock_aiter_lines():
             yield 'data: {"type": "message_stop"}'
 
@@ -373,6 +375,7 @@ class TestGenerateStreamBranch:
         class _StreamCM:
             async def __aenter__(self_inner):
                 return mock_response
+
             async def __aexit__(self_inner, *args):
                 pass
 
@@ -409,6 +412,7 @@ class TestGenerateStreamBranch:
         class _StreamCM:
             async def __aenter__(self_inner):
                 raise httpx.TimeoutException("timeout")
+
             async def __aexit__(self_inner, *args):
                 pass
 
@@ -433,6 +437,7 @@ class TestGenerateStreamBranch:
         class _StreamCM:
             async def __aenter__(self_inner):
                 raise httpx.ConnectError("connect fail")
+
             async def __aexit__(self_inner, *args):
                 pass
 
@@ -457,6 +462,7 @@ class TestGenerateStreamBranch:
         class _StreamCM:
             async def __aenter__(self_inner):
                 raise RuntimeError("something broke")
+
             async def __aexit__(self_inner, *args):
                 pass
 
@@ -480,9 +486,7 @@ class TestGenerateStreamBranch:
         mock_response.status_code = 500
         mock_response.aread = AsyncMock()
         mock_response.text = "Server Error"
-        mock_response.json = MagicMock(
-            return_value={"error": {"type": "server_error", "message": "Internal"}}
-        )
+        mock_response.json = MagicMock(return_value={"error": {"type": "server_error", "message": "Internal"}})
         mock_response.headers = {}
 
         mock_http_client = AsyncMock()
@@ -490,6 +494,7 @@ class TestGenerateStreamBranch:
         class _StreamCM:
             async def __aenter__(self_inner):
                 return mock_response
+
             async def __aexit__(self_inner, *args):
                 pass
 
@@ -509,8 +514,9 @@ class TestGenerateStreamBranch:
     @pytest.mark.asyncio
     async def test_stream_skips_bad_json(self, client: AnthropicClient) -> None:
         """Malformed JSON data lines are skipped during streaming."""
+
         async def _mock_aiter_lines():
-            yield 'data: not valid json'
+            yield "data: not valid json"
             yield 'data: {"type": "content_block_delta", "delta": {"type": "text_delta", "text": "ok"}}'
             yield 'data: {"type": "message_stop"}'
 
@@ -524,6 +530,7 @@ class TestGenerateStreamBranch:
         class _StreamCM:
             async def __aenter__(self_inner):
                 return mock_response
+
             async def __aexit__(self_inner, *args):
                 pass
 
@@ -545,6 +552,7 @@ class TestGenerateStreamBranch:
     @pytest.mark.asyncio
     async def test_stream_with_tools(self, client: AnthropicClient) -> None:
         """Stream with tools converts tool definitions."""
+
         async def _mock_aiter_lines():
             yield 'data: {"type": "message_stop"}'
 
@@ -559,6 +567,7 @@ class TestGenerateStreamBranch:
         class _StreamCM:
             async def __aenter__(self_inner):
                 return mock_response
+
             async def __aexit__(self_inner, *args):
                 pass
 
@@ -595,8 +604,9 @@ class TestGenerateStreamBranch:
     @pytest.mark.asyncio
     async def test_stream_empty_data_line_skipped(self, client: AnthropicClient) -> None:
         """Empty data: lines are skipped."""
+
         async def _mock_aiter_lines():
-            yield 'data: '
+            yield "data: "
             yield 'data: {"type": "content_block_delta", "delta": {"type": "text_delta", "text": "hi"}}'
             yield 'data: {"type": "message_stop"}'
 
@@ -610,6 +620,7 @@ class TestGenerateStreamBranch:
         class _StreamCM:
             async def __aenter__(self_inner):
                 return mock_response
+
             async def __aexit__(self_inner, *args):
                 pass
 
@@ -636,6 +647,7 @@ class TestGenerateStreamBranch:
         class _StreamCM:
             async def __aenter__(self_inner):
                 raise LLMAuthenticationError("anthropic", "bad key")
+
             async def __aexit__(self_inner, *args):
                 pass
 

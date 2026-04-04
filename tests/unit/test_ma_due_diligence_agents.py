@@ -29,6 +29,7 @@ from src.enterprise.use_cases.ma_due_diligence.state import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_state(**overrides) -> MADueDiligenceState:
     defaults = {
         "state_id": "test_state",
@@ -45,6 +46,7 @@ def _make_state(**overrides) -> MADueDiligenceState:
 # ---------------------------------------------------------------------------
 # AgentConfig / DocumentAnalysisAgentConfig
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestAgentConfigs:
@@ -79,6 +81,7 @@ class TestAgentConfigs:
 # ---------------------------------------------------------------------------
 # DocumentAnalysisAgent
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestDocumentAnalysisAgent:
@@ -182,6 +185,7 @@ class TestDocumentAnalysisAgent:
 # RiskIdentificationAgent
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestRiskIdentificationAgent:
     """Tests for RiskIdentificationAgent."""
@@ -232,12 +236,20 @@ class TestRiskIdentificationAgent:
 
         agent = RiskIdentificationAgent()
         risks = [
-            IdentifiedRisk(risk_id="R1", category="financial", description="x",
-                           severity=RiskLevel.LOW, probability=0.5, impact=0.5),
-            IdentifiedRisk(risk_id="R2", category="legal", description="y",
-                           severity=RiskLevel.LOW, probability=0.5, impact=0.5),
-            IdentifiedRisk(risk_id="R3", category="operational", description="z",
-                           severity=RiskLevel.LOW, probability=0.5, impact=0.5),
+            IdentifiedRisk(
+                risk_id="R1", category="financial", description="x", severity=RiskLevel.LOW, probability=0.5, impact=0.5
+            ),
+            IdentifiedRisk(
+                risk_id="R2", category="legal", description="y", severity=RiskLevel.LOW, probability=0.5, impact=0.5
+            ),
+            IdentifiedRisk(
+                risk_id="R3",
+                category="operational",
+                description="z",
+                severity=RiskLevel.LOW,
+                probability=0.5,
+                impact=0.5,
+            ),
         ]
         conf = agent._compute_confidence(risks)
         assert conf == min(0.5 + 3 * 0.1, 0.9)
@@ -251,8 +263,14 @@ class TestRiskIdentificationAgent:
 
         agent = RiskIdentificationAgent()
         risks = [
-            IdentifiedRisk(risk_id="R1", category="financial", description="x",
-                           severity=RiskLevel.MEDIUM, probability=0.6, impact=0.7),
+            IdentifiedRisk(
+                risk_id="R1",
+                category="financial",
+                description="x",
+                severity=RiskLevel.MEDIUM,
+                probability=0.6,
+                impact=0.7,
+            ),
         ]
         score = agent._compute_risk_score(risks)
         expected = RiskLevel.MEDIUM.to_weight() * 0.6 * 0.7
@@ -263,8 +281,12 @@ class TestRiskIdentificationAgent:
 
         agent = RiskIdentificationAgent()
         risk = IdentifiedRisk(
-            risk_id="R1", category="financial", description="test",
-            severity=RiskLevel.HIGH, probability=0.8, impact=0.9,
+            risk_id="R1",
+            category="financial",
+            description="test",
+            severity=RiskLevel.HIGH,
+            probability=0.8,
+            impact=0.9,
         )
         d = agent._risk_to_dict(risk)
         assert d["risk_id"] == "R1"
@@ -290,6 +312,7 @@ class TestRiskIdentificationAgent:
 # ---------------------------------------------------------------------------
 # SynergyExplorationAgent
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestSynergyExplorationAgent:
@@ -354,6 +377,7 @@ class TestSynergyExplorationAgent:
 # ---------------------------------------------------------------------------
 # ComplianceCheckAgent
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestComplianceCheckAgent:

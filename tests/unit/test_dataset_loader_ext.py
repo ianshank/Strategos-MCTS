@@ -124,9 +124,7 @@ class TestDABStepLoader:
 
     def test_iterate_samples_batching(self):
         loader = DABStepLoader()
-        loader._loaded_samples = [
-            DatasetSample(id=f"s{i}", text=f"text {i}") for i in range(5)
-        ]
+        loader._loaded_samples = [DatasetSample(id=f"s{i}", text=f"text {i}") for i in range(5)]
         batches = list(loader.iterate_samples(batch_size=2))
         assert len(batches) == 3  # 2 + 2 + 1
         assert len(batches[0]) == 2
@@ -307,26 +305,28 @@ class TestCombinedDatasetLoader:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "test.csv"
             with open(path, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(
-                    f, fieldnames=["id", "text", "domain", "difficulty", "labels", "metadata"]
-                )
+                writer = csv.DictWriter(f, fieldnames=["id", "text", "domain", "difficulty", "labels", "metadata"])
                 writer.writeheader()
-                writer.writerow({
-                    "id": "s1",
-                    "text": "Sample text",
-                    "domain": "math",
-                    "difficulty": "easy",
-                    "labels": json.dumps(["tag1"]),
-                    "metadata": json.dumps({"key": "val"}),
-                })
-                writer.writerow({
-                    "id": "s2",
-                    "text": "Another",
-                    "domain": "",
-                    "difficulty": "",
-                    "labels": "",
-                    "metadata": "",
-                })
+                writer.writerow(
+                    {
+                        "id": "s1",
+                        "text": "Sample text",
+                        "domain": "math",
+                        "difficulty": "easy",
+                        "labels": json.dumps(["tag1"]),
+                        "metadata": json.dumps({"key": "val"}),
+                    }
+                )
+                writer.writerow(
+                    {
+                        "id": "s2",
+                        "text": "Another",
+                        "domain": "",
+                        "difficulty": "",
+                        "labels": "",
+                        "metadata": "",
+                    }
+                )
 
             samples = CombinedDatasetLoader.load_from_csv(str(path))
             assert len(samples) == 2

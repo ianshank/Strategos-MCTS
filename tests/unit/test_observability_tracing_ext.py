@@ -134,13 +134,16 @@ class TestTracingManagerExtended:
         mgr._instrument_httpx()
         assert mock_httpx_inst.return_value.instrument.call_count == 1
 
-    @patch.dict("os.environ", {
-        "OTEL_SERVICE_NAME": "env-service",
-        "OTEL_EXPORTER_OTLP_ENDPOINT": "env-endpoint:4317",
-        "OTEL_EXPORTER_TYPE": "none",
-        "SERVICE_VERSION": "2.0.0",
-        "ENVIRONMENT": "staging",
-    })
+    @patch.dict(
+        "os.environ",
+        {
+            "OTEL_SERVICE_NAME": "env-service",
+            "OTEL_EXPORTER_OTLP_ENDPOINT": "env-endpoint:4317",
+            "OTEL_EXPORTER_TYPE": "none",
+            "SERVICE_VERSION": "2.0.0",
+            "ENVIRONMENT": "staging",
+        },
+    )
     @patch("src.observability.tracing.trace")
     def test_initialize_reads_all_env_vars(self, mock_trace):
         from src.observability.tracing import TracingManager
@@ -328,6 +331,7 @@ class TestTraceOperationExtended:
         mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock(return_value=False)
 
         with patch("src.observability.tracing.get_tracer", return_value=mock_tracer):
+
             @trace_operation()
             def my_function():
                 """My docstring."""
@@ -347,6 +351,7 @@ class TestTraceOperationExtended:
         mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock(return_value=False)
 
         with patch("src.observability.tracing.get_tracer", return_value=mock_tracer):
+
             @trace_operation(name="custom_name")
             def func(a, b=10):
                 return a + b
@@ -366,6 +371,7 @@ class TestTraceOperationExtended:
         mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock(return_value=False)
 
         with patch("src.observability.tracing.get_tracer", return_value=mock_tracer):
+
             @trace_operation(name="async_custom")
             async def my_async_fn(x):
                 """Async docstring."""
@@ -385,6 +391,7 @@ class TestTraceOperationExtended:
         mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock(return_value=False)
 
         with patch("src.observability.tracing.get_tracer", return_value=mock_tracer):
+
             @trace_operation()
             async def compute(a, b, c=0):
                 return a + b + c
@@ -403,6 +410,7 @@ class TestTraceOperationExtended:
         mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock(return_value=False)
 
         with patch("src.observability.tracing.get_tracer", return_value=mock_tracer):
+
             @trace_operation()
             def ok_func():
                 return "ok"

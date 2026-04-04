@@ -19,6 +19,13 @@ from tenacity import (
     wait_exponential,
 )
 
+from src.config.constants import (
+    DEFAULT_ANTHROPIC_BASE_URL,
+    DEFAULT_ANTHROPIC_MODEL,
+    DEFAULT_ANTHROPIC_TIMEOUT,
+    DEFAULT_MAX_TOKENS,
+)
+
 from .base import BaseLLMClient, LLMResponse, LLMToolResponse, ToolCall
 from .exceptions import (
     CircuitBreakerOpenError,
@@ -70,8 +77,8 @@ class AnthropicClient(BaseLLMClient):
     """
 
     PROVIDER_NAME = "anthropic"
-    DEFAULT_BASE_URL = "https://api.anthropic.com"
-    DEFAULT_MODEL = "claude-3-5-sonnet-20241022"
+    DEFAULT_BASE_URL = DEFAULT_ANTHROPIC_BASE_URL
+    DEFAULT_MODEL = DEFAULT_ANTHROPIC_MODEL
     API_VERSION = "2023-06-01"
 
     def __init__(
@@ -79,7 +86,7 @@ class AnthropicClient(BaseLLMClient):
         api_key: str | None = None,
         model: str | None = None,
         base_url: str | None = None,
-        timeout: float = 120.0,  # Claude can be slower
+        timeout: float = DEFAULT_ANTHROPIC_TIMEOUT,  # Claude can be slower
         max_retries: int = 3,
         # Circuit breaker settings
         circuit_breaker_threshold: int = 5,
@@ -283,7 +290,7 @@ class AnthropicClient(BaseLLMClient):
 
         # Anthropic requires max_tokens
         if max_tokens is None:
-            max_tokens = 4096  # Sensible default
+            max_tokens = DEFAULT_MAX_TOKENS
 
         if stream:
             return await self._generate_stream(
@@ -312,7 +319,7 @@ class AnthropicClient(BaseLLMClient):
         messages: list[dict] | None = None,
         prompt: str | None = None,
         temperature: float = 0.7,
-        max_tokens: int = 4096,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
         tools: list[dict] | None = None,
         stop: list[str] | None = None,
         **kwargs: Any,
@@ -429,7 +436,7 @@ class AnthropicClient(BaseLLMClient):
         messages: list[dict] | None = None,
         prompt: str | None = None,
         temperature: float = 0.7,
-        max_tokens: int = 4096,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
         tools: list[dict] | None = None,
         stop: list[str] | None = None,
         **kwargs: Any,

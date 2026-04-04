@@ -24,6 +24,7 @@ from src.enterprise.use_cases.ma_due_diligence.use_case import MADueDiligence
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_state(**overrides) -> MADueDiligenceState:
     """Build a minimal MADueDiligenceState for tests."""
     defaults = {
@@ -42,6 +43,7 @@ def _make_state(**overrides) -> MADueDiligenceState:
 # ---------------------------------------------------------------------------
 # Properties
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestMADueDiligenceProperties:
@@ -69,6 +71,7 @@ class TestMADueDiligenceProperties:
 # _setup_agents
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestSetupAgents:
     """Tests for agent setup."""
@@ -87,6 +90,7 @@ class TestSetupAgents:
 # ---------------------------------------------------------------------------
 # _setup_reward_function
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestSetupRewardFunction:
@@ -109,6 +113,7 @@ class TestSetupRewardFunction:
 # ---------------------------------------------------------------------------
 # get_initial_state
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestGetInitialState:
@@ -153,6 +158,7 @@ class TestGetInitialState:
 # get_available_actions / apply_action (delegation)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestActionDelegation:
     """Tests for action retrieval and application."""
@@ -176,6 +182,7 @@ class TestActionDelegation:
 # get_rollout_policy
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestGetRolloutPolicy:
     """Tests for the rollout policy."""
@@ -195,6 +202,7 @@ class TestGetRolloutPolicy:
             type(uc).__mro__[1], "get_rollout_policy", return_value=MagicMock(name="fallback_policy")
         ) as mock_super:
             import builtins
+
             original_import = builtins.__import__
 
             def _blocking_import(name, *args, **kwargs):
@@ -213,6 +221,7 @@ class TestGetRolloutPolicy:
 # _update_state_from_agents
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestUpdateStateFromAgents:
     """Tests for _update_state_from_agents."""
@@ -223,8 +232,14 @@ class TestUpdateStateFromAgents:
         agent_results = {
             "risk_identification": {
                 "risks": [
-                    {"risk_id": "R1", "category": "financial", "description": "cash", "severity": "high",
-                     "probability": 0.5, "impact": 0.8},
+                    {
+                        "risk_id": "R1",
+                        "category": "financial",
+                        "description": "cash",
+                        "severity": "high",
+                        "probability": 0.5,
+                        "impact": 0.8,
+                    },
                 ]
             }
         }
@@ -239,8 +254,14 @@ class TestUpdateStateFromAgents:
         agent_results = {
             "synergy_exploration": {
                 "synergies": [
-                    {"synergy_id": "S1", "category": "cost", "description": "IT consolidation",
-                     "estimated_value": 5000000, "probability": 0.7, "timeline_months": 12},
+                    {
+                        "synergy_id": "S1",
+                        "category": "cost",
+                        "description": "IT consolidation",
+                        "estimated_value": 5000000,
+                        "probability": 0.7,
+                        "timeline_months": 12,
+                    },
                 ]
             }
         }
@@ -275,22 +296,14 @@ class TestUpdateStateFromAgents:
     def test_non_dict_risk_skipped(self):
         uc = MADueDiligence()
         state = _make_state()
-        agent_results = {
-            "risk_identification": {
-                "risks": ["not_a_dict"]
-            }
-        }
+        agent_results = {"risk_identification": {"risks": ["not_a_dict"]}}
         updated = uc._update_state_from_agents(state, agent_results)
         assert len(updated.risks_identified) == 0
 
     def test_non_dict_synergy_skipped(self):
         uc = MADueDiligence()
         state = _make_state()
-        agent_results = {
-            "synergy_exploration": {
-                "synergies": [42]
-            }
-        }
+        agent_results = {"synergy_exploration": {"synergies": [42]}}
         updated = uc._update_state_from_agents(state, agent_results)
         assert len(updated.synergies_found) == 0
 
@@ -298,6 +311,7 @@ class TestUpdateStateFromAgents:
 # ---------------------------------------------------------------------------
 # _generate_final_analysis
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestGenerateFinalAnalysis:
@@ -317,8 +331,12 @@ class TestGenerateFinalAnalysis:
         for i in range(3):
             state.risks_identified.append(
                 IdentifiedRisk(
-                    risk_id=f"R{i}", category="financial", description="bad",
-                    severity=RiskLevel.CRITICAL, probability=0.9, impact=0.9,
+                    risk_id=f"R{i}",
+                    category="financial",
+                    description="bad",
+                    severity=RiskLevel.CRITICAL,
+                    probability=0.9,
+                    impact=0.9,
                 )
             )
         agent_results = {"doc": {"confidence": 0.8}}
@@ -333,8 +351,12 @@ class TestGenerateFinalAnalysis:
         # Add risks to push score above critical threshold but <3 critical
         state.risks_identified.append(
             IdentifiedRisk(
-                risk_id="R1", category="financial", description="severe",
-                severity=RiskLevel.HIGH, probability=0.9, impact=0.9,
+                risk_id="R1",
+                category="financial",
+                description="severe",
+                severity=RiskLevel.HIGH,
+                probability=0.9,
+                impact=0.9,
             )
         )
         agent_results = {"agent1": {"confidence": 0.8}}
@@ -349,8 +371,12 @@ class TestGenerateFinalAnalysis:
         state = _make_state()
         state.risks_identified.append(
             IdentifiedRisk(
-                risk_id="R1", category="legal", description="minor",
-                severity=RiskLevel.MEDIUM, probability=0.5, impact=0.5,
+                risk_id="R1",
+                category="legal",
+                description="minor",
+                severity=RiskLevel.MEDIUM,
+                probability=0.5,
+                impact=0.5,
             )
         )
         agent_results = {"a1": {"confidence": 0.7}}
@@ -362,6 +388,7 @@ class TestGenerateFinalAnalysis:
 # ---------------------------------------------------------------------------
 # process (async)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestProcess:

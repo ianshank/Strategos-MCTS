@@ -88,14 +88,20 @@ class TestBuildParser:
 
     def test_combined_args(self):
         parser = build_parser()
-        args = parser.parse_args([
-            "--systems", "langgraph_mcts",
-            "--tasks", "A1",
-            "--iterations", "3",
-            "--no-scoring",
-            "--dry-run",
-            "--log-level", "DEBUG",
-        ])
+        args = parser.parse_args(
+            [
+                "--systems",
+                "langgraph_mcts",
+                "--tasks",
+                "A1",
+                "--iterations",
+                "3",
+                "--no-scoring",
+                "--dry-run",
+                "--log-level",
+                "DEBUG",
+            ]
+        )
         assert args.systems == ["langgraph_mcts"]
         assert args.tasks == ["A1"]
         assert args.iterations == 3
@@ -130,7 +136,9 @@ class TestApplyCliOverrides:
     def test_iterations_override(self):
         settings = MagicMock()
         args = argparse.Namespace(
-            iterations=5, output_dir=None, no_scoring=False,
+            iterations=5,
+            output_dir=None,
+            no_scoring=False,
         )
         apply_cli_overrides(settings, args)
         assert settings._run is not None
@@ -138,7 +146,9 @@ class TestApplyCliOverrides:
     def test_output_dir_override(self):
         settings = MagicMock()
         args = argparse.Namespace(
-            iterations=None, output_dir="/tmp/out", no_scoring=False,
+            iterations=None,
+            output_dir="/tmp/out",
+            no_scoring=False,
         )
         apply_cli_overrides(settings, args)
         assert settings._report is not None
@@ -146,7 +156,9 @@ class TestApplyCliOverrides:
     def test_no_scoring_override(self):
         settings = MagicMock()
         args = argparse.Namespace(
-            iterations=None, output_dir=None, no_scoring=True,
+            iterations=None,
+            output_dir=None,
+            no_scoring=True,
         )
         apply_cli_overrides(settings, args)
         assert settings._scoring is not None
@@ -157,7 +169,9 @@ class TestApplyCliOverrides:
         original_report = settings._report
         original_scoring = settings._scoring
         args = argparse.Namespace(
-            iterations=None, output_dir=None, no_scoring=False,
+            iterations=None,
+            output_dir=None,
+            no_scoring=False,
         )
         apply_cli_overrides(settings, args)
         # Nothing should be reset when no overrides
@@ -181,9 +195,14 @@ class TestRunBenchmark:
         mock_get_settings.return_value = settings
 
         args = argparse.Namespace(
-            iterations=None, output_dir=None, no_scoring=False,
-            dry_run=False, systems=None, tasks=None,
-            no_save_results=False, no_report=False,
+            iterations=None,
+            output_dir=None,
+            no_scoring=False,
+            dry_run=False,
+            systems=None,
+            tasks=None,
+            no_save_results=False,
+            no_report=False,
         )
         result = asyncio.run(run_benchmark(args))
         assert result == 1
@@ -220,9 +239,14 @@ class TestRunBenchmark:
         factory_instance.settings = settings
 
         args = argparse.Namespace(
-            iterations=None, output_dir=None, no_scoring=False,
-            dry_run=True, systems=None, tasks=None,
-            no_save_results=False, no_report=False,
+            iterations=None,
+            output_dir=None,
+            no_scoring=False,
+            dry_run=True,
+            systems=None,
+            tasks=None,
+            no_save_results=False,
+            no_report=False,
         )
         result = asyncio.run(run_benchmark(args))
         assert result == 0
@@ -241,9 +265,14 @@ class TestRunBenchmark:
         mock_factory_cls.return_value = factory_instance
 
         args = argparse.Namespace(
-            iterations=None, output_dir=None, no_scoring=False,
-            dry_run=False, systems=["langgraph_mcts"], tasks=None,
-            no_save_results=False, no_report=False,
+            iterations=None,
+            output_dir=None,
+            no_scoring=False,
+            dry_run=False,
+            systems=["langgraph_mcts"],
+            tasks=None,
+            no_save_results=False,
+            no_report=False,
         )
         result = asyncio.run(run_benchmark(args))
         assert result == 1
@@ -265,9 +294,14 @@ class TestRunBenchmark:
         factory_instance.create_harness.return_value = harness
 
         args = argparse.Namespace(
-            iterations=None, output_dir=None, no_scoring=False,
-            dry_run=False, systems=None, tasks=None,
-            no_save_results=False, no_report=False,
+            iterations=None,
+            output_dir=None,
+            no_scoring=False,
+            dry_run=False,
+            systems=None,
+            tasks=None,
+            no_save_results=False,
+            no_report=False,
         )
         result = asyncio.run(run_benchmark(args))
         assert result == 2
@@ -310,9 +344,14 @@ class TestRunBenchmark:
         factory_instance.create_report_generator.return_value = report_gen
 
         args = argparse.Namespace(
-            iterations=None, output_dir=None, no_scoring=False,
-            dry_run=False, systems=None, tasks=None,
-            no_save_results=False, no_report=False,
+            iterations=None,
+            output_dir=None,
+            no_scoring=False,
+            dry_run=False,
+            systems=None,
+            tasks=None,
+            no_save_results=False,
+            no_report=False,
         )
         result = asyncio.run(run_benchmark(args))
         assert result == 0
@@ -336,9 +375,14 @@ class TestRunBenchmark:
         factory_instance.create_harness.return_value = harness
 
         args = argparse.Namespace(
-            iterations=None, output_dir=None, no_scoring=False,
-            dry_run=False, systems=None, tasks=None,
-            no_save_results=False, no_report=False,
+            iterations=None,
+            output_dir=None,
+            no_scoring=False,
+            dry_run=False,
+            systems=None,
+            tasks=None,
+            no_save_results=False,
+            no_report=False,
         )
         result = asyncio.run(run_benchmark(args))
         assert result == 1

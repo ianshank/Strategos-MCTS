@@ -29,6 +29,7 @@ from src.enterprise.base.use_case import (
 
 # ---------- Concrete test subclass ----------
 
+
 @dataclass
 class _TestState(BaseDomainState):
     """Test domain state."""
@@ -104,6 +105,7 @@ def _make_agent(name: str = "agent_1", response: str = "ok", confidence: float =
 
 # ---------- Tests: get_reward_function ----------
 
+
 @pytest.mark.unit
 class TestGetRewardFunction:
     """Tests for get_reward_function guard logic."""
@@ -121,6 +123,7 @@ class TestGetRewardFunction:
 
 
 # ---------- Tests: get_domain_agents ----------
+
 
 @pytest.mark.unit
 class TestGetDomainAgents:
@@ -144,6 +147,7 @@ class TestGetDomainAgents:
 
 # ---------- Tests: initialize (idempotency) ----------
 
+
 @pytest.mark.unit
 class TestInitializeIdempotent:
     """Test that initialize is idempotent."""
@@ -158,6 +162,7 @@ class TestInitializeIdempotent:
 
 
 # ---------- Tests: _synthesize_results ----------
+
 
 @pytest.mark.unit
 class TestSynthesizeResults:
@@ -227,6 +232,7 @@ class TestSynthesizeResults:
 
 
 # ---------- Tests: _process_with_agents ----------
+
 
 @pytest.mark.unit
 class TestProcessWithAgents:
@@ -346,9 +352,7 @@ class TestProcessWithAgents:
     async def test_agent_processing_error_re_raised(self):
         uc = _TestUseCase(config=_make_config())
         agent = _make_agent("bad")
-        agent.process = AsyncMock(
-            side_effect=AgentProcessingError("bad", ValueError("orig"))
-        )
+        agent.process = AsyncMock(side_effect=AgentProcessingError("bad", ValueError("orig")))
         uc._agents = {"bad": agent}
 
         state = _TestState(state_id="s1")
@@ -379,6 +383,7 @@ class TestProcessWithAgents:
 
 
 # ---------- Tests: _run_mcts ----------
+
 
 @pytest.mark.unit
 class TestRunMcts:
@@ -487,6 +492,7 @@ class TestRunMcts:
 
 # ---------- Tests: process (async entry point) ----------
 
+
 @pytest.mark.unit
 class TestProcess:
     """Tests for the main process() async entry point."""
@@ -588,6 +594,7 @@ class TestProcess:
 
 
 # ---------- Tests: get_rollout_policy ----------
+
 
 @pytest.mark.unit
 class TestGetRolloutPolicy:

@@ -96,9 +96,7 @@ class TestDistillationTrainerConfig:
             cfg.validate()
 
     def test_validate_multiple_errors(self):
-        cfg = DistillationTrainerConfig(
-            num_epochs=0, learning_rate=-1, warmup_steps=-5
-        )
+        cfg = DistillationTrainerConfig(num_epochs=0, learning_rate=-1, warmup_steps=-5)
         with pytest.raises(ValueError) as exc_info:
             cfg.validate()
         msg = str(exc_info.value)
@@ -180,9 +178,7 @@ class TestLoggingCallback:
     def test_on_epoch_end(self):
         cb = LoggingCallback()
         trainer = MagicMock()
-        metrics = TrainingMetrics(
-            policy_loss=0.5, value_loss=0.3, policy_accuracy=0.7, value_mse=0.1
-        )
+        metrics = TrainingMetrics(policy_loss=0.5, value_loss=0.3, policy_accuracy=0.7, value_mse=0.1)
         cb.on_epoch_end(0, metrics, trainer)  # Should not raise
 
     def test_on_batch_end_logged(self):
@@ -227,9 +223,7 @@ class TestDistillationTrainer:
         assert trainer._best_metric == float("inf")
 
     def test_init_with_config(self):
-        cfg = DistillationTrainerConfig(
-            num_epochs=5, learning_rate=0.01, device="cpu"
-        )
+        cfg = DistillationTrainerConfig(num_epochs=5, learning_rate=0.01, device="cpu")
         trainer = DistillationTrainer(config=cfg)
         assert trainer._config.num_epochs == 5
         assert trainer._config.learning_rate == 0.01
@@ -296,9 +290,7 @@ class TestDistillationTrainer:
         cfg = DistillationTrainerConfig(device="cpu")
         net1 = self._make_simple_network()
         net2 = self._make_simple_network()
-        trainer = DistillationTrainer(
-            policy_network=net1, value_network=net2, config=cfg
-        )
+        trainer = DistillationTrainer(policy_network=net1, value_network=net2, config=cfg)
         params = trainer._get_all_parameters()
         assert len(params) == 4  # 2 params per Linear (weight + bias) x 2
 
@@ -315,9 +307,7 @@ class TestDistillationTrainer:
 
     def test_callbacks_custom(self):
         cb = MagicMock(spec=TrainingCallback)
-        trainer = DistillationTrainer(
-            config=DistillationTrainerConfig(device="cpu"), callbacks=[cb]
-        )
+        trainer = DistillationTrainer(config=DistillationTrainerConfig(device="cpu"), callbacks=[cb])
         assert len(trainer._callbacks) == 1
         assert trainer._callbacks[0] is cb
 
@@ -336,9 +326,7 @@ class TestDistillationTrainer:
         assert (tmp_path / "checkpoint_final.pt").exists()
 
     def test_cleanup_old_checkpoints(self, tmp_path):
-        cfg = DistillationTrainerConfig(
-            device="cpu", checkpoint_dir=str(tmp_path), keep_last_n_checkpoints=2
-        )
+        cfg = DistillationTrainerConfig(device="cpu", checkpoint_dir=str(tmp_path), keep_last_n_checkpoints=2)
         net = self._make_simple_network()
         trainer = DistillationTrainer(policy_network=net, config=cfg)
         # Create several checkpoints

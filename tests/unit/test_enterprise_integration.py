@@ -177,9 +177,7 @@ class TestEnterpriseGraphBuilder:
         mock_factory.create_from_query.return_value = mock_uc
         mock_factory.create_all_enabled.return_value = {}
 
-        builder = EnterpriseGraphBuilder(
-            use_case_factory=mock_factory, domain_detector=mock_detector
-        )
+        builder = EnterpriseGraphBuilder(use_case_factory=mock_factory, domain_detector=mock_detector)
         state: EnterpriseAgentState = {"query": "test"}
         await builder.process_enterprise_query(state)
 
@@ -209,9 +207,7 @@ class TestEnterpriseGraphBuilder:
             EnterpriseDomain.MA_DUE_DILIGENCE: mock_uc,
         }
 
-        builder = EnterpriseGraphBuilder(
-            use_case_factory=mock_factory, domain_detector=mock_detector
-        )
+        builder = EnterpriseGraphBuilder(use_case_factory=mock_factory, domain_detector=mock_detector)
         handler = builder.create_enterprise_node(EnterpriseDomain.MA_DUE_DILIGENCE)
 
         state: EnterpriseAgentState = {"query": "Analyze deal", "use_mcts": False}
@@ -233,9 +229,7 @@ class TestEnterpriseGraphBuilder:
         mock_detector.detect.return_value = result
         mock_factory.create_all_enabled.return_value = {}
 
-        builder = EnterpriseGraphBuilder(
-            use_case_factory=mock_factory, domain_detector=mock_detector
-        )
+        builder = EnterpriseGraphBuilder(use_case_factory=mock_factory, domain_detector=mock_detector)
         state: EnterpriseAgentState = {"query": "Analyze acquisition"}
         assert builder.should_route_to_enterprise(state) is True
 
@@ -257,9 +251,7 @@ class TestEnterpriseGraphBuilder:
         mock_factory.create_from_query.return_value = mock_uc
         mock_factory.create_all_enabled.return_value = {}
 
-        builder = EnterpriseGraphBuilder(
-            use_case_factory=mock_factory, domain_detector=mock_detector
-        )
+        builder = EnterpriseGraphBuilder(use_case_factory=mock_factory, domain_detector=mock_detector)
         state: EnterpriseAgentState = {"query": "Analyze acquisition"}
         assert builder.get_enterprise_route(state) == "enterprise_ma_due_diligence"
 
@@ -271,9 +263,7 @@ class TestEnterpriseGraphBuilder:
         mock_factory.create_from_query.return_value = None
         mock_factory.create_all_enabled.return_value = {}
 
-        builder = EnterpriseGraphBuilder(
-            use_case_factory=mock_factory, domain_detector=mock_detector
-        )
+        builder = EnterpriseGraphBuilder(use_case_factory=mock_factory, domain_detector=mock_detector)
         state: EnterpriseAgentState = {"query": "something"}
         assert builder.get_enterprise_route(state) == "standard"
 

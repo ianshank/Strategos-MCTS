@@ -128,6 +128,7 @@ class TestFAISSVectorStoreInit:
 
     def test_custom_init(self):
         from pathlib import Path
+
         store = FAISSVectorStore(
             model_name="custom-model",
             embedding_dim=768,

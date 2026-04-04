@@ -22,6 +22,8 @@ from typing import Any
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from src.config.constants import DEFAULT_OPENAI_MODEL
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,7 +107,7 @@ class ScoringConfig(BaseSettings):
         description="LLM provider for scoring (openai, anthropic, google)",
     )
     model: str = Field(
-        default="gpt-4-turbo-preview",
+        default=DEFAULT_OPENAI_MODEL,
         description="Model to use for scoring",
     )
     temperature: float = Field(

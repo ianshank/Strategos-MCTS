@@ -137,9 +137,7 @@ class TestConceptExtractorExtract:
 
     def test_sorted_by_importance(self):
         ext = ConceptExtractor(domain="software")
-        concepts = ext.extract_concepts(
-            "The api endpoint connects to the database for query optimization"
-        )
+        concepts = ext.extract_concepts("The api endpoint connects to the database for query optimization")
         if len(concepts) > 1:
             importances = [c.importance for c in concepts]
             assert importances == sorted(importances, reverse=True)
@@ -295,6 +293,7 @@ class TestConceptExtractorVisualize:
 
     def test_visualize_handles_missing_matplotlib(self, monkeypatch):
         import builtins
+
         real_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):

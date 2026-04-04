@@ -17,6 +17,8 @@ from contextlib import contextmanager
 from functools import wraps
 from typing import Any
 
+from src.config.constants import DEFAULT_OTLP_HTTP_ENDPOINT
+
 logger = logging.getLogger(__name__)
 
 # Try to import OpenTelemetry
@@ -84,7 +86,7 @@ def setup_tracing(
 
     try:
         # Get OTLP endpoint from environment or parameter
-        endpoint = otlp_endpoint or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+        endpoint = otlp_endpoint or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", DEFAULT_OTLP_HTTP_ENDPOINT)
 
         # Create resource with service information
         resource = Resource.create(
@@ -430,7 +432,7 @@ def get_tracing_status() -> dict[str, Any]:
     return {
         "otel_available": OTEL_AVAILABLE,
         "initialized": _initialized,
-        "endpoint": os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"),
+        "endpoint": os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", DEFAULT_OTLP_HTTP_ENDPOINT),
     }
 
 

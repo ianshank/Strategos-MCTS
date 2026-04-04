@@ -26,6 +26,7 @@ from src.training.system_config import MCTSConfig
 # Test helpers
 # ---------------------------------------------------------------------------
 
+
 class SimpleGameState(GameState):
     """Concrete GameState for testing."""
 
@@ -87,6 +88,7 @@ def _make_config(**overrides):
 # ---------------------------------------------------------------------------
 # NeuralMCTSNode extended tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestNeuralMCTSNodeExt:
@@ -178,6 +180,7 @@ class TestNeuralMCTSNodeExt:
 # ---------------------------------------------------------------------------
 # NeuralMCTS extended tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestNeuralMCTSExt:
@@ -408,6 +411,7 @@ class TestNeuralMCTSExt:
 # MCTSExample tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestMCTSExample:
     """Tests for MCTSExample dataclass."""
@@ -425,6 +429,7 @@ class TestMCTSExample:
 # ---------------------------------------------------------------------------
 # SelfPlayCollector tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestSelfPlayCollector:
@@ -508,6 +513,7 @@ class TestSelfPlayCollector:
 # ---------------------------------------------------------------------------
 # GameState base class extended tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestGameStateBase:

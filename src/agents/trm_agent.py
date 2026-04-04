@@ -401,7 +401,8 @@ class TRMRefinementWrapper:
 
         if return_path:
             result: torch.Tensor | tuple[torch.Tensor, list[torch.Tensor]] = (
-                output.final_prediction, output.intermediate_predictions
+                output.final_prediction,
+                output.intermediate_predictions,
             )
             return result
         final: torch.Tensor = output.final_prediction

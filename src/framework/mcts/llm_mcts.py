@@ -30,6 +30,11 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from src.config.constants import (
+    DEFAULT_ANTHROPIC_BASE_URL,
+    DEFAULT_OPENAI_BASE_URL,
+)
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -135,12 +140,12 @@ PROVIDER_CONFIG: dict[str, dict[str, str]] = {
     "openai": {
         "env_key": "OPENAI_API_KEY",
         "default_model": "gpt-4o-mini",
-        "base_url": "https://api.openai.com/v1/chat/completions",
+        "base_url": f"{DEFAULT_OPENAI_BASE_URL}/chat/completions",
     },
     "anthropic": {
         "env_key": "ANTHROPIC_API_KEY",
         "default_model": "claude-sonnet-4-20250514",
-        "base_url": "https://api.anthropic.com/v1/messages",
+        "base_url": f"{DEFAULT_ANTHROPIC_BASE_URL}/v1/messages",
         "api_version": "2023-06-01",
     },
 }

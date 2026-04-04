@@ -20,6 +20,12 @@ from tenacity import (
     wait_exponential,
 )
 
+from src.config.constants import (
+    DEFAULT_OPENAI_BASE_URL,
+    DEFAULT_OPENAI_MODEL,
+    DEFAULT_OPENAI_TIMEOUT,
+)
+
 from .base import BaseLLMClient, LLMResponse, LLMToolResponse, ToolCall
 from .exceptions import (
     CircuitBreakerOpenError,
@@ -112,15 +118,15 @@ class OpenAIClient(BaseLLMClient):
     """
 
     PROVIDER_NAME = "openai"
-    DEFAULT_BASE_URL = "https://api.openai.com/v1"
-    DEFAULT_MODEL = "gpt-4-turbo-preview"
+    DEFAULT_BASE_URL = DEFAULT_OPENAI_BASE_URL
+    DEFAULT_MODEL = DEFAULT_OPENAI_MODEL
 
     def __init__(
         self,
         api_key: str | None = None,
         model: str | None = None,
         base_url: str | None = None,
-        timeout: float = 60.0,
+        timeout: float = DEFAULT_OPENAI_TIMEOUT,
         max_retries: int = 3,
         organization: str | None = None,
         # Circuit breaker settings

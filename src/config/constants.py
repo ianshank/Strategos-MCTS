@@ -142,3 +142,39 @@ DEFAULT_WANDB_MODE: Final[str] = "online"
 DEFAULT_LANGCHAIN_ENDPOINT: Final[str] = "https://api.smith.langchain.com"
 DEFAULT_LMSTUDIO_URL: Final[str] = "http://localhost:1234/v1"
 DEFAULT_SERVER_HOST: Final[str] = "0.0.0.0"
+DEFAULT_OPENAI_BASE_URL: Final[str] = "https://api.openai.com/v1"
+DEFAULT_ANTHROPIC_BASE_URL: Final[str] = "https://api.anthropic.com"
+DEFAULT_OTLP_ENDPOINT: Final[str] = "localhost:4317"
+DEFAULT_OTLP_HTTP_ENDPOINT: Final[str] = "http://localhost:4317"
+
+# ============================================================================
+# LLM Provider Defaults
+# ============================================================================
+
+# Default model names
+DEFAULT_OPENAI_MODEL: Final[str] = "gpt-4-turbo-preview"
+DEFAULT_ANTHROPIC_MODEL: Final[str] = "claude-3-5-sonnet-20241022"
+
+# Default timeouts per provider (seconds)
+DEFAULT_OPENAI_TIMEOUT: Final[float] = 60.0
+DEFAULT_ANTHROPIC_TIMEOUT: Final[float] = 120.0
+DEFAULT_LMSTUDIO_TIMEOUT: Final[float] = 300.0
+DEFAULT_LLM_TIMEOUT: Final[float] = 60.0
+
+# Default max tokens
+DEFAULT_MAX_TOKENS: Final[int] = 4096
+DEFAULT_MAX_RETRIES: Final[int] = 5
+
+# ============================================================================
+# S3 Storage Defaults
+# ============================================================================
+
+DEFAULT_S3_BUCKET_NAME: Final[str] = "mcts-framework-storage"
+
+# ============================================================================
+# Service Metadata
+# ============================================================================
+
+SERVICE_VERSION: Final[str] = "0.1.0"
+DEFAULT_ENVIRONMENT: Final[str] = "development"
+DEFAULT_OTEL_SERVICE_NAME: Final[str] = "mcts-framework"

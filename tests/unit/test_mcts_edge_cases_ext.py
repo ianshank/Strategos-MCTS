@@ -35,6 +35,7 @@ pytestmark = [pytest.mark.unit]
 # Helper mocks
 # ---------------------------------------------------------------------------
 
+
 class MockNode:
     """Minimal mock of an MCTS node for validator tests."""
 
@@ -47,6 +48,7 @@ class MockNode:
 # ---------------------------------------------------------------------------
 # MCTSValidator extended tests
 # ---------------------------------------------------------------------------
+
 
 class TestMCTSValidatorExt:
     """Extended coverage for MCTSValidator."""
@@ -169,6 +171,7 @@ class TestMCTSValidatorExt:
 # MCTSValidationError
 # ---------------------------------------------------------------------------
 
+
 class TestMCTSValidationError:
     def test_is_exception(self):
         err = MCTSValidationError("test error")
@@ -179,6 +182,7 @@ class TestMCTSValidationError:
 # ---------------------------------------------------------------------------
 # MCTSTerminationReason
 # ---------------------------------------------------------------------------
+
 
 class TestMCTSTerminationReason:
     def test_all_values(self):
@@ -195,6 +199,7 @@ class TestMCTSTerminationReason:
 # ---------------------------------------------------------------------------
 # MCTSSearchResult extended tests
 # ---------------------------------------------------------------------------
+
 
 class TestMCTSSearchResultExt:
     def test_to_dict_rounds_time(self):
@@ -224,6 +229,7 @@ class TestMCTSSearchResultExt:
 # ---------------------------------------------------------------------------
 # TimeoutConfig
 # ---------------------------------------------------------------------------
+
 
 class TestTimeoutConfig:
     def test_defaults(self):
@@ -270,6 +276,7 @@ class TestTimeoutConfig:
 # BudgetConfig
 # ---------------------------------------------------------------------------
 
+
 class TestBudgetConfig:
     def test_defaults(self):
         cfg = BudgetConfig()
@@ -304,6 +311,7 @@ class TestBudgetConfig:
 # ---------------------------------------------------------------------------
 # TimeoutHandler extended tests
 # ---------------------------------------------------------------------------
+
 
 class TestTimeoutHandlerExt:
     def test_elapsed_before_start(self):
@@ -449,6 +457,7 @@ class TestTimeoutHandlerExt:
 # ---------------------------------------------------------------------------
 # EmptyActionHandler extended tests
 # ---------------------------------------------------------------------------
+
 
 class TestEmptyActionHandlerExt:
     def test_default_fallback_action(self):

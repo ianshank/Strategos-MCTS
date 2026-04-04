@@ -120,16 +120,20 @@ class TestAssemblyFeatureExtractor:
 
     def test_init_default(self) -> None:
         """Extractor initializes with default config."""
-        with patch("src.framework.assembly.features.AssemblyIndexCalculator"), \
-             patch("src.framework.assembly.features.ConceptExtractor"):
+        with (
+            patch("src.framework.assembly.features.AssemblyIndexCalculator"),
+            patch("src.framework.assembly.features.ConceptExtractor"),
+        ):
             extractor = AssemblyFeatureExtractor()
             assert extractor.domain == "general"
             assert extractor._max_assembly_index == 20.0
 
     def test_init_custom_domain(self) -> None:
         """Extractor accepts custom domain."""
-        with patch("src.framework.assembly.features.AssemblyIndexCalculator"), \
-             patch("src.framework.assembly.features.ConceptExtractor"):
+        with (
+            patch("src.framework.assembly.features.AssemblyIndexCalculator"),
+            patch("src.framework.assembly.features.ConceptExtractor"),
+        ):
             extractor = AssemblyFeatureExtractor(domain="software")
             assert extractor.domain == "software"
 
@@ -202,6 +206,7 @@ class TestAssemblyFeatureExtractor:
         extractor = self._make_extractor()
         extractor.concept_extractor.extract_concepts.return_value = []
         import networkx as nx
+
         extractor.concept_extractor.build_dependency_graph.return_value = nx.DiGraph()
 
         result = extractor.extract("hello")
@@ -210,6 +215,7 @@ class TestAssemblyFeatureExtractor:
     def test_graph_depth_empty_graph(self) -> None:
         """Graph depth is 0 for empty graph."""
         import networkx as nx
+
         extractor = self._make_extractor()
         extractor.concept_extractor.build_dependency_graph.return_value = nx.DiGraph()
         extractor.concept_extractor.extract_concepts.return_value = []
@@ -220,6 +226,7 @@ class TestAssemblyFeatureExtractor:
     def test_graph_depth_dag(self) -> None:
         """Graph depth calculated correctly for a DAG."""
         import networkx as nx
+
         extractor = self._make_extractor()
 
         g = nx.DiGraph()
@@ -237,6 +244,7 @@ class TestAssemblyFeatureExtractor:
     def test_decomposability_empty_concepts(self) -> None:
         """Decomposability is 0.0 with no concepts."""
         import networkx as nx
+
         extractor = self._make_extractor()
         score = extractor._calculate_decomposability([], nx.DiGraph())
         assert score == 0.0
@@ -244,6 +252,7 @@ class TestAssemblyFeatureExtractor:
     def test_decomposability_cyclic_graph(self) -> None:
         """Cyclic graphs get low decomposability score."""
         import networkx as nx
+
         extractor = self._make_extractor()
 
         g = nx.DiGraph()
@@ -277,14 +286,24 @@ class TestAssemblyFeatureExtractor:
         """High decomposability increases its own importance."""
         extractor = self._make_extractor()
         low_decomp = AssemblyFeatures(
-            assembly_index=5.0, copy_number=2.0, decomposability_score=0.3,
-            graph_depth=2, constraint_count=3, concept_count=4,
-            technical_complexity=0.3, normalized_assembly_index=0.25,
+            assembly_index=5.0,
+            copy_number=2.0,
+            decomposability_score=0.3,
+            graph_depth=2,
+            constraint_count=3,
+            concept_count=4,
+            technical_complexity=0.3,
+            normalized_assembly_index=0.25,
         )
         high_decomp = AssemblyFeatures(
-            assembly_index=5.0, copy_number=2.0, decomposability_score=0.8,
-            graph_depth=2, constraint_count=3, concept_count=4,
-            technical_complexity=0.3, normalized_assembly_index=0.25,
+            assembly_index=5.0,
+            copy_number=2.0,
+            decomposability_score=0.8,
+            graph_depth=2,
+            constraint_count=3,
+            concept_count=4,
+            technical_complexity=0.3,
+            normalized_assembly_index=0.25,
         )
         imp_low = extractor.get_feature_importance(low_decomp)
         imp_high = extractor.get_feature_importance(high_decomp)
@@ -294,9 +313,14 @@ class TestAssemblyFeatureExtractor:
         """Explain features for low complexity query."""
         extractor = self._make_extractor()
         features = AssemblyFeatures(
-            assembly_index=2.0, copy_number=1.0, decomposability_score=0.8,
-            graph_depth=1, constraint_count=0, concept_count=2,
-            technical_complexity=0.1, normalized_assembly_index=0.1,
+            assembly_index=2.0,
+            copy_number=1.0,
+            decomposability_score=0.8,
+            graph_depth=1,
+            constraint_count=0,
+            concept_count=2,
+            technical_complexity=0.1,
+            normalized_assembly_index=0.1,
         )
         explanation = extractor.explain_features(features)
         assert "low" in explanation.lower()
@@ -306,9 +330,14 @@ class TestAssemblyFeatureExtractor:
         """Explain features for high complexity query."""
         extractor = self._make_extractor()
         features = AssemblyFeatures(
-            assembly_index=9.0, copy_number=4.0, decomposability_score=0.2,
-            graph_depth=5, constraint_count=10, concept_count=15,
-            technical_complexity=0.7, normalized_assembly_index=0.45,
+            assembly_index=9.0,
+            copy_number=4.0,
+            decomposability_score=0.2,
+            graph_depth=5,
+            constraint_count=10,
+            concept_count=15,
+            technical_complexity=0.7,
+            normalized_assembly_index=0.45,
         )
         explanation = extractor.explain_features(features)
         assert "high" in explanation.lower()

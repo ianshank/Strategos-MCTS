@@ -167,6 +167,7 @@ class TestCreateEmbeddingCache:
     def test_factory_with_compute_fn(self):
         def fn(text):
             return np.zeros(10)
+
         cache = create_embedding_cache(compute_fn=fn)
         assert cache._compute_fn is fn
 

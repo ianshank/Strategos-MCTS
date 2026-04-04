@@ -21,6 +21,7 @@ from src.training.system_config import (
 # Fixtures: mock all heavy components so tests are fast and isolated
 # ---------------------------------------------------------------------------
 
+
 def _make_mock_model(param_count: int = 100):
     """Create a mock nn.Module with parameter count."""
     model = MagicMock()
@@ -121,6 +122,7 @@ def _build_orchestrator_with_mocks(config):
 # Tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestUnifiedTrainingOrchestratorInit:
     """Tests for UnifiedTrainingOrchestrator initialization."""
@@ -182,6 +184,7 @@ class TestSetupWandb:
         orch = _build_orchestrator_with_mocks(tmp_config)
 
         import sys
+
         # Set wandb to None in sys.modules so import raises ImportError
         with patch.dict(sys.modules, {"wandb": None}):
             orch._setup_wandb()
@@ -196,6 +199,7 @@ class TestSetupWandb:
         mock_wandb.init.side_effect = RuntimeError("wandb error")
 
         import sys
+
         with patch.dict(sys.modules, {"wandb": mock_wandb}):
             orch._setup_wandb()
         assert orch.config.use_wandb is False
@@ -361,6 +365,7 @@ class TestLogMetrics:
 
         mock_wandb = MagicMock()
         import sys
+
         with patch.dict(sys.modules, {"wandb": mock_wandb}):
             orch._log_metrics(iteration=1, metrics={"loss": 0.5})
             mock_wandb.log.assert_called_once()

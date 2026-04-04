@@ -306,7 +306,7 @@ class HRMAgent(nn.Module):
 
             # Generate subproblem decomposition if requested
             if return_decomposition:
-                subproblem_repr = self.h_module[0].decompose(h_state)  # type: ignore[operator]
+                subproblem_repr = self.h_module[0].decompose(h_state)
                 # Create subproblem entries (simplified)
                 for i in range(min(3, seq_len)):  # Top 3 subproblems
                     subproblems.append(

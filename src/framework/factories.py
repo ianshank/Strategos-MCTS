@@ -21,6 +21,7 @@ import logging
 from typing import Any, Protocol
 
 from src.adapters.llm.base import LLMClient
+from src.config.constants import DEFAULT_OPENAI_MODEL
 from src.config.settings import Settings, get_settings
 
 
@@ -109,11 +110,11 @@ class LLMClientFactory:
     def _get_default_model(self, provider: str) -> str:
         """Get default model for a provider."""
         defaults = {
-            "openai": "gpt-4-turbo-preview",
+            "openai": DEFAULT_OPENAI_MODEL,
             "anthropic": "claude-3-sonnet-20240229",
             "lmstudio": "local-model",
         }
-        return defaults.get(provider, "gpt-4-turbo-preview")
+        return defaults.get(provider, DEFAULT_OPENAI_MODEL)
 
 
 class AgentFactory:
@@ -238,9 +239,9 @@ class AgentFactory:
             latent_dim=latent_dim if latent_dim is not None else self.settings.TRM_LATENT_DIM,
             hidden_dim=hidden_dim if hidden_dim is not None else self.settings.TRM_HIDDEN_DIM,
             num_recursions=num_recursions if num_recursions is not None else self.settings.TRM_NUM_RECURSIONS,
-            convergence_threshold=convergence_threshold
-            if convergence_threshold is not None
-            else self.settings.TRM_CONVERGENCE_THRESHOLD,
+            convergence_threshold=(
+                convergence_threshold if convergence_threshold is not None else self.settings.TRM_CONVERGENCE_THRESHOLD
+            ),
             deep_supervision=deep_supervision if deep_supervision is not None else True,
             **{k: v for k, v in config.items() if k in TRMConfig.__dataclass_fields__},
         )

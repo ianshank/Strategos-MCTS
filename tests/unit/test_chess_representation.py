@@ -23,6 +23,7 @@ def mock_torch():
     """Provide a mock torch module if torch is not available."""
     try:
         import torch
+
         yield torch
     except ImportError:
         mock_torch_mod = MagicMock()
@@ -93,6 +94,7 @@ def mock_chess():
     """Provide the chess module or a mock."""
     try:
         import chess
+
         yield chess
     except ImportError:
         mock_chess_mod = MagicMock()
@@ -109,6 +111,7 @@ class TestChessBoardRepresentationImport:
 
     def test_piece_to_plane_mapping(self):
         from src.games.chess.representation import PIECE_TO_PLANE
+
         assert PIECE_TO_PLANE[1] == 0  # Pawn
         assert PIECE_TO_PLANE[2] == 1  # Knight
         assert PIECE_TO_PLANE[3] == 2  # Bishop
@@ -118,6 +121,7 @@ class TestChessBoardRepresentationImport:
 
     def test_default_config(self):
         from src.games.chess.representation import ChessBoardRepresentation
+
         rep = ChessBoardRepresentation()
         assert rep.num_planes == 22  # Default: 12 + 1 + 4 + 1 + 1 + 1 + 2
         assert rep.input_shape == (22, 8, 8)
@@ -125,6 +129,7 @@ class TestChessBoardRepresentationImport:
     def test_custom_config(self):
         from src.games.chess.config import ChessBoardConfig
         from src.games.chess.representation import ChessBoardRepresentation
+
         config = ChessBoardConfig(include_history=True, history_length=4)
         rep = ChessBoardRepresentation(config)
         # 22 base + 4 * 12 history = 70
@@ -132,6 +137,7 @@ class TestChessBoardRepresentationImport:
 
     def test_repr(self):
         from src.games.chess.representation import ChessBoardRepresentation
+
         rep = ChessBoardRepresentation()
         s = repr(rep)
         assert "ChessBoardRepresentation" in s

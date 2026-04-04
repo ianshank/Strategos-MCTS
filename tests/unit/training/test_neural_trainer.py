@@ -24,6 +24,7 @@ from src.training.neural_trainer import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_simple_model(input_dim: int = 4, output_dim: int = 3) -> nn.Module:
     """Create a small feedforward model for testing."""
     return nn.Sequential(nn.Linear(input_dim, 8), nn.ReLU(), nn.Linear(8, output_dim))
@@ -65,6 +66,7 @@ def _make_trainer_with_mock_forward(config, model=None, loss_fn=None):
 # ---------------------------------------------------------------------------
 # TrainingConfig tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestTrainingConfig:
@@ -120,6 +122,7 @@ class TestTrainingConfig:
 # TrainingMetrics tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestTrainingMetrics:
     """Tests for TrainingMetrics dataclass."""
@@ -150,6 +153,7 @@ class TestTrainingMetrics:
 # ---------------------------------------------------------------------------
 # PolicyDataset tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestPolicyDataset:
@@ -187,6 +191,7 @@ class TestPolicyDataset:
 # ValueDataset tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestValueDataset:
     """Tests for ValueDataset."""
@@ -211,6 +216,7 @@ class TestValueDataset:
 # ---------------------------------------------------------------------------
 # NeuralTrainer tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestNeuralTrainer:
@@ -445,6 +451,7 @@ class TestNeuralTrainer:
         )
         # Remove wandb from sys.modules so the import inside __init__ fails
         import sys
+
         with patch.dict(sys.modules, {"wandb": None}):
             trainer = NeuralTrainer(model, loss_fn, config)
             assert trainer.wandb is None

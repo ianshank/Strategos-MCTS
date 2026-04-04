@@ -72,9 +72,7 @@ class TestDataclasses:
         assert rd.confidence == 0.8
 
     def test_chess_move_result_defaults(self):
-        cmr = ChessMoveResult(
-            move="e2e4", score=0.9, reasoning="good move", agent_name="hrm"
-        )
+        cmr = ChessMoveResult(move="e2e4", score=0.9, reasoning="good move", agent_name="hrm")
         assert cmr.confidence == 0.0
         assert cmr.metadata == {}
 
@@ -497,12 +495,8 @@ class TestLLMChessEngine:
         adapter = _make_mock_adapter()
         engine = LLMChessEngine(adapter)
         agent_results = {
-            "hrm": ChessMoveResult(
-                move="e2e4", score=0.8, reasoning="good", agent_name="hrm", confidence=0.8
-            ),
-            "trm": ChessMoveResult(
-                move="d2d4", score=0.7, reasoning="also good", agent_name="trm", confidence=0.7
-            ),
+            "hrm": ChessMoveResult(move="e2e4", score=0.8, reasoning="good", agent_name="hrm", confidence=0.8),
+            "trm": ChessMoveResult(move="d2d4", score=0.7, reasoning="also good", agent_name="trm", confidence=0.7),
         }
         move, reasoning = await engine._synthesize_consensus(START_FEN, agent_results)
         assert move == "e2e4"  # extracted from mock response
@@ -513,12 +507,8 @@ class TestLLMChessEngine:
         adapter.generate = AsyncMock(side_effect=RuntimeError("LLM error"))
         engine = LLMChessEngine(adapter)
         agent_results = {
-            "hrm": ChessMoveResult(
-                move="e2e4", score=0.8, reasoning="good", agent_name="hrm", confidence=0.8
-            ),
-            "trm": ChessMoveResult(
-                move="d2d4", score=0.7, reasoning="also good", agent_name="trm", confidence=0.7
-            ),
+            "hrm": ChessMoveResult(move="e2e4", score=0.8, reasoning="good", agent_name="hrm", confidence=0.8),
+            "trm": ChessMoveResult(move="d2d4", score=0.7, reasoning="also good", agent_name="trm", confidence=0.7),
         }
         move, reasoning = await engine._synthesize_consensus(START_FEN, agent_results)
         assert move is None

@@ -56,45 +56,75 @@ class TestStockfishAnalysis:
 
     def test_evaluation_score_positive_cp(self):
         analysis = StockfishAnalysis(
-            best_move="e2e4", evaluation_cp=100, evaluation_mate=None,
-            depth=20, nodes=0, time_ms=0.0, pv=[],
+            best_move="e2e4",
+            evaluation_cp=100,
+            evaluation_mate=None,
+            depth=20,
+            nodes=0,
+            time_ms=0.0,
+            pv=[],
         )
         score = analysis.evaluation_score
         assert 0 < score < 1.0
 
     def test_evaluation_score_negative_cp(self):
         analysis = StockfishAnalysis(
-            best_move="e7e5", evaluation_cp=-200, evaluation_mate=None,
-            depth=20, nodes=0, time_ms=0.0, pv=[],
+            best_move="e7e5",
+            evaluation_cp=-200,
+            evaluation_mate=None,
+            depth=20,
+            nodes=0,
+            time_ms=0.0,
+            pv=[],
         )
         score = analysis.evaluation_score
         assert -1.0 < score < 0
 
     def test_evaluation_score_zero_cp(self):
         analysis = StockfishAnalysis(
-            best_move="e2e4", evaluation_cp=0, evaluation_mate=None,
-            depth=20, nodes=0, time_ms=0.0, pv=[],
+            best_move="e2e4",
+            evaluation_cp=0,
+            evaluation_mate=None,
+            depth=20,
+            nodes=0,
+            time_ms=0.0,
+            pv=[],
         )
         assert analysis.evaluation_score == pytest.approx(0.0)
 
     def test_evaluation_score_mate_white(self):
         analysis = StockfishAnalysis(
-            best_move="Qf7", evaluation_cp=10000, evaluation_mate=3,
-            depth=20, nodes=0, time_ms=0.0, pv=[],
+            best_move="Qf7",
+            evaluation_cp=10000,
+            evaluation_mate=3,
+            depth=20,
+            nodes=0,
+            time_ms=0.0,
+            pv=[],
         )
         assert analysis.evaluation_score == 1.0
 
     def test_evaluation_score_mate_black(self):
         analysis = StockfishAnalysis(
-            best_move="Qf2", evaluation_cp=-10000, evaluation_mate=-2,
-            depth=20, nodes=0, time_ms=0.0, pv=[],
+            best_move="Qf2",
+            evaluation_cp=-10000,
+            evaluation_mate=-2,
+            depth=20,
+            nodes=0,
+            time_ms=0.0,
+            pv=[],
         )
         assert analysis.evaluation_score == -1.0
 
     def test_to_dict(self):
         analysis = StockfishAnalysis(
-            best_move="e2e4", evaluation_cp=50, evaluation_mate=None,
-            depth=20, nodes=100, time_ms=500.0, pv=["e2e4"],
+            best_move="e2e4",
+            evaluation_cp=50,
+            evaluation_mate=None,
+            depth=20,
+            nodes=100,
+            time_ms=500.0,
+            pv=["e2e4"],
         )
         d = analysis.to_dict()
         assert d["best_move"] == "e2e4"
@@ -104,8 +134,13 @@ class TestStockfishAnalysis:
 
     def test_extra_info(self):
         analysis = StockfishAnalysis(
-            best_move="e2e4", evaluation_cp=50, evaluation_mate=None,
-            depth=20, nodes=100, time_ms=500.0, pv=[],
+            best_move="e2e4",
+            evaluation_cp=50,
+            evaluation_mate=None,
+            depth=20,
+            nodes=100,
+            time_ms=500.0,
+            pv=[],
             extra_info={"nps": 200000},
         )
         assert analysis.extra_info["nps"] == 200000
@@ -127,15 +162,23 @@ class TestEvaluationResult:
 
     def test_win_rate_zero_games(self):
         result = EvaluationResult(
-            total_games=0, agent_wins=0, stockfish_wins=0, draws=0,
-            avg_move_diff_cp=0.0, agreement_rate=0.0,
+            total_games=0,
+            agent_wins=0,
+            stockfish_wins=0,
+            draws=0,
+            avg_move_diff_cp=0.0,
+            agreement_rate=0.0,
         )
         assert result.agent_win_rate == 0.0
 
     def test_games_list(self):
         result = EvaluationResult(
-            total_games=1, agent_wins=1, stockfish_wins=0, draws=0,
-            avg_move_diff_cp=10.0, agreement_rate=0.8,
+            total_games=1,
+            agent_wins=1,
+            stockfish_wins=0,
+            draws=0,
+            avg_move_diff_cp=10.0,
+            agreement_rate=0.8,
             games=[{"game_num": 0, "result": "agent_win"}],
         )
         assert len(result.games) == 1
@@ -163,8 +206,10 @@ class TestStockfishAdapter:
     def test_find_stockfish_not_found(self):
         config = StockfishConfig(stockfish_path=None)
         adapter = StockfishAdapter(config)
-        with patch("shutil.which", return_value=None), \
-             patch("src.games.chess.engines.stockfish_adapter.get_stockfish_executables", return_value=["stockfish"]):
+        with (
+            patch("shutil.which", return_value=None),
+            patch("src.games.chess.engines.stockfish_adapter.get_stockfish_executables", return_value=["stockfish"]),
+        ):
             adapter._config.stockfish_path = None
             result = adapter._find_stockfish()
             assert result is None

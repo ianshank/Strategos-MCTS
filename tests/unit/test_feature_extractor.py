@@ -84,6 +84,7 @@ class TestFeatureExtractor:
 
         # Mock cosine similarity to return reasonable scores
         import torch
+
         mock_util.cos_sim.return_value = torch.tensor([[0.8, 0.6, 0.5, 0.4, 0.3]])
 
         extractor = FeatureExtractor()

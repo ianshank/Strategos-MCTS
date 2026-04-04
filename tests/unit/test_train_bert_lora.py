@@ -18,6 +18,7 @@ import pytest
 # Helpers: mock out the heavy imports that train_bert_lora pulls in
 # ---------------------------------------------------------------------------
 
+
 def _make_mock_controller(**kwargs):
     """Build a mock BERTMetaController."""
     ctrl = MagicMock(name="BERTMetaController")
@@ -45,14 +46,13 @@ def _patch_heavy_deps(monkeypatch):
     monkeypatch.setattr(mod, "_DATASETS_AVAILABLE", True)
 
     # Patch BERTMetaController constructor
-    monkeypatch.setattr(
-        mod, "BERTMetaController", lambda **kw: _make_mock_controller(**kw)
-    )
+    monkeypatch.setattr(mod, "BERTMetaController", lambda **kw: _make_mock_controller(**kw))
 
 
 # ---------------------------------------------------------------------------
 # setup_logging
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestSetupLogging:
@@ -74,6 +74,7 @@ class TestSetupLogging:
 # ---------------------------------------------------------------------------
 # BERTLoRATrainer.__init__
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestBERTLoRATrainerInit:
@@ -136,6 +137,7 @@ class TestBERTLoRATrainerInit:
 # prepare_dataset
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestPrepareDataset:
     """Tests for BERTLoRATrainer.prepare_dataset."""
@@ -173,6 +175,7 @@ class TestPrepareDataset:
 # ---------------------------------------------------------------------------
 # compute_metrics
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestComputeMetrics:
@@ -220,6 +223,7 @@ class TestComputeMetrics:
 # ---------------------------------------------------------------------------
 # train
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestTrain:
@@ -287,6 +291,7 @@ class TestTrain:
 # ---------------------------------------------------------------------------
 # evaluate
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestEvaluate:
@@ -359,6 +364,7 @@ class TestEvaluate:
 # save_model
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestSaveModel:
     """Tests for BERTLoRATrainer.save_model."""
@@ -375,6 +381,7 @@ class TestSaveModel:
 # main (argument parsing smoke test)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestMainFunction:
     """Smoke tests for the main() entry point argument parsing."""
@@ -389,9 +396,12 @@ class TestMainFunction:
         mock_gen.generate_dataset.return_value = (["feat1", "feat2"], ["hrm", "trm"])
         mock_gen.to_text_dataset.return_value = (["text1", "text2"], [0, 1])
         mock_gen.split_dataset.return_value = {
-            "X_train": ["t1"], "y_train": [0],
-            "X_val": ["v1"], "y_val": [1],
-            "X_test": ["e1"], "y_test": [0],
+            "X_train": ["t1"],
+            "y_train": [0],
+            "X_val": ["v1"],
+            "y_val": [1],
+            "X_test": ["e1"],
+            "y_test": [0],
         }
         mock_data_gen_cls.return_value = mock_gen
 
@@ -441,22 +451,30 @@ class TestMainFunction:
         mock_gen.generate_balanced_dataset.return_value = (["f1", "f2", "f3"], ["hrm", "trm", "mcts"])
         mock_gen.to_text_dataset.return_value = (["t1", "t2", "t3"], [0, 1, 2])
         mock_gen.split_dataset.return_value = {
-            "X_train": ["t1"], "y_train": [0],
-            "X_val": ["v1"], "y_val": [1],
-            "X_test": ["e1"], "y_test": [0],
+            "X_train": ["t1"],
+            "y_train": [0],
+            "X_val": ["v1"],
+            "y_val": [1],
+            "X_test": ["e1"],
+            "y_test": [0],
         }
         mock_data_gen_cls.return_value = mock_gen
 
         mock_trainer = MagicMock()
         mock_trainer.train.return_value = {
-            "train_loss": 0.1, "epochs": 1, "final_metrics": {},
+            "train_loss": 0.1,
+            "epochs": 1,
+            "final_metrics": {},
             "eval_results": {"eval_accuracy": 0.8},
-            "train_runtime": 1.0, "train_samples_per_second": 5.0,
+            "train_runtime": 1.0,
+            "train_samples_per_second": 5.0,
         }
         mock_trainer.evaluate.return_value = {"loss": 0.1, "accuracy": 0.8, "predictions": [], "probabilities": []}
         mock_trainer.controller = MagicMock()
         mock_trainer.controller.get_trainable_parameters.return_value = {
-            "total_params": 100, "trainable_params": 10, "trainable_percentage": 10.0,
+            "total_params": 100,
+            "trainable_params": 10,
+            "trainable_percentage": 10.0,
         }
         mock_trainer_cls.return_value = mock_trainer
 
@@ -477,22 +495,30 @@ class TestMainFunction:
         mock_gen.load_dataset.return_value = (["f1"], ["hrm"])
         mock_gen.to_text_dataset.return_value = (["t1"], [0])
         mock_gen.split_dataset.return_value = {
-            "X_train": ["t1"], "y_train": [0],
-            "X_val": ["v1"], "y_val": [1],
-            "X_test": ["e1"], "y_test": [0],
+            "X_train": ["t1"],
+            "y_train": [0],
+            "X_val": ["v1"],
+            "y_val": [1],
+            "X_test": ["e1"],
+            "y_test": [0],
         }
         mock_data_gen_cls.return_value = mock_gen
 
         mock_trainer = MagicMock()
         mock_trainer.train.return_value = {
-            "train_loss": 0.1, "epochs": 1, "final_metrics": {},
+            "train_loss": 0.1,
+            "epochs": 1,
+            "final_metrics": {},
             "eval_results": {"eval_accuracy": 0.8},
-            "train_runtime": 1.0, "train_samples_per_second": 5.0,
+            "train_runtime": 1.0,
+            "train_samples_per_second": 5.0,
         }
         mock_trainer.evaluate.return_value = {"loss": 0.1, "accuracy": 0.8, "predictions": [], "probabilities": []}
         mock_trainer.controller = MagicMock()
         mock_trainer.controller.get_trainable_parameters.return_value = {
-            "total_params": 100, "trainable_params": 10, "trainable_percentage": 10.0,
+            "total_params": 100,
+            "trainable_params": 10,
+            "trainable_percentage": 10.0,
         }
         mock_trainer_cls.return_value = mock_trainer
 

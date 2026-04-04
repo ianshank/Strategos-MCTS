@@ -31,6 +31,7 @@ from src.neuro_symbolic.state import Fact, NeuroSymbolicState, SymbolicFactType
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def default_mcts_config():
     return NeuroSymbolicMCTSConfig()
@@ -79,6 +80,7 @@ def mock_reasoning_agent():
 # NeuroSymbolicMCTSConfig
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestNeuroSymbolicMCTSConfig:
 
@@ -103,6 +105,7 @@ class TestNeuroSymbolicMCTSConfig:
 # ---------------------------------------------------------------------------
 # NeuroSymbolicMCTSIntegration - State Conversion
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestMCTSIntegrationStateConversion:
@@ -148,31 +151,26 @@ class TestMCTSIntegrationStateConversion:
 # NeuroSymbolicMCTSIntegration - Action Filtering
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestMCTSIntegrationActionFiltering:
 
     def test_filter_valid_actions_with_pruning_enabled(self, integration, mock_mcts_state, mock_constraint_system):
-        result = asyncio.run(
-            integration.filter_valid_actions(mock_mcts_state, ["a", "b", "c"])
-        )
+        result = asyncio.run(integration.filter_valid_actions(mock_mcts_state, ["a", "b", "c"]))
         mock_constraint_system.validate_expansion.assert_called_once()
         assert result == [("action_a", 1.0), ("action_b", 0.8)]
 
     def test_filter_valid_actions_pruning_disabled(self, mock_constraint_system, mock_mcts_state):
         config = NeuroSymbolicMCTSConfig(enable_constraint_pruning=False)
         integ = NeuroSymbolicMCTSIntegration(config=config, constraint_system=mock_constraint_system)
-        result = asyncio.run(
-            integ.filter_valid_actions(mock_mcts_state, ["x", "y"])
-        )
+        result = asyncio.run(integ.filter_valid_actions(mock_mcts_state, ["x", "y"]))
         assert result == [("x", 1.0), ("y", 1.0)]
         mock_constraint_system.validate_expansion.assert_not_called()
 
     def test_filter_tracks_statistics(self, integration, mock_mcts_state, mock_constraint_system):
         # 3 candidates, 2 returned => 1 pruned
         mock_constraint_system.validate_expansion.return_value = [("a", 1.0)]
-        asyncio.run(
-            integration.filter_valid_actions(mock_mcts_state, ["a", "b", "c"])
-        )
+        asyncio.run(integration.filter_valid_actions(mock_mcts_state, ["a", "b", "c"]))
         assert integration._expansions_checked == 1
         assert integration._actions_pruned == 2
 
@@ -184,15 +182,14 @@ class TestMCTSIntegrationActionFiltering:
         state = MagicMock()
         state.state_id = "s-log"
         state.features = {}
-        asyncio.run(
-            integ.filter_valid_actions(state, ["a", "b"])
-        )
+        asyncio.run(integ.filter_valid_actions(state, ["a", "b"]))
         logger.debug.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
 # NeuroSymbolicMCTSIntegration - Heuristic & Hybrid Value
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestMCTSIntegrationHeuristics:
@@ -236,19 +233,13 @@ class TestMCTSIntegrationHeuristics:
         assert abs(score - 0.7) < 1e-6
 
     def test_compute_progress_score(self, integration):
-        facts = frozenset(
-            Fact(name=f"f{i}", arguments=(i,), fact_type=SymbolicFactType.ATTRIBUTE)
-            for i in range(10)
-        )
+        facts = frozenset(Fact(name=f"f{i}", arguments=(i,), fact_type=SymbolicFactType.ATTRIBUTE) for i in range(10))
         state = NeuroSymbolicState(state_id="s4", facts=facts)
         score = integration._compute_progress_score(state)
         assert abs(score - 0.5) < 1e-6  # 10/20
 
     def test_compute_progress_score_capped_at_one(self, integration):
-        facts = frozenset(
-            Fact(name=f"f{i}", arguments=(i,), fact_type=SymbolicFactType.ATTRIBUTE)
-            for i in range(30)
-        )
+        facts = frozenset(Fact(name=f"f{i}", arguments=(i,), fact_type=SymbolicFactType.ATTRIBUTE) for i in range(30))
         state = NeuroSymbolicState(state_id="s5", facts=facts)
         score = integration._compute_progress_score(state)
         assert score == 1.0
@@ -257,6 +248,7 @@ class TestMCTSIntegrationHeuristics:
 # ---------------------------------------------------------------------------
 # Statistics
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestMCTSIntegrationStatistics:
@@ -281,6 +273,7 @@ class TestMCTSIntegrationStatistics:
 # SymbolicAgentNodeConfig
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestSymbolicAgentNodeConfig:
 
@@ -295,6 +288,7 @@ class TestSymbolicAgentNodeConfig:
 # ---------------------------------------------------------------------------
 # SymbolicAgentGraphExtension
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestSymbolicAgentGraphExtension:
@@ -349,6 +343,7 @@ class TestSymbolicAgentGraphExtension:
 # ---------------------------------------------------------------------------
 # HybridConfidenceAggregator
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestHybridConfidenceAggregator:
@@ -420,6 +415,7 @@ class TestHybridConfidenceAggregator:
 # Factory function
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestCreateNeuroSymbolicExtension:
 
@@ -443,6 +439,7 @@ class TestCreateNeuroSymbolicExtension:
 # ---------------------------------------------------------------------------
 # extend_graph_builder
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestExtendGraphBuilder:

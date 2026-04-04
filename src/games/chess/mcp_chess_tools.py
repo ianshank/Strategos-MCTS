@@ -39,6 +39,7 @@ except ImportError:  # pragma: no cover
 
         return _decorator
 
+
 # ---------------------------------------------------------------------------
 # Input models with Pydantic validation
 # ---------------------------------------------------------------------------

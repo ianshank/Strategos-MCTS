@@ -40,8 +40,9 @@ class TestBERTLoRATrainer:
 
     def test_import_error_when_datasets_missing(self):
         """BERTLoRATrainer should raise ImportError when datasets not available."""
-        with patch("src.training.train_bert_lora._TRANSFORMERS_AVAILABLE", True), patch(
-            "src.training.train_bert_lora._DATASETS_AVAILABLE", False
+        with (
+            patch("src.training.train_bert_lora._TRANSFORMERS_AVAILABLE", True),
+            patch("src.training.train_bert_lora._DATASETS_AVAILABLE", False),
         ):
             from src.training.train_bert_lora import BERTLoRATrainer
 

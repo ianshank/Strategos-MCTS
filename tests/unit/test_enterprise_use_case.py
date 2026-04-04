@@ -69,7 +69,8 @@ class TestBaseDomainState:
 
     def test_copy(self):
         state = BaseDomainState(
-            state_id="s1", domain="test",
+            state_id="s1",
+            domain="test",
             features={"nested": {"a": 1}},
         )
         copied = state.copy()
@@ -80,7 +81,8 @@ class TestBaseDomainState:
 
     def test_to_mcts_state(self):
         state = BaseDomainState(
-            state_id="s1", domain="finance",
+            state_id="s1",
+            domain="finance",
             features={"risk": 0.5},
         )
         mcts_state = state.to_mcts_state()

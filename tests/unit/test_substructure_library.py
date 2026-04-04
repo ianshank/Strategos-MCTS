@@ -14,6 +14,7 @@ from src.framework.assembly.substructure_library import Match, SubstructureLibra
 # Match dataclass tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestMatch:
     """Tests for Match dataclass."""
@@ -39,6 +40,7 @@ class TestMatch:
 # ---------------------------------------------------------------------------
 # SubstructureLibrary tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestSubstructureLibrary:

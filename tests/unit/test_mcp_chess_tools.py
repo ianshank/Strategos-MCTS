@@ -144,9 +144,7 @@ class TestDispatchChessTool:
         mock_analysis.total_time_ms = 100.0
         mock_engine.analyze_position = AsyncMock(return_value=mock_analysis)
 
-        result = await dispatch_chess_tool(
-            "chess_analyze_position", {"fen": VALID_FEN}, engine=mock_engine
-        )
+        result = await dispatch_chess_tool("chess_analyze_position", {"fen": VALID_FEN}, engine=mock_engine)
         assert result["success"] is True
         assert result["best_move"] == "e2e4"
 

@@ -18,6 +18,7 @@ from src.games.chess.meta_controller import (
 
 # ---------- Helper fixtures ----------
 
+
 def _make_features(**overrides) -> ChessPositionFeatures:
     """Create ChessPositionFeatures with sensible defaults, allowing overrides."""
     defaults = {
@@ -53,6 +54,7 @@ def _make_config(**overrides) -> ChessEnsembleConfig:
 
 # ---------- RoutingDecision ----------
 
+
 @pytest.mark.unit
 class TestRoutingDecision:
     """Tests for the RoutingDecision dataclass."""
@@ -71,6 +73,7 @@ class TestRoutingDecision:
 
 # ---------- ChessPositionFeatures ----------
 
+
 @pytest.mark.unit
 class TestChessPositionFeatures:
     """Tests for ChessPositionFeatures dataclass and to_tensor."""
@@ -83,7 +86,9 @@ class TestChessPositionFeatures:
 
     def test_to_tensor_opening(self):
         features = _make_features(
-            game_phase=GamePhase.OPENING, is_opening=True, is_middlegame=False,
+            game_phase=GamePhase.OPENING,
+            is_opening=True,
+            is_middlegame=False,
         )
         tensor = features.to_tensor()
         assert tensor[0].item() == 1.0  # is_opening
@@ -91,7 +96,9 @@ class TestChessPositionFeatures:
 
     def test_to_tensor_normalization(self):
         features = _make_features(
-            move_number=50, total_material=78, material_balance=10,
+            move_number=50,
+            total_material=78,
+            material_balance=10,
         )
         tensor = features.to_tensor()
         assert abs(tensor[3].item() - 50 / 100.0) < 1e-5
@@ -100,12 +107,16 @@ class TestChessPositionFeatures:
 
     def test_to_tensor_boolean_fields(self):
         features = _make_features(
-            has_queens=True, is_check=True, has_captures=False,
-            has_promotions=True, is_forcing=True, time_pressure=True,
+            has_queens=True,
+            is_check=True,
+            has_captures=False,
+            has_promotions=True,
+            is_forcing=True,
+            time_pressure=True,
         )
         tensor = features.to_tensor()
-        assert tensor[6].item() == 1.0   # has_queens
-        assert tensor[8].item() == 1.0   # is_check
+        assert tensor[6].item() == 1.0  # has_queens
+        assert tensor[8].item() == 1.0  # is_check
         assert tensor[10].item() == 0.0  # has_captures
         assert tensor[11].item() == 1.0  # has_promotions
         assert tensor[12].item() == 1.0  # is_forcing
@@ -113,6 +124,7 @@ class TestChessPositionFeatures:
 
 
 # ---------- ChessFeatureExtractor ----------
+
 
 @pytest.mark.unit
 class TestChessFeatureExtractor:
@@ -274,6 +286,7 @@ class TestChessFeatureExtractor:
 
 # ---------- NeuralRouter ----------
 
+
 @pytest.mark.unit
 class TestNeuralRouter:
     """Tests for NeuralRouter nn.Module."""
@@ -314,6 +327,7 @@ class TestNeuralRouter:
 
 
 # ---------- ChessMetaController ----------
+
 
 @pytest.mark.unit
 class TestChessMetaControllerHeuristic:
@@ -443,7 +457,9 @@ class TestChessMetaControllerReasoning:
         config = _make_config()
         controller = ChessMetaController(config)
         features = _make_features(
-            game_phase=GamePhase.OPENING, is_opening=True, is_forcing=False,
+            game_phase=GamePhase.OPENING,
+            is_opening=True,
+            is_forcing=False,
         )
         reasoning = controller._generate_reasoning(features, AgentType.HRM)
         assert "Opening" in reasoning or "strategic" in reasoning
@@ -459,7 +475,9 @@ class TestChessMetaControllerReasoning:
         config = _make_config()
         controller = ChessMetaController(config)
         features = _make_features(
-            game_phase=GamePhase.ENDGAME, is_endgame=True, time_pressure=False,
+            game_phase=GamePhase.ENDGAME,
+            is_endgame=True,
+            time_pressure=False,
         )
         reasoning = controller._generate_reasoning(features, AgentType.TRM)
         assert "Endgame" in reasoning or "precise" in reasoning
@@ -513,6 +531,7 @@ class TestChessMetaControllerSaveLoad:
         path = str(tmp_path / "router.pt")
         controller.save(path)
         import os
+
         assert os.path.exists(path)
 
     def test_save_without_neural_router(self, tmp_path):
@@ -521,6 +540,7 @@ class TestChessMetaControllerSaveLoad:
         path = str(tmp_path / "router.pt")
         controller.save(path)
         import os
+
         assert not os.path.exists(path)
 
     def test_load_with_neural_router(self, tmp_path):

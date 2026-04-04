@@ -249,9 +249,7 @@ class TestEvaluateConsensusNode:
             "mixed_above_threshold",
         ],
     )
-    def test_evaluate_consensus_parametrized(
-        self, graph_builder, confidences, expected_consensus
-    ):
+    def test_evaluate_consensus_parametrized(self, graph_builder, confidences, expected_consensus):
         """Parametrized consensus evaluation across confidence combinations."""
         outputs = [_agent_output(f"agent_{i}", c) for i, c in enumerate(confidences)]
         state = _make_state(agent_outputs=outputs)

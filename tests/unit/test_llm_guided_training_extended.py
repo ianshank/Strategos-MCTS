@@ -228,9 +228,7 @@ class TestCombinedNetwork:
         problem_mask = torch.ones(batch_size, seq_len)
         action_mask = torch.ones(batch_size, 5)
 
-        log_probs, values = combined_network(
-            code_tokens, code_mask, problem_tokens, problem_mask, action_mask
-        )
+        log_probs, values = combined_network(code_tokens, code_mask, problem_tokens, problem_mask, action_mask)
 
         assert log_probs.shape == (batch_size, 5)
         assert values.shape == (batch_size,)
@@ -245,9 +243,7 @@ class TestCombinedNetwork:
         problem_tokens = torch.randint(0, 1000, (batch_size, seq_len))
         problem_mask = torch.ones(batch_size, seq_len)
 
-        log_probs, values = combined_network(
-            code_tokens, code_mask, problem_tokens, problem_mask
-        )
+        log_probs, values = combined_network(code_tokens, code_mask, problem_tokens, problem_mask)
         assert log_probs.shape == (batch_size, 5)
         assert values.shape == (batch_size,)
 
@@ -258,9 +254,7 @@ class TestCombinedNetwork:
         problem_tokens = torch.randint(0, 1000, (batch_size, seq_len))
         problem_mask = torch.ones(batch_size, seq_len)
 
-        _, values = combined_network(
-            code_tokens, code_mask, problem_tokens, problem_mask
-        )
+        _, values = combined_network(code_tokens, code_mask, problem_tokens, problem_mask)
         assert (values >= -1.0).all()
         assert (values <= 1.0).all()
 
@@ -323,9 +317,7 @@ class TestPolicyNetworkMasking:
         )
 
         encoder_config = CodeEncoderConfig(hidden_dim=32, num_layers=1, num_heads=4)
-        config = PolicyNetworkConfig(
-            encoder_config=encoder_config, max_actions=5, hidden_dim=32
-        )
+        config = PolicyNetworkConfig(encoder_config=encoder_config, max_actions=5, hidden_dim=32)
         net = PolicyNetwork(config)
 
         code = torch.randint(0, 1000, (1, 8))
@@ -722,17 +714,9 @@ class TestDistillationTrainerTrainLoop:
             ValueNetworkConfig,
         )
 
-        encoder_config = CodeEncoderConfig(
-            hidden_dim=32, num_layers=1, num_heads=4, max_seq_length=64
-        )
-        policy = PolicyNetwork(
-            PolicyNetworkConfig(
-                encoder_config=encoder_config, max_actions=5, hidden_dim=32
-            )
-        )
-        value = ValueNetwork(
-            ValueNetworkConfig(encoder_config=encoder_config, hidden_dim=32)
-        )
+        encoder_config = CodeEncoderConfig(hidden_dim=32, num_layers=1, num_heads=4, max_seq_length=64)
+        policy = PolicyNetwork(PolicyNetworkConfig(encoder_config=encoder_config, max_actions=5, hidden_dim=32))
+        value = ValueNetwork(ValueNetworkConfig(encoder_config=encoder_config, hidden_dim=32))
         return policy, value
 
     def test_train_one_epoch(self, tmp_path):
@@ -940,17 +924,9 @@ class TestDistillationTrainerEvaluate:
             DistillationTrainerConfig,
         )
 
-        encoder_config = CodeEncoderConfig(
-            hidden_dim=32, num_layers=1, num_heads=4, max_seq_length=64
-        )
-        policy = PolicyNetwork(
-            PolicyNetworkConfig(
-                encoder_config=encoder_config, max_actions=5, hidden_dim=32
-            )
-        )
-        value = ValueNetwork(
-            ValueNetworkConfig(encoder_config=encoder_config, hidden_dim=32)
-        )
+        encoder_config = CodeEncoderConfig(hidden_dim=32, num_layers=1, num_heads=4, max_seq_length=64)
+        policy = PolicyNetwork(PolicyNetworkConfig(encoder_config=encoder_config, max_actions=5, hidden_dim=32))
+        value = ValueNetwork(ValueNetworkConfig(encoder_config=encoder_config, hidden_dim=32))
         config = DistillationTrainerConfig(
             device="cpu",
             checkpoint_dir=str(tmp_path),
@@ -985,15 +961,9 @@ class TestCreateTrainerExtended:
         )
         from src.framework.mcts.llm_guided.training.trainer import create_trainer
 
-        encoder_config = CodeEncoderConfig(
-            hidden_dim=32, num_layers=1, num_heads=4
-        )
-        policy = PolicyNetwork(
-            PolicyNetworkConfig(encoder_config=encoder_config, max_actions=5, hidden_dim=32)
-        )
-        value = ValueNetwork(
-            ValueNetworkConfig(encoder_config=encoder_config, hidden_dim=32)
-        )
+        encoder_config = CodeEncoderConfig(hidden_dim=32, num_layers=1, num_heads=4)
+        policy = PolicyNetwork(PolicyNetworkConfig(encoder_config=encoder_config, max_actions=5, hidden_dim=32))
+        value = ValueNetwork(ValueNetworkConfig(encoder_config=encoder_config, hidden_dim=32))
 
         trainer = create_trainer(
             policy_network=policy,
