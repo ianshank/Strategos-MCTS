@@ -6,11 +6,15 @@ Tests initialization, store operations, query, buffering, and error handling.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.agents.meta_controller.base import MetaControllerFeatures, MetaControllerPrediction
+
+if TYPE_CHECKING:
+    from src.storage.pinecone_store import PineconeVectorStore
 
 # =============================================================================
 # Test Markers
@@ -28,27 +32,27 @@ pytestmark = [
 
 def _make_features(**overrides: object) -> MetaControllerFeatures:
     """Create a MetaControllerFeatures with sensible defaults."""
-    defaults = dict(
-        hrm_confidence=0.8,
-        trm_confidence=0.6,
-        mcts_value=0.7,
-        consensus_score=0.75,
-        last_agent="hrm",
-        iteration=1,
-        query_length=50,
-        has_rag_context=False,
-    )
+    defaults: dict = {
+        "hrm_confidence": 0.8,
+        "trm_confidence": 0.6,
+        "mcts_value": 0.7,
+        "consensus_score": 0.75,
+        "last_agent": "hrm",
+        "iteration": 1,
+        "query_length": 50,
+        "has_rag_context": False,
+    }
     defaults.update(overrides)
     return MetaControllerFeatures(**defaults)  # type: ignore[arg-type]
 
 
 def _make_prediction(**overrides: object) -> MetaControllerPrediction:
     """Create a MetaControllerPrediction with sensible defaults."""
-    defaults = dict(
-        agent="hrm",
-        confidence=0.9,
-        probabilities={"hrm": 0.6, "trm": 0.2, "mcts": 0.2},
-    )
+    defaults: dict = {
+        "agent": "hrm",
+        "confidence": 0.9,
+        "probabilities": {"hrm": 0.6, "trm": 0.2, "mcts": 0.2},
+    }
     defaults.update(overrides)
     return MetaControllerPrediction(**defaults)  # type: ignore[arg-type]
 
@@ -118,7 +122,7 @@ def available_store(mock_pinecone_client: MagicMock, mock_pinecone_index: MagicM
 
 
 @pytest.fixture
-def unavailable_store() -> "PineconeVectorStore":
+def unavailable_store() -> PineconeVectorStore:
     """Create a PineconeVectorStore that is not available."""
     from src.storage.pinecone_store import PineconeVectorStore
 
@@ -266,20 +270,20 @@ class TestPineconeVectorStoreInit:
 class TestPineconeIsAvailable:
     """Tests for is_available property."""
 
-    def test_available_when_fully_initialized(self, available_store: "PineconeVectorStore") -> None:
+    def test_available_when_fully_initialized(self, available_store: PineconeVectorStore) -> None:
         """Test is_available returns True when fully initialized."""
         assert available_store.is_available is True
 
-    def test_not_available_when_not_initialized(self, unavailable_store: "PineconeVectorStore") -> None:
+    def test_not_available_when_not_initialized(self, unavailable_store: PineconeVectorStore) -> None:
         """Test is_available returns False when not initialized."""
         assert unavailable_store.is_available is False
 
-    def test_not_available_without_api_key(self, available_store: "PineconeVectorStore") -> None:
+    def test_not_available_without_api_key(self, available_store: PineconeVectorStore) -> None:
         """Test is_available returns False without API key."""
         available_store._api_key = None
         assert available_store.is_available is False
 
-    def test_not_available_without_host(self, available_store: "PineconeVectorStore") -> None:
+    def test_not_available_without_host(self, available_store: PineconeVectorStore) -> None:
         """Test is_available returns False without host."""
         available_store._host = None
         assert available_store.is_available is False
@@ -293,7 +297,7 @@ class TestPineconeIsAvailable:
 class TestStorePrediction:
     """Tests for store_prediction method."""
 
-    def test_store_prediction_success(self, available_store: "PineconeVectorStore") -> None:
+    def test_store_prediction_success(self, available_store: PineconeVectorStore) -> None:
         """Test successful prediction storage returns vector ID."""
         features = _make_features()
         prediction = _make_prediction()
@@ -306,7 +310,7 @@ class TestStorePrediction:
         assert len(result) > 0
         available_store._index.upsert.assert_called_once()
 
-    def test_store_prediction_with_metadata(self, available_store: "PineconeVectorStore") -> None:
+    def test_store_prediction_with_metadata(self, available_store: PineconeVectorStore) -> None:
         """Test prediction storage with additional metadata."""
         features = _make_features()
         prediction = _make_prediction()
@@ -320,7 +324,7 @@ class TestStorePrediction:
         vector_metadata = call_args[1]["vectors"][0]["metadata"]
         assert vector_metadata["experiment"] == "test-run-1"
 
-    def test_store_prediction_buffers_when_unavailable(self, unavailable_store: "PineconeVectorStore") -> None:
+    def test_store_prediction_buffers_when_unavailable(self, unavailable_store: PineconeVectorStore) -> None:
         """Test prediction is buffered when Pinecone is unavailable."""
         features = _make_features()
         prediction = _make_prediction()
@@ -331,7 +335,7 @@ class TestStorePrediction:
         assert len(unavailable_store._operation_buffer) == 1
         assert unavailable_store._operation_buffer[0]["type"] == "store_prediction"
 
-    def test_store_prediction_handles_connection_error(self, available_store: "PineconeVectorStore") -> None:
+    def test_store_prediction_handles_connection_error(self, available_store: PineconeVectorStore) -> None:
         """Test store_prediction handles connection errors."""
         features = _make_features()
         prediction = _make_prediction()
@@ -342,7 +346,7 @@ class TestStorePrediction:
 
         assert result is None
 
-    def test_store_prediction_handles_timeout(self, available_store: "PineconeVectorStore") -> None:
+    def test_store_prediction_handles_timeout(self, available_store: PineconeVectorStore) -> None:
         """Test store_prediction handles timeout errors."""
         features = _make_features()
         prediction = _make_prediction()
@@ -353,7 +357,7 @@ class TestStorePrediction:
 
         assert result is None
 
-    def test_store_prediction_includes_feature_metadata(self, available_store: "PineconeVectorStore") -> None:
+    def test_store_prediction_includes_feature_metadata(self, available_store: PineconeVectorStore) -> None:
         """Test stored vector metadata includes feature information."""
         features = _make_features(iteration=5, query_length=100, last_agent="trm", has_rag_context=True)
         prediction = _make_prediction(agent="mcts", confidence=0.85)
@@ -379,7 +383,7 @@ class TestStorePrediction:
 class TestFindSimilarDecisions:
     """Tests for find_similar_decisions method."""
 
-    def test_find_similar_returns_results(self, available_store: "PineconeVectorStore") -> None:
+    def test_find_similar_returns_results(self, available_store: PineconeVectorStore) -> None:
         """Test find_similar_decisions returns formatted results."""
         features = _make_features()
 
@@ -391,13 +395,13 @@ class TestFindSimilarDecisions:
         assert results[0]["score"] == 0.95
         assert "metadata" in results[0]
 
-    def test_find_similar_returns_empty_when_unavailable(self, unavailable_store: "PineconeVectorStore") -> None:
+    def test_find_similar_returns_empty_when_unavailable(self, unavailable_store: PineconeVectorStore) -> None:
         """Test returns empty list when Pinecone is unavailable."""
         features = _make_features()
         results = unavailable_store.find_similar_decisions(features)
         assert results == []
 
-    def test_find_similar_with_custom_top_k(self, available_store: "PineconeVectorStore") -> None:
+    def test_find_similar_with_custom_top_k(self, available_store: PineconeVectorStore) -> None:
         """Test custom top_k is passed to query."""
         features = _make_features()
 
@@ -407,12 +411,10 @@ class TestFindSimilarDecisions:
         call_args = available_store._index.query.call_args
         assert call_args[1]["top_k"] == 3
 
-    def test_find_similar_without_metadata(self, available_store: "PineconeVectorStore") -> None:
+    def test_find_similar_without_metadata(self, available_store: PineconeVectorStore) -> None:
         """Test find_similar_decisions without metadata."""
         features = _make_features()
-        available_store._index.query.return_value = {
-            "matches": [{"id": "vec-1", "score": 0.9}]
-        }
+        available_store._index.query.return_value = {"matches": [{"id": "vec-1", "score": 0.9}]}
 
         with patch("src.storage.pinecone_store.normalize_features", return_value=[0.1] * 10):
             results = available_store.find_similar_decisions(features, include_metadata=False)
@@ -420,7 +422,7 @@ class TestFindSimilarDecisions:
         assert len(results) == 1
         assert "metadata" not in results[0]
 
-    def test_find_similar_handles_connection_error(self, available_store: "PineconeVectorStore") -> None:
+    def test_find_similar_handles_connection_error(self, available_store: PineconeVectorStore) -> None:
         """Test handles connection errors gracefully."""
         features = _make_features()
         available_store._index.query.side_effect = ConnectionError("fail")
@@ -430,7 +432,7 @@ class TestFindSimilarDecisions:
 
         assert results == []
 
-    def test_find_similar_handles_empty_matches(self, available_store: "PineconeVectorStore") -> None:
+    def test_find_similar_handles_empty_matches(self, available_store: PineconeVectorStore) -> None:
         """Test handles empty matches list."""
         features = _make_features()
         available_store._index.query.return_value = {"matches": []}
@@ -449,7 +451,7 @@ class TestFindSimilarDecisions:
 class TestGetAgentDistribution:
     """Tests for get_agent_distribution method."""
 
-    def test_distribution_from_similar_decisions(self, available_store: "PineconeVectorStore") -> None:
+    def test_distribution_from_similar_decisions(self, available_store: PineconeVectorStore) -> None:
         """Test agent distribution calculation."""
         features = _make_features()
 
@@ -463,14 +465,14 @@ class TestGetAgentDistribution:
         assert dist["trm"] == 0.5
         assert dist["mcts"] == 0.0
 
-    def test_distribution_returns_zeros_when_unavailable(self, unavailable_store: "PineconeVectorStore") -> None:
+    def test_distribution_returns_zeros_when_unavailable(self, unavailable_store: PineconeVectorStore) -> None:
         """Test returns zero distribution when unavailable."""
         features = _make_features()
         dist = unavailable_store.get_agent_distribution(features)
 
         assert dist == {"hrm": 0.0, "trm": 0.0, "mcts": 0.0}
 
-    def test_distribution_returns_zeros_for_no_matches(self, available_store: "PineconeVectorStore") -> None:
+    def test_distribution_returns_zeros_for_no_matches(self, available_store: PineconeVectorStore) -> None:
         """Test returns zero distribution when no similar decisions found."""
         features = _make_features()
         available_store._index.query.return_value = {"matches": []}
@@ -480,7 +482,7 @@ class TestGetAgentDistribution:
 
         assert dist == {"hrm": 0.0, "trm": 0.0, "mcts": 0.0}
 
-    def test_distribution_ignores_unknown_agents(self, available_store: "PineconeVectorStore") -> None:
+    def test_distribution_ignores_unknown_agents(self, available_store: PineconeVectorStore) -> None:
         """Test distribution ignores unknown agent names."""
         features = _make_features()
         available_store._index.query.return_value = {
@@ -506,7 +508,7 @@ class TestGetAgentDistribution:
 class TestStoreBatch:
     """Tests for store_batch method."""
 
-    def test_store_batch_success(self, available_store: "PineconeVectorStore") -> None:
+    def test_store_batch_success(self, available_store: PineconeVectorStore) -> None:
         """Test successful batch storage."""
         features_list = [_make_features(), _make_features(iteration=2)]
         predictions_list = [_make_prediction(), _make_prediction(agent="trm")]
@@ -517,7 +519,7 @@ class TestStoreBatch:
         assert count == 2
         available_store._index.upsert.assert_called_once()
 
-    def test_store_batch_buffers_when_unavailable(self, unavailable_store: "PineconeVectorStore") -> None:
+    def test_store_batch_buffers_when_unavailable(self, unavailable_store: PineconeVectorStore) -> None:
         """Test batch is buffered when unavailable."""
         features_list = [_make_features()]
         predictions_list = [_make_prediction()]
@@ -528,7 +530,7 @@ class TestStoreBatch:
         assert len(unavailable_store._operation_buffer) == 1
         assert unavailable_store._operation_buffer[0]["type"] == "store_batch"
 
-    def test_store_batch_length_mismatch_raises(self, available_store: "PineconeVectorStore") -> None:
+    def test_store_batch_length_mismatch_raises(self, available_store: PineconeVectorStore) -> None:
         """Test mismatched list lengths raise ValueError."""
         features_list = [_make_features(), _make_features()]
         predictions_list = [_make_prediction()]
@@ -536,7 +538,7 @@ class TestStoreBatch:
         with pytest.raises(ValueError, match="same length"):
             available_store.store_batch(features_list, predictions_list)
 
-    def test_store_batch_with_metadata(self, available_store: "PineconeVectorStore") -> None:
+    def test_store_batch_with_metadata(self, available_store: PineconeVectorStore) -> None:
         """Test batch storage with batch metadata."""
         features_list = [_make_features()]
         predictions_list = [_make_prediction()]
@@ -550,7 +552,7 @@ class TestStoreBatch:
         vector_metadata = call_args[1]["vectors"][0]["metadata"]
         assert vector_metadata["batch_id"] == "batch-001"
 
-    def test_store_batch_handles_error(self, available_store: "PineconeVectorStore") -> None:
+    def test_store_batch_handles_error(self, available_store: PineconeVectorStore) -> None:
         """Test batch storage handles errors gracefully."""
         features_list = [_make_features()]
         predictions_list = [_make_prediction()]
@@ -570,21 +572,19 @@ class TestStoreBatch:
 class TestDeleteNamespace:
     """Tests for delete_namespace method."""
 
-    def test_delete_namespace_success(self, available_store: "PineconeVectorStore") -> None:
+    def test_delete_namespace_success(self, available_store: PineconeVectorStore) -> None:
         """Test successful namespace deletion."""
         result = available_store.delete_namespace()
 
         assert result is True
-        available_store._index.delete.assert_called_once_with(
-            delete_all=True, namespace="meta_controller"
-        )
+        available_store._index.delete.assert_called_once_with(delete_all=True, namespace="meta_controller")
 
-    def test_delete_namespace_when_unavailable(self, unavailable_store: "PineconeVectorStore") -> None:
+    def test_delete_namespace_when_unavailable(self, unavailable_store: PineconeVectorStore) -> None:
         """Test returns False when unavailable."""
         result = unavailable_store.delete_namespace()
         assert result is False
 
-    def test_delete_namespace_handles_error(self, available_store: "PineconeVectorStore") -> None:
+    def test_delete_namespace_handles_error(self, available_store: PineconeVectorStore) -> None:
         """Test handles errors gracefully."""
         available_store._index.delete.side_effect = RuntimeError("delete fail")
         result = available_store.delete_namespace()
@@ -599,7 +599,7 @@ class TestDeleteNamespace:
 class TestGetStats:
     """Tests for get_stats method."""
 
-    def test_get_stats_when_available(self, available_store: "PineconeVectorStore") -> None:
+    def test_get_stats_when_available(self, available_store: PineconeVectorStore) -> None:
         """Test stats retrieval when available."""
         stats = available_store.get_stats()
 
@@ -608,14 +608,14 @@ class TestGetStats:
         assert stats["dimension"] == 10
         assert stats["buffered_operations"] == 0
 
-    def test_get_stats_when_unavailable(self, unavailable_store: "PineconeVectorStore") -> None:
+    def test_get_stats_when_unavailable(self, unavailable_store: PineconeVectorStore) -> None:
         """Test stats when unavailable."""
         stats = unavailable_store.get_stats()
 
         assert stats["available"] is False
         assert stats["buffered_operations"] == 0
 
-    def test_get_stats_handles_error(self, available_store: "PineconeVectorStore") -> None:
+    def test_get_stats_handles_error(self, available_store: PineconeVectorStore) -> None:
         """Test stats handles errors gracefully."""
         available_store._index.describe_index_stats.side_effect = RuntimeError("stats fail")
         stats = available_store.get_stats()
@@ -623,7 +623,7 @@ class TestGetStats:
         assert stats["available"] is True
         assert "error" in stats
 
-    def test_get_stats_includes_buffered_count(self, unavailable_store: "PineconeVectorStore") -> None:
+    def test_get_stats_includes_buffered_count(self, unavailable_store: PineconeVectorStore) -> None:
         """Test stats includes buffered operations count."""
         unavailable_store._operation_buffer = [{"type": "test"}]
         stats = unavailable_store.get_stats()
@@ -638,7 +638,7 @@ class TestGetStats:
 class TestBufferOperations:
     """Tests for buffer management methods."""
 
-    def test_get_buffered_operations_returns_copy(self, unavailable_store: "PineconeVectorStore") -> None:
+    def test_get_buffered_operations_returns_copy(self, unavailable_store: PineconeVectorStore) -> None:
         """Test get_buffered_operations returns a copy."""
         unavailable_store._operation_buffer = [{"type": "test"}]
         buf = unavailable_store.get_buffered_operations()
@@ -647,24 +647,24 @@ class TestBufferOperations:
         buf.append({"type": "new"})
         assert len(unavailable_store._operation_buffer) == 1
 
-    def test_clear_buffer(self, unavailable_store: "PineconeVectorStore") -> None:
+    def test_clear_buffer(self, unavailable_store: PineconeVectorStore) -> None:
         """Test clear_buffer empties the buffer."""
         unavailable_store._operation_buffer = [{"type": "test"}]
         unavailable_store.clear_buffer()
         assert len(unavailable_store._operation_buffer) == 0
 
-    def test_flush_buffer_when_unavailable(self, unavailable_store: "PineconeVectorStore") -> None:
+    def test_flush_buffer_when_unavailable(self, unavailable_store: PineconeVectorStore) -> None:
         """Test flush_buffer returns 0 when unavailable."""
         unavailable_store._operation_buffer = [{"type": "test"}]
         result = unavailable_store.flush_buffer()
         assert result == 0
 
-    def test_flush_buffer_empty(self, available_store: "PineconeVectorStore") -> None:
+    def test_flush_buffer_empty(self, available_store: PineconeVectorStore) -> None:
         """Test flush_buffer with empty buffer."""
         result = available_store.flush_buffer()
         assert result == 0
 
-    def test_flush_buffer_processes_store_prediction(self, available_store: "PineconeVectorStore") -> None:
+    def test_flush_buffer_processes_store_prediction(self, available_store: PineconeVectorStore) -> None:
         """Test flush_buffer processes buffered store_prediction operations."""
         features = _make_features()
         prediction = _make_prediction()
@@ -684,7 +684,7 @@ class TestBufferOperations:
         assert flushed == 1
         assert len(available_store._operation_buffer) == 0
 
-    def test_flush_buffer_processes_store_batch(self, available_store: "PineconeVectorStore") -> None:
+    def test_flush_buffer_processes_store_batch(self, available_store: PineconeVectorStore) -> None:
         """Test flush_buffer processes buffered store_batch operations."""
         features = _make_features()
         prediction = _make_prediction()
@@ -704,7 +704,7 @@ class TestBufferOperations:
         assert flushed == 1
         assert len(available_store._operation_buffer) == 0
 
-    def test_flush_buffer_keeps_failed_operations(self, available_store: "PineconeVectorStore") -> None:
+    def test_flush_buffer_keeps_failed_operations(self, available_store: PineconeVectorStore) -> None:
         """Test failed flush operations remain in buffer."""
         features = _make_features()
         prediction = _make_prediction()

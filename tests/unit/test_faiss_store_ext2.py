@@ -26,6 +26,7 @@ from src.storage.faiss_store import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_initialized_store(
     index_type: str = IndexType.FLAT_IP,
     persist_dir: Path | None = None,
@@ -161,9 +162,7 @@ class TestCreateIndex:
         mock_faiss.IndexFlatL2.return_value = mock_quantizer
         store = FAISSVectorStore(index_type=IndexType.IVF_FLAT, embedding_dim=4, use_gpu=False)
         store._create_index()
-        mock_faiss.IndexIVFFlat.assert_called_once_with(
-            mock_quantizer, 4, FAISSStoreDefaults.IVF_NLIST
-        )
+        mock_faiss.IndexIVFFlat.assert_called_once_with(mock_quantizer, 4, FAISSStoreDefaults.IVF_NLIST)
 
     @patch("src.storage.faiss_store.faiss")
     def test_hnsw(self, mock_faiss):
@@ -363,9 +362,7 @@ class TestSearch:
     def test_search_success(self):
         """Full search success path."""
         store = _make_initialized_store()
-        store._documents[0] = FAISSDocument(
-            id="d1", content="hello world", embedding_id=0, metadata={"src": "test"}
-        )
+        store._documents[0] = FAISSDocument(id="d1", content="hello world", embedding_id=0, metadata={"src": "test"})
 
         query_emb = np.array([0.1, 0.2, 0.3, 0.4], dtype="float32")
         store._model.encode.return_value = query_emb
@@ -456,12 +453,8 @@ class TestSearch:
     def test_search_metadata_filter(self):
         """Lines 422-423: metadata filter applied."""
         store = _make_initialized_store()
-        store._documents[0] = FAISSDocument(
-            id="d1", content="hi", embedding_id=0, metadata={"type": "a"}
-        )
-        store._documents[1] = FAISSDocument(
-            id="d2", content="lo", embedding_id=1, metadata={"type": "b"}
-        )
+        store._documents[0] = FAISSDocument(id="d1", content="hi", embedding_id=0, metadata={"type": "a"})
+        store._documents[1] = FAISSDocument(id="d2", content="lo", embedding_id=1, metadata={"type": "b"})
 
         store._model.encode.return_value = np.zeros(4, dtype="float32")
         store._index.search.return_value = (
@@ -491,9 +484,7 @@ class TestSearch:
     def test_search_with_filter_uses_expanded_k(self):
         """Line 398: search_k = top_k * 3 when filter_metadata is set."""
         store = _make_initialized_store()
-        store._documents[0] = FAISSDocument(
-            id="d1", content="hi", embedding_id=0, metadata={"type": "a"}
-        )
+        store._documents[0] = FAISSDocument(id="d1", content="hi", embedding_id=0, metadata={"type": "a"})
 
         store._model.encode.return_value = np.zeros(4, dtype="float32")
         store._index.search.return_value = (
@@ -623,9 +614,7 @@ class TestSave:
     def test_save_creates_files(self, mock_faiss, tmp_path):
         """Lines 549-577: saves index and metadata."""
         store = _make_initialized_store(persist_dir=tmp_path)
-        store._documents[0] = FAISSDocument(
-            id="d1", content="hello", embedding_id=0, metadata={"src": "test"}
-        )
+        store._documents[0] = FAISSDocument(id="d1", content="hello", embedding_id=0, metadata={"src": "test"})
         store._document_id_map = {"d1": 0}
         store._next_id = 1
 

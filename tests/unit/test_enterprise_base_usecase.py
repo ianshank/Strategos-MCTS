@@ -26,6 +26,7 @@ from src.enterprise.base.use_case import (
 
 # ---------- Test domain state ----------
 
+
 @pytest.mark.unit
 class TestBaseDomainState:
     """Tests for BaseDomainState."""
@@ -86,6 +87,7 @@ class TestBaseDomainState:
 
 # ---------- Test exceptions ----------
 
+
 @pytest.mark.unit
 class TestEnterpriseExceptions:
     """Tests for enterprise exception classes."""
@@ -116,9 +118,11 @@ class TestEnterpriseExceptions:
 
 # ---------- Test BaseUseCase ----------
 
+
 @dataclass
 class _TestState(BaseDomainState):
     """Test domain state for testing BaseUseCase."""
+
     domain: str = "test"
     custom_field: str = ""
     actions_applied: list[str] = field(default_factory=list)
@@ -148,6 +152,7 @@ class _TestUseCase(BaseUseCase[_TestState]):
 
     def apply_action(self, state: _TestState, action: str) -> _TestState:
         import copy
+
         new_state = copy.deepcopy(state)
         new_state.actions_applied.append(action)
         return new_state

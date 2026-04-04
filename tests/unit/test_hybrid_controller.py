@@ -35,7 +35,9 @@ def _make_neural_prediction(agent="hrm", confidence=0.8):
     return MetaControllerPrediction(
         agent=agent,
         confidence=confidence,
-        probabilities={"hrm": 0.7, "trm": 0.2, "mcts": 0.1} if agent == "hrm" else {"hrm": 0.1, "trm": 0.7, "mcts": 0.2},
+        probabilities=(
+            {"hrm": 0.7, "trm": 0.2, "mcts": 0.1} if agent == "hrm" else {"hrm": 0.1, "trm": 0.7, "mcts": 0.2}
+        ),
     )
 
 

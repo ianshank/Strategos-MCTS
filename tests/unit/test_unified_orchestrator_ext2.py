@@ -126,9 +126,9 @@ class TestTrainHRMAgent:
         orch = _make_orchestrator()
 
         mock_trainer = MagicMock()
-        mock_trainer.train_epoch = AsyncMock(return_value={
-            "loss": 0.1, "hrm_halt_step": 3.0, "hrm_ponder_cost": 0.01, "gradient_norm": 0.5
-        })
+        mock_trainer.train_epoch = AsyncMock(
+            return_value={"loss": 0.1, "hrm_halt_step": 3.0, "hrm_ponder_cost": 0.01, "gradient_norm": 0.5}
+        )
 
         with (
             patch("src.training.agent_trainer.HRMTrainer", return_value=mock_trainer),
@@ -167,9 +167,9 @@ class TestTrainTRMAgent:
         orch = _make_orchestrator()
 
         mock_trainer = MagicMock()
-        mock_trainer.train_epoch = AsyncMock(return_value={
-            "loss": 0.2, "trm_convergence_step": 5.0, "trm_final_residual": 0.01, "gradient_norm": 0.3
-        })
+        mock_trainer.train_epoch = AsyncMock(
+            return_value={"loss": 0.2, "trm_convergence_step": 5.0, "trm_final_residual": 0.01, "gradient_norm": 0.3}
+        )
 
         with (
             patch("src.training.agent_trainer.TRMTrainer", return_value=mock_trainer),

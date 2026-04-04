@@ -41,8 +41,10 @@ class TestPolicyOutput:
         probs = torch.softmax(logits, dim=-1)
         entropy = torch.tensor([1.0, 1.0])
         out = PolicyOutput(
-            policy_logits=logits, state_value=value,
-            action_probs=probs, entropy=entropy,
+            policy_logits=logits,
+            state_value=value,
+            action_probs=probs,
+            entropy=entropy,
         )
         assert out.action_probs is not None
         assert out.entropy is not None
@@ -405,7 +407,9 @@ class TestPolicyLoss:
         target_values = torch.randn(4)
 
         total_loss, loss_dict = loss_fn(
-            output, target_policy=target_policy, target_values=target_values,
+            output,
+            target_policy=target_policy,
+            target_values=target_values,
         )
         assert "policy_supervised" in loss_dict
         assert "value_mse" in loss_dict
@@ -420,7 +424,9 @@ class TestPolicyLoss:
         target_values = torch.randn(4)
 
         total_loss, loss_dict = loss_fn(
-            output, target_actions=target_actions, target_values=target_values,
+            output,
+            target_actions=target_actions,
+            target_values=target_values,
         )
         assert "policy_ce" in loss_dict
         assert "value_mse" in loss_dict
@@ -433,7 +439,9 @@ class TestPolicyLoss:
         advantages = torch.randn(4)
 
         total_loss, loss_dict = loss_fn(
-            output, target_actions=target_actions, advantages=advantages,
+            output,
+            target_actions=target_actions,
+            advantages=advantages,
         )
         assert "policy_gradient" in loss_dict
 

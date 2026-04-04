@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.adapters.llm.base import LLMResponse
-from src.framework.agents.base import AgentContext
 from src.framework.agents.llm_hrm import (
     DEFAULT_HRM_MAX_TOKENS,
     DEFAULT_HRM_TEMPERATURE,
@@ -113,20 +112,14 @@ class TestComputeQualityScore:
         assert score == pytest.approx(QUALITY_BASELINE + QUALITY_LENGTH_BONUS)
 
     def test_all_bonuses(self):
-        text = (
-            "### Sub-problem analysis\n"
-            "The synthesis shows that\n"
-            + "x" * (QUALITY_LENGTH_THRESHOLD + 1)
-        )
+        text = "### Sub-problem analysis\n" "The synthesis shows that\n" + "x" * (QUALITY_LENGTH_THRESHOLD + 1)
         expected = QUALITY_BASELINE + QUALITY_SUBPROBLEM_BONUS + QUALITY_SYNTHESIS_BONUS + QUALITY_LENGTH_BONUS
         score = LLMHRMAgent._compute_quality_score(text)
         assert score == pytest.approx(min(expected, 1.0))
 
     def test_capped_at_one(self):
         # Even with all bonuses the score should not exceed 1.0
-        score = LLMHRMAgent._compute_quality_score(
-            "### sub-problem\nsynthesis final\n" + "x" * 1000
-        )
+        score = LLMHRMAgent._compute_quality_score("### sub-problem\nsynthesis final\n" + "x" * 1000)
         assert score <= 1.0
 
     def test_empty_string(self):
@@ -212,10 +205,7 @@ class TestLLMHRMAgentRAG:
         agent = LLMHRMAgent(mock_llm_client)
         await agent.process(query="What is AI?", rag_context="AI stands for Artificial Intelligence.")
 
-        # Verify the prompt sent to LLM includes the rag context
-        call_kwargs = mock_llm_client.generate.call_args
-        prompt = call_kwargs.kwargs.get("prompt") or call_kwargs.args[0] if call_kwargs.args else ""
-        # The prompt should contain the rag section
+        # Verify the LLM was called with the rag context
         assert mock_llm_client.generate.called
 
     @pytest.mark.asyncio

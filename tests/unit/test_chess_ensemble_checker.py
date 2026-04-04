@@ -7,8 +7,6 @@ divergence calculation, and routing consistency.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -309,8 +307,11 @@ class TestCheckPositionConsistency:
 
         with patch("src.games.chess.verification.ensemble_checker.get_routing_scores") as mock_scores:
             mock_scores.return_value = {
-                "match": 1.0, "middlegame_fallback": 0.7,
-                "phase_appropriate": 0.8, "phase_mismatch": 0.4, "default": 0.5,
+                "match": 1.0,
+                "middlegame_fallback": 0.7,
+                "phase_appropriate": 0.8,
+                "phase_mismatch": 0.4,
+                "default": 0.5,
             }
             result = await checker.check_position_consistency(mock_state)
 
@@ -334,8 +335,11 @@ class TestCheckPositionConsistency:
 
         with patch("src.games.chess.verification.ensemble_checker.get_routing_scores") as mock_scores:
             mock_scores.return_value = {
-                "match": 1.0, "middlegame_fallback": 0.7,
-                "phase_appropriate": 0.8, "phase_mismatch": 0.4, "default": 0.5,
+                "match": 1.0,
+                "middlegame_fallback": 0.7,
+                "phase_appropriate": 0.8,
+                "phase_mismatch": 0.4,
+                "default": 0.5,
             }
             result = await checker.check_position_consistency(mock_state)
 
@@ -344,9 +348,7 @@ class TestCheckPositionConsistency:
         assert result.is_consistent is False
 
     @pytest.mark.asyncio
-    async def test_ensemble_execution_failure(
-        self, config: EnsembleCheckerConfig, mock_state: MagicMock
-    ) -> None:
+    async def test_ensemble_execution_failure(self, config: EnsembleCheckerConfig, mock_state: MagicMock) -> None:
         """Test handles ensemble execution failure."""
         mock_agent = AsyncMock()
         mock_agent.get_best_move.side_effect = RuntimeError("execution failed")
@@ -358,9 +360,7 @@ class TestCheckPositionConsistency:
         assert any(i.code == "ENSEMBLE_EXECUTION_FAILED" for i in result.issues)
 
     @pytest.mark.asyncio
-    async def test_unexpected_exception_reraises(
-        self, config: EnsembleCheckerConfig, mock_state: MagicMock
-    ) -> None:
+    async def test_unexpected_exception_reraises(self, config: EnsembleCheckerConfig, mock_state: MagicMock) -> None:
         """Test unexpected exceptions are re-raised."""
         mock_agent = AsyncMock()
         mock_agent.get_best_move.side_effect = KeyboardInterrupt()
@@ -395,8 +395,11 @@ class TestCheckPositionConsistency:
 
         with patch("src.games.chess.verification.ensemble_checker.get_routing_scores") as mock_scores:
             mock_scores.return_value = {
-                "match": 1.0, "middlegame_fallback": 0.7,
-                "phase_appropriate": 0.8, "phase_mismatch": 0.4, "default": 0.5,
+                "match": 1.0,
+                "middlegame_fallback": 0.7,
+                "phase_appropriate": 0.8,
+                "phase_mismatch": 0.4,
+                "default": 0.5,
             }
             result = await checker.check_position_consistency(mock_state)
 
@@ -428,8 +431,11 @@ class TestCheckPositionConsistency:
 
         with patch("src.games.chess.verification.ensemble_checker.get_routing_scores") as mock_scores:
             mock_scores.return_value = {
-                "match": 1.0, "middlegame_fallback": 0.7,
-                "phase_appropriate": 0.8, "phase_mismatch": 0.4, "default": 0.5,
+                "match": 1.0,
+                "middlegame_fallback": 0.7,
+                "phase_appropriate": 0.8,
+                "phase_mismatch": 0.4,
+                "default": 0.5,
             }
             result = await checker.check_position_consistency(mock_state)
 
@@ -453,8 +459,11 @@ class TestCheckPositionConsistency:
 
         with patch("src.games.chess.verification.ensemble_checker.get_routing_scores") as mock_scores:
             mock_scores.return_value = {
-                "match": 1.0, "middlegame_fallback": 0.7,
-                "phase_appropriate": 0.8, "phase_mismatch": 0.4, "default": 0.5,
+                "match": 1.0,
+                "middlegame_fallback": 0.7,
+                "phase_appropriate": 0.8,
+                "phase_mismatch": 0.4,
+                "default": 0.5,
             }
             result = await checker.check_position_consistency(mock_state)
 
@@ -494,8 +503,11 @@ class TestCheckSequenceConsistency:
 
         with patch("src.games.chess.verification.ensemble_checker.get_routing_scores") as mock_scores:
             mock_scores.return_value = {
-                "match": 1.0, "middlegame_fallback": 0.7,
-                "phase_appropriate": 0.8, "phase_mismatch": 0.4, "default": 0.5,
+                "match": 1.0,
+                "middlegame_fallback": 0.7,
+                "phase_appropriate": 0.8,
+                "phase_mismatch": 0.4,
+                "default": 0.5,
             }
             results = await checker.check_sequence_consistency(states)
 
@@ -522,23 +534,17 @@ class TestCalculateAgreementRate:
 
     def test_all_agree(self, checker: EnsembleConsistencyChecker) -> None:
         """Test agreement rate when all agree."""
-        rate = checker._calculate_agreement_rate(
-            {"hrm": "e2e4", "trm": "e2e4", "mcts": "e2e4"}
-        )
+        rate = checker._calculate_agreement_rate({"hrm": "e2e4", "trm": "e2e4", "mcts": "e2e4"})
         assert rate == 1.0
 
     def test_none_agree(self, checker: EnsembleConsistencyChecker) -> None:
         """Test agreement rate when none agree."""
-        rate = checker._calculate_agreement_rate(
-            {"hrm": "e2e4", "trm": "d2d4", "mcts": "c2c4"}
-        )
+        rate = checker._calculate_agreement_rate({"hrm": "e2e4", "trm": "d2d4", "mcts": "c2c4"})
         assert rate == 0.0
 
     def test_two_of_three_agree(self, checker: EnsembleConsistencyChecker) -> None:
         """Test agreement rate when 2 of 3 agree."""
-        rate = checker._calculate_agreement_rate(
-            {"hrm": "e2e4", "trm": "e2e4", "mcts": "d2d4"}
-        )
+        rate = checker._calculate_agreement_rate({"hrm": "e2e4", "trm": "e2e4", "mcts": "d2d4"})
         # 1 agreeing pair out of 3 total pairs = 1/3
         assert rate == pytest.approx(1.0 / 3.0)
 
@@ -632,8 +638,11 @@ class TestCheckRoutingConsistency:
 
         with patch("src.games.chess.verification.ensemble_checker.get_routing_scores") as mock_scores:
             mock_scores.return_value = {
-                "match": 1.0, "middlegame_fallback": 0.7,
-                "phase_appropriate": 0.8, "phase_mismatch": 0.4, "default": 0.5,
+                "match": 1.0,
+                "middlegame_fallback": 0.7,
+                "phase_appropriate": 0.8,
+                "phase_mismatch": 0.4,
+                "default": 0.5,
             }
             score = checker._check_routing_consistency(mock_state, AgentType.HRM)
 
@@ -646,8 +655,11 @@ class TestCheckRoutingConsistency:
 
         with patch("src.games.chess.verification.ensemble_checker.get_routing_scores") as mock_scores:
             mock_scores.return_value = {
-                "match": 1.0, "middlegame_fallback": 0.7,
-                "phase_appropriate": 0.8, "phase_mismatch": 0.4, "default": 0.5,
+                "match": 1.0,
+                "middlegame_fallback": 0.7,
+                "phase_appropriate": 0.8,
+                "phase_mismatch": 0.4,
+                "default": 0.5,
             }
             score = checker._check_routing_consistency(state, AgentType.HRM)
 
@@ -660,8 +672,11 @@ class TestCheckRoutingConsistency:
 
         with patch("src.games.chess.verification.ensemble_checker.get_routing_scores") as mock_scores:
             mock_scores.return_value = {
-                "match": 1.0, "middlegame_fallback": 0.7,
-                "phase_appropriate": 0.8, "phase_mismatch": 0.4, "default": 0.5,
+                "match": 1.0,
+                "middlegame_fallback": 0.7,
+                "phase_appropriate": 0.8,
+                "phase_mismatch": 0.4,
+                "default": 0.5,
             }
             score = checker._check_routing_consistency(state, AgentType.MCTS)
 
@@ -674,8 +689,11 @@ class TestCheckRoutingConsistency:
 
         with patch("src.games.chess.verification.ensemble_checker.get_routing_scores") as mock_scores:
             mock_scores.return_value = {
-                "match": 1.0, "middlegame_fallback": 0.7,
-                "phase_appropriate": 0.8, "phase_mismatch": 0.4, "default": 0.5,
+                "match": 1.0,
+                "middlegame_fallback": 0.7,
+                "phase_appropriate": 0.8,
+                "phase_mismatch": 0.4,
+                "default": 0.5,
             }
             score = checker._check_routing_consistency(state, AgentType.TRM)
 
@@ -688,8 +706,11 @@ class TestCheckRoutingConsistency:
 
         with patch("src.games.chess.verification.ensemble_checker.get_routing_scores") as mock_scores:
             mock_scores.return_value = {
-                "match": 1.0, "middlegame_fallback": 0.7,
-                "phase_appropriate": 0.8, "phase_mismatch": 0.4, "default": 0.5,
+                "match": 1.0,
+                "middlegame_fallback": 0.7,
+                "phase_appropriate": 0.8,
+                "phase_mismatch": 0.4,
+                "default": 0.5,
             }
             score = checker._check_routing_consistency(state, AgentType.MCTS)
 
@@ -702,8 +723,11 @@ class TestCheckRoutingConsistency:
 
         with patch("src.games.chess.verification.ensemble_checker.get_routing_scores") as mock_scores:
             mock_scores.return_value = {
-                "match": 1.0, "middlegame_fallback": 0.7,
-                "phase_appropriate": 0.8, "phase_mismatch": 0.4, "default": 0.5,
+                "match": 1.0,
+                "middlegame_fallback": 0.7,
+                "phase_appropriate": 0.8,
+                "phase_mismatch": 0.4,
+                "default": 0.5,
             }
             score = checker._check_routing_consistency(state, AgentType.TRM)
 
@@ -716,8 +740,11 @@ class TestCheckRoutingConsistency:
 
         with patch("src.games.chess.verification.ensemble_checker.get_routing_scores") as mock_scores:
             mock_scores.return_value = {
-                "match": 1.0, "middlegame_fallback": 0.7,
-                "phase_appropriate": 0.8, "phase_mismatch": 0.4, "default": 0.5,
+                "match": 1.0,
+                "middlegame_fallback": 0.7,
+                "phase_appropriate": 0.8,
+                "phase_mismatch": 0.4,
+                "default": 0.5,
             }
             score = checker._check_routing_consistency(state, AgentType.HRM)
 

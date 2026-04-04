@@ -27,6 +27,7 @@ from src.storage.s3_client import S3Config, S3StorageClient
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_s3_mock(response: dict | None = None, body_data: bytes = b""):
     """Build a mock S3 client that works with ``async with session.client(...) as s3``."""
     s3 = AsyncMock()
@@ -42,12 +43,14 @@ def _make_s3_mock(response: dict | None = None, body_data: bytes = b""):
     s3.get_object = AsyncMock(return_value={"Body": stream})
 
     # list_objects_v2
-    s3.list_objects_v2 = AsyncMock(return_value={
-        "Contents": [
-            {"Key": "test/key1", "Size": 100, "LastModified": "2024-01-01", "ETag": '"e1"'},
-            {"Key": "test/key2", "Size": 200, "LastModified": "2024-01-02", "ETag": '"e2"'},
-        ]
-    })
+    s3.list_objects_v2 = AsyncMock(
+        return_value={
+            "Contents": [
+                {"Key": "test/key1", "Size": 100, "LastModified": "2024-01-01", "ETag": '"e1"'},
+                {"Key": "test/key2", "Size": 200, "LastModified": "2024-01-02", "ETag": '"e2"'},
+            ]
+        }
+    )
 
     # delete_object
     s3.delete_object = AsyncMock(return_value={"VersionId": "v2"})
@@ -129,7 +132,9 @@ class TestPutObjectWithRetry:
         client._initialized = True
 
         await client._put_object_with_retry(
-            "test/key", b"data", metadata={"foo": "bar"},
+            "test/key",
+            b"data",
+            metadata={"foo": "bar"},
         )
 
         call_kwargs = s3_mock.put_object.call_args.kwargs
@@ -487,6 +492,7 @@ class TestRetrieveObject:
     async def test_retrieve_object_gzipped(self):
         """Retrieve gzip-compressed object (auto-decompressed by key suffix)."""
         import gzip
+
         original = b"compressed data"
         compressed = gzip.compress(original)
 

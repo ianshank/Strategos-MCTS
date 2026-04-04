@@ -270,8 +270,7 @@ class TestMetaControllerFeatureExtractor:
         extractor = MetaControllerFeatureExtractor()
         # Include many technical indicators + long text + question words
         text = (
-            "How do we analyze compare evaluate synthesize strategic tactical "
-            "multi-step consider why what if? " * 10
+            "How do we analyze compare evaluate synthesize strategic tactical " "multi-step consider why what if? " * 10
         )
         score = extractor._estimate_complexity(text)
         assert score == 1.0
@@ -305,9 +304,7 @@ class TestMetaControllerFeatureExtractor:
 
     def test_extract_agent_state_features_normalization(self):
         extractor = MetaControllerFeatureExtractor()
-        features = extractor.extract_agent_state_features(
-            mcts_iterations=5000, rag_retrieved=100
-        )
+        features = extractor.extract_agent_state_features(mcts_iterations=5000, rag_retrieved=100)
         # Capped at 1.0
         assert features[2] == 1.0
         assert features[4] == 1.0

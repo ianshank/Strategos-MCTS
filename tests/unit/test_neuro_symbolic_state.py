@@ -98,11 +98,13 @@ class TestNeuroSymbolicState:
         assert state.hash_key == key  # cached
 
     def test_fact_index(self):
-        facts = frozenset([
-            Fact(name="a", arguments=(1,)),
-            Fact(name="a", arguments=(2,)),
-            Fact(name="b", arguments=(3,)),
-        ])
+        facts = frozenset(
+            [
+                Fact(name="a", arguments=(1,)),
+                Fact(name="a", arguments=(2,)),
+                Fact(name="b", arguments=(3,)),
+            ]
+        )
         state = NeuroSymbolicState(state_id="s1", facts=facts)
         idx = state.fact_index
         assert len(idx["a"]) == 2
@@ -133,20 +135,24 @@ class TestNeuroSymbolicState:
         assert not state.has_fact("ready", "other")
 
     def test_query_facts(self):
-        facts = frozenset([
-            Fact(name="parent", arguments=("john", "mary")),
-            Fact(name="parent", arguments=("john", "bob")),
-            Fact(name="child", arguments=("mary", "john")),
-        ])
+        facts = frozenset(
+            [
+                Fact(name="parent", arguments=("john", "mary")),
+                Fact(name="parent", arguments=("john", "bob")),
+                Fact(name="child", arguments=("mary", "john")),
+            ]
+        )
         state = NeuroSymbolicState(state_id="s1", facts=facts)
         results = state.query_facts("parent")
         assert len(results) == 2
 
     def test_query_facts_with_filter(self):
-        facts = frozenset([
-            Fact(name="parent", arguments=("john", "mary")),
-            Fact(name="parent", arguments=("john", "bob")),
-        ])
+        facts = frozenset(
+            [
+                Fact(name="parent", arguments=("john", "mary")),
+                Fact(name="parent", arguments=("john", "bob")),
+            ]
+        )
         state = NeuroSymbolicState(state_id="s1", facts=facts)
         results = state.query_facts("parent", arg1="mary")
         assert len(results) == 1

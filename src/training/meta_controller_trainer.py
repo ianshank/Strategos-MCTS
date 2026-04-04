@@ -277,7 +277,7 @@ class MetaControllerTrainingOrchestrator:
         try:
             from src.agents.meta_controller.bert_controller import BERTMetaController
 
-            return BERTMetaController(  # type: ignore[call-arg]
+            return BERTMetaController(
                 name="MetaControllerTrainer_BERT",
                 seed=getattr(self.config, "seed", 42),
                 lora_dropout=self.config.dropout,
@@ -296,7 +296,7 @@ class MetaControllerTrainingOrchestrator:
         try:
             from src.agents.meta_controller.rnn_controller import RNNMetaController
 
-            return RNNMetaController(  # type: ignore[call-arg]
+            return RNNMetaController(
                 name="MetaControllerTrainer_RNN",
                 seed=getattr(self.config, "seed", 42),
                 hidden_dim=self.config.hidden_dim,

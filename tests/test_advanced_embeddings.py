@@ -323,9 +323,9 @@ class TestEmbedderFactory:
 
         # Should successfully create an embedder (either first or fallback)
         assert embedder is not None, "Should create an embedder"
-        assert embedder.is_available() or isinstance(embedder, RandomEmbedder), (
-            "Should have available embedder or random fallback"
-        )
+        assert embedder.is_available() or isinstance(
+            embedder, RandomEmbedder
+        ), "Should have available embedder or random fallback"
 
 
 class TestRandomEmbedder:

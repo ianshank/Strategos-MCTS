@@ -9,8 +9,6 @@ Mocks prometheus_client if needed so tests run without it installed.
 
 from __future__ import annotations
 
-import asyncio
-from time import perf_counter
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -268,7 +266,7 @@ class TestSetupMetrics:
 
     def test_setup_metrics_with_prometheus_available(self):
         """Test setup_metrics sets system info when prometheus is available."""
-        from src.monitoring.prometheus_metrics import SYSTEM_INFO, setup_metrics
+        from src.monitoring.prometheus_metrics import setup_metrics
 
         # Should not raise regardless of prometheus availability
         setup_metrics(app_version="2.0.0", environment="test")

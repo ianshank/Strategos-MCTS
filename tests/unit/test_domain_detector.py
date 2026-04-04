@@ -112,11 +112,7 @@ class TestDomainDetector:
 
     def test_init_custom_patterns(self, config):
         """Test detector with custom patterns."""
-        custom = {
-            EnterpriseDomain.MA_DUE_DILIGENCE: DomainPattern(
-                keywords=["deal"], weight=2.0
-            )
-        }
+        custom = {EnterpriseDomain.MA_DUE_DILIGENCE: DomainPattern(keywords=["deal"], weight=2.0)}
         detector = DomainDetector(patterns=custom, config=config)
         assert len(detector._patterns) == 1
         assert detector._patterns[EnterpriseDomain.MA_DUE_DILIGENCE].weight == 2.0
@@ -214,18 +210,14 @@ class TestDomainDetector:
         query = "simple question"
         base = detector.estimate_complexity(query)
         with_rag = detector.estimate_complexity(query, {"rag_context": "some context"})
-        with_both = detector.estimate_complexity(
-            query, {"rag_context": "ctx", "previous_responses": ["r1"]}
-        )
+        with_both = detector.estimate_complexity(query, {"rag_context": "ctx", "previous_responses": ["r1"]})
         assert with_rag >= base
         assert with_both >= with_rag
 
     def test_estimate_complexity_capped_at_one(self, detector):
         """Test complexity is capped at 1.0."""
         query = " ".join(DomainDetector.TECHNICAL_KEYWORDS) * 10
-        score = detector.estimate_complexity(
-            query, {"rag_context": "x", "previous_responses": ["y"]}
-        )
+        score = detector.estimate_complexity(query, {"rag_context": "x", "previous_responses": ["y"]})
         assert score <= 1.0
 
     # --- extract_jurisdictions() ---

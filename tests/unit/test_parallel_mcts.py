@@ -5,7 +5,6 @@ Tests ParallelMCTSStats, ParallelMCTSConfig, VirtualLossNode,
 and ParallelMCTSEngine initialization.
 """
 
-
 import numpy as np
 import pytest
 

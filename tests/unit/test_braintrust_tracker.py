@@ -176,8 +176,11 @@ class TestBraintrustTrackerLogging:
     def test_log_epoch_summary_buffers(self):
         tracker = self._make_unavailable_tracker()
         tracker.log_epoch_summary(
-            epoch=1, train_loss=0.5, val_loss=0.3,
-            train_accuracy=0.8, val_accuracy=0.85,
+            epoch=1,
+            train_loss=0.5,
+            val_loss=0.3,
+            train_accuracy=0.8,
+            val_accuracy=0.85,
             additional_metrics={"f1": 0.82},
         )
         buf = tracker._metrics_buffer[0]
@@ -266,8 +269,11 @@ class TestBraintrustTrackerWithExperiment:
     def test_log_epoch_summary_all_fields(self):
         tracker = self._make_active_tracker()
         tracker.log_epoch_summary(
-            epoch=1, train_loss=0.5, val_loss=0.4,
-            train_accuracy=0.8, val_accuracy=0.85,
+            epoch=1,
+            train_loss=0.5,
+            val_loss=0.4,
+            train_accuracy=0.8,
+            val_accuracy=0.85,
             additional_metrics={"f1": 0.82},
         )
         call_kwargs = tracker._experiment.log.call_args[1]
@@ -459,7 +465,8 @@ class TestCreateTrainingTracker:
     def test_starts_experiment_when_available(self):
         with patch.object(BraintrustTracker, "start_experiment") as mock_start:
             with patch.object(
-                BraintrustTracker, "is_available",
+                BraintrustTracker,
+                "is_available",
                 new_callable=lambda: property(lambda self: True),
             ):
                 create_training_tracker(model_type="bert", config={"epochs": 10})
@@ -472,7 +479,8 @@ class TestCreateTrainingTracker:
     def test_does_not_start_experiment_when_not_available(self):
         with patch.object(BraintrustTracker, "start_experiment") as mock_start:
             with patch.object(
-                BraintrustTracker, "is_available",
+                BraintrustTracker,
+                "is_available",
                 new_callable=lambda: property(lambda self: False),
             ):
                 create_training_tracker()

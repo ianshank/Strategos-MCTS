@@ -166,12 +166,15 @@ class TestFrameworkServiceInitialize:
         mock_integrated = MagicMock()
         mock_mcts_config = MagicMock()
 
-        with patch.dict("sys.modules", {
-            "src.framework.factories": MagicMock(LLMClientFactory=MagicMock(return_value=mock_llm_factory)),
-            "src.framework.graph": MagicMock(IntegratedFramework=MagicMock(return_value=mock_integrated)),
-            "src.framework.mcts.config": MagicMock(MCTSConfig=MagicMock(return_value=mock_mcts_config)),
-            "src.api.rag_retriever": MagicMock(create_rag_retriever=MagicMock(side_effect=ImportError("no rag"))),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "src.framework.factories": MagicMock(LLMClientFactory=MagicMock(return_value=mock_llm_factory)),
+                "src.framework.graph": MagicMock(IntegratedFramework=MagicMock(return_value=mock_integrated)),
+                "src.framework.mcts.config": MagicMock(MCTSConfig=MagicMock(return_value=mock_mcts_config)),
+                "src.api.rag_retriever": MagicMock(create_rag_retriever=MagicMock(side_effect=ImportError("no rag"))),
+            },
+        ):
             result = await service.initialize()
 
         assert result is True
@@ -189,14 +192,17 @@ class TestFrameworkServiceInitialize:
         mock_integrated = MagicMock()
         mock_mcts_config = MagicMock()
 
-        with patch.dict("sys.modules", {
-            "src.framework.factories": MagicMock(LLMClientFactory=MagicMock(return_value=mock_llm_factory)),
-            "src.framework.graph": MagicMock(IntegratedFramework=MagicMock(return_value=mock_integrated)),
-            "src.framework.mcts.config": MagicMock(MCTSConfig=MagicMock(return_value=mock_mcts_config)),
-            "src.api.rag_retriever": MagicMock(
-                create_rag_retriever=MagicMock(side_effect=RuntimeError("RAG init failed"))
-            ),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "src.framework.factories": MagicMock(LLMClientFactory=MagicMock(return_value=mock_llm_factory)),
+                "src.framework.graph": MagicMock(IntegratedFramework=MagicMock(return_value=mock_integrated)),
+                "src.framework.mcts.config": MagicMock(MCTSConfig=MagicMock(return_value=mock_mcts_config)),
+                "src.api.rag_retriever": MagicMock(
+                    create_rag_retriever=MagicMock(side_effect=RuntimeError("RAG init failed"))
+                ),
+            },
+        ):
             result = await service.initialize()
 
         assert result is True
@@ -216,14 +222,15 @@ class TestFrameworkServiceInitialize:
         mock_graph_module = MagicMock()
         mock_graph_module.IntegratedFramework = MagicMock(side_effect=ImportError("missing dep"))
 
-        with patch.dict("sys.modules", {
-            "src.framework.factories": MagicMock(LLMClientFactory=MagicMock(return_value=mock_llm_factory)),
-            "src.framework.graph": mock_graph_module,
-            "src.framework.mcts.config": MagicMock(MCTSConfig=MagicMock(return_value=mock_mcts_config)),
-            "src.api.rag_retriever": MagicMock(
-                create_rag_retriever=MagicMock(side_effect=ImportError("no rag"))
-            ),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "src.framework.factories": MagicMock(LLMClientFactory=MagicMock(return_value=mock_llm_factory)),
+                "src.framework.graph": mock_graph_module,
+                "src.framework.mcts.config": MagicMock(MCTSConfig=MagicMock(return_value=mock_mcts_config)),
+                "src.api.rag_retriever": MagicMock(create_rag_retriever=MagicMock(side_effect=ImportError("no rag"))),
+            },
+        ):
             result = await service.initialize()
 
         assert result is True
@@ -237,11 +244,12 @@ class TestFrameworkServiceInitialize:
         service = FrameworkService(settings=settings)
 
         # Make the import itself raise an unexpected error
-        with patch.dict("sys.modules", {
-            "src.framework.factories": MagicMock(
-                LLMClientFactory=MagicMock(side_effect=Exception("catastrophic"))
-            ),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "src.framework.factories": MagicMock(LLMClientFactory=MagicMock(side_effect=Exception("catastrophic"))),
+            },
+        ):
             result = await service.initialize()
 
         assert result is False
@@ -265,15 +273,17 @@ class TestFrameworkServiceProcessQuery:
         service._state = FrameworkState.READY
 
         mock_framework = AsyncMock()
-        mock_framework.process = AsyncMock(return_value={
-            "response": "Test answer",
-            "metadata": {
-                "consensus_score": 0.85,
-                "agents_used": ["agent1"],
-                "iterations": 1,
-            },
-            "state": {"mcts_stats": None},
-        })
+        mock_framework.process = AsyncMock(
+            return_value={
+                "response": "Test answer",
+                "metadata": {
+                    "consensus_score": 0.85,
+                    "agents_used": ["agent1"],
+                    "iterations": 1,
+                },
+                "state": {"mcts_stats": None},
+            }
+        )
         service._framework = mock_framework
         return service
 
@@ -373,17 +383,19 @@ class TestFrameworkServiceProcessQuery:
     async def test_process_query_with_mcts_stats(self):
         """MCTS stats are included when use_mcts is True (line 549)."""
         service = self._make_ready_service()
-        service._framework.process = AsyncMock(return_value={
-            "response": "Answer",
-            "metadata": {
-                "consensus_score": 0.9,
-                "agents_used": ["agent1"],
-                "iterations": 50,
-            },
-            "state": {
-                "mcts_stats": {"iterations": 50, "best_action": "search"},
-            },
-        })
+        service._framework.process = AsyncMock(
+            return_value={
+                "response": "Answer",
+                "metadata": {
+                    "consensus_score": 0.9,
+                    "agents_used": ["agent1"],
+                    "iterations": 50,
+                },
+                "state": {
+                    "mcts_stats": {"iterations": 50, "best_action": "search"},
+                },
+            }
+        )
 
         result = await service.process_query("test", use_mcts=True)
         assert result.mcts_stats is not None
@@ -393,17 +405,19 @@ class TestFrameworkServiceProcessQuery:
     async def test_process_query_without_mcts_stats(self):
         """MCTS stats are None when use_mcts is False."""
         service = self._make_ready_service()
-        service._framework.process = AsyncMock(return_value={
-            "response": "Answer",
-            "metadata": {
-                "consensus_score": 0.9,
-                "agents_used": ["agent1"],
-                "iterations": 1,
-            },
-            "state": {
-                "mcts_stats": {"iterations": 50},
-            },
-        })
+        service._framework.process = AsyncMock(
+            return_value={
+                "response": "Answer",
+                "metadata": {
+                    "consensus_score": 0.9,
+                    "agents_used": ["agent1"],
+                    "iterations": 1,
+                },
+                "state": {
+                    "mcts_stats": {"iterations": 50},
+                },
+            }
+        )
 
         result = await service.process_query("test", use_mcts=False)
         assert result.mcts_stats is None

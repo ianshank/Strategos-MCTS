@@ -137,8 +137,12 @@ class TestBraintrustTracker:
             os.environ.pop("BRAINTRUST_API_KEY", None)
             tracker = BraintrustTracker(api_key=None)
             metrics = TrainingMetrics(
-                epoch=1, step=5, train_loss=0.5, val_loss=0.6,
-                accuracy=0.8, learning_rate=0.001,
+                epoch=1,
+                step=5,
+                train_loss=0.5,
+                val_loss=0.6,
+                accuracy=0.8,
+                learning_rate=0.001,
                 custom_metrics={"f1": 0.75},
             )
             tracker.log_training_step(metrics)
@@ -273,8 +277,12 @@ class TestWandBTracker:
             os.environ.pop("WANDB_MODE", None)
             tracker = WandBTracker(api_key=None)
             metrics = TrainingMetrics(
-                epoch=1, step=5, train_loss=0.5, val_loss=0.6,
-                accuracy=0.8, learning_rate=0.001,
+                epoch=1,
+                step=5,
+                train_loss=0.5,
+                val_loss=0.6,
+                accuracy=0.8,
+                learning_rate=0.001,
             )
             # Should not raise
             tracker.log_training_step(metrics)

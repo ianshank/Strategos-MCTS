@@ -239,9 +239,7 @@ class TestMCTSDataset:
         examples = [_make_raw_example()]
         cfg = MCTSDatasetConfig(max_code_length=32, max_problem_length=16, max_actions=5)
         ds = MCTSDataset(config=cfg, examples=examples)
-        llm_p, mcts_p, mask = ds._encode_policies(
-            {"a": 0.6, "b": 0.4}, {"a": 0.3, "b": 0.7}
-        )
+        llm_p, mcts_p, mask = ds._encode_policies({"a": 0.6, "b": 0.4}, {"a": 0.3, "b": 0.7})
         # Normalized sums should be ~1.0 for non-zero actions
         assert abs(sum(llm_p[:2]) - 1.0) < 1e-6
         assert abs(sum(mcts_p[:2]) - 1.0) < 1e-6
@@ -312,9 +310,7 @@ class TestMCTSDataset:
             _sample_example_dict(depth=2, visits=10),
         ]
         _write_episode_file(data_dir / "episode_001.jsonl", examples)
-        cfg = MCTSDatasetConfig(
-            data_dir=str(data_dir), min_visits=1, exclude_root_nodes=False
-        )
+        cfg = MCTSDatasetConfig(data_dir=str(data_dir), min_visits=1, exclude_root_nodes=False)
         ds = MCTSDataset(config=cfg)
         assert len(ds) == 2
 
@@ -327,9 +323,7 @@ class TestMCTSDataset:
             examples,
             metadata={"solution_found": True},
         )
-        cfg = MCTSDatasetConfig(
-            data_dir=str(data_dir), min_visits=1, exclude_root_nodes=False
-        )
+        cfg = MCTSDatasetConfig(data_dir=str(data_dir), min_visits=1, exclude_root_nodes=False)
         ds = MCTSDataset(config=cfg)
         assert len(ds) == 1
 
@@ -374,9 +368,7 @@ class TestMCTSDataset:
             _sample_example_dict(depth=1, visits=10),
         ]
         _write_episode_file(data_dir / "episode_001.jsonl", examples)
-        cfg = MCTSDatasetConfig(
-            data_dir=str(data_dir), min_visits=1, exclude_root_nodes=True
-        )
+        cfg = MCTSDatasetConfig(data_dir=str(data_dir), min_visits=1, exclude_root_nodes=True)
         ds = MCTSDataset(config=cfg)
         assert len(ds) == 1
 
@@ -387,9 +379,7 @@ class TestMCTSDataset:
         with open(filepath, "w") as f:
             f.write("not valid json\n")
             f.write(json.dumps(_sample_example_dict(depth=2, visits=5)) + "\n")
-        cfg = MCTSDatasetConfig(
-            data_dir=str(data_dir), min_visits=1, exclude_root_nodes=False
-        )
+        cfg = MCTSDatasetConfig(data_dir=str(data_dir), min_visits=1, exclude_root_nodes=False)
         ds = MCTSDataset(config=cfg)
         assert len(ds) == 1  # Only the valid line
 
@@ -399,9 +389,7 @@ class TestMCTSDataset:
         splits_dir.mkdir(parents=True)
         examples = [_sample_example_dict(depth=2, visits=5)]
         _write_episode_file(splits_dir / "train.jsonl", examples)
-        cfg = MCTSDatasetConfig(
-            data_dir=str(data_dir), min_visits=1, exclude_root_nodes=False
-        )
+        cfg = MCTSDatasetConfig(data_dir=str(data_dir), min_visits=1, exclude_root_nodes=False)
         ds = MCTSDataset(config=cfg)
         assert len(ds) == 1
 
@@ -489,10 +477,7 @@ class TestCreateDataloaders:
     def _make_data_dir(self, tmp_path, n_examples=10):
         data_dir = tmp_path / "data"
         data_dir.mkdir()
-        examples = [
-            _sample_example_dict(depth=i + 1, visits=5 + i, episode_id=f"ep_{i}")
-            for i in range(n_examples)
-        ]
+        examples = [_sample_example_dict(depth=i + 1, visits=5 + i, episode_id=f"ep_{i}") for i in range(n_examples)]
         _write_episode_file(data_dir / "episode_001.jsonl", examples)
         return data_dir
 
@@ -505,9 +490,7 @@ class TestCreateDataloaders:
             max_problem_length=8,
             max_actions=3,
         )
-        loaders = create_dataloaders(
-            data_dir, config=cfg, batch_size=2, train_ratio=0.6, val_ratio=0.2, test_ratio=0.2
-        )
+        loaders = create_dataloaders(data_dir, config=cfg, batch_size=2, train_ratio=0.6, val_ratio=0.2, test_ratio=0.2)
         assert "train" in loaders
         assert "val" in loaders
         assert "test" in loaders
@@ -526,7 +509,5 @@ class TestCreateDataloaders:
     def test_create_dataloaders_no_config(self, tmp_path):
         data_dir = self._make_data_dir(tmp_path, n_examples=10)
         # This should use default config; examples with depth>=1 and visits>=1 pass
-        loaders = create_dataloaders(
-            data_dir, batch_size=2, train_ratio=0.6, val_ratio=0.2, test_ratio=0.2
-        )
+        loaders = create_dataloaders(data_dir, batch_size=2, train_ratio=0.6, val_ratio=0.2, test_ratio=0.2)
         assert "train" in loaders

@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.adapters.llm.base import LLMResponse
-from src.framework.agents.base import AgentContext
 from src.framework.agents.llm_trm import (
     DEFAULT_TRM_MAX_TOKENS,
     DEFAULT_TRM_TEMPERATURE,
@@ -120,20 +119,21 @@ class TestComputeQualityScore:
         text = (
             "Initial approach.\n"
             "Review shows weakness.\n"
-            "Refined and improved solution.\n"
-            + "z" * (QUALITY_LENGTH_THRESHOLD + 1)
+            "Refined and improved solution.\n" + "z" * (QUALITY_LENGTH_THRESHOLD + 1)
         )
         expected = min(
-            QUALITY_BASELINE + QUALITY_INITIAL_BONUS + QUALITY_REVIEW_BONUS + QUALITY_REFINED_BONUS + QUALITY_LENGTH_BONUS,
+            QUALITY_BASELINE
+            + QUALITY_INITIAL_BONUS
+            + QUALITY_REVIEW_BONUS
+            + QUALITY_REFINED_BONUS
+            + QUALITY_LENGTH_BONUS,
             1.0,
         )
         score = LLMTRMAgent._compute_quality_score(text)
         assert score == pytest.approx(expected)
 
     def test_capped_at_one(self):
-        score = LLMTRMAgent._compute_quality_score(
-            "initial review weakness refined improved\n" + "z" * 1000
-        )
+        score = LLMTRMAgent._compute_quality_score("initial review weakness refined improved\n" + "z" * 1000)
         assert score <= 1.0
 
     def test_empty_string(self):

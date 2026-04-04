@@ -238,7 +238,13 @@ class TestJSONFormatter:
     def test_format_basic(self):
         formatter = JSONFormatter(include_hostname=False, include_process=False)
         record = logging.LogRecord(
-            name="test.logger", level=logging.INFO, pathname="test.py", lineno=42, msg="Hello world", args=(), exc_info=None
+            name="test.logger",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=42,
+            msg="Hello world",
+            args=(),
+            exc_info=None,
         )
         record.correlation_id = "test-cid"
         record.request_metadata = {}
@@ -309,6 +315,7 @@ class TestJSONFormatter:
             raise ValueError("test error")
         except ValueError:
             import sys
+
             exc_info = sys.exc_info()
 
         record = logging.LogRecord(
@@ -324,8 +331,7 @@ class TestJSONFormatter:
     def test_format_sanitizes_message(self):
         formatter = JSONFormatter(include_hostname=False, include_process=False)
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="", lineno=0,
-            msg='api_key: "sk-secret"', args=(), exc_info=None
+            name="test", level=logging.INFO, pathname="", lineno=0, msg='api_key: "sk-secret"', args=(), exc_info=None
         )
         record.correlation_id = None
         record.request_metadata = {}

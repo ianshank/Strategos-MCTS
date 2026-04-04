@@ -94,7 +94,8 @@ class TestPredicateConstraint:
     def test_required_fact_missing_hard(self):
         state = _make_state()
         c = PredicateConstraint(
-            "p1", "ready check",
+            "p1",
+            "ready check",
             required_facts=[("ready", ("agent",))],
             enforcement=ConstraintEnforcement.HARD,
         )
@@ -104,7 +105,8 @@ class TestPredicateConstraint:
     def test_required_fact_missing_soft(self):
         state = _make_state()
         c = PredicateConstraint(
-            "p1", "ready check",
+            "p1",
+            "ready check",
             required_facts=[("ready", ("agent",))],
             enforcement=ConstraintEnforcement.SOFT,
         )
@@ -115,7 +117,8 @@ class TestPredicateConstraint:
     def test_required_fact_missing_advisory(self):
         state = _make_state()
         c = PredicateConstraint(
-            "p1", "ready check",
+            "p1",
+            "ready check",
             required_facts=[("ready", ("agent",))],
             enforcement=ConstraintEnforcement.ADVISORY,
         )
@@ -127,7 +130,8 @@ class TestPredicateConstraint:
         fact = Fact(name="error", arguments=("system",))
         state = _make_state(facts=[fact])
         c = PredicateConstraint(
-            "p2", "no error",
+            "p2",
+            "no error",
             forbidden_facts=[("error", ("system",))],
             enforcement=ConstraintEnforcement.HARD,
         )
@@ -137,7 +141,8 @@ class TestPredicateConstraint:
     def test_forbidden_fact_absent(self):
         state = _make_state()
         c = PredicateConstraint(
-            "p2", "no error",
+            "p2",
+            "no error",
             forbidden_facts=[("error", ("system",))],
         )
         result = c.evaluate(state)
@@ -145,7 +150,8 @@ class TestPredicateConstraint:
 
     def test_compile(self):
         c = PredicateConstraint(
-            "p3", "test",
+            "p3",
+            "test",
             required_facts=[("a", (1,))],
             forbidden_facts=[("b", (2,))],
         )
@@ -182,7 +188,8 @@ class TestTemporalConstraint:
     def test_must_precede_satisfied(self):
         state = _make_state(metadata={"action_history": ["init", "process"]})
         c = TemporalConstraint(
-            "t1", "init before process",
+            "t1",
+            "init before process",
             must_precede=[("init", "process")],
         )
         result = c.evaluate(state)
@@ -191,7 +198,8 @@ class TestTemporalConstraint:
     def test_must_precede_violated_wrong_order(self):
         state = _make_state(metadata={"action_history": ["process", "init"]})
         c = TemporalConstraint(
-            "t1", "init before process",
+            "t1",
+            "init before process",
             must_precede=[("init", "process")],
             enforcement=ConstraintEnforcement.HARD,
         )
@@ -201,7 +209,8 @@ class TestTemporalConstraint:
     def test_must_precede_violated_missing(self):
         state = _make_state(metadata={"action_history": ["process"]})
         c = TemporalConstraint(
-            "t1", "init before process",
+            "t1",
+            "init before process",
             must_precede=[("init", "process")],
             enforcement=ConstraintEnforcement.HARD,
         )
@@ -211,7 +220,8 @@ class TestTemporalConstraint:
     def test_must_not_follow_satisfied(self):
         state = _make_state(metadata={"action_history": ["a", "b"]})
         c = TemporalConstraint(
-            "t2", "c cannot follow a",
+            "t2",
+            "c cannot follow a",
             must_not_follow=[("a", "c")],
         )
         result = c.evaluate(state)
@@ -220,7 +230,8 @@ class TestTemporalConstraint:
     def test_must_not_follow_violated(self):
         state = _make_state(metadata={"action_history": ["a", "c"]})
         c = TemporalConstraint(
-            "t2", "c cannot follow a",
+            "t2",
+            "c cannot follow a",
             must_not_follow=[("a", "c")],
             enforcement=ConstraintEnforcement.HARD,
         )
@@ -230,7 +241,8 @@ class TestTemporalConstraint:
     def test_with_action_parameter(self):
         state = _make_state(metadata={"action_history": ["init"]})
         c = TemporalConstraint(
-            "t3", "init before process",
+            "t3",
+            "init before process",
             must_precede=[("init", "process")],
         )
         result = c.evaluate(state, action="process")
@@ -239,7 +251,8 @@ class TestTemporalConstraint:
     def test_soft_enforcement(self):
         state = _make_state(metadata={"action_history": ["process"]})
         c = TemporalConstraint(
-            "t4", "init before process",
+            "t4",
+            "init before process",
             must_precede=[("init", "process")],
             enforcement=ConstraintEnforcement.SOFT,
         )
@@ -260,7 +273,8 @@ class TestExpressionConstraint:
     def test_simple_expression_satisfied(self):
         state = _make_state(metadata={"depth": 5})
         c = ExpressionConstraint(
-            "e1", "depth check",
+            "e1",
+            "depth check",
             expressions=[("metadata.depth", "<", 10)],
         )
         result = c.evaluate(state)
@@ -269,7 +283,8 @@ class TestExpressionConstraint:
     def test_simple_expression_violated(self):
         state = _make_state(metadata={"depth": 15})
         c = ExpressionConstraint(
-            "e1", "depth check",
+            "e1",
+            "depth check",
             expressions=[("metadata.depth", "<", 10)],
             enforcement=ConstraintEnforcement.HARD,
         )
@@ -279,7 +294,8 @@ class TestExpressionConstraint:
     def test_variable_not_found(self):
         state = _make_state()
         c = ExpressionConstraint(
-            "e2", "missing var",
+            "e2",
+            "missing var",
             expressions=[("metadata.nonexistent", "==", 1)],
             enforcement=ConstraintEnforcement.HARD,
         )
@@ -290,7 +306,8 @@ class TestExpressionConstraint:
     def test_multiple_expressions(self):
         state = _make_state(metadata={"depth": 5, "score": 0.8})
         c = ExpressionConstraint(
-            "e3", "multi check",
+            "e3",
+            "multi check",
             expressions=[
                 ("metadata.depth", "<", 10),
                 ("metadata.score", ">=", 0.5),
@@ -302,7 +319,8 @@ class TestExpressionConstraint:
     def test_context_lookup(self):
         state = _make_state()
         c = ExpressionConstraint(
-            "e4", "context check",
+            "e4",
+            "context check",
             expressions=[("level", "==", "high")],
         )
         result = c.evaluate(state, context={"level": "high"})
@@ -311,7 +329,8 @@ class TestExpressionConstraint:
     def test_in_operator(self):
         state = _make_state(metadata={"role": "admin"})
         c = ExpressionConstraint(
-            "e5", "role check",
+            "e5",
+            "role check",
             expressions=[("metadata.role", "in", ["admin", "moderator"])],
         )
         result = c.evaluate(state)
@@ -319,7 +338,8 @@ class TestExpressionConstraint:
 
     def test_unknown_operator(self):
         c = ExpressionConstraint(
-            "e6", "bad op",
+            "e6",
+            "bad op",
             expressions=[("x", "~=", 1)],
         )
         with pytest.raises(ValueError, match="Unknown operator"):
@@ -328,7 +348,8 @@ class TestExpressionConstraint:
     def test_soft_enforcement(self):
         state = _make_state(metadata={"depth": 15})
         c = ExpressionConstraint(
-            "e7", "depth check",
+            "e7",
+            "depth check",
             expressions=[("metadata.depth", "<", 10)],
             enforcement=ConstraintEnforcement.SOFT,
         )
@@ -342,7 +363,8 @@ class TestLambdaConstraint:
 
     def test_satisfied(self):
         c = LambdaConstraint(
-            "l1", "always true",
+            "l1",
+            "always true",
             predicate=lambda s, a, ctx: True,
         )
         state = _make_state()
@@ -351,7 +373,8 @@ class TestLambdaConstraint:
 
     def test_violated_hard(self):
         c = LambdaConstraint(
-            "l2", "always false",
+            "l2",
+            "always false",
             predicate=lambda s, a, ctx: False,
             enforcement=ConstraintEnforcement.HARD,
         )
@@ -361,7 +384,8 @@ class TestLambdaConstraint:
 
     def test_violated_soft_with_penalty_fn(self):
         c = LambdaConstraint(
-            "l3", "soft false",
+            "l3",
+            "soft false",
             predicate=lambda s, a, ctx: False,
             penalty_fn=lambda s: 0.3,
             enforcement=ConstraintEnforcement.SOFT,
@@ -373,7 +397,8 @@ class TestLambdaConstraint:
 
     def test_exception_returns_unknown(self):
         c = LambdaConstraint(
-            "l4", "error",
+            "l4",
+            "error",
             predicate=lambda s, a, ctx: 1 / 0,
         )
         state = _make_state()
@@ -425,11 +450,14 @@ class TestConstraintValidator:
     def test_validate_hard_violation(self):
         config = _make_config()
         validator = ConstraintValidator(config)
-        validator.add_constraint(PredicateConstraint(
-            "p1", "need ready",
-            required_facts=[("ready", ("x",))],
-            enforcement=ConstraintEnforcement.HARD,
-        ))
+        validator.add_constraint(
+            PredicateConstraint(
+                "p1",
+                "need ready",
+                required_facts=[("ready", ("x",))],
+                enforcement=ConstraintEnforcement.HARD,
+            )
+        )
         state = _make_state()
         valid, results = validator.validate(state)
         assert not valid
@@ -475,16 +503,22 @@ class TestConstraintValidator:
         config = _make_config()
         validator = ConstraintValidator(config)
         # Add high priority hard constraint that fails
-        validator.add_constraint(PredicateConstraint(
-            "p_high", "high priority",
-            required_facts=[("missing", ("x",))],
-            enforcement=ConstraintEnforcement.HARD,
-            priority=10,
-        ))
-        validator.add_constraint(PredicateConstraint(
-            "p_low", "low priority",
-            priority=1,
-        ))
+        validator.add_constraint(
+            PredicateConstraint(
+                "p_high",
+                "high priority",
+                required_facts=[("missing", ("x",))],
+                enforcement=ConstraintEnforcement.HARD,
+                priority=10,
+            )
+        )
+        validator.add_constraint(
+            PredicateConstraint(
+                "p_low",
+                "low priority",
+                priority=1,
+            )
+        )
         state = _make_state()
         valid, results = validator.validate(state)
         assert not valid
@@ -495,12 +529,15 @@ class TestConstraintValidator:
         config = _make_config(min_satisfaction_ratio=0.8)
         validator = ConstraintValidator(config)
         # Add soft constraint with high penalty
-        validator.add_constraint(LambdaConstraint(
-            "l1", "penalize",
-            predicate=lambda s, a, ctx: False,
-            penalty_fn=lambda s: 0.5,
-            enforcement=ConstraintEnforcement.SOFT,
-        ))
+        validator.add_constraint(
+            LambdaConstraint(
+                "l1",
+                "penalize",
+                predicate=lambda s, a, ctx: False,
+                penalty_fn=lambda s: 0.5,
+                enforcement=ConstraintEnforcement.SOFT,
+            )
+        )
         state = _make_state()
         valid, _ = validator.validate(state)
         # 1.0 - 0.5 = 0.5 < 0.8 threshold
@@ -515,7 +552,8 @@ class TestConstraintSystem:
         config = _make_config()
         system = ConstraintSystem(config)
         c = system.register_predicate_constraint(
-            "pc1", "test",
+            "pc1",
+            "test",
             required_facts=[("ready", ("x",))],
         )
         assert c.constraint_id == "pc1"
@@ -525,7 +563,8 @@ class TestConstraintSystem:
         config = _make_config()
         system = ConstraintSystem(config)
         c = system.register_temporal_constraint(
-            "tc1", "ordering",
+            "tc1",
+            "ordering",
             must_precede=[("a", "b")],
         )
         assert c.constraint_id == "tc1"
@@ -534,7 +573,8 @@ class TestConstraintSystem:
         config = _make_config()
         system = ConstraintSystem(config)
         c = system.register_expression_constraint(
-            "ec1", "depth check",
+            "ec1",
+            "depth check",
             expressions=[("metadata.depth", "<", 10)],
         )
         assert c.constraint_id == "ec1"
@@ -552,7 +592,8 @@ class TestConstraintSystem:
         config = _make_config()
         system = ConstraintSystem(config)
         system.register_predicate_constraint(
-            "pc1", "need ready",
+            "pc1",
+            "need ready",
             required_facts=[("ready", ("x",))],
             enforcement=ConstraintEnforcement.HARD,
         )
@@ -564,7 +605,8 @@ class TestConstraintSystem:
         config = _make_config(enable_conflict_analysis=True)
         system = ConstraintSystem(config)
         system.register_predicate_constraint(
-            "pc1", "need ready",
+            "pc1",
+            "need ready",
             required_facts=[("ready", ("x",))],
             enforcement=ConstraintEnforcement.HARD,
         )
@@ -595,12 +637,15 @@ class TestConstraintSystem:
         # Use a low min_satisfaction_ratio so penalty doesn't exclude
         config = _make_config(min_satisfaction_ratio=0.1)
         system = ConstraintSystem(config)
-        system.register_constraint(LambdaConstraint(
-            "l1", "penalize",
-            predicate=lambda s, a, ctx: False,
-            penalty_fn=lambda s: 0.3,
-            enforcement=ConstraintEnforcement.SOFT,
-        ))
+        system.register_constraint(
+            LambdaConstraint(
+                "l1",
+                "penalize",
+                predicate=lambda s, a, ctx: False,
+                penalty_fn=lambda s: 0.3,
+                enforcement=ConstraintEnforcement.SOFT,
+            )
+        )
         state = _make_state()
         results = system.validate_expansion(state, ["action1"])
         assert len(results) == 1

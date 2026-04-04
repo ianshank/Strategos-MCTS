@@ -5,7 +5,6 @@ Tests ResidualBlock, PolicyHead, ValueHead, PolicyValueNetwork,
 AlphaZeroLoss, MLPPolicyValueNetwork, and create_policy_value_network factory.
 """
 
-
 import pytest
 
 torch = pytest.importorskip("torch", reason="PyTorch required for policy-value net tests")

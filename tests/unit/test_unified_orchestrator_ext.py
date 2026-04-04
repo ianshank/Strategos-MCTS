@@ -95,6 +95,7 @@ def _make_orchestrator(tmp_path=None):
 # GPU memory utilization branch (lines 482-492)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestGPUMemoryUtilization:
     """Tests for GPU memory reporting in _get_memory_utilization."""
@@ -141,6 +142,7 @@ class TestGPUMemoryUtilization:
 # ---------------------------------------------------------------------------
 # Policy-Value network training with buffer ready (lines 584-713)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestTrainPolicyValueNetworkReady:
@@ -306,6 +308,7 @@ class TestTrainPolicyValueNetworkReady:
 # Evaluation: exception loading best model (lines 963-969)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestEvaluateBestModelLoadError:
     """Tests for _evaluate when loading best model fails."""
@@ -321,9 +324,7 @@ class TestEvaluateBestModelLoadError:
         orch.best_model_path = best_path
 
         mock_evaluator = MagicMock()
-        mock_evaluator.evaluate = AsyncMock(
-            return_value={"win_rate": 0.6, "wins": 6, "losses": 3, "draws": 1}
-        )
+        mock_evaluator.evaluate = AsyncMock(return_value={"win_rate": 0.6, "wins": 6, "losses": 3, "draws": 1})
 
         with (
             patch(f"{_MODULE}.torch.load", side_effect=RuntimeError("corrupt checkpoint")),
@@ -342,6 +343,7 @@ class TestEvaluateBestModelLoadError:
 # ---------------------------------------------------------------------------
 # Save checkpoint: exception saving best model (lines 1077-1078)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestSaveCheckpointBestModelError:
@@ -377,6 +379,7 @@ class TestSaveCheckpointBestModelError:
 # Log metrics: wandb exception (lines 1106-1107)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestLogMetricsWandbError:
     """Tests for _log_metrics when wandb logging fails."""
@@ -400,6 +403,7 @@ class TestLogMetricsWandbError:
 # ---------------------------------------------------------------------------
 # Train: KeyboardInterrupt (lines 1164-1171)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestTrainKeyboardInterrupt:
@@ -431,6 +435,7 @@ class TestTrainKeyboardInterrupt:
 # ---------------------------------------------------------------------------
 # Load checkpoint: KeyError and generic Exception (lines 1312-1326)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestLoadCheckpointErrors:
@@ -470,9 +475,7 @@ class TestLoadCheckpointErrors:
         torch.save(checkpoint, ckpt_path)
 
         # Make load_state_dict raise a RuntimeError (not KeyError)
-        orch.policy_value_net.load_state_dict.side_effect = RuntimeError(
-            "Error(s) in loading state_dict"
-        )
+        orch.policy_value_net.load_state_dict.side_effect = RuntimeError("Error(s) in loading state_dict")
 
         with pytest.raises(RuntimeError, match="Error.*state_dict"):
             orch.load_checkpoint(str(ckpt_path))
@@ -491,6 +494,7 @@ class TestLoadCheckpointErrors:
 # ---------------------------------------------------------------------------
 # Train: early stopping path in train() (lines 1154-1162)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestTrainEarlyStopping:
@@ -514,6 +518,7 @@ class TestTrainEarlyStopping:
 # ---------------------------------------------------------------------------
 # Train: exception in train_iteration within train() (lines 1172-1179)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestTrainIterationException:
@@ -546,6 +551,7 @@ class TestTrainIterationException:
 # _evaluate with no best model path (line 970-974)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestEvaluateNoBestModel:
     """Tests for _evaluate when best_model_path is None."""
@@ -557,9 +563,7 @@ class TestEvaluateNoBestModel:
         orch.best_model_path = None
 
         mock_evaluator = MagicMock()
-        mock_evaluator.evaluate = AsyncMock(
-            return_value={"win_rate": 0.55, "wins": 5, "losses": 4, "draws": 1}
-        )
+        mock_evaluator.evaluate = AsyncMock(return_value={"win_rate": 0.55, "wins": 5, "losses": 4, "draws": 1})
 
         with (
             patch("src.training.agent_trainer.SelfPlayEvaluator", return_value=mock_evaluator),
@@ -578,9 +582,7 @@ class TestEvaluateNoBestModel:
         orch.best_model_path = Path("/nonexistent/best_model.pt")
 
         mock_evaluator = MagicMock()
-        mock_evaluator.evaluate = AsyncMock(
-            return_value={"win_rate": 0.5, "wins": 5, "losses": 5, "draws": 0}
-        )
+        mock_evaluator.evaluate = AsyncMock(return_value={"win_rate": 0.5, "wins": 5, "losses": 5, "draws": 0})
 
         with (
             patch("src.training.agent_trainer.SelfPlayEvaluator", return_value=mock_evaluator),
@@ -596,6 +598,7 @@ class TestEvaluateNoBestModel:
 # ---------------------------------------------------------------------------
 # _save_checkpoint regular failure (line 1056-1063)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestSaveCheckpointRegularFailure:

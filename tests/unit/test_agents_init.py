@@ -29,11 +29,7 @@ class TestAgentsAvailability:
 
     def test_all_available_means_no_missing(self):
         """If all agents are available, missing deps should be empty."""
-        if (
-            agents_mod.is_hrm_available()
-            and agents_mod.is_trm_available()
-            and agents_mod.is_hybrid_available()
-        ):
+        if agents_mod.is_hrm_available() and agents_mod.is_trm_available() and agents_mod.is_hybrid_available():
             assert agents_mod.get_missing_dependencies() == {}
 
     def test_hrm_available_means_importable(self):
@@ -64,32 +60,45 @@ class TestUtilsInit:
 
     def test_personality_response_generator_direct(self):
         from src.utils import PersonalityResponseGenerator
+
         assert PersonalityResponseGenerator is not None
 
     def test_lazy_import_planning_loader(self):
         from src.utils import PlanningLoader
+
         assert PlanningLoader is not None
 
     def test_lazy_import_get_project_plan(self):
         from src.utils import get_project_plan
+
         assert callable(get_project_plan)
 
     def test_lazy_import_mcts_debugger(self):
         from src.utils import MCTSDebugger
+
         assert MCTSDebugger is not None
 
     def test_lazy_import_create_debugger(self):
         from src.utils import create_debugger
+
         assert callable(create_debugger)
 
     def test_invalid_attribute_raises(self):
         import src.utils as utils_mod
+
         with pytest.raises(AttributeError, match="has no attribute"):
             utils_mod.__getattr__("nonexistent_thing")
 
     def test_all_exports(self):
         import src.utils as utils_mod
-        expected = {"PersonalityResponseGenerator", "PlanningLoader", "get_project_plan", "MCTSDebugger", "create_debugger"}
+
+        expected = {
+            "PersonalityResponseGenerator",
+            "PlanningLoader",
+            "get_project_plan",
+            "MCTSDebugger",
+            "create_debugger",
+        }
         assert set(utils_mod.__all__) == expected
 
 
@@ -99,24 +108,28 @@ class TestEnterpriseUseCasesInit:
 
     def test_get_ma_due_diligence(self):
         from src.enterprise.use_cases import get_ma_due_diligence
+
         cls = get_ma_due_diligence()
         assert cls is not None
         assert cls.__name__ == "MADueDiligence"
 
     def test_get_clinical_trial(self):
         from src.enterprise.use_cases import get_clinical_trial
+
         cls = get_clinical_trial()
         assert cls is not None
         assert cls.__name__ == "ClinicalTrialDesign"
 
     def test_get_regulatory_compliance(self):
         from src.enterprise.use_cases import get_regulatory_compliance
+
         cls = get_regulatory_compliance()
         assert cls is not None
         assert cls.__name__ == "RegulatoryCompliance"
 
     def test_all_exports(self):
         from src.enterprise.use_cases import __all__
+
         assert "get_ma_due_diligence" in __all__
         assert "get_clinical_trial" in __all__
         assert "get_regulatory_compliance" in __all__
@@ -128,23 +141,28 @@ class TestBenchmarkProtocol:
 
     def test_protocol_is_runtime_checkable(self):
         from src.benchmark.adapters.protocol import BenchmarkSystemProtocol
+
         assert hasattr(BenchmarkSystemProtocol, "__protocol_attrs__") or True  # runtime_checkable
 
     def test_protocol_has_name_property(self):
         from src.benchmark.adapters.protocol import BenchmarkSystemProtocol
+
         # Verify protocol defines expected interface
         assert "name" in dir(BenchmarkSystemProtocol)
 
     def test_protocol_has_is_available_property(self):
         from src.benchmark.adapters.protocol import BenchmarkSystemProtocol
+
         assert "is_available" in dir(BenchmarkSystemProtocol)
 
     def test_protocol_has_execute_method(self):
         from src.benchmark.adapters.protocol import BenchmarkSystemProtocol
+
         assert "execute" in dir(BenchmarkSystemProtocol)
 
     def test_protocol_has_health_check_method(self):
         from src.benchmark.adapters.protocol import BenchmarkSystemProtocol
+
         assert "health_check" in dir(BenchmarkSystemProtocol)
 
     def test_conforming_class_isinstance_check(self):

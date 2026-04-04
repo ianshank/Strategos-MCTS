@@ -239,9 +239,9 @@ class AgentFactory:
             latent_dim=latent_dim if latent_dim is not None else self.settings.TRM_LATENT_DIM,
             hidden_dim=hidden_dim if hidden_dim is not None else self.settings.TRM_HIDDEN_DIM,
             num_recursions=num_recursions if num_recursions is not None else self.settings.TRM_NUM_RECURSIONS,
-            convergence_threshold=convergence_threshold
-            if convergence_threshold is not None
-            else self.settings.TRM_CONVERGENCE_THRESHOLD,
+            convergence_threshold=(
+                convergence_threshold if convergence_threshold is not None else self.settings.TRM_CONVERGENCE_THRESHOLD
+            ),
             deep_supervision=deep_supervision if deep_supervision is not None else True,
             **{k: v for k, v in config.items() if k in TRMConfig.__dataclass_fields__},
         )

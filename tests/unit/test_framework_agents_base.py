@@ -45,9 +45,7 @@ class ConcreteAgent(AsyncAgentBase):
 @pytest.fixture
 def mock_llm_client():
     client = AsyncMock()
-    client.generate = AsyncMock(
-        return_value=LLMResponse(text="llm response", usage={"total_tokens": 100})
-    )
+    client.generate = AsyncMock(return_value=LLMResponse(text="llm response", usage={"total_tokens": 100}))
     return client
 
 
@@ -148,9 +146,16 @@ class TestAgentResult:
         result = AgentResult(response="test")
         d = result.to_dict()
         expected_keys = {
-            "response", "confidence", "metadata", "agent_name",
-            "processing_time_ms", "token_usage", "intermediate_steps",
-            "created_at", "error", "success",
+            "response",
+            "confidence",
+            "metadata",
+            "agent_name",
+            "processing_time_ms",
+            "token_usage",
+            "intermediate_steps",
+            "created_at",
+            "error",
+            "success",
         }
         assert set(d.keys()) == expected_keys
 

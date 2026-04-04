@@ -5,7 +5,6 @@ Tests all config dataclasses, preset configurations,
 serialization, and validation.
 """
 
-
 import pytest
 
 from src.neuro_symbolic.config import (

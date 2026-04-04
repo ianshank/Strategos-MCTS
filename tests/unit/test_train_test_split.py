@@ -12,7 +12,9 @@ from src.data.train_test_split import (
 )
 
 
-def _make_sample(id: str, domain: str = "math", difficulty: str = "easy", labels: list[str] | None = None) -> DatasetSample:
+def _make_sample(
+    id: str, domain: str = "math", difficulty: str = "easy", labels: list[str] | None = None
+) -> DatasetSample:
     """Helper to create a DatasetSample."""
     return DatasetSample(
         id=id,

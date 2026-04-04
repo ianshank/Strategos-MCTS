@@ -182,6 +182,7 @@ class TestRetrieveFromPinecone:
             # Need the actual import to work
             try:
                 from src.agents.meta_controller.base import MetaControllerFeatures  # noqa: F401
+
                 docs, backend = await r._retrieve_from_pinecone("query", 5, None, 0.5)
                 assert backend == "pinecone"
                 # Only score >= 0.5 should be returned

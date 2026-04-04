@@ -1123,12 +1123,12 @@ class IntegratedFramework:
             from src.framework.agents.llm_hrm import LLMHRMAgent
             from src.framework.agents.llm_trm import LLMTRMAgent
 
-            self.hrm_agent = LLMHRMAgent(
+            self.hrm_agent: LLMHRMAgent | None = LLMHRMAgent(
                 model_adapter=model_adapter,
                 logger=logger,
                 **(hrm_config or {}),
             )
-            self.trm_agent = LLMTRMAgent(
+            self.trm_agent: LLMTRMAgent | None = LLMTRMAgent(
                 model_adapter=model_adapter,
                 logger=logger,
                 **(trm_config or {}),

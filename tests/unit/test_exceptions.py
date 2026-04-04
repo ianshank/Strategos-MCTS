@@ -133,9 +133,15 @@ class TestErrorSubclasses:
 
     def test_all_are_framework_errors(self):
         classes = [
-            ValidationError, AuthenticationError, AuthorizationError,
-            RateLimitError, LLMError, MCTSError, RAGError,
-            TimeoutError, ConfigurationError,
+            ValidationError,
+            AuthenticationError,
+            AuthorizationError,
+            RateLimitError,
+            LLMError,
+            MCTSError,
+            RAGError,
+            TimeoutError,
+            ConfigurationError,
         ]
         for cls in classes:
             assert issubclass(cls, FrameworkError)

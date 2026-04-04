@@ -228,8 +228,13 @@ class TestMADueDiligenceState:
         defaults.update(kwargs)
         return MADueDiligenceState(**defaults)
 
-    def _make_risk(self, risk_id: str = "R001", severity: RiskLevel = RiskLevel.MEDIUM,
-                   probability: float = 0.5, impact: float = 0.5) -> IdentifiedRisk:
+    def _make_risk(
+        self,
+        risk_id: str = "R001",
+        severity: RiskLevel = RiskLevel.MEDIUM,
+        probability: float = 0.5,
+        impact: float = 0.5,
+    ) -> IdentifiedRisk:
         return IdentifiedRisk(
             risk_id=risk_id,
             category="financial",
@@ -239,8 +244,9 @@ class TestMADueDiligenceState:
             impact=impact,
         )
 
-    def _make_synergy(self, synergy_id: str = "S001", estimated_value: float = 1_000_000.0,
-                      probability: float = 0.8) -> SynergyOpportunity:
+    def _make_synergy(
+        self, synergy_id: str = "S001", estimated_value: float = 1_000_000.0, probability: float = 0.8
+    ) -> SynergyOpportunity:
         return SynergyOpportunity(
             synergy_id=synergy_id,
             category="cost",
@@ -316,7 +322,7 @@ class TestMADueDiligenceState:
 
     def test_get_high_value_synergies(self) -> None:
         state = self._make_state()
-        state.synergies_found.append(self._make_synergy("S1", 100.0, 0.5))   # expected = 50
+        state.synergies_found.append(self._make_synergy("S1", 100.0, 0.5))  # expected = 50
         state.synergies_found.append(self._make_synergy("S2", 1000.0, 0.9))  # expected = 900
         high = state.get_high_value_synergies(min_value=100.0)
         assert len(high) == 1

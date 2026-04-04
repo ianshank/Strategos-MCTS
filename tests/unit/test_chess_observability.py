@@ -25,6 +25,7 @@ from src.games.chess.observability.metrics import (
 # ChessVerificationMetrics tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestChessVerificationMetrics:
     """Test ChessVerificationMetrics dataclass."""
@@ -96,6 +97,7 @@ class TestChessVerificationMetrics:
 # PhaseRoutingStats tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestPhaseRoutingStats:
     """Test PhaseRoutingStats dataclass."""
@@ -139,6 +141,7 @@ class TestPhaseRoutingStats:
 # ---------------------------------------------------------------------------
 # ChessMetricsCollector tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestChessMetricsCollector:
@@ -268,6 +271,7 @@ class TestChessMetricsCollector:
 # ChessVerificationLogger tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestChessVerificationLogger:
     """Test ChessVerificationLogger."""
@@ -375,6 +379,7 @@ class TestGetChessLogger:
 # ---------------------------------------------------------------------------
 # Decorator tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestTracedMoveSelectionDecorator:
@@ -573,7 +578,9 @@ class TestVerifiedGamePlayDecorator:
 
         mock_settings = MagicMock()
         mock_settings.LOG_LEVEL = MagicMock(value="INFO")
-        with patch("src.games.chess.observability.decorators.get_chess_logger"), \
-             patch("src.games.chess.verification.factory.get_settings", return_value=mock_settings):
+        with (
+            patch("src.games.chess.observability.decorators.get_chess_logger"),
+            patch("src.games.chess.verification.factory.get_settings", return_value=mock_settings),
+        ):
             result = await play_game_async()
             assert result.moves == ["e2e4", "e7e5"]

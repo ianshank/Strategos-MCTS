@@ -26,6 +26,7 @@ from src.framework.agents.llm_trm import LLMTRMAgent
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_mock_adapter(text: str = "mock response", usage: dict | None = None) -> AsyncMock:
     """Create a mock LLMClient whose generate() returns an LLMResponse."""
     adapter = AsyncMock()
@@ -61,6 +62,7 @@ class _FailingAgent(AsyncAgentBase):
 # ===========================================================================
 # AgentContext
 # ===========================================================================
+
 
 @pytest.mark.unit
 class TestAgentContext:
@@ -102,6 +104,7 @@ class TestAgentContext:
 # AgentResult
 # ===========================================================================
 
+
 @pytest.mark.unit
 class TestAgentResult:
     def test_defaults(self):
@@ -131,6 +134,7 @@ class TestAgentResult:
 # NoOpMetricsCollector
 # ===========================================================================
 
+
 @pytest.mark.unit
 class TestNoOpMetricsCollector:
     def test_all_methods_are_noop(self):
@@ -145,6 +149,7 @@ class TestNoOpMetricsCollector:
 # ===========================================================================
 # AsyncAgentBase lifecycle & process
 # ===========================================================================
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio
@@ -241,6 +246,7 @@ class TestAsyncAgentBase:
 # ===========================================================================
 # LLMHRMAgent
 # ===========================================================================
+
 
 @pytest.mark.unit
 class TestLLMHRMAgentQuality:
@@ -339,6 +345,7 @@ class TestLLMHRMAgentProcess:
 # ===========================================================================
 # LLMTRMAgent
 # ===========================================================================
+
 
 @pytest.mark.unit
 class TestLLMTRMAgentQuality:
@@ -448,6 +455,7 @@ class TestLLMTRMAgentProcess:
 # ParallelAgent
 # ===========================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.asyncio
 class TestParallelAgent:
@@ -516,6 +524,7 @@ class TestParallelAgent:
 # SequentialAgent
 # ===========================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.asyncio
 class TestSequentialAgent:
@@ -581,6 +590,7 @@ class TestSequentialAgent:
 # ===========================================================================
 # Edge cases & error paths
 # ===========================================================================
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio

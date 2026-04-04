@@ -6,7 +6,6 @@ DomainDetectorConfig, BaseUseCaseConfig, MADueDiligenceConfig, ClinicalTrialConf
 RegulatoryComplianceConfig), EnterpriseSettings, and utility functions.
 """
 
-
 import pytest
 from pydantic import ValidationError
 

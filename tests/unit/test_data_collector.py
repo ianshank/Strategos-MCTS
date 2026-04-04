@@ -279,10 +279,12 @@ class TestDataCollector:
 
     def test_create_policy_dataset_hard_targets(self):
         buf = ExperienceBuffer()
-        buf.add_batch([
-            Experience(state=torch.randn(4), action=0, value=0.5),
-            Experience(state=torch.randn(4), action=1, value=0.8),
-        ])
+        buf.add_batch(
+            [
+                Experience(state=torch.randn(4), action=0, value=0.5),
+                Experience(state=torch.randn(4), action=1, value=0.8),
+            ]
+        )
         dc = DataCollector(buffer=buf)
         states, targets, values = dc.create_policy_dataset(use_visit_counts=False)
         assert states.shape == (2, 4)
@@ -292,20 +294,24 @@ class TestDataCollector:
 
     def test_create_policy_dataset_soft_targets(self):
         buf = ExperienceBuffer()
-        buf.add_batch([
-            Experience(state=torch.randn(4), action=0, value=0.5, policy=torch.tensor([0.7, 0.3])),
-            Experience(state=torch.randn(4), action=1, value=0.8, policy=torch.tensor([0.2, 0.8])),
-        ])
+        buf.add_batch(
+            [
+                Experience(state=torch.randn(4), action=0, value=0.5, policy=torch.tensor([0.7, 0.3])),
+                Experience(state=torch.randn(4), action=1, value=0.8, policy=torch.tensor([0.2, 0.8])),
+            ]
+        )
         dc = DataCollector(buffer=buf)
         states, targets, values = dc.create_policy_dataset(use_visit_counts=True)
         assert targets.shape == (2, 2)
 
     def test_create_value_dataset(self):
         buf = ExperienceBuffer()
-        buf.add_batch([
-            Experience(state=torch.randn(4), action=0, value=0.5),
-            Experience(state=torch.randn(4), action=1, value=0.8),
-        ])
+        buf.add_batch(
+            [
+                Experience(state=torch.randn(4), action=0, value=0.5),
+                Experience(state=torch.randn(4), action=1, value=0.8),
+            ]
+        )
         dc = DataCollector(buffer=buf)
         states, values = dc.create_value_dataset()
         assert states.shape == (2, 4)
@@ -314,10 +320,14 @@ class TestDataCollector:
 
     def test_create_td_dataset(self):
         buf = ExperienceBuffer()
-        buf.add_batch([
-            Experience(state=torch.randn(4), action=0, value=0.5, reward=0.1, next_state=torch.randn(4), done=False),
-            Experience(state=torch.randn(4), action=1, value=0.8, reward=0.2, next_state=None, done=True),
-        ])
+        buf.add_batch(
+            [
+                Experience(
+                    state=torch.randn(4), action=0, value=0.5, reward=0.1, next_state=torch.randn(4), done=False
+                ),
+                Experience(state=torch.randn(4), action=1, value=0.8, reward=0.2, next_state=None, done=True),
+            ]
+        )
         dc = DataCollector(buffer=buf)
         states, rewards, next_states, dones = dc.create_td_dataset()
         # Only 1 experience has next_state

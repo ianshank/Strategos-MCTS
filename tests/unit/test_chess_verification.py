@@ -37,6 +37,7 @@ from src.games.chess.verification.types import (
 # Enums
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestMoveType:
     """Test MoveType enum."""
@@ -78,6 +79,7 @@ class TestVerificationSeverity:
 # ---------------------------------------------------------------------------
 # VerificationIssue
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestVerificationIssue:
@@ -123,6 +125,7 @@ class TestVerificationIssue:
 # ---------------------------------------------------------------------------
 # MoveValidationResult
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestMoveValidationResult:
@@ -187,6 +190,7 @@ class TestMoveValidationResult:
 # PositionVerificationResult
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestPositionVerificationResult:
     """Test PositionVerificationResult dataclass."""
@@ -215,6 +219,7 @@ class TestPositionVerificationResult:
 # MoveSequenceResult
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestMoveSequenceResult:
     """Test MoveSequenceResult dataclass."""
@@ -242,6 +247,7 @@ class TestMoveSequenceResult:
 # ---------------------------------------------------------------------------
 # GameVerificationResult
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestGameVerificationResult:
@@ -290,6 +296,7 @@ class TestGameVerificationResult:
 # ---------------------------------------------------------------------------
 # EnsembleConsistencyResult
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestEnsembleConsistencyResult:
@@ -347,6 +354,7 @@ class TestEnsembleConsistencyResult:
 # BatchVerificationResult
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestBatchVerificationResult:
     """Test BatchVerificationResult dataclass."""
@@ -360,9 +368,7 @@ class TestBatchVerificationResult:
         assert abs(r.success_rate - 0.8) < 0.001
 
     def test_summary(self) -> None:
-        r = BatchVerificationResult(
-            total_items=10, valid_items=8, invalid_items=2, results=[], total_time_ms=150.0
-        )
+        r = BatchVerificationResult(total_items=10, valid_items=8, invalid_items=2, results=[], total_time_ms=150.0)
         s = r.summary()
         assert "8/10" in s
         assert "80.0%" in s
@@ -371,6 +377,7 @@ class TestBatchVerificationResult:
 # ---------------------------------------------------------------------------
 # MoveValidator tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestMoveValidatorConfig:
@@ -538,6 +545,7 @@ class TestCreateMoveValidator:
 # EnsembleConsistencyChecker tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestEnsembleCheckerConfig:
     """Test EnsembleCheckerConfig."""
@@ -674,6 +682,7 @@ class TestCreateEnsembleChecker:
 # GameVerifier tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestGameVerifierConfig:
     """Test GameVerifierConfig."""
@@ -701,8 +710,10 @@ class TestChessGameVerifier:
         mv_config = MoveValidatorConfig(validate_encoding=False, validate_legality=True)
         gv_config = GameVerifierConfig(log_verifications=False, **kwargs)
 
-        with patch("src.games.chess.verification.move_validator.get_structured_logger"), \
-             patch("src.games.chess.verification.game_verifier.get_structured_logger"):
+        with (
+            patch("src.games.chess.verification.move_validator.get_structured_logger"),
+            patch("src.games.chess.verification.game_verifier.get_structured_logger"),
+        ):
             mv = MoveValidator(config=mv_config)
             return ChessGameVerifier(move_validator=mv, config=gv_config)
 
@@ -820,8 +831,10 @@ class TestCreateGameVerifier:
     def test_create(self) -> None:
         from src.games.chess.verification.game_verifier import ChessGameVerifier, create_game_verifier
 
-        with patch("src.games.chess.verification.move_validator.get_structured_logger"), \
-             patch("src.games.chess.verification.game_verifier.get_structured_logger"):
+        with (
+            patch("src.games.chess.verification.move_validator.get_structured_logger"),
+            patch("src.games.chess.verification.game_verifier.get_structured_logger"),
+        ):
             v = create_game_verifier()
             assert isinstance(v, ChessGameVerifier)
 
@@ -829,6 +842,7 @@ class TestCreateGameVerifier:
 # ---------------------------------------------------------------------------
 # Factory tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestChessVerificationFactory:
@@ -867,8 +881,10 @@ class TestChessVerificationFactory:
         from src.games.chess.verification.game_verifier import ChessGameVerifier
 
         factory = self._make_factory()
-        with patch("src.games.chess.verification.move_validator.get_structured_logger"), \
-             patch("src.games.chess.verification.game_verifier.get_structured_logger"):
+        with (
+            patch("src.games.chess.verification.move_validator.get_structured_logger"),
+            patch("src.games.chess.verification.game_verifier.get_structured_logger"),
+        ):
             v = factory.create_game_verifier()
             assert isinstance(v, ChessGameVerifier)
 
@@ -876,23 +892,27 @@ class TestChessVerificationFactory:
         from src.games.chess.verification.ensemble_checker import EnsembleConsistencyChecker
 
         factory = self._make_factory()
-        with patch("src.games.chess.verification.ensemble_checker.get_structured_logger"), \
-             patch(
-                 "src.config.settings.get_settings",
-                 side_effect=RuntimeError,
-             ):
+        with (
+            patch("src.games.chess.verification.ensemble_checker.get_structured_logger"),
+            patch(
+                "src.config.settings.get_settings",
+                side_effect=RuntimeError,
+            ),
+        ):
             c = factory.create_ensemble_checker()
             assert isinstance(c, EnsembleConsistencyChecker)
 
     def test_create_all_verifiers(self) -> None:
         factory = self._make_factory()
-        with patch("src.games.chess.verification.move_validator.get_structured_logger"), \
-             patch("src.games.chess.verification.game_verifier.get_structured_logger"), \
-             patch("src.games.chess.verification.ensemble_checker.get_structured_logger"), \
-             patch(
-                 "src.config.settings.get_settings",
-                 side_effect=RuntimeError,
-             ):
+        with (
+            patch("src.games.chess.verification.move_validator.get_structured_logger"),
+            patch("src.games.chess.verification.game_verifier.get_structured_logger"),
+            patch("src.games.chess.verification.ensemble_checker.get_structured_logger"),
+            patch(
+                "src.config.settings.get_settings",
+                side_effect=RuntimeError,
+            ),
+        ):
             result = factory.create_all_verifiers()
             assert "move_validator" in result
             assert "game_verifier" in result
@@ -908,7 +928,12 @@ class TestVerificationBuilder:
         from src.games.chess.verification.move_validator import MoveValidator
 
         with patch("src.games.chess.verification.move_validator.get_structured_logger"):
-            v = VerificationBuilder().with_encoding_validation(True).with_legality_validation(True).build_move_validator()
+            v = (
+                VerificationBuilder()
+                .with_encoding_validation(True)
+                .with_legality_validation(True)
+                .build_move_validator()
+            )
             assert isinstance(v, MoveValidator)
             assert v.config.validate_encoding is True
 
@@ -916,14 +941,11 @@ class TestVerificationBuilder:
         from src.games.chess.verification.factory import VerificationBuilder
         from src.games.chess.verification.game_verifier import ChessGameVerifier
 
-        with patch("src.games.chess.verification.move_validator.get_structured_logger"), \
-             patch("src.games.chess.verification.game_verifier.get_structured_logger"):
-            v = (
-                VerificationBuilder()
-                .with_stop_on_first_error(True)
-                .with_logging(True)
-                .build_game_verifier()
-            )
+        with (
+            patch("src.games.chess.verification.move_validator.get_structured_logger"),
+            patch("src.games.chess.verification.game_verifier.get_structured_logger"),
+        ):
+            v = VerificationBuilder().with_stop_on_first_error(True).with_logging(True).build_game_verifier()
             assert isinstance(v, ChessGameVerifier)
             assert v.config.stop_on_first_error is True
 
@@ -931,11 +953,13 @@ class TestVerificationBuilder:
         from src.games.chess.verification.ensemble_checker import EnsembleConsistencyChecker
         from src.games.chess.verification.factory import VerificationBuilder
 
-        with patch("src.games.chess.verification.ensemble_checker.get_structured_logger"), \
-             patch(
-                 "src.config.settings.get_settings",
-                 side_effect=RuntimeError,
-             ):
+        with (
+            patch("src.games.chess.verification.ensemble_checker.get_structured_logger"),
+            patch(
+                "src.config.settings.get_settings",
+                side_effect=RuntimeError,
+            ),
+        ):
             c = (
                 VerificationBuilder()
                 .with_agreement_threshold(0.8)
@@ -999,6 +1023,7 @@ class TestCreateVerificationFactory:
 # ---------------------------------------------------------------------------
 # Protocol structural conformance tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestProtocolConformance:

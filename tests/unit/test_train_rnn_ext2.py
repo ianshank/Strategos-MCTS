@@ -49,10 +49,7 @@ class TestRNNTrainerDeviceDetection:
             trainer.seed = 42
             torch.manual_seed(42)
             # Device auto-detection: CUDA available
-            trainer.device = (
-                torch.device("cuda") if torch.cuda.is_available()
-                else torch.device("cpu")
-            )
+            trainer.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         assert trainer.device == torch.device("cuda")
         mock_seed_all.assert_called_once()
 
@@ -117,7 +114,10 @@ class TestRNNTrainerBraintrustDuringTraining:
         mock_tracker = MagicMock()
         mock_tracker.is_available = True
         trainer = RNNTrainer(
-            device="cpu", hidden_dim=16, batch_size=16, epochs=2,
+            device="cpu",
+            hidden_dim=16,
+            batch_size=16,
+            epochs=2,
             braintrust_tracker=mock_tracker,
         )
         X_train = torch.randn(32, 10)
@@ -135,7 +135,10 @@ class TestRNNTrainerBraintrustDuringTraining:
         mock_tracker = MagicMock()
         mock_tracker.is_available = True
         trainer = RNNTrainer(
-            device="cpu", hidden_dim=16, batch_size=16, epochs=2,
+            device="cpu",
+            hidden_dim=16,
+            batch_size=16,
+            epochs=2,
             braintrust_tracker=mock_tracker,
         )
         X_train = torch.randn(32, 10)
@@ -156,7 +159,10 @@ class TestRNNTrainerBraintrustDuringTraining:
         mock_tracker.is_available = True
         save_path = str(tmp_path / "model.pt")
         trainer = RNNTrainer(
-            device="cpu", hidden_dim=16, batch_size=16, epochs=2,
+            device="cpu",
+            hidden_dim=16,
+            batch_size=16,
+            epochs=2,
             braintrust_tracker=mock_tracker,
         )
         X_train = torch.randn(32, 10)
@@ -184,8 +190,11 @@ class TestRNNTrainerEarlyStopping:
         to guarantee early stopping triggers.
         """
         trainer = RNNTrainer(
-            device="cpu", hidden_dim=16, batch_size=64,
-            epochs=50, early_stopping_patience=1,
+            device="cpu",
+            hidden_dim=16,
+            batch_size=64,
+            epochs=50,
+            early_stopping_patience=1,
         )
         X_train = torch.randn(64, 10)
         y_train = torch.randint(0, 3, (64,))
@@ -212,8 +221,11 @@ class TestRNNTrainerEarlyStopping:
     def test_no_early_stopping_all_epochs_run(self):
         """With high patience, all epochs should run."""
         trainer = RNNTrainer(
-            device="cpu", hidden_dim=16, batch_size=16,
-            epochs=3, early_stopping_patience=100,
+            device="cpu",
+            hidden_dim=16,
+            batch_size=16,
+            epochs=3,
+            early_stopping_patience=100,
         )
         X_train = torch.randn(32, 10)
         y_train = torch.randint(0, 3, (32,))
@@ -228,8 +240,11 @@ class TestRNNTrainerEarlyStopping:
     def test_best_model_restored_after_training(self):
         """Model should be restored to best state after training completes."""
         trainer = RNNTrainer(
-            device="cpu", hidden_dim=16, batch_size=16,
-            epochs=3, early_stopping_patience=100,
+            device="cpu",
+            hidden_dim=16,
+            batch_size=16,
+            epochs=3,
+            early_stopping_patience=100,
         )
         X_train = torch.randn(48, 10)
         y_train = torch.randint(0, 3, (48,))

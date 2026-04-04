@@ -196,9 +196,7 @@ class TestLLMGuidedMCTSConfig:
     def test_nested_config_validation(self) -> None:
         """Nested configs should also be validated."""
         with pytest.raises(ValueError, match="temperature"):
-            LLMGuidedMCTSConfig(
-                generator_config=GeneratorConfig(temperature=5.0)  # Invalid
-            )
+            LLMGuidedMCTSConfig(generator_config=GeneratorConfig(temperature=5.0))  # Invalid
 
 
 class TestLLMGuidedMCTSConfigSerialization:

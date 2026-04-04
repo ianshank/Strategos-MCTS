@@ -656,9 +656,7 @@ class TestLMStudioGenerateStream:
         mock_http.is_closed = False
 
         stream_cm = AsyncMock()
-        stream_cm.__aenter__ = AsyncMock(
-            side_effect=httpx.ConnectError("Connection refused")
-        )
+        stream_cm.__aenter__ = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
         stream_cm.__aexit__ = AsyncMock(return_value=False)
         mock_http.stream.return_value = stream_cm
         client._client = mock_http

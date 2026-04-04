@@ -65,8 +65,13 @@ class TestCodeExecutionResult:
     def test_repr_passed(self) -> None:
         """repr shows PASSED for passing results."""
         result = CodeExecutionResult(
-            passed=True, num_tests_passed=3, num_tests_total=3,
-            stdout="", stderr="", errors=[], execution_time_ms=1.0,
+            passed=True,
+            num_tests_passed=3,
+            num_tests_total=3,
+            stdout="",
+            stderr="",
+            errors=[],
+            execution_time_ms=1.0,
         )
         assert "PASSED" in repr(result)
         assert "3/3" in repr(result)
@@ -74,8 +79,13 @@ class TestCodeExecutionResult:
     def test_repr_failed(self) -> None:
         """repr shows FAILED for failing results."""
         result = CodeExecutionResult(
-            passed=False, num_tests_passed=1, num_tests_total=3,
-            stdout="", stderr="", errors=["x"], execution_time_ms=1.0,
+            passed=False,
+            num_tests_passed=1,
+            num_tests_total=3,
+            stdout="",
+            stderr="",
+            errors=["x"],
+            execution_time_ms=1.0,
         )
         assert "FAILED" in repr(result)
         assert "1/3" in repr(result)

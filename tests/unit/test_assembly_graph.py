@@ -13,6 +13,7 @@ from src.framework.assembly.graph import AssemblyGraph, AssemblyNode
 # AssemblyNode tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestAssemblyNode:
     """Tests for AssemblyNode dataclass."""
@@ -77,6 +78,7 @@ class TestAssemblyNode:
 # ---------------------------------------------------------------------------
 # AssemblyGraph tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestAssemblyGraph:
@@ -347,5 +349,6 @@ class TestAssemblyGraph:
         g.add_edge("c", "a")  # cycle
         dag = g._make_dag()
         import networkx as nx
+
         assert nx.is_directed_acyclic_graph(dag)
         assert dag.number_of_nodes() == 3

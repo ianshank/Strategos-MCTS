@@ -90,7 +90,7 @@ class ValueNetwork(nn.Module):
                 nn.Softplus(),  # Ensure positive
             )
         else:
-            self.uncertainty_head = None  # type: ignore[assignment]
+            self.uncertainty_head = None
 
         # Initialize weights
         self.apply(self._init_weights)

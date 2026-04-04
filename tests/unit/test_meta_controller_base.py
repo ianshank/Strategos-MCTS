@@ -18,7 +18,9 @@ class DummyController(AbstractMetaController):
     """Concrete controller for testing."""
 
     def predict(self, features):
-        return MetaControllerPrediction(agent="hrm", confidence=0.9, probabilities={"hrm": 0.9, "trm": 0.05, "mcts": 0.05})
+        return MetaControllerPrediction(
+            agent="hrm", confidence=0.9, probabilities={"hrm": 0.9, "trm": 0.05, "mcts": 0.05}
+        )
 
     def load_model(self, path):
         pass
@@ -31,9 +33,14 @@ class DummyController(AbstractMetaController):
 class TestMetaControllerFeatures:
     def test_basic(self):
         f = MetaControllerFeatures(
-            hrm_confidence=0.8, trm_confidence=0.6, mcts_value=0.5,
-            consensus_score=0.7, last_agent="hrm", iteration=1,
-            query_length=100, has_rag_context=True,
+            hrm_confidence=0.8,
+            trm_confidence=0.6,
+            mcts_value=0.5,
+            consensus_score=0.7,
+            last_agent="hrm",
+            iteration=1,
+            query_length=100,
+            has_rag_context=True,
         )
         assert f.hrm_confidence == 0.8
         assert f.rag_relevance_score == 0.0
@@ -41,10 +48,16 @@ class TestMetaControllerFeatures:
 
     def test_optional_fields(self):
         f = MetaControllerFeatures(
-            hrm_confidence=0.8, trm_confidence=0.6, mcts_value=0.5,
-            consensus_score=0.7, last_agent="hrm", iteration=1,
-            query_length=100, has_rag_context=True,
-            rag_relevance_score=0.9, is_technical_query=True,
+            hrm_confidence=0.8,
+            trm_confidence=0.6,
+            mcts_value=0.5,
+            consensus_score=0.7,
+            last_agent="hrm",
+            iteration=1,
+            query_length=100,
+            has_rag_context=True,
+            rag_relevance_score=0.9,
+            is_technical_query=True,
         )
         assert f.rag_relevance_score == 0.9
         assert f.is_technical_query is True
@@ -60,7 +73,8 @@ class TestMetaControllerPrediction:
 
     def test_with_probabilities(self):
         p = MetaControllerPrediction(
-            agent="mcts", confidence=0.7,
+            agent="mcts",
+            confidence=0.7,
             probabilities={"hrm": 0.1, "trm": 0.2, "mcts": 0.7},
         )
         assert p.probabilities["mcts"] == 0.7

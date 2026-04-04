@@ -185,9 +185,9 @@ class AssemblyConfig:
         """Validate configuration values."""
         assert 0.0 <= self.mcts_ucb_weight <= 1.0, "UCB weight must be in [0, 1]"
         assert self.max_complexity_threshold > 0, "Max complexity threshold must be positive"
-        assert self.routing_simple_threshold < self.routing_medium_threshold, (
-            "Simple threshold must be less than medium threshold"
-        )
+        assert (
+            self.routing_simple_threshold < self.routing_medium_threshold
+        ), "Simple threshold must be less than medium threshold"
         assert 0.0 <= self.trm_complexity_penalty <= 1.0, "Complexity penalty must be in [0, 1]"
         assert 0.0 <= self.substructure_reuse_threshold <= 1.0, "Reuse threshold must be in [0, 1]"
         assert self.max_cache_size > 0, "Cache size must be positive"

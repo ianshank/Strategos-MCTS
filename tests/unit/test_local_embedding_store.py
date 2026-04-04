@@ -362,10 +362,12 @@ class TestLocalEmbeddingStore:
             LocalDocument(id="d1", content="hello", metadata={"src": "a"}),
             LocalDocument(id="d2", content="world", metadata={"src": "b"}),
         ]
-        store._embeddings = np.array([
-            [0.9, 0.1, 0.0],
-            [0.1, 0.9, 0.0],
-        ])
+        store._embeddings = np.array(
+            [
+                [0.9, 0.1, 0.0],
+                [0.1, 0.9, 0.0],
+            ]
+        )
 
         results = store.search("test", top_k=2)
         assert len(results) == 2
@@ -389,10 +391,12 @@ class TestLocalEmbeddingStore:
             LocalDocument(id="d1", content="good"),
             LocalDocument(id="d2", content="bad"),
         ]
-        store._embeddings = np.array([
-            [0.95, 0.05],
-            [0.1, 0.9],
-        ])
+        store._embeddings = np.array(
+            [
+                [0.95, 0.05],
+                [0.1, 0.9],
+            ]
+        )
 
         results = store.search("q", top_k=10, min_score=0.5)
         assert all(r["score"] >= 0.5 for r in results)
@@ -412,10 +416,12 @@ class TestLocalEmbeddingStore:
             LocalDocument(id="d1", content="hello", metadata={"lang": "en"}),
             LocalDocument(id="d2", content="bonjour", metadata={"lang": "fr"}),
         ]
-        store._embeddings = np.array([
-            [0.9, 0.1],
-            [0.8, 0.2],
-        ])
+        store._embeddings = np.array(
+            [
+                [0.9, 0.1],
+                [0.8, 0.2],
+            ]
+        )
 
         results = store.search("test", filter_metadata={"lang": "fr"})
         assert len(results) == 1

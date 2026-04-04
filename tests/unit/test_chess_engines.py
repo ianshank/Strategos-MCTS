@@ -253,8 +253,10 @@ class TestStockfishAdapter:
         config = StockfishConfig(stockfish_path="/nonexistent/stockfish")
         with patch("src.games.chess.engines.stockfish_adapter.get_structured_logger"):
             adapter = StockfishAdapter(config=config)
-            with patch("os.path.isfile", return_value=False), patch("shutil.which", return_value=None), patch(
-                "src.config.settings.get_settings", side_effect=RuntimeError("no settings")
+            with (
+                patch("os.path.isfile", return_value=False),
+                patch("shutil.which", return_value=None),
+                patch("src.config.settings.get_settings", side_effect=RuntimeError("no settings")),
             ):
                 result = adapter._find_stockfish()
                 assert result is None
@@ -262,8 +264,9 @@ class TestStockfishAdapter:
     def test_find_stockfish_via_which(self) -> None:
         with patch("src.games.chess.engines.stockfish_adapter.get_structured_logger"):
             adapter = StockfishAdapter()
-            with patch("shutil.which", side_effect=lambda name: "/usr/bin/stockfish" if name == "stockfish" else None), patch(
-                "src.config.settings.get_settings", side_effect=RuntimeError("no settings")
+            with (
+                patch("shutil.which", side_effect=lambda name: "/usr/bin/stockfish" if name == "stockfish" else None),
+                patch("src.config.settings.get_settings", side_effect=RuntimeError("no settings")),
             ):
                 result = adapter._find_stockfish()
                 assert result == "/usr/bin/stockfish"

@@ -41,8 +41,15 @@ class TestMoveType:
     def test_all_move_types_defined(self) -> None:
         """Test all expected move types exist."""
         expected = [
-            "NORMAL", "CAPTURE", "CASTLE_KINGSIDE", "CASTLE_QUEENSIDE",
-            "EN_PASSANT", "PROMOTION", "PROMOTION_CAPTURE", "CHECK", "CHECKMATE",
+            "NORMAL",
+            "CAPTURE",
+            "CASTLE_KINGSIDE",
+            "CASTLE_QUEENSIDE",
+            "EN_PASSANT",
+            "PROMOTION",
+            "PROMOTION_CAPTURE",
+            "CHECK",
+            "CHECKMATE",
         ]
         for name in expected:
             assert hasattr(MoveType, name)
@@ -64,9 +71,14 @@ class TestGameResult:
     def test_all_results_defined(self) -> None:
         """Test all expected game results exist."""
         expected = [
-            "WHITE_WINS", "BLACK_WINS", "DRAW_STALEMATE",
-            "DRAW_INSUFFICIENT_MATERIAL", "DRAW_FIFTY_MOVES",
-            "DRAW_THREEFOLD_REPETITION", "DRAW_AGREEMENT", "IN_PROGRESS",
+            "WHITE_WINS",
+            "BLACK_WINS",
+            "DRAW_STALEMATE",
+            "DRAW_INSUFFICIENT_MATERIAL",
+            "DRAW_FIFTY_MOVES",
+            "DRAW_THREEFOLD_REPETITION",
+            "DRAW_AGREEMENT",
+            "IN_PROGRESS",
         ]
         for name in expected:
             assert hasattr(GameResult, name)
@@ -117,9 +129,7 @@ class TestVerificationIssue:
 
     def test_default_fields(self) -> None:
         """Test default field values."""
-        issue = VerificationIssue(
-            code="TEST", message="test", severity=VerificationSeverity.INFO
-        )
+        issue = VerificationIssue(code="TEST", message="test", severity=VerificationSeverity.INFO)
         assert issue.context == {}
         assert issue.move_number is None
         assert issue.fen is None
@@ -150,9 +160,7 @@ class TestVerificationIssue:
 
     def test_str_representation_without_move(self) -> None:
         """Test string representation without move number."""
-        issue = VerificationIssue(
-            code="WARN", message="Warning", severity=VerificationSeverity.WARNING
-        )
+        issue = VerificationIssue(code="WARN", message="Warning", severity=VerificationSeverity.WARNING)
         result = str(issue)
         assert "[WARNING]" in result
         assert "WARN" in result
@@ -180,9 +188,7 @@ class TestMoveValidationResult:
 
     def test_default_fields(self) -> None:
         """Test default field values."""
-        result = MoveValidationResult(
-            is_valid=True, move_uci="e2e4", move_type=MoveType.NORMAL
-        )
+        result = MoveValidationResult(is_valid=True, move_uci="e2e4", move_type=MoveType.NORMAL)
         assert result.encoded_index is None
         assert result.issues == []
         assert result.extra_info == {}
@@ -233,9 +239,7 @@ class TestMoveValidationResult:
 
     def test_has_errors_no_issues(self) -> None:
         """Test has_errors is False when no issues."""
-        result = MoveValidationResult(
-            is_valid=True, move_uci="e2e4", move_type=MoveType.NORMAL
-        )
+        result = MoveValidationResult(is_valid=True, move_uci="e2e4", move_type=MoveType.NORMAL)
         assert result.has_errors is False
 
     def test_to_dict(self) -> None:
@@ -269,9 +273,7 @@ class TestMoveValidationResult:
 
     def test_to_dict_empty_issues(self) -> None:
         """Test to_dict with no issues."""
-        result = MoveValidationResult(
-            is_valid=True, move_uci="d2d4", move_type=MoveType.NORMAL
-        )
+        result = MoveValidationResult(is_valid=True, move_uci="d2d4", move_type=MoveType.NORMAL)
         d = result.to_dict()
         assert d["issues"] == []
 
@@ -376,39 +378,48 @@ class TestMoveSequenceResult:
 
     def test_error_rate_no_moves(self) -> None:
         """Test error_rate with no moves returns 0."""
-        result = MoveSequenceResult(
-            is_valid=True, initial_fen="start", moves=[], total_moves=0
-        )
+        result = MoveSequenceResult(is_valid=True, initial_fen="start", moves=[], total_moves=0)
         assert result.error_rate == 0.0
 
     def test_error_rate_all_valid(self) -> None:
         """Test error_rate when all moves are valid."""
         result = MoveSequenceResult(
-            is_valid=True, initial_fen="start", moves=["e2e4"],
-            total_moves=10, valid_moves=10,
+            is_valid=True,
+            initial_fen="start",
+            moves=["e2e4"],
+            total_moves=10,
+            valid_moves=10,
         )
         assert result.error_rate == 0.0
 
     def test_error_rate_some_invalid(self) -> None:
         """Test error_rate with some invalid moves."""
         result = MoveSequenceResult(
-            is_valid=False, initial_fen="start", moves=["e2e4"],
-            total_moves=10, valid_moves=7,
+            is_valid=False,
+            initial_fen="start",
+            moves=["e2e4"],
+            total_moves=10,
+            valid_moves=7,
         )
         assert result.error_rate == pytest.approx(0.3)
 
     def test_error_rate_all_invalid(self) -> None:
         """Test error_rate when all moves are invalid."""
         result = MoveSequenceResult(
-            is_valid=False, initial_fen="start", moves=[],
-            total_moves=5, valid_moves=0,
+            is_valid=False,
+            initial_fen="start",
+            moves=[],
+            total_moves=5,
+            valid_moves=0,
         )
         assert result.error_rate == 1.0
 
     def test_has_errors_property(self) -> None:
         """Test has_errors property."""
         result = MoveSequenceResult(
-            is_valid=False, initial_fen="start", moves=[],
+            is_valid=False,
+            initial_fen="start",
+            moves=[],
             issues=[
                 VerificationIssue(code="CRIT", message="Critical", severity=VerificationSeverity.CRITICAL),
             ],
@@ -438,9 +449,7 @@ class TestGameVerificationResult:
 
     def test_default_fields(self) -> None:
         """Test default field values."""
-        result = GameVerificationResult(
-            is_valid=True, game_id="g1", moves=[], result=GameResult.IN_PROGRESS
-        )
+        result = GameVerificationResult(is_valid=True, game_id="g1", moves=[], result=GameResult.IN_PROGRESS)
         assert result.issues == []
         assert result.move_sequence_result is None
         assert "rnbqkbnr" in result.initial_fen  # STARTING_FEN
@@ -454,7 +463,10 @@ class TestGameVerificationResult:
     def test_has_errors_property(self) -> None:
         """Test has_errors property."""
         result = GameVerificationResult(
-            is_valid=False, game_id="g1", moves=[], result=GameResult.WHITE_WINS,
+            is_valid=False,
+            game_id="g1",
+            moves=[],
+            result=GameResult.WHITE_WINS,
             issues=[
                 VerificationIssue(code="ERR", message="Error", severity=VerificationSeverity.ERROR),
             ],
@@ -464,7 +476,10 @@ class TestGameVerificationResult:
     def test_has_errors_no_errors(self) -> None:
         """Test has_errors with only warnings."""
         result = GameVerificationResult(
-            is_valid=True, game_id="g1", moves=[], result=GameResult.DRAW_AGREEMENT,
+            is_valid=True,
+            game_id="g1",
+            moves=[],
+            result=GameResult.DRAW_AGREEMENT,
             issues=[
                 VerificationIssue(code="W", message="Warn", severity=VerificationSeverity.WARNING),
             ],
@@ -620,47 +635,40 @@ class TestBatchVerificationResult:
 
     def test_basic_creation(self) -> None:
         """Test basic creation."""
-        result = BatchVerificationResult(
-            total_items=10, valid_items=8, invalid_items=2, results=[]
-        )
+        result = BatchVerificationResult(total_items=10, valid_items=8, invalid_items=2, results=[])
         assert result.total_items == 10
         assert result.valid_items == 8
         assert result.invalid_items == 2
 
     def test_default_fields(self) -> None:
         """Test default field values."""
-        result = BatchVerificationResult(
-            total_items=0, valid_items=0, invalid_items=0, results=[]
-        )
+        result = BatchVerificationResult(total_items=0, valid_items=0, invalid_items=0, results=[])
         assert result.issues == []
         assert result.total_time_ms == 0.0
         assert result.avg_time_per_item_ms == 0.0
 
     def test_success_rate_zero_items(self) -> None:
         """Test success_rate with zero items."""
-        result = BatchVerificationResult(
-            total_items=0, valid_items=0, invalid_items=0, results=[]
-        )
+        result = BatchVerificationResult(total_items=0, valid_items=0, invalid_items=0, results=[])
         assert result.success_rate == 0.0
 
     def test_success_rate_all_valid(self) -> None:
         """Test success_rate when all items valid."""
-        result = BatchVerificationResult(
-            total_items=5, valid_items=5, invalid_items=0, results=[]
-        )
+        result = BatchVerificationResult(total_items=5, valid_items=5, invalid_items=0, results=[])
         assert result.success_rate == 1.0
 
     def test_success_rate_partial(self) -> None:
         """Test success_rate with some invalid."""
-        result = BatchVerificationResult(
-            total_items=10, valid_items=7, invalid_items=3, results=[]
-        )
+        result = BatchVerificationResult(total_items=10, valid_items=7, invalid_items=3, results=[])
         assert result.success_rate == pytest.approx(0.7)
 
     def test_summary(self) -> None:
         """Test summary generation."""
         result = BatchVerificationResult(
-            total_items=10, valid_items=8, invalid_items=2, results=[],
+            total_items=10,
+            valid_items=8,
+            invalid_items=2,
+            results=[],
             total_time_ms=150.5,
         )
         summary = result.summary()
@@ -670,9 +678,7 @@ class TestBatchVerificationResult:
 
     def test_summary_zero_items(self) -> None:
         """Test summary with zero items."""
-        result = BatchVerificationResult(
-            total_items=0, valid_items=0, invalid_items=0, results=[]
-        )
+        result = BatchVerificationResult(total_items=0, valid_items=0, invalid_items=0, results=[])
         summary = result.summary()
         assert "0/0" in summary
         assert "0.0%" in summary

@@ -21,6 +21,7 @@ from src.framework.mcts.policies import RolloutPolicy, SelectionPolicy
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_root(state_id: str = "root") -> MCTSNode:
     """Create a root MCTSNode with a fixed RNG."""
     state = MCTSState(state_id=state_id)
@@ -77,6 +78,7 @@ class ChangingRolloutPolicy(RolloutPolicy):
 # Config tests
 # ---------------------------------------------------------------------------
 
+
 class TestConfigEarlyStopDefaults:
     """Test that MCTSConfig has correct defaults for early stop fields."""
 
@@ -114,6 +116,7 @@ class TestConfigEarlyStopDefaults:
 # ---------------------------------------------------------------------------
 # Search early termination tests
 # ---------------------------------------------------------------------------
+
 
 class TestSearchEarlyStopOnConvergence:
     """Test that search stops early when best action value converges."""

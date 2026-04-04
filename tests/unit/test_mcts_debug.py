@@ -84,9 +84,14 @@ class TestNodeStats:
 
     def test_default_action_none(self):
         stats = NodeStats(
-            node_id="x", depth=0, visits=0, value=0.0,
-            ucb_score=None, children_count=0,
-            is_terminal=False, is_expanded=False,
+            node_id="x",
+            depth=0,
+            visits=0,
+            value=0.0,
+            ucb_score=None,
+            children_count=0,
+            is_terminal=False,
+            is_expanded=False,
         )
         assert stats.action is None
 
@@ -249,9 +254,14 @@ class TestMCTSDebugger:
 
     def test_get_node_stats(self):
         node = _make_node(
-            visits=10, value=0.75, action="move",
-            depth=2, is_terminal=True, is_expanded=True,
-            ucb_score=1.5, children=[_make_node(), _make_node()],
+            visits=10,
+            value=0.75,
+            action="move",
+            depth=2,
+            is_terminal=True,
+            is_expanded=True,
+            ucb_score=1.5,
+            children=[_make_node(), _make_node()],
         )
         debugger = MCTSDebugger()
         stats = debugger.get_node_stats(node)

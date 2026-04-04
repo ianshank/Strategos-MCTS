@@ -219,7 +219,9 @@ class TestExperimentTracker:
 
     def test_export_to_csv(self, tmp_path):
         tracker = ExperimentTracker()
-        tracker.add_result(_make_result("e1", "a1", 0.8, config={"name": "test", "num_iterations": 100, "exploration_weight": 1.4}))
+        tracker.add_result(
+            _make_result("e1", "a1", 0.8, config={"name": "test", "num_iterations": 100, "exploration_weight": 1.4})
+        )
 
         path = str(tmp_path / "results.csv")
         tracker.export_to_csv(path)
@@ -235,6 +237,7 @@ class TestExperimentTracker:
         tracker.export_to_csv(path)
         # File should not be created when no results
         import os
+
         assert not os.path.exists(path)
 
     def test_load_from_json(self, tmp_path):

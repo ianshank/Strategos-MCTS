@@ -95,8 +95,7 @@ class TestOnlineLearnerLearnFull:
         params_before = [p.clone() for p in learner.network.parameters()]
         learner.learn(batch_size=32)
         changed = any(
-            not torch.equal(before, after)
-            for before, after in zip(params_before, learner.network.parameters())
+            not torch.equal(before, after) for before, after in zip(params_before, learner.network.parameters())
         )
         assert changed, "Network parameters should have changed after learning"
 
@@ -207,8 +206,9 @@ class TestPlaySingleGame:
         session.is_running = True
         return session
 
-    def _mock_state_sequence(self, num_moves: int, terminal_at: int | None = None,
-                              checkmate: bool = False, stalemate: bool = False):
+    def _mock_state_sequence(
+        self, num_moves: int, terminal_at: int | None = None, checkmate: bool = False, stalemate: bool = False
+    ):
         """Create a chain of mock states."""
         states = []
         for i in range(num_moves + 1):
@@ -743,12 +743,17 @@ class TestRunSession:
             now = datetime.now()
             return GameRecord(
                 game_id=game_id,
-                white_agent="e", black_agent="e",
+                white_agent="e",
+                black_agent="e",
                 result=GameResult.DRAW,
-                moves=["e2e4"], positions=["f1", "f2"],
-                move_times_ms=[10.0], total_time_ms=10.0,
-                start_time=now, end_time=now,
-                final_fen="f2", termination_reason="max_moves",
+                moves=["e2e4"],
+                positions=["f1", "f2"],
+                move_times_ms=[10.0],
+                total_time_ms=10.0,
+                start_time=now,
+                end_time=now,
+                final_fen="f2",
+                termination_reason="max_moves",
             )
 
         session.play_single_game = mock_play

@@ -137,8 +137,7 @@ def render_board_html(fen: str, last_move: str | None = None, flipped: bool = Fa
         highlight_squares.add((from_rank, from_file))
         highlight_squares.add((to_rank, to_file))
 
-    html_parts = [
-        """
+    html_parts = ["""
     <style>
         .chess-board {
             display: inline-block;
@@ -165,8 +164,7 @@ def render_board_html(fen: str, last_move: str | None = None, flipped: bool = Fa
     <div class="board-wrapper">
         <div class="board-container">
             <div class="rank-labels">
-    """
-    ]
+    """]
 
     ranks = list(range(8, 0, -1)) if not flipped else list(range(1, 9))
     for rank in ranks:
@@ -920,14 +918,12 @@ def create_chess_ui() -> gr.Blocks:
         .tab-content { min-height: 400px; }
         """,
     ) as demo:
-        gr.Markdown(
-            """
+        gr.Markdown("""
             # ♟️ Chess vs AlphaZero-Style AI
 
             Play chess against an AI using HRM, TRM, and Neural MCTS ensemble agents.
             Watch the AI learn and improve through continuous self-play!
-            """
-        )
+            """)
 
         with gr.Tabs():
             # Tab 1: Play Mode
@@ -1002,14 +998,12 @@ def create_chess_ui() -> gr.Blocks:
 
             # Tab 2: Continuous Learning Mode
             with gr.TabItem("🧠 Continuous Learning", elem_id="learning-tab"):
-                gr.Markdown(
-                    """
+                gr.Markdown("""
                     ### AlphaZero-Style Continuous Learning
 
                     Watch the AI play against itself and learn in real-time!
                     The AI generates training data through self-play and updates its neural network.
-                    """
-                )
+                    """)
 
                 with gr.Row():
                     with gr.Column(scale=1):

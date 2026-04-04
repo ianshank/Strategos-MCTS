@@ -6,7 +6,7 @@ src/enterprise/integration/graph_extension.py.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -321,7 +321,8 @@ class TestEnterpriseGraphBuilder:
         mock_domain_detector: MagicMock,
     ):
         mock_domain_detector.detect.return_value = DetectionResult(
-            domain=None, confidence=0.0,
+            domain=None,
+            confidence=0.0,
         )
         state: EnterpriseAgentState = {
             "query": "",
@@ -359,7 +360,8 @@ class TestEnterpriseGraphBuilder:
         mock_domain_detector: MagicMock,
     ):
         mock_domain_detector.detect.return_value = DetectionResult(
-            domain=None, confidence=0.0,
+            domain=None,
+            confidence=0.0,
         )
         route = builder.get_enterprise_route(sample_state)
         assert route == "standard"

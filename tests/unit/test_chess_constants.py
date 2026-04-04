@@ -43,7 +43,7 @@ class TestChessConstantValues:
     def test_castling_moves(self) -> None:
         from src.games.chess.constants import CASTLING_MOVES
 
-        assert CASTLING_MOVES[(True, True)] == "e1g1"   # White kingside
+        assert CASTLING_MOVES[(True, True)] == "e1g1"  # White kingside
         assert CASTLING_MOVES[(True, False)] == "e1c1"  # White queenside
         assert CASTLING_MOVES[(False, True)] == "e8g8"  # Black kingside
         assert CASTLING_MOVES[(False, False)] == "e8c8"  # Black queenside
@@ -51,7 +51,7 @@ class TestChessConstantValues:
     def test_en_passant_ranks(self) -> None:
         from src.games.chess.constants import EN_PASSANT_RANKS
 
-        assert EN_PASSANT_RANKS[True] == 5   # White captures on rank 6 (0-indexed)
+        assert EN_PASSANT_RANKS[True] == 5  # White captures on rank 6 (0-indexed)
         assert EN_PASSANT_RANKS[False] == 2  # Black captures on rank 3 (0-indexed)
 
     def test_uuid_short_length(self) -> None:

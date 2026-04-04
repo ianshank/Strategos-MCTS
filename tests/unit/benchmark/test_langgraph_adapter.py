@@ -17,7 +17,11 @@ pytest.importorskip("pydantic", reason="pydantic required for settings/benchmark
 
 from src.benchmark.adapters.langgraph_adapter import LangGraphBenchmarkAdapter
 from src.benchmark.adapters.protocol import BenchmarkSystemProtocol
-from src.benchmark.config.benchmark_settings import BenchmarkSettings, LangGraphBenchmarkConfig, reset_benchmark_settings
+from src.benchmark.config.benchmark_settings import (
+    BenchmarkSettings,
+    LangGraphBenchmarkConfig,
+    reset_benchmark_settings,
+)
 from src.benchmark.evaluation.models import BenchmarkResult
 from src.benchmark.tasks.models import BenchmarkTask, TaskCategory
 

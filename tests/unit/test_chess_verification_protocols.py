@@ -55,9 +55,7 @@ class ConcreteMoveValidator:
 class ConcreteGameVerifier:
     """Concrete implementation of ChessGameVerifierProtocol for testing."""
 
-    async def verify_full_game(
-        self, moves: list[str], expected_outcome: Any = None, game_id: str | None = None
-    ) -> Any:
+    async def verify_full_game(self, moves: list[str], expected_outcome: Any = None, game_id: str | None = None) -> Any:
         return MagicMock(is_valid=True)
 
     def verify_position(self, fen: str) -> Any:
@@ -79,9 +77,7 @@ class ConcreteEnsembleChecker:
     async def check_sequence_consistency(self, states: list[Any]) -> list[Any]:
         return [MagicMock(is_consistent=True) for _ in states]
 
-    async def check_game_consistency(
-        self, moves: list[str], initial_fen: str | None = None
-    ) -> list[Any]:
+    async def check_game_consistency(self, moves: list[str], initial_fen: str | None = None) -> list[Any]:
         return [MagicMock(is_consistent=True)]
 
     def get_divergence_threshold(self) -> float:
@@ -225,9 +221,7 @@ class TestChessGameVerifierProtocol:
     async def test_verify_full_game_with_expected_outcome(self) -> None:
         """Test verify_full_game accepts optional parameters."""
         verifier = ConcreteGameVerifier()
-        result = await verifier.verify_full_game(
-            moves=["e2e4"], expected_outcome="white_wins", game_id="g-001"
-        )
+        result = await verifier.verify_full_game(moves=["e2e4"], expected_outcome="white_wins", game_id="g-001")
         assert result.is_valid is True
 
 
@@ -287,9 +281,7 @@ class TestEnsembleConsistencyCheckerProtocol:
     async def test_check_game_consistency_with_initial_fen(self) -> None:
         """Test check_game_consistency accepts initial_fen."""
         checker = ConcreteEnsembleChecker()
-        results = await checker.check_game_consistency(
-            ["e2e4"], initial_fen="custom_fen"
-        )
+        results = await checker.check_game_consistency(["e2e4"], initial_fen="custom_fen")
         assert len(results) >= 1
 
 

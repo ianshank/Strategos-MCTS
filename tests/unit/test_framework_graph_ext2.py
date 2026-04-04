@@ -311,9 +311,7 @@ class TestNeuralRouteDecision:
 
         mock_features = MagicMock()
         with patch.object(builder, "_extract_meta_controller_features", return_value=mock_features):
-            result = builder._neural_route_decision(
-                {"query": "test", "iteration": 0, "use_mcts": True}
-            )
+            result = builder._neural_route_decision({"query": "test", "iteration": 0, "use_mcts": True})
         assert result == "mcts"
 
     def test_falls_back_when_agent_already_ran(self):
@@ -677,8 +675,14 @@ class TestIntegratedFramework:
         chunk_obj.content = "hello"
 
         async def _mock_stream(*args, **kwargs):
-            yield {"event": "on_llm_stream", "name": "generate", "run_id": "r1",
-                   "data": {"chunk": chunk_obj}, "metadata": {}, "tags": []}
+            yield {
+                "event": "on_llm_stream",
+                "name": "generate",
+                "run_id": "r1",
+                "data": {"chunk": chunk_obj},
+                "metadata": {},
+                "tags": [],
+            }
 
         mock_app = MagicMock()
         mock_app.astream_events = _mock_stream
@@ -703,8 +707,14 @@ class TestIntegratedFramework:
         mock_logger = logging.getLogger("test_int")
 
         async def _mock_stream(*args, **kwargs):
-            yield {"event": "on_llm_stream", "name": "gen", "run_id": "r2",
-                   "data": {"chunk": {"content": "world"}}, "metadata": {}, "tags": []}
+            yield {
+                "event": "on_llm_stream",
+                "name": "gen",
+                "run_id": "r2",
+                "data": {"chunk": {"content": "world"}},
+                "metadata": {},
+                "tags": [],
+            }
 
         mock_app = MagicMock()
         mock_app.astream_events = _mock_stream

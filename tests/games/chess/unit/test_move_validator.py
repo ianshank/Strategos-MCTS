@@ -152,9 +152,9 @@ class TestMoveValidator:
         else:
             result = validator.validate_move(state, case["move"])
 
-        assert result.is_valid == case["should_be_legal"], (
-            f"Expected is_valid={case['should_be_legal']} for {case['name']}, got {result.is_valid}"
-        )
+        assert (
+            result.is_valid == case["should_be_legal"]
+        ), f"Expected is_valid={case['should_be_legal']} for {case['name']}, got {result.is_valid}"
 
     @pytest.mark.unit
     @pytest.mark.parametrize("case", EN_PASSANT_EDGE_CASES, ids=lambda c: c["name"])
@@ -167,9 +167,9 @@ class TestMoveValidator:
         else:
             result = validator.validate_move(state, case["move"])
 
-        assert result.is_valid == case["should_be_legal"], (
-            f"Expected is_valid={case['should_be_legal']} for {case['name']}, got {result.is_valid}"
-        )
+        assert (
+            result.is_valid == case["should_be_legal"]
+        ), f"Expected is_valid={case['should_be_legal']} for {case['name']}, got {result.is_valid}"
 
     @pytest.mark.unit
     @pytest.mark.parametrize("case", PROMOTION_EDGE_CASES, ids=lambda c: c["name"])
@@ -179,9 +179,9 @@ class TestMoveValidator:
 
         result = validator.validate_promotion(state, case["move"])
 
-        assert result.is_valid == case["should_be_legal"], (
-            f"Expected is_valid={case['should_be_legal']} for {case['name']}, got {result.is_valid}"
-        )
+        assert (
+            result.is_valid == case["should_be_legal"]
+        ), f"Expected is_valid={case['should_be_legal']} for {case['name']}, got {result.is_valid}"
 
         if result.is_valid and "promotion_piece" in case:
             assert result.promotion_piece is not None

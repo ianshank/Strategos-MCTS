@@ -9,7 +9,6 @@ Mocks all OpenTelemetry dependencies so tests run without OTEL installed.
 
 from __future__ import annotations
 
-import asyncio
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
@@ -94,6 +93,7 @@ class TestDummyTracer:
                     @_cm
                     def dummy_context():
                         yield None
+
                     return dummy_context()
 
             tracer = _DummyTracer()
@@ -242,6 +242,7 @@ class TestGetTracer:
                         @_cm
                         def dummy_context():
                             yield None
+
                         return dummy_context()
 
                 with patch.object(mod, "DummyTracer", _FallbackTracer, create=True):
@@ -283,6 +284,7 @@ class TestGetTracer:
                     @_cm
                     def ctx():
                         yield None
+
                     return ctx()
 
             with patch.object(mod, "DummyTracer", _FallbackTracer, create=True):
@@ -342,6 +344,7 @@ class TestTraceSpan:
                 @_cm
                 def ctx():
                     yield None
+
                 return ctx()
 
         with (

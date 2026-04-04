@@ -1,6 +1,5 @@
 """Unit tests for src/training/train_rnn.py."""
 
-
 import pytest
 import torch
 
@@ -196,9 +195,7 @@ class TestRNNTrainerTrain:
     def test_train_early_stopping(self):
         """Test early stopping when validation loss does not improve."""
         # Use a very small patience to trigger early stopping quickly
-        trainer = RNNTrainer(
-            device="cpu", batch_size=64, epochs=100, early_stopping_patience=1
-        )
+        trainer = RNNTrainer(device="cpu", batch_size=64, epochs=100, early_stopping_patience=1)
         # Use random data so no real learning occurs
         X_train = torch.randn(80, 10)
         y_train = torch.randint(0, 3, (80,))

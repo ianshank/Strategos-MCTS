@@ -19,6 +19,7 @@ from src.training.performance_monitor import (
 # PerformanceMetrics tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestPerformanceMetrics:
     """Tests for PerformanceMetrics dataclass."""
@@ -59,6 +60,7 @@ class TestPerformanceMetrics:
 # ---------------------------------------------------------------------------
 # PerformanceMonitor tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestPerformanceMonitor:
@@ -291,6 +293,7 @@ class TestPerformanceMonitor:
 # ---------------------------------------------------------------------------
 # TimingContext tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestTimingContext:

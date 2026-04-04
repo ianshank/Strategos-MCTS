@@ -106,10 +106,14 @@ class TestEnterpriseMetaControllerAdapter:
 
     def test_enterprise_agents_class_attribute(self):
         expected = [
-            "hrm", "trm", "mcts",
-            "enterprise_ma", "enterprise_clinical", "enterprise_regulatory",
+            "hrm",
+            "trm",
+            "mcts",
+            "enterprise_ma",
+            "enterprise_clinical",
+            "enterprise_regulatory",
         ]
-        assert EnterpriseMetaControllerAdapter.ENTERPRISE_AGENTS == expected
+        assert expected == EnterpriseMetaControllerAdapter.ENTERPRISE_AGENTS
 
     def test_init_sets_detection_threshold(self, mock_domain_detector: MagicMock):
         EnterpriseMetaControllerAdapter(
@@ -139,7 +143,8 @@ class TestEnterpriseMetaControllerAdapter:
         mock_domain_detector: MagicMock,
     ):
         mock_domain_detector.detect.return_value = DetectionResult(
-            domain=None, confidence=0.0,
+            domain=None,
+            confidence=0.0,
         )
         domain, confidence = adapter.detect_domain("What is the weather today?")
         assert domain is None

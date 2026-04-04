@@ -489,9 +489,7 @@ class TestInferenceServerRun:
     def test_run_calls_uvicorn(self, mock_uvicorn):
         server = _create_mock_server()
         server.run()
-        mock_uvicorn.run.assert_called_once_with(
-            server.app, host=server.host, port=server.port
-        )
+        mock_uvicorn.run.assert_called_once_with(server.app, host=server.host, port=server.port)
 
 
 @pytest.mark.unit
@@ -514,6 +512,7 @@ class TestInferenceServerMain:
         mock_server_cls.return_value = mock_server_instance
 
         from src.api.inference_server import main
+
         main()
 
         mock_server_cls.assert_called_once_with(
@@ -542,6 +541,7 @@ class TestInferenceServerMain:
         mock_server_cls.return_value = MagicMock()
 
         from src.api.inference_server import main
+
         main()
 
         mock_sys_config.assert_called_once()

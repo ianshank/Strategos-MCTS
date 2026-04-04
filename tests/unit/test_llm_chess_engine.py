@@ -2,23 +2,12 @@
 
 from __future__ import annotations
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from src.adapters.llm.base import LLMResponse
 from src.games.chess.llm_chess_engine import (
-    DEFAULT_CHESS_MAX_TOKENS,
-    DEFAULT_CHESS_TEMPERATURE,
-    DEFAULT_CONSENSUS_TOP_K,
-    DEFAULT_MCTS_DEPTH,
-    ENDGAME_WEIGHTS,
-    MIDDLEGAME_WEIGHTS,
-    OPENING_WEIGHTS,
-    PHASE_ENDGAME_MATERIAL,
-    PHASE_OPENING_THRESHOLD,
-    PIECE_VALUES,
     ChessAnalysis,
     ChessMoveResult,
     LLMChessEngine,

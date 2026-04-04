@@ -217,6 +217,7 @@ class TestNeuralMCTS:
 
     def _make_config(self):
         from src.training.system_config import MCTSConfig
+
         return MCTSConfig()
 
     def test_init(self):
