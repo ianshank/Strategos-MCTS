@@ -75,6 +75,15 @@ except ImportError:
         "unit/test_rest_server_ext.py",
     ]
 
+try:
+    import chess  # noqa: F401
+except ImportError:
+    collect_ignore_glob += [
+        "unit/test_chess_ensemble_checker.py",
+        "unit/test_chess_verification_protocols.py",
+        "unit/test_chess_verification_types.py",
+    ]
+
 
 def pytest_configure(config):
     """Configure pytest with custom markers and settings."""

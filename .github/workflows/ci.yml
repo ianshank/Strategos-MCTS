@@ -55,7 +55,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -e ".[dev]"
+          pip install -e ".[dev,neural]"
 
       - name: Run mypy
         run: mypy src/ --no-error-summary
@@ -160,7 +160,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,neural]"
 
       - name: Run unit tests with coverage
         run: |
