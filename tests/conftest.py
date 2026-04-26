@@ -23,6 +23,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+# Set test-safe defaults BEFORE any project module is imported.
+# Settings validation rejects empty OPENAI_API_KEY when LLM_PROVIDER=openai
+# (the default), so test runs without secrets in env would fail at import.
+# HuggingFace offline flags prevent transformers from attempting network
+# downloads of pretrained tokenizers/models during tests.
+os.environ.setdefault("OPENAI_API_KEY", "sk-test-key-not-real")
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
 # Import project modules with graceful fallback
 try:
     from src.config.settings import Settings, get_settings, reset_settings
@@ -73,6 +82,13 @@ except ImportError:
         "unit/test_inference_server.py",
         "unit/test_rest_server.py",
         "unit/test_rest_server_ext.py",
+    ]
+
+try:
+    import uvicorn  # noqa: F401
+except ImportError:
+    collect_ignore_glob += [
+        "unit/test_inference_server.py",
     ]
 
 try:
