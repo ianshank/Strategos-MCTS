@@ -12,6 +12,7 @@ from enum import Enum, auto
 from typing import Any
 
 from ...base.use_case import BaseDomainState
+from ...config.enterprise_settings import get_enterprise_settings
 
 
 class DueDiligencePhase(Enum):
@@ -47,13 +48,7 @@ class RiskLevel(Enum):
 
     def to_weight(self) -> float:
         """Convert to numeric weight for calculations."""
-        weights = {
-            RiskLevel.LOW: 0.25,
-            RiskLevel.MEDIUM: 0.5,
-            RiskLevel.HIGH: 0.75,
-            RiskLevel.CRITICAL: 1.0,
-        }
-        return weights[self]
+        return get_enterprise_settings().ma_due_diligence.risk_level_weights[self.value]
 
 
 @dataclass

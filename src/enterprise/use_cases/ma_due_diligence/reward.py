@@ -117,29 +117,7 @@ class MADueDiligenceReward(RewardFunctionProtocol):
         Higher reward for actions that uncover new information,
         with diminishing returns for repeated similar actions.
         """
-        # Base information gain by action type
-        action_base_gain = {
-            "deep_dive_revenue": 0.8,
-            "analyze_cost_structure": 0.75,
-            "review_contracts": 0.75,
-            "check_litigation_history": 0.85,
-            "verify_ip_ownership": 0.7,
-            "assess_regulatory_compliance": 0.8,
-            "evaluate_operations": 0.65,
-            "assess_supply_chain": 0.6,
-            "review_hr_structure": 0.55,
-            "analyze_it_infrastructure": 0.7,
-            "assess_tech_stack": 0.75,
-            "review_security_posture": 0.8,
-            "evaluate_scalability": 0.65,
-            "check_tech_debt": 0.7,
-            "identify_revenue_synergies": 0.75,
-            "identify_cost_synergies": 0.7,
-            "escalate_to_expert": 0.6,
-            "request_additional_docs": 0.5,
-        }
-
-        base = action_base_gain.get(action, 0.5)
+        base = self._config.action_base_gain.get(action, self._config.action_base_gain_default)
 
         # Diminishing returns for repeated similar actions (configurable decay factor)
         similar_count = sum(1 for a in state.action_history if action.split("_")[0] in a)  # Same action category
