@@ -230,10 +230,9 @@ class MetaControllerTrainingOrchestrator:
         self._criterion = nn.CrossEntropyLoss()
 
         # Determine device
-        if config.device == "auto":
-            self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        else:
-            self._device = torch.device(config.device)
+        from src.utils.device import resolve_device
+
+        self._device = resolve_device(config.device)
 
         # Training state
         self._current_epoch = 0

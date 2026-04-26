@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 
 import torch
 
+from src.utils.device import get_default_device_str
+
 
 @dataclass
 class HRMConfig:
@@ -171,7 +173,7 @@ class SystemConfig:
     training: TrainingConfig = field(default_factory=TrainingConfig)
 
     # System settings
-    device: str = field(default_factory=lambda: "cuda" if torch.cuda.is_available() else "cpu")
+    device: str = field(default_factory=lambda: get_default_device_str())
     seed: int = 42  # For reproducibility
 
     # Performance optimizations

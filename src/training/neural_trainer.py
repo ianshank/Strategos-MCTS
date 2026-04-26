@@ -19,6 +19,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from ..models.policy_network import PolicyLoss, PolicyNetwork
 from ..models.value_network import ValueLoss, ValueNetwork
+from ..utils.device import get_default_device_str
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ class TrainingConfig:
     wandb_project: str | None = None
 
     # Device
-    device: str = "cuda" if torch.cuda.is_available() else "cpu"
+    device: str = field(default_factory=get_default_device_str)
 
 
 @dataclass

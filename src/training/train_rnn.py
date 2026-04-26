@@ -116,15 +116,9 @@ class RNNTrainer:
             torch.cuda.manual_seed_all(seed)
 
         # Auto-detect device if not specified
-        if device is None:
-            if torch.cuda.is_available():
-                self.device = torch.device("cuda")
-            elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-                self.device = torch.device("mps")
-            else:
-                self.device = torch.device("cpu")
-        else:
-            self.device = torch.device(device)
+        from src.utils.device import resolve_device
+
+        self.device = resolve_device(device)
 
         # Setup logging
         self._setup_logging()
