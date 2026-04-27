@@ -24,7 +24,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from src.observability.logging import get_logger
+
 from ...training.system_config import MCTSConfig
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -344,7 +348,7 @@ class NeuralMCTS:
                     action_indices.append(action_idx)
             except (ValueError, IndexError, AttributeError) as e:
                 # Fallback: if action_to_index fails, use sequential mapping
-                print(f"Warning: action_to_index failed for action {action}: {e}")
+                logger.warning("action_to_index failed for action %s: %s", action, e)
                 action_indices = list(range(len(legal_actions)))
                 action_mask = np.full_like(policy_logits, -np.inf)
                 action_mask[action_indices] = 0

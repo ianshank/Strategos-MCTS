@@ -9,7 +9,10 @@ from dataclasses import dataclass, field
 
 import torch
 
+from src.observability.logging import get_logger
 from src.utils.device import get_default_device_str
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -202,7 +205,7 @@ class SystemConfig:
         """Validate configuration after initialization."""
         # Ensure device is valid
         if self.device.startswith("cuda") and not torch.cuda.is_available():
-            print("⚠️  CUDA requested but not available, falling back to CPU")
+            logger.warning("CUDA requested but not available, falling back to CPU")
             self.device = "cpu"
 
         # Adjust settings based on device

@@ -8,6 +8,8 @@ import os
 from datetime import datetime
 from typing import Any
 
+from src.observability.logging import get_logger
+
 # Check if braintrust is available
 try:
     import braintrust
@@ -16,6 +18,8 @@ try:
 except ImportError:
     BRAINTRUST_AVAILABLE = False
     braintrust = None
+
+logger = get_logger(__name__)
 
 
 class BraintrustTracker:
@@ -52,7 +56,7 @@ class BraintrustTracker:
         self._metrics_buffer: list[dict[str, Any]] = []
 
         if not BRAINTRUST_AVAILABLE:
-            print("Warning: braintrust package not installed. Install with: pip install braintrust")
+            logger.warning("braintrust package not installed. Install with: pip install braintrust")
             return
 
         if auto_init and self._api_key:
@@ -102,7 +106,7 @@ class BraintrustTracker:
             )
             return self._experiment
         except Exception as e:
-            print(f"Warning: Failed to start Braintrust experiment: {e}")
+            logger.warning("Failed to start Braintrust experiment: %s", e)
             return None
 
     def log_hyperparameters(self, params: dict[str, Any]) -> None:
@@ -119,7 +123,7 @@ class BraintrustTracker:
         try:
             self._experiment.log(metadata=params)
         except Exception as e:
-            print(f"Warning: Failed to log hyperparameters: {e}")
+            logger.warning("Failed to log hyperparameters: %s", e)
 
     def log_training_step(
         self,
@@ -157,7 +161,7 @@ class BraintrustTracker:
             }
             self._experiment.log(**log_data)
         except Exception as e:
-            print(f"Warning: Failed to log training step: {e}")
+            logger.warning("Failed to log training step: %s", e)
 
     def log_epoch_summary(
         self,
@@ -212,7 +216,7 @@ class BraintrustTracker:
                 scores=scores,
             )
         except Exception as e:
-            print(f"Warning: Failed to log epoch summary: {e}")
+            logger.warning("Failed to log epoch summary: %s", e)
 
     def log_evaluation(
         self,
@@ -254,7 +258,7 @@ class BraintrustTracker:
                 scores=metrics,
             )
         except Exception as e:
-            print(f"Warning: Failed to log evaluation: {e}")
+            logger.warning("Failed to log evaluation: %s", e)
 
     def log_model_prediction(
         self,
@@ -296,7 +300,7 @@ class BraintrustTracker:
                 scores=scores,
             )
         except Exception as e:
-            print(f"Warning: Failed to log prediction: {e}")
+            logger.warning("Failed to log prediction: %s", e)
 
     def log_model_artifact(
         self,
@@ -337,7 +341,7 @@ class BraintrustTracker:
                 metadata=metadata or {},
             )
         except Exception as e:
-            print(f"Warning: Failed to log model artifact: {e}")
+            logger.warning("Failed to log model artifact: %s", e)
 
     def end_experiment(self) -> str | None:
         """
@@ -354,7 +358,7 @@ class BraintrustTracker:
             self._experiment = None
             return summary.experiment_url if hasattr(summary, "experiment_url") else None
         except Exception as e:
-            print(f"Warning: Failed to end experiment: {e}")
+            logger.warning("Failed to end experiment: %s", e)
             return None
 
     def get_buffered_metrics(self) -> list[dict[str, Any]]:
