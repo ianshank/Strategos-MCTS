@@ -207,7 +207,7 @@ class TestTrainerFactory:
         """Test trainer factory uses default settings when not provided."""
         from src.framework.component_factory import TrainerFactory
 
-        with patch("src.framework.component_factory.get_settings") as mock_get_settings:
+        with patch("src.framework.component_factory.trainer_factory.get_settings") as mock_get_settings:
             mock_settings = MagicMock()
             mock_settings.MCTS_MAX_PARALLEL_ROLLOUTS = 4
             mock_settings.MCTS_IMPL.value = "baseline"
@@ -1293,7 +1293,7 @@ class TestConvenienceFunctions:
         """Test create_trainer_factory convenience function."""
         from src.framework.component_factory import create_trainer_factory
 
-        with patch("src.framework.component_factory.get_settings", return_value=mock_settings):
+        with patch("src.framework.component_factory.registry.get_settings", return_value=mock_settings):
             factory = create_trainer_factory(settings=mock_settings)
 
             assert factory is not None
@@ -1303,7 +1303,7 @@ class TestConvenienceFunctions:
         """Test create_metrics_factory convenience function."""
         from src.framework.component_factory import create_metrics_factory
 
-        with patch("src.framework.component_factory.get_settings", return_value=mock_settings):
+        with patch("src.framework.component_factory.registry.get_settings", return_value=mock_settings):
             factory = create_metrics_factory(settings=mock_settings)
 
             assert factory is not None
@@ -1313,7 +1313,7 @@ class TestConvenienceFunctions:
         """Test create_data_loader_factory convenience function."""
         from src.framework.component_factory import create_data_loader_factory
 
-        with patch("src.framework.component_factory.get_settings", return_value=mock_settings):
+        with patch("src.framework.component_factory.registry.get_settings", return_value=mock_settings):
             factory = create_data_loader_factory(settings=mock_settings)
 
             assert factory is not None
@@ -1323,7 +1323,7 @@ class TestConvenienceFunctions:
         """Test get_component_registry convenience function."""
         from src.framework.component_factory import get_component_registry
 
-        with patch("src.framework.component_factory.get_settings", return_value=mock_settings):
+        with patch("src.framework.component_factory.registry.get_settings", return_value=mock_settings):
             registry = get_component_registry(settings=mock_settings)
 
             assert registry is not None
@@ -1971,7 +1971,7 @@ class TestConvenienceFunctionsNoSettings:
         mock_settings.MCTS_ITERATIONS = 100
         mock_settings.S3_BUCKET = None
 
-        with patch("src.framework.component_factory.get_settings", return_value=mock_settings):
+        with patch("src.framework.component_factory.registry.get_settings", return_value=mock_settings):
             factory = create_trainer_factory()
             assert factory is not None
 
@@ -1984,7 +1984,7 @@ class TestConvenienceFunctionsNoSettings:
         mock_settings.WANDB_ENTITY = None
         mock_settings.WANDB_MODE = "offline"
 
-        with patch("src.framework.component_factory.get_settings", return_value=mock_settings):
+        with patch("src.framework.component_factory.registry.get_settings", return_value=mock_settings):
             factory = create_metrics_factory()
             assert factory is not None
 
@@ -1995,7 +1995,7 @@ class TestConvenienceFunctionsNoSettings:
         mock_settings = MagicMock()
         mock_settings.MCTS_MAX_PARALLEL_ROLLOUTS = 2
 
-        with patch("src.framework.component_factory.get_settings", return_value=mock_settings):
+        with patch("src.framework.component_factory.registry.get_settings", return_value=mock_settings):
             factory = create_data_loader_factory()
             assert factory is not None
 
