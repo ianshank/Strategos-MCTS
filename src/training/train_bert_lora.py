@@ -10,6 +10,7 @@ and model evaluation.
 import argparse
 import json
 import logging
+import os
 import warnings
 from pathlib import Path
 from typing import Any
@@ -111,7 +112,7 @@ class BERTLoRATrainer:
 
     def __init__(
         self,
-        model_name: str = "prajjwal1/bert-mini",
+        model_name: str | None = None,
         lora_r: int = 4,
         lora_alpha: int = 16,
         lora_dropout: float = 0.1,
@@ -153,7 +154,8 @@ class BERTLoRATrainer:
         self.logger.info("Initializing BERTLoRATrainer")
 
         # Store training parameters
-        self.model_name = model_name
+        # Resolution order: explicit arg > BERT_MODEL_NAME env var > prajjwal1/bert-mini default.
+        self.model_name = model_name or os.environ.get("BERT_MODEL_NAME", "prajjwal1/bert-mini")
         self.lora_r = lora_r
         self.lora_alpha = lora_alpha
         self.lora_dropout = lora_dropout

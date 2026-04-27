@@ -64,6 +64,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          # Install the project so 'src' package and its core deps (incl. networkx)
+          # are available for test collection. requirements.txt covers the demo
+          # surface; rich/tomli are used by the sanity-check script itself.
+          pip install -e .
           pip install -r requirements.txt
           pip install rich tomli
 

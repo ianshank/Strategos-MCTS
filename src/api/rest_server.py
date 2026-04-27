@@ -157,7 +157,7 @@ framework_service: FrameworkService | None = None
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """Application lifespan manager with framework initialization."""
     global framework_service
 
@@ -330,7 +330,7 @@ async def verify_api_key(x_api_key: str = Header(..., description="API key for a
 
 # Exception handlers
 @app.exception_handler(FrameworkError)
-async def framework_error_handler(request: Request, exc: FrameworkError):
+async def framework_error_handler(_request: Request, exc: FrameworkError):
     """Handle framework-specific errors."""
     if PROMETHEUS_AVAILABLE:
         ERROR_COUNT.labels(error_type=exc.error_code).inc()
@@ -339,7 +339,7 @@ async def framework_error_handler(request: Request, exc: FrameworkError):
 
 
 @app.exception_handler(ValidationError)
-async def validation_error_handler(request: Request, exc: ValidationError):
+async def validation_error_handler(_request: Request, exc: ValidationError):
     """Handle validation errors."""
     if PROMETHEUS_AVAILABLE:
         ERROR_COUNT.labels(error_type="validation").inc()

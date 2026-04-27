@@ -6,6 +6,8 @@ for parameter-efficient fine-tuning. The controller converts agent state feature
 text and uses a sequence classification model to predict the optimal agent.
 """
 
+import logging
+import os
 import warnings
 from typing import Any
 
@@ -17,6 +19,8 @@ from src.agents.meta_controller.base import (
     MetaControllerPrediction,
 )
 from src.agents.meta_controller.utils import features_to_text
+
+logger = logging.getLogger(__name__)
 
 # Handle optional transformers and peft imports gracefully
 _TRANSFORMERS_AVAILABLE = False
@@ -154,7 +158,8 @@ class BERTMetaController(AbstractMetaController):
             self.device = torch.device(device)
 
         # Store configuration parameters
-        self.model_name = model_name if model_name is not None else self.DEFAULT_MODEL_NAME
+        # Resolution order: explicit arg > BERT_MODEL_NAME env var > class default.
+        self.model_name = model_name or os.environ.get("BERT_MODEL_NAME", self.DEFAULT_MODEL_NAME)
         self.lora_r = lora_r
         self.lora_alpha = lora_alpha
         self.lora_dropout = lora_dropout
@@ -187,6 +192,16 @@ class BERTMetaController(AbstractMetaController):
 
         # Initialize tokenization cache for performance optimization
         self._tokenization_cache: dict[str, Any] = {}
+
+        logger.info(
+            "Initialized BERTMetaController",
+            extra={
+                "model_name": self.model_name,
+                "use_lora": self.use_lora,
+                "device": str(self.device),
+                "lora_r": self.lora_r if self.use_lora else None,
+            },
+        )
 
     def predict(self, features: MetaControllerFeatures) -> MetaControllerPrediction:
         """
@@ -266,6 +281,11 @@ class BERTMetaController(AbstractMetaController):
         # Get agent name
         selected_agent = self.AGENT_NAMES[predicted_idx]
 
+        logger.debug(
+            "BERT meta-controller routing decision",
+            extra={"selected_agent": selected_agent, "confidence": float(confidence), "probabilities": prob_dict},
+        )
+
         return MetaControllerPrediction(
             agent=selected_agent,
             confidence=float(confidence),
@@ -313,6 +333,7 @@ class BERTMetaController(AbstractMetaController):
 
         # Ensure model is in evaluation mode
         self.model.eval()
+        logger.info("Loaded BERT meta-controller from %s (lora=%s)", path, self.use_lora)
 
     def save_model(self, path: str) -> None:
         """
@@ -340,6 +361,7 @@ class BERTMetaController(AbstractMetaController):
         else:
             # Save base model state dict
             torch.save(self.model.state_dict(), path)
+        logger.info("Saved BERT meta-controller to %s (lora=%s)", path, self.use_lora)
 
     def clear_cache(self) -> None:
         """

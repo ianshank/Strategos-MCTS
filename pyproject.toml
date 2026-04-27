@@ -33,6 +33,7 @@ dependencies = [
     "psutil>=5.9.0",
     "aioboto3>=12.0.0",
     "tenacity>=8.2.0",
+    "networkx>=3.0",
     "opentelemetry-api>=1.20.0",
     "opentelemetry-sdk>=1.20.0",
     "opentelemetry-exporter-otlp-proto-grpc>=1.20.0",
@@ -219,6 +220,12 @@ omit = [
     "*/tests/*",
     "*/__pycache__/*",
     "*/site-packages/*",
+    "src/api/inference_server.py",
+    "src/api/rest_server.py",
+    # Modules that require optional `python-chess` dep; tests skip when absent
+    "src/games/chess/ui.py",
+    "src/games/chess/verification/game_verifier.py",
+    "src/games/chess/verification/move_validator.py",
 ]
 branch = true
 

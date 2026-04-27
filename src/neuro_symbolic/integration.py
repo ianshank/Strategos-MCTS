@@ -43,6 +43,13 @@ class NeuroSymbolicMCTSConfig:
     neural_weight: float = 0.6
     symbolic_weight: float = 0.4
 
+    # Symbolic heuristic mixing (constraint satisfaction vs goal progress)
+    satisfaction_weight: float = 0.6
+    progress_weight: float = 0.4
+
+    # Progress score normalization (max facts before progress saturates at 1.0)
+    progress_max_facts: int = 20
+
     # Performance
     async_constraint_checking: bool = True
     constraint_timeout_ms: int = 100
@@ -53,6 +60,10 @@ class NeuroSymbolicMCTSConfig:
         if abs(total_weight - 1.0) > 1e-6:
             self.neural_weight /= total_weight
             self.symbolic_weight /= total_weight
+        heuristic_total = self.satisfaction_weight + self.progress_weight
+        if abs(heuristic_total - 1.0) > 1e-6:
+            self.satisfaction_weight /= heuristic_total
+            self.progress_weight /= heuristic_total
 
 
 class NeuroSymbolicMCTSIntegration:
@@ -218,7 +229,7 @@ class NeuroSymbolicMCTSIntegration:
         satisfaction_score = self._compute_satisfaction_score(ns_state)
         progress_score = self._compute_progress_score(ns_state)
 
-        return 0.6 * satisfaction_score + 0.4 * progress_score
+        return self.config.satisfaction_weight * satisfaction_score + self.config.progress_weight * progress_score
 
     def _compute_satisfaction_score(self, state: NeuroSymbolicState) -> float:
         """Compute constraint satisfaction score."""
@@ -230,12 +241,14 @@ class NeuroSymbolicMCTSIntegration:
         return 0.0
 
     def _compute_progress_score(self, state: NeuroSymbolicState) -> float:
-        """Compute goal progress score based on facts."""
-        # Simple heuristic: more facts = more progress
-        # In practice, this should be domain-specific
+        """Compute goal progress score based on facts.
+
+        Heuristic: more facts → more progress, saturating at progress_max_facts.
+        Domain-specific scoring should override this method.
+        """
         num_facts = len(state.facts)
-        max_expected_facts = 20  # Configurable
-        return min(num_facts / max_expected_facts, 1.0)
+        max_expected_facts = self.config.progress_max_facts
+        return min(num_facts / max_expected_facts, 1.0) if max_expected_facts > 0 else 0.0
 
     def compute_hybrid_value(
         self,

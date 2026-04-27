@@ -206,7 +206,12 @@ class MCTSDataset(Dataset if _TORCH_AVAILABLE else object):  # type: ignore[misc
         )
 
     def _init_tokenizer(self) -> Any:
-        """Initialize tokenizer for text encoding."""
+        """Initialize tokenizer for text encoding.
+
+        Falls back to a simple character-level tokenizer when transformers
+        is unavailable (ImportError) or the configured tokenizer cannot be
+        downloaded (OSError, e.g. offline environments).
+        """
         try:
             from transformers import AutoTokenizer
 
@@ -216,6 +221,11 @@ class MCTSDataset(Dataset if _TORCH_AVAILABLE else object):  # type: ignore[misc
             return tokenizer
         except ImportError:
             logger.warning("transformers not available, using simple tokenization")
+            return None
+        except OSError as exc:
+            logger.warning(
+                f"Could not load tokenizer {self._config.tokenizer_name} ({exc}); " "using simple tokenization"
+            )
             return None
 
     def _load_examples(self) -> list[RawExample]:

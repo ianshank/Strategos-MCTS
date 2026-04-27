@@ -6,6 +6,8 @@ that learns to select the optimal agent (HRM, TRM, or MCTS) based on
 sequential patterns in the agent state features.
 """
 
+import logging
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,6 +18,8 @@ from src.agents.meta_controller.base import (
     MetaControllerPrediction,
 )
 from src.agents.meta_controller.utils import features_to_tensor
+
+logger = logging.getLogger(__name__)
 
 
 class RNNMetaControllerModel(nn.Module):
@@ -216,6 +220,16 @@ class RNNMetaController(AbstractMetaController):
         # Initialize hidden state for sequence tracking
         self.hidden_state: torch.Tensor | None = None
 
+        logger.info(
+            "Initialized RNNMetaController",
+            extra={
+                "hidden_dim": hidden_dim,
+                "num_layers": num_layers,
+                "dropout": dropout,
+                "device": str(self.device),
+            },
+        )
+
     def predict(self, features: MetaControllerFeatures) -> MetaControllerPrediction:
         """
         Predict which agent should handle the current query.
@@ -281,6 +295,11 @@ class RNNMetaController(AbstractMetaController):
         # Get agent name
         selected_agent = self.AGENT_NAMES[predicted_idx]
 
+        logger.debug(
+            "RNN meta-controller routing decision",
+            extra={"selected_agent": selected_agent, "confidence": float(confidence), "probabilities": prob_dict},
+        )
+
         return MetaControllerPrediction(
             agent=selected_agent,
             confidence=float(confidence),
@@ -313,6 +332,7 @@ class RNNMetaController(AbstractMetaController):
 
         # Ensure model is in evaluation mode
         self.model.eval()
+        logger.info("Loaded RNN meta-controller from %s", path)
 
     def save_model(self, path: str) -> None:
         """
@@ -328,6 +348,7 @@ class RNNMetaController(AbstractMetaController):
             >>> controller.save_model("/path/to/model.pt")
         """
         torch.save(self.model.state_dict(), path)
+        logger.info("Saved RNN meta-controller to %s", path)
 
     def reset_hidden_state(self) -> None:
         """

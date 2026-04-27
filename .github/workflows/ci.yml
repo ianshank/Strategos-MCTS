@@ -55,7 +55,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -e ".[dev]"
+          pip install -e ".[dev,neural]"
+
+      - name: Show installed package versions
+        run: |
+          python --version
+          mypy --version
+          pip list 2>&1 | head -100
 
       - name: Run mypy
         run: mypy src/ --no-error-summary
@@ -160,7 +166,10 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,neural]"
+
+      - name: Show installed package versions
+        run: pip list 2>&1 | head -100
 
       - name: Run unit tests with coverage
         run: |
@@ -178,6 +187,9 @@ jobs:
         env:
           WANDB_MODE: disabled
           LANGCHAIN_TRACING_V2: "false"
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+          OPENAI_API_KEY: "sk-test-key-not-real"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

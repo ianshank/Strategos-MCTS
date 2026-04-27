@@ -337,6 +337,49 @@ class MADueDiligenceConfig(BaseUseCaseConfig):
         description="Weights for reward function components",
     )
 
+    # Information-gain base reward per action type (0..1).
+    # Unknown actions fall back to action_base_gain_default.
+    action_base_gain: dict[str, float] = Field(
+        default_factory=lambda: {
+            "deep_dive_revenue": 0.8,
+            "analyze_cost_structure": 0.75,
+            "review_contracts": 0.75,
+            "check_litigation_history": 0.85,
+            "verify_ip_ownership": 0.7,
+            "assess_regulatory_compliance": 0.8,
+            "evaluate_operations": 0.65,
+            "assess_supply_chain": 0.6,
+            "review_hr_structure": 0.55,
+            "analyze_it_infrastructure": 0.7,
+            "assess_tech_stack": 0.75,
+            "review_security_posture": 0.8,
+            "evaluate_scalability": 0.65,
+            "check_tech_debt": 0.7,
+            "identify_revenue_synergies": 0.75,
+            "identify_cost_synergies": 0.7,
+            "escalate_to_expert": 0.6,
+            "request_additional_docs": 0.5,
+        },
+        description="Base information-gain reward per action type",
+    )
+    action_base_gain_default: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Fallback information-gain reward for unknown actions",
+    )
+
+    # Numeric weight per risk severity level (keyed by RiskLevel.value).
+    risk_level_weights: dict[str, float] = Field(
+        default_factory=lambda: {
+            "low": 0.25,
+            "medium": 0.5,
+            "high": 0.75,
+            "critical": 1.0,
+        },
+        description="Numeric weight for each risk severity level",
+    )
+
     # Reward function parameters
     reward_decay_factor: float = Field(
         default=0.8,

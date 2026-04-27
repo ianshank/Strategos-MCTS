@@ -490,7 +490,7 @@ class GraphBuilder:
             self.logger.error(f"Failed to initialize neuro-symbolic components: {e}")
             self.use_symbolic_reasoning = False
 
-    async def _neural_fallback_for_symbolic(self, query: str, state: Any) -> str:
+    async def _neural_fallback_for_symbolic(self, query: str, _state: Any) -> str:
         """Neural fallback when symbolic reasoning fails."""
         try:
             response = await self.model_adapter.generate(
@@ -831,7 +831,7 @@ class GraphBuilder:
             return MCTSState(state_id=new_id, features=new_features)
 
         # Create rollout policy using agent results
-        def heuristic_fn(mcts_state: MCTSState) -> float:
+        def heuristic_fn(_mcts_state: MCTSState) -> float:
             """Evaluate state using agent confidence."""
             base = 0.5
 

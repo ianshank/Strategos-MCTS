@@ -259,7 +259,7 @@ class TrainerFactory:
         use_mixed_precision: bool | None = None,
         device: str | None = None,
         scaler: Any | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> HRMTrainer:
         """
         Create an HRM (Hierarchical Reasoning Model) trainer.
@@ -336,7 +336,7 @@ class TrainerFactory:
         use_mixed_precision: bool | None = None,
         device: str | None = None,
         scaler: Any | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> TRMTrainer:
         """
         Create a TRM (Task Refinement Model) trainer.
@@ -409,7 +409,7 @@ class TrainerFactory:
         mcts_iterations: int | None = None,
         win_threshold: float | None = None,
         device: str | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> SelfPlayEvaluator:
         """
         Create a self-play evaluator for model comparison.
@@ -469,7 +469,7 @@ class TrainerFactory:
         beta_frames: int | None = None,
         augmentation_fn: Any | None = None,
         use_singleton: bool = True,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> ReplayBuffer | PrioritizedReplayBuffer | AugmentedReplayBuffer:
         """
         Create an experience replay buffer.
@@ -600,7 +600,7 @@ class MetricsFactory:
         enable_gpu_monitoring: bool | None = None,
         alert_threshold_ms: float | None = None,
         use_singleton: bool = True,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> PerformanceMonitor:
         """
         Create a performance monitoring component.
@@ -667,7 +667,7 @@ class MetricsFactory:
         api_key: str | None = None,
         entity: str | None = None,
         use_singleton: bool = True,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> BraintrustTracker | WandBTracker | UnifiedExperimentTracker:
         """
         Create an experiment tracking component.
@@ -957,7 +957,7 @@ class DataLoaderFactory:
         self,
         cache_dir: str | None = None,
         use_singleton: bool = True,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> DABStepLoader:
         """
         Create a DABStep dataset loader.
@@ -1010,7 +1010,7 @@ class DataLoaderFactory:
         self,
         cache_dir: str | None = None,
         use_singleton: bool = True,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> PRIMUSLoader:
         """
         Create a PRIMUS dataset loader.
@@ -1065,7 +1065,7 @@ class DataLoaderFactory:
         self,
         cache_dir: str | None = None,
         use_singleton: bool = True,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> CombinedDatasetLoader:
         """
         Create a combined dataset loader for multiple datasets.
