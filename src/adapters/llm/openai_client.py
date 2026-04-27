@@ -25,6 +25,7 @@ from src.config.constants import (
     DEFAULT_OPENAI_MODEL,
     DEFAULT_OPENAI_TIMEOUT,
 )
+from src.observability.logging import get_logger
 
 from .base import BaseLLMClient, LLMResponse, LLMToolResponse, ToolCall
 from .exceptions import (
@@ -43,7 +44,7 @@ from .exceptions import (
     LLMTimeoutError,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CircuitBreaker:

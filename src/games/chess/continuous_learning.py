@@ -8,7 +8,6 @@ play against each other, learn from outcomes, and continuously improve.
 from __future__ import annotations
 
 import asyncio
-import logging
 import random
 import time
 from collections.abc import Callable
@@ -18,6 +17,8 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+
+from src.observability.logging import get_logger
 
 # Optional torch import for neural network operations
 try:
@@ -36,7 +37,7 @@ if TYPE_CHECKING:
 from src.games.chess.config import ChessConfig, get_chess_small_config
 from src.games.chess.state import ChessGameState
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class GameResult(Enum):

@@ -12,7 +12,6 @@ and LLM-based move analysis.
 from __future__ import annotations
 
 import asyncio
-import logging
 import re
 import time
 from dataclasses import dataclass, field
@@ -26,8 +25,9 @@ from src.framework.agents.base import (
     ParallelAgent,
     SequentialAgent,
 )
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # Optional python-chess import

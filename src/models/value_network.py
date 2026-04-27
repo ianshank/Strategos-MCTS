@@ -7,7 +7,6 @@ enabling efficient position evaluation without full tree search.
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -15,7 +14,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-logger = logging.getLogger(__name__)
+from src.observability.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass

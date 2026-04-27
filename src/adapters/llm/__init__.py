@@ -6,8 +6,9 @@ based on provider settings, with lazy loading of adapters.
 """
 
 import importlib
-import logging
 from typing import Any
+
+from src.observability.logging import get_logger
 
 from .base import BaseLLMClient, LLMClient, LLMResponse, LLMToolResponse, ToolCall
 from .exceptions import (
@@ -27,7 +28,7 @@ from .exceptions import (
     LLMTimeoutError,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Provider registry with lazy loading
 # Maps provider name to (module_path, class_name)

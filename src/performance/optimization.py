@@ -11,11 +11,12 @@ Provides:
 from __future__ import annotations
 
 import gc
-import logging
 import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import Any, TypeVar
+
+from src.observability.logging import get_logger
 
 try:
     import psutil
@@ -25,7 +26,7 @@ except ImportError:
     psutil = None
     _HAS_PSUTIL = False
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 T = TypeVar("T")
 R = TypeVar("R")

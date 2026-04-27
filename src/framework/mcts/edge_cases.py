@@ -13,15 +13,15 @@ Based on: CLAUDE_CODE_IMPLEMENTATION_TEMPLATE.md Section 7
 
 from __future__ import annotations
 
-import logging
 import time
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
 from src.config.settings import get_settings
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class MCTSTerminationReason(str, Enum):

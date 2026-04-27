@@ -11,13 +11,14 @@ Provides high-performance caching for embedding computations with:
 from __future__ import annotations
 
 import hashlib
-import logging
 import threading
 import time
 from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
+
+from src.observability.logging import get_logger
 
 try:
     import numpy as np
@@ -27,7 +28,7 @@ except ImportError:
     np = None
     _HAS_NUMPY = False
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

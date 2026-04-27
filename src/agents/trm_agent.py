@@ -14,15 +14,16 @@ Based on principles from:
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
 
+from src.observability.logging import get_logger
+
 from ..training.system_config import TRMConfig
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

@@ -5,11 +5,11 @@ Provides a weighted ensemble of neural meta-controller predictions and
 assembly-based routing heuristics for improved decision-making.
 """
 
-import logging
 from dataclasses import dataclass
 from typing import Any
 
 from src.framework.assembly import AssemblyConfig, AssemblyFeatures
+from src.observability.logging import get_logger
 
 from .assembly_router import AssemblyRouter, RoutingDecision
 from .base import (
@@ -18,7 +18,7 @@ from .base import (
     MetaControllerPrediction,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

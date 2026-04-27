@@ -6,7 +6,6 @@ for parameter-efficient fine-tuning. The controller converts agent state feature
 text and uses a sequence classification model to predict the optimal agent.
 """
 
-import logging
 import os
 import warnings
 from typing import Any
@@ -19,8 +18,9 @@ from src.agents.meta_controller.base import (
     MetaControllerPrediction,
 )
 from src.agents.meta_controller.utils import features_to_text
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Handle optional transformers and peft imports gracefully
 _TRANSFORMERS_AVAILABLE = False

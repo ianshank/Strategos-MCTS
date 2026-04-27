@@ -9,7 +9,6 @@ Provides:
 """
 
 import hashlib
-import logging
 import secrets
 import time
 from collections import defaultdict
@@ -21,9 +20,10 @@ from src.api.exceptions import (
     AuthorizationError,
     RateLimitError,
 )
+from src.observability.logging import get_logger
 from src.utils.time_utils import utc_now
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

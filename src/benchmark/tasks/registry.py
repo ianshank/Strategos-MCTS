@@ -13,8 +13,9 @@ from pathlib import Path
 from typing import Any
 
 from src.benchmark.tasks.models import BenchmarkTask, TaskCategory, TaskComplexity
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class BenchmarkTaskRegistry:

@@ -10,7 +10,6 @@ This module configures OpenTelemetry for distributed tracing across:
 Traces are exported to Jaeger via OTLP (OpenTelemetry Protocol).
 """
 
-import logging
 import os
 from collections.abc import Callable
 from contextlib import contextmanager
@@ -18,8 +17,9 @@ from functools import wraps
 from typing import Any
 
 from src.config.constants import DEFAULT_OTLP_HTTP_ENDPOINT
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Try to import OpenTelemetry
 try:

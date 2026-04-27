@@ -11,13 +11,13 @@ replacement in the LangGraph graph nodes.
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from src.adapters.llm.base import LLMClient
 from src.framework.agents.base import AgentContext, AgentResult, AsyncAgentBase
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Configurable defaults (no hardcoded magic numbers)
 DEFAULT_TRM_TEMPERATURE = 0.5

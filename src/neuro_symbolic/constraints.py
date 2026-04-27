@@ -16,7 +16,6 @@ Best Practices 2025:
 from __future__ import annotations
 
 import hashlib
-import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -24,10 +23,12 @@ from datetime import UTC, datetime
 from enum import Enum, auto
 from typing import Any, TypeVar
 
+from src.observability.logging import get_logger
+
 from .config import ConstraintConfig, ConstraintEnforcement
 from .state import NeuroSymbolicState
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ConstraintSatisfactionLevel(Enum):

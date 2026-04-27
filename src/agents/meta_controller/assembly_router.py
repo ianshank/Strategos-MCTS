@@ -5,7 +5,6 @@ Provides rule-based routing decisions based on assembly theory features,
 complementing neural meta-controllers with interpretable heuristics.
 """
 
-import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -14,10 +13,11 @@ from src.framework.assembly import (
     AssemblyFeatureExtractor,
     AssemblyFeatures,
 )
+from src.observability.logging import get_logger
 
 from .base import MetaControllerPrediction
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

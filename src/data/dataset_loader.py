@@ -11,14 +11,15 @@ License Attribution:
 - PRIMUS: ODC-BY (Open Data Commons Attribution)
 """
 
-import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger(__name__)
+from src.observability.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass

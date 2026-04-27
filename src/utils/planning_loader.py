@@ -9,7 +9,6 @@ Based on: universal-dev-agent prompt template
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -17,7 +16,9 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
-logger = logging.getLogger(__name__)
+from src.observability.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class StoryStatus(str, Enum):

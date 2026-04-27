@@ -16,15 +16,15 @@ Environment Variable Prefixes:
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.config.constants import DEFAULT_OPENAI_MODEL
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class BenchmarkRunConfig(BaseSettings):

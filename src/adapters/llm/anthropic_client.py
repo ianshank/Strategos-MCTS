@@ -25,6 +25,7 @@ from src.config.constants import (
     DEFAULT_ANTHROPIC_TIMEOUT,
     DEFAULT_MAX_TOKENS,
 )
+from src.observability.logging import get_logger
 
 from .base import BaseLLMClient, LLMResponse, LLMToolResponse, ToolCall
 from .exceptions import (
@@ -45,7 +46,7 @@ from .exceptions import (
 )
 from .openai_client import CircuitBreaker
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # Model mappings for convenience

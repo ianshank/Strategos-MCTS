@@ -6,8 +6,6 @@ that learns to select the optimal agent (HRM, TRM, or MCTS) based on
 sequential patterns in the agent state features.
 """
 
-import logging
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,8 +16,9 @@ from src.agents.meta_controller.base import (
     MetaControllerPrediction,
 )
 from src.agents.meta_controller.utils import features_to_tensor
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class RNNMetaControllerModel(nn.Module):

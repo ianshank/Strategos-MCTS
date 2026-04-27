@@ -7,7 +7,6 @@ components of the hybrid LLM-neural MCTS system.
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -17,11 +16,13 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 
+from src.observability.logging import get_logger
+
 from ..models.policy_network import PolicyLoss, PolicyNetwork
 from ..models.value_network import ValueLoss, ValueNetwork
 from ..utils.device import get_default_device_str
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

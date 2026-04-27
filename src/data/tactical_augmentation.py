@@ -10,13 +10,14 @@ These augmentations help increase training data diversity and improve
 model robustness for tactical analysis tasks.
 """
 
-import logging
 import random
 from dataclasses import dataclass
 
+from src.observability.logging import get_logger
+
 from .dataset_loader import DatasetSample
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

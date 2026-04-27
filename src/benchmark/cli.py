@@ -39,9 +39,9 @@ from typing import Any
 
 from src.benchmark.config.benchmark_settings import BenchmarkSettings, get_benchmark_settings, reset_benchmark_settings
 from src.benchmark.factory import BenchmarkFactory
-from src.observability.logging import get_correlation_id, set_correlation_id
+from src.observability.logging import get_correlation_id, get_logger, set_correlation_id
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def build_parser() -> argparse.ArgumentParser:

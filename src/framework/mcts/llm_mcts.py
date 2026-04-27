@@ -19,7 +19,6 @@ Strategies explored by MCTS:
 from __future__ import annotations
 
 import json
-import logging
 import math
 import random
 import ssl
@@ -34,8 +33,9 @@ from src.config.constants import (
     DEFAULT_ANTHROPIC_BASE_URL,
     DEFAULT_OPENAI_BASE_URL,
 )
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # Data structures

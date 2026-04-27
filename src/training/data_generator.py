@@ -6,7 +6,6 @@ that learn to select the optimal agent (HRM, TRM, or MCTS) based on system state
 """
 
 import json
-import logging
 from dataclasses import asdict
 from typing import Any
 
@@ -15,8 +14,9 @@ import torch
 
 from src.agents.meta_controller.base import MetaControllerFeatures
 from src.agents.meta_controller.utils import features_to_text, normalize_features
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class MetaControllerDataGenerator:

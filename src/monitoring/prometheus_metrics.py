@@ -11,14 +11,15 @@ Metrics Categories:
 - LLM Integration: Request success/failure rates
 """
 
-import logging
 from collections.abc import Callable
 from contextlib import contextmanager
 from functools import wraps
 from time import perf_counter
 from typing import Any
 
-logger = logging.getLogger(__name__)
+from src.observability.logging import get_logger
+
+logger = get_logger(__name__)
 
 # Try to import Prometheus client
 try:

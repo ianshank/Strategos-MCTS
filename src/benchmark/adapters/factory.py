@@ -13,8 +13,9 @@ from typing import Any
 
 from src.benchmark.adapters.protocol import BenchmarkSystemProtocol
 from src.benchmark.config.benchmark_settings import BenchmarkSettings, get_benchmark_settings
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Registry of known adapter types
 ADAPTER_REGISTRY: dict[str, str] = {

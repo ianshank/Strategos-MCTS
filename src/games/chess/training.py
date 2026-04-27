@@ -9,7 +9,6 @@ against external engines.
 from __future__ import annotations
 
 import asyncio
-import logging
 import random
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -19,6 +18,8 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import torch
 
+from src.observability.logging import get_logger
+
 if TYPE_CHECKING:
     pass
 
@@ -26,7 +27,7 @@ from src.games.chess.config import ChessConfig
 from src.games.chess.ensemble_agent import ChessEnsembleAgent
 from src.games.chess.state import ChessGameState, create_initial_state
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass
