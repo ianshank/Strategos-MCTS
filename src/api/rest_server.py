@@ -18,7 +18,6 @@ Best Practices 2025:
 - Type-safe interfaces
 """
 
-import logging
 import os
 import secrets
 import time
@@ -33,9 +32,10 @@ from pydantic import BaseModel, Field
 
 from src.config.constants import DEFAULT_SERVER_HOST
 from src.config.settings import get_settings
+from src.observability.logging import get_logger
 
 # Configure logging
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Import framework components
 try:

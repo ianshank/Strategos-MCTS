@@ -7,7 +7,6 @@ Provides REST API for:
 - Health checks and monitoring
 """
 
-import logging
 import time
 from typing import Any
 
@@ -17,6 +16,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from src.observability.logging import get_logger
+
 from ..config.constants import DEFAULT_SERVER_HOST
 from ..config.settings import get_settings
 from ..framework.mcts.neural_mcts import NeuralMCTS
@@ -24,7 +25,7 @@ from ..training.performance_monitor import PerformanceMonitor
 from ..training.system_config import SystemConfig
 
 # Configure module logger
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # Request/Response Models

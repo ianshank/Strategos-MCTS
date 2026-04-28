@@ -8,7 +8,6 @@ Implements:
 - Data augmentation support
 """
 
-import logging
 import random
 from collections import deque
 from dataclasses import dataclass
@@ -16,7 +15,9 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
-logger = logging.getLogger(__name__)
+from src.observability.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass

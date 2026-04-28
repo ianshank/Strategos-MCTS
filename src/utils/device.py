@@ -11,13 +11,14 @@ neural extras being absent.
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
+
+from src.observability.logging import get_logger
 
 if TYPE_CHECKING:
     import torch
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def get_default_device_str() -> str:

@@ -6,13 +6,13 @@ Designed for running local models with configurable endpoint.
 """
 
 import json
-import logging
 from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
 
 from src.config.constants import DEFAULT_LMSTUDIO_TIMEOUT, DEFAULT_LMSTUDIO_URL
+from src.observability.logging import get_logger
 
 from .base import BaseLLMClient, LLMResponse
 from .exceptions import (
@@ -24,7 +24,7 @@ from .exceptions import (
     LLMTimeoutError,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class LMStudioClient(BaseLLMClient):

@@ -10,7 +10,6 @@ Provides:
 
 from __future__ import annotations
 
-import logging
 import math
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
@@ -19,7 +18,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-logger = logging.getLogger(__name__)
+from src.observability.logging import get_logger
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from .core import MCTSState

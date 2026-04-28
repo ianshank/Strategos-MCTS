@@ -13,15 +13,15 @@ from __future__ import annotations
 
 import dataclasses
 import hashlib
-import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 import torch
 
 from src.config.settings import get_settings
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

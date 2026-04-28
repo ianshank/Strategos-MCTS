@@ -7,7 +7,6 @@ for routine decisions and LLM for complex reasoning tasks.
 
 from __future__ import annotations
 
-import logging
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -15,10 +14,12 @@ from typing import Any, Literal
 
 import torch
 
+from src.observability.logging import get_logger
+
 from ..models.policy_network import PolicyNetwork
 from ..models.value_network import ValueNetwork
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DecisionSource(Enum):

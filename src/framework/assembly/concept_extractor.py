@@ -11,6 +11,10 @@ from typing import Any
 
 import networkx as nx
 
+from src.observability.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 @dataclass
 class Concept:
@@ -222,7 +226,7 @@ class ConceptExtractor:
                 plt.show()
 
         except ImportError:
-            print("Matplotlib not available. Skipping visualization.")
+            logger.warning("Matplotlib not available. Skipping visualization.")
 
     def _extract_candidates(self, text: str) -> dict[str, Concept]:
         """Extract candidate concepts from text."""

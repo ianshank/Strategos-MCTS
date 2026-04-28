@@ -52,7 +52,7 @@ def _build_graph_builder(
     same way production code sets them.  MCTSEngine is patched out to
     avoid heavy initialisation.
     """
-    import src.framework.graph as graph_module
+    import src.framework.graph.builder as graph_module
 
     hrm_agent = MagicMock(name="hrm_agent")
     trm_agent = MagicMock(name="trm_agent")

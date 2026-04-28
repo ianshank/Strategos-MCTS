@@ -8,7 +8,6 @@ Provides unified interface for:
 - Model artifact versioning
 """
 
-import logging
 import os
 import time
 from dataclasses import dataclass, field
@@ -16,7 +15,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger(__name__)
+from src.observability.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass

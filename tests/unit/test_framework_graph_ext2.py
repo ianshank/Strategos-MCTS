@@ -52,7 +52,7 @@ class TestInitMetaController:
 
     def test_meta_controller_not_available_logs_warning(self):
         """When meta-controller modules are unavailable, falls back to rule-based."""
-        with patch("src.framework.graph._META_CONTROLLER_AVAILABLE", False):
+        with patch("src.framework.graph.builder._META_CONTROLLER_AVAILABLE", False):
             builder = _make_builder(meta_controller_config={"enabled": True, "type": "rnn"})
         assert builder.meta_controller is None
         assert builder.use_neural_routing is False
@@ -62,8 +62,8 @@ class TestInitMetaController:
         mock_config = MagicMock()
         mock_config.enabled = False
 
-        with patch("src.framework.graph._META_CONTROLLER_AVAILABLE", True):
-            with patch("src.framework.graph.MetaControllerConfigLoader") as mock_loader:
+        with patch("src.framework.graph.builder._META_CONTROLLER_AVAILABLE", True):
+            with patch("src.framework.graph.builder.MetaControllerConfigLoader") as mock_loader:
                 mock_loader.load_from_dict.return_value = mock_config
                 builder = _make_builder(meta_controller_config={"enabled": False})
         assert builder.use_neural_routing is False
@@ -82,10 +82,10 @@ class TestInitMetaController:
 
         mock_rnn = MagicMock()
 
-        with patch("src.framework.graph._META_CONTROLLER_AVAILABLE", True):
-            with patch("src.framework.graph.MetaControllerConfigLoader") as mock_loader:
+        with patch("src.framework.graph.builder._META_CONTROLLER_AVAILABLE", True):
+            with patch("src.framework.graph.builder.MetaControllerConfigLoader") as mock_loader:
                 mock_loader.load_from_dict.return_value = mock_config
-                with patch("src.framework.graph.RNNMetaController", return_value=mock_rnn):
+                with patch("src.framework.graph.builder.RNNMetaController", return_value=mock_rnn):
                     builder = _make_builder(meta_controller_config={"type": "rnn"})
 
         assert builder.use_neural_routing is True
@@ -107,10 +107,10 @@ class TestInitMetaController:
 
         mock_bert = MagicMock()
 
-        with patch("src.framework.graph._META_CONTROLLER_AVAILABLE", True):
-            with patch("src.framework.graph.MetaControllerConfigLoader") as mock_loader:
+        with patch("src.framework.graph.builder._META_CONTROLLER_AVAILABLE", True):
+            with patch("src.framework.graph.builder.MetaControllerConfigLoader") as mock_loader:
                 mock_loader.load_from_dict.return_value = mock_config
-                with patch("src.framework.graph.BERTMetaController", return_value=mock_bert):
+                with patch("src.framework.graph.builder.BERTMetaController", return_value=mock_bert):
                     builder = _make_builder(meta_controller_config={"type": "bert"})
 
         assert builder.use_neural_routing is True
@@ -123,8 +123,8 @@ class TestInitMetaController:
         mock_config.type = "unknown_type"
         mock_config.fallback_to_rule_based = False
 
-        with patch("src.framework.graph._META_CONTROLLER_AVAILABLE", True):
-            with patch("src.framework.graph.MetaControllerConfigLoader") as mock_loader:
+        with patch("src.framework.graph.builder._META_CONTROLLER_AVAILABLE", True):
+            with patch("src.framework.graph.builder.MetaControllerConfigLoader") as mock_loader:
                 mock_loader.load_from_dict.return_value = mock_config
                 with pytest.raises(ValueError, match="Unknown meta-controller type"):
                     _make_builder(meta_controller_config={"type": "unknown"})
@@ -136,10 +136,10 @@ class TestInitMetaController:
         mock_config.type = "rnn"
         mock_config.fallback_to_rule_based = True
 
-        with patch("src.framework.graph._META_CONTROLLER_AVAILABLE", True):
-            with patch("src.framework.graph.MetaControllerConfigLoader") as mock_loader:
+        with patch("src.framework.graph.builder._META_CONTROLLER_AVAILABLE", True):
+            with patch("src.framework.graph.builder.MetaControllerConfigLoader") as mock_loader:
                 mock_loader.load_from_dict.return_value = mock_config
-                with patch("src.framework.graph.RNNMetaController", side_effect=RuntimeError("init fail")):
+                with patch("src.framework.graph.builder.RNNMetaController", side_effect=RuntimeError("init fail")):
                     builder = _make_builder(meta_controller_config=mock_config)
 
         assert builder.use_neural_routing is False
@@ -155,7 +155,7 @@ class TestInitNeuroSymbolic:
 
     def test_neuro_symbolic_not_available(self):
         """When neuro-symbolic modules are unavailable, skips init."""
-        with patch("src.framework.graph._NEURO_SYMBOLIC_AVAILABLE", False):
+        with patch("src.framework.graph.builder._NEURO_SYMBOLIC_AVAILABLE", False):
             builder = _make_builder(neuro_symbolic_config={"enabled": True})
         assert builder.use_symbolic_reasoning is False
 
@@ -169,14 +169,16 @@ class TestInitNeuroSymbolic:
         mock_ext = MagicMock()
         mock_mcts_int = MagicMock()
 
-        with patch("src.framework.graph._NEURO_SYMBOLIC_AVAILABLE", True):
-            with patch("src.framework.graph.NeuroSymbolicConfig") as mock_cls:
+        with patch("src.framework.graph.builder._NEURO_SYMBOLIC_AVAILABLE", True):
+            with patch("src.framework.graph.builder.NeuroSymbolicConfig") as mock_cls:
                 mock_cls.from_dict.return_value = mock_ns_config
-                with patch("src.framework.graph.SymbolicReasoningAgent", return_value=mock_agent):
-                    with patch("src.framework.graph.SymbolicAgentGraphExtension", return_value=mock_ext):
-                        with patch("src.framework.graph.NeuroSymbolicMCTSIntegration", return_value=mock_mcts_int):
-                            with patch("src.framework.graph.SymbolicAgentNodeConfig"):
-                                with patch("src.framework.graph.NeuroSymbolicMCTSConfig"):
+                with patch("src.framework.graph.builder.SymbolicReasoningAgent", return_value=mock_agent):
+                    with patch("src.framework.graph.builder.SymbolicAgentGraphExtension", return_value=mock_ext):
+                        with patch(
+                            "src.framework.graph.builder.NeuroSymbolicMCTSIntegration", return_value=mock_mcts_int
+                        ):
+                            with patch("src.framework.graph.builder.SymbolicAgentNodeConfig"):
+                                with patch("src.framework.graph.builder.NeuroSymbolicMCTSConfig"):
                                     builder = _make_builder(neuro_symbolic_config={"key": "val"})
 
         assert builder.use_symbolic_reasoning is True
@@ -184,8 +186,8 @@ class TestInitNeuroSymbolic:
 
     def test_neuro_symbolic_init_failure(self):
         """When init fails, symbolic reasoning disabled gracefully."""
-        with patch("src.framework.graph._NEURO_SYMBOLIC_AVAILABLE", True):
-            with patch("src.framework.graph.NeuroSymbolicConfig") as mock_cls:
+        with patch("src.framework.graph.builder._NEURO_SYMBOLIC_AVAILABLE", True):
+            with patch("src.framework.graph.builder.NeuroSymbolicConfig") as mock_cls:
                 mock_cls.from_dict.side_effect = RuntimeError("bad config")
                 builder = _make_builder(neuro_symbolic_config={"broken": True})
 
@@ -226,7 +228,7 @@ class TestExtractMetaControllerFeatures:
     """Tests for _extract_meta_controller_features (lines 513-546)."""
 
     def test_returns_none_when_unavailable(self):
-        with patch("src.framework.graph._META_CONTROLLER_AVAILABLE", False):
+        with patch("src.framework.graph.builder._META_CONTROLLER_AVAILABLE", False):
             builder = _make_builder()
             result = builder._extract_meta_controller_features({"query": "test"})
         assert result is None
@@ -234,8 +236,8 @@ class TestExtractMetaControllerFeatures:
     def test_extracts_features_from_state(self):
         mock_features_cls = MagicMock()
 
-        with patch("src.framework.graph._META_CONTROLLER_AVAILABLE", True):
-            with patch("src.framework.graph.MetaControllerFeatures", mock_features_cls):
+        with patch("src.framework.graph.builder._META_CONTROLLER_AVAILABLE", True):
+            with patch("src.framework.graph.builder.MetaControllerFeatures", mock_features_cls):
                 builder = _make_builder()
                 state = {
                     "query": "test query",
@@ -522,7 +524,7 @@ class TestBuildGraph:
     """Tests for build_graph (lines 239-324)."""
 
     def test_build_graph_no_langgraph_raises(self):
-        with patch("src.framework.graph.StateGraph", None):
+        with patch("src.framework.graph.builder.StateGraph", None):
             builder = _make_builder()
             with pytest.raises(ImportError, match="LangGraph not installed"):
                 builder.build_graph()
@@ -532,8 +534,8 @@ class TestBuildGraph:
         mock_workflow = MagicMock()
         mock_sg.return_value = mock_workflow
 
-        with patch("src.framework.graph.StateGraph", mock_sg):
-            with patch("src.framework.graph.END", "END"):
+        with patch("src.framework.graph.builder.StateGraph", mock_sg):
+            with patch("src.framework.graph.builder.END", "END"):
                 mock_agent = MagicMock()
                 builder = _make_builder(adk_agents={"deep_search": mock_agent})
                 builder.build_graph()
@@ -547,8 +549,8 @@ class TestBuildGraph:
         mock_workflow = MagicMock()
         mock_sg.return_value = mock_workflow
 
-        with patch("src.framework.graph.StateGraph", mock_sg):
-            with patch("src.framework.graph.END", "END"):
+        with patch("src.framework.graph.builder.StateGraph", mock_sg):
+            with patch("src.framework.graph.builder.END", "END"):
                 builder = _make_builder()
                 builder.use_symbolic_reasoning = True
                 builder.symbolic_extension = MagicMock()
@@ -572,7 +574,7 @@ class TestIntegratedFramework:
         mock_logger = logging.getLogger("test_int")
 
         with (
-            patch("src.framework.graph.StateGraph", None),
+            patch("src.framework.graph.integrated.StateGraph", None),
             patch.dict("sys.modules", {"src.framework.agents.llm_hrm": None, "src.framework.agents.llm_trm": None}),
         ):
             fw = IntegratedFramework(
@@ -588,7 +590,7 @@ class TestIntegratedFramework:
         mock_adapter = AsyncMock()
         mock_logger = logging.getLogger("test_int")
 
-        with patch("src.framework.graph.StateGraph", None):
+        with patch("src.framework.graph.integrated.StateGraph", None):
             fw = IntegratedFramework(model_adapter=mock_adapter, logger=mock_logger)
 
         with pytest.raises(RuntimeError, match="LangGraph not available"):
@@ -605,7 +607,7 @@ class TestIntegratedFramework:
             "metadata": {"agents_used": ["hrm"]},
         }
 
-        with patch("src.framework.graph.StateGraph", None):
+        with patch("src.framework.graph.integrated.StateGraph", None):
             fw = IntegratedFramework(model_adapter=mock_adapter, logger=mock_logger)
         fw.app = mock_app
 
@@ -618,7 +620,7 @@ class TestIntegratedFramework:
         mock_adapter = AsyncMock()
         mock_logger = logging.getLogger("test_int")
 
-        with patch("src.framework.graph.StateGraph", None):
+        with patch("src.framework.graph.integrated.StateGraph", None):
             fw = IntegratedFramework(model_adapter=mock_adapter, logger=mock_logger)
 
         with pytest.raises(RuntimeError, match="LangGraph not available"):
@@ -630,7 +632,7 @@ class TestIntegratedFramework:
         mock_adapter = AsyncMock()
         mock_logger = logging.getLogger("test_int")
 
-        with patch("src.framework.graph.StateGraph", None):
+        with patch("src.framework.graph.integrated.StateGraph", None):
             fw = IntegratedFramework(model_adapter=mock_adapter, logger=mock_logger)
 
         with pytest.raises(RuntimeError, match="LangGraph not available"):
@@ -651,7 +653,7 @@ class TestIntegratedFramework:
 
         mock_app.astream_events = _failing_stream
 
-        with patch("src.framework.graph.StateGraph", None):
+        with patch("src.framework.graph.integrated.StateGraph", None):
             fw = IntegratedFramework(model_adapter=mock_adapter, logger=mock_logger)
         fw.app = mock_app
         fw.graph_builder = MagicMock()
@@ -687,7 +689,7 @@ class TestIntegratedFramework:
         mock_app = MagicMock()
         mock_app.astream_events = _mock_stream
 
-        with patch("src.framework.graph.StateGraph", None):
+        with patch("src.framework.graph.integrated.StateGraph", None):
             fw = IntegratedFramework(model_adapter=mock_adapter, logger=mock_logger)
         fw.app = mock_app
         fw.graph_builder = MagicMock()
@@ -719,7 +721,7 @@ class TestIntegratedFramework:
         mock_app = MagicMock()
         mock_app.astream_events = _mock_stream
 
-        with patch("src.framework.graph.StateGraph", None):
+        with patch("src.framework.graph.integrated.StateGraph", None):
             fw = IntegratedFramework(model_adapter=mock_adapter, logger=mock_logger)
         fw.app = mock_app
         fw.graph_builder = MagicMock()
@@ -743,7 +745,7 @@ class TestFrameworkHelpers:
     def test_get_experiment_tracker(self):
         mock_adapter = AsyncMock()
         mock_logger = logging.getLogger("test")
-        with patch("src.framework.graph.StateGraph", None):
+        with patch("src.framework.graph.integrated.StateGraph", None):
             fw = IntegratedFramework(model_adapter=mock_adapter, logger=mock_logger)
         tracker = fw.get_experiment_tracker()
         assert tracker is fw.graph_builder.experiment_tracker
@@ -751,7 +753,7 @@ class TestFrameworkHelpers:
     def test_set_mcts_seed(self):
         mock_adapter = AsyncMock()
         mock_logger = logging.getLogger("test")
-        with patch("src.framework.graph.StateGraph", None):
+        with patch("src.framework.graph.integrated.StateGraph", None):
             fw = IntegratedFramework(model_adapter=mock_adapter, logger=mock_logger)
         fw.graph_builder.mcts_engine = MagicMock()
         fw.graph_builder.mcts_config = MagicMock()
@@ -771,7 +773,7 @@ class TestVisualization:
     def _make_fw(self):
         mock_adapter = AsyncMock()
         mock_logger = logging.getLogger("test")
-        with patch("src.framework.graph.StateGraph", None):
+        with patch("src.framework.graph.integrated.StateGraph", None):
             fw = IntegratedFramework(model_adapter=mock_adapter, logger=mock_logger)
         return fw
 
@@ -826,7 +828,7 @@ class TestVisualization:
 
     def test_draw_mermaid_render_failure(self):
         fw = self._make_fw()
-        with patch("src.framework.graph.IntegratedFramework.get_graph_mermaid", return_value="flowchart TD"):
+        with patch("src.framework.graph.integrated.IntegratedFramework.get_graph_mermaid", return_value="flowchart TD"):
             with pytest.raises(RuntimeError, match="Diagram rendering failed"):
                 with patch.dict("sys.modules", {"httpx": MagicMock()}):
                     mock_httpx = MagicMock()

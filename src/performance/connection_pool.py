@@ -12,10 +12,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import logging
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
+
+from src.observability.logging import get_logger
 
 try:
     import httpx
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
     from httpx import AsyncClient
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

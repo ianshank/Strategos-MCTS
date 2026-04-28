@@ -5,7 +5,6 @@ Replaces simple heuristic-based feature engineering with semantic embeddings.
 Uses sentence-transformers for local embedding generation or OpenAI if configured.
 """
 
-import logging
 import os
 from dataclasses import dataclass
 
@@ -13,8 +12,9 @@ import numpy as np
 from sentence_transformers import SentenceTransformer, util
 
 from src.agents.meta_controller.base import MetaControllerFeatures
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

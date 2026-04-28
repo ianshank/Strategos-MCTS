@@ -16,7 +16,6 @@ Best Practices 2025:
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -24,12 +23,14 @@ import torch
 import torch.nn as nn
 from torch.cuda.amp import autocast
 
+from src.observability.logging import get_logger
+
 if TYPE_CHECKING:
     from ..agents.hrm_agent import HRMAgent, HRMLoss
     from ..agents.trm_agent import TRMAgent, TRMLoss
     from ..framework.mcts.neural_mcts import NeuralMCTS
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

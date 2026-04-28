@@ -6,7 +6,6 @@ enabling seamless switching between providers (OpenAI, Anthropic, LM Studio, etc
 """
 
 import asyncio
-import logging
 import time
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
@@ -14,9 +13,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Protocol, runtime_checkable
 
+from src.observability.logging import get_logger
 from src.utils.time_utils import utc_now
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

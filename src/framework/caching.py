@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import logging
 import time
 from collections import OrderedDict
 from collections.abc import Callable
@@ -23,9 +22,10 @@ from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
 from src.config.settings import get_settings
+from src.observability.logging import get_logger
 
 T = TypeVar("T")
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

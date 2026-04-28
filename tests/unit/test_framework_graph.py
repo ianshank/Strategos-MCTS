@@ -587,6 +587,6 @@ class TestBuildGraph:
 
     def test_build_graph_without_langgraph_raises(self, graph_builder):
         """Test build_graph raises when LangGraph not installed."""
-        with patch("src.framework.graph.StateGraph", None):
+        with patch("src.framework.graph.builder.StateGraph", None):
             with pytest.raises(ImportError, match="LangGraph not installed"):
                 graph_builder.build_graph()

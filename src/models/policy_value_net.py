@@ -12,15 +12,15 @@ Based on:
 
 from __future__ import annotations
 
-import logging
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from src.observability.logging import get_logger
+
 from ..training.system_config import NeuralNetworkConfig
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ResidualBlock(nn.Module):

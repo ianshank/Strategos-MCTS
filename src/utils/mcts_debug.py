@@ -13,18 +13,17 @@ Based on: MULTI_AGENT_MCTS_TEMPLATE.md debugging patterns
 from __future__ import annotations
 
 import json
-import logging
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from src.observability.logging import get_correlation_id, sanitize_dict
+from src.observability.logging import get_correlation_id, get_logger, sanitize_dict
 
 if TYPE_CHECKING:
     from src.framework.mcts.core import MCTSEngine, MCTSNode
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

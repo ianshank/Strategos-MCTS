@@ -25,8 +25,9 @@ from src.games.chess.continuous_learning import (
     GameResult,
     ScoreCard,
 )
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

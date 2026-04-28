@@ -18,12 +18,13 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any, Protocol, runtime_checkable
+
+from src.observability.logging import get_logger
 
 from .config import (
     LogicEngineConfig,
@@ -31,7 +32,7 @@ from .config import (
 )
 from .state import Fact, NeuroSymbolicState, SymbolicFactType
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ProofStatus(Enum):

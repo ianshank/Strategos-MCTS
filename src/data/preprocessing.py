@@ -7,12 +7,13 @@ Provides utilities for:
 - Feature extraction for meta-controller training
 """
 
-import logging
 import re
 from dataclasses import dataclass
 from typing import Any
 
-logger = logging.getLogger(__name__)
+from src.observability.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass

@@ -19,7 +19,9 @@ import re
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-logger = logging.getLogger(__name__)
+from src.observability.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True)

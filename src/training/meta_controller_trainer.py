@@ -25,11 +25,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from src.observability.logging import get_logger
+
 if TYPE_CHECKING:
     from torch.utils.data import DataLoader
 
 # Module logger
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Check dependencies
 _HAS_TORCH: bool = False

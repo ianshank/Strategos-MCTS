@@ -21,13 +21,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum, auto
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
+
+from src.observability.logging import get_logger
 
 # Optional torch import for environments without GPU support
 try:
@@ -38,7 +39,7 @@ except ImportError:
     TORCH_AVAILABLE = False
     torch = None
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SymbolicFactType(Enum):

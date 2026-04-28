@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import logging
 from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -21,9 +20,11 @@ from typing import Any
 
 import numpy as np
 
+from src.observability.logging import get_logger
+
 from .policies import RolloutPolicy, SelectionPolicy, ucb1
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

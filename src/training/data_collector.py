@@ -8,7 +8,6 @@ to train policy and value networks.
 from __future__ import annotations
 
 import asyncio
-import logging
 import pickle
 from collections import deque
 from dataclasses import dataclass, field
@@ -17,7 +16,9 @@ from typing import Any
 
 import torch
 
-logger = logging.getLogger(__name__)
+from src.observability.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass

@@ -17,7 +17,7 @@ class TestEntryNodeValidation:
     @pytest.fixture
     def mock_graph_builder(self):
         """Create a minimal mock graph builder for testing."""
-        with patch("src.framework.graph._META_CONTROLLER_AVAILABLE", False):
+        with patch("src.framework.graph.builder._META_CONTROLLER_AVAILABLE", False):
             from src.framework.graph import GraphBuilder
 
             # Create mock dependencies
@@ -97,7 +97,7 @@ class TestRetrieveContextNodeErrorHandling:
     @pytest.fixture
     def mock_graph_builder_with_vector_store(self):
         """Create mock graph builder with vector store."""
-        with patch("src.framework.graph._META_CONTROLLER_AVAILABLE", False):
+        with patch("src.framework.graph.builder._META_CONTROLLER_AVAILABLE", False):
             from src.framework.graph import GraphBuilder
 
             mock_adapter = MagicMock()
@@ -153,7 +153,7 @@ class TestRetrieveContextNodeErrorHandling:
 
     def test_no_vector_store_returns_empty(self):
         """Test that missing vector store returns empty context."""
-        with patch("src.framework.graph._META_CONTROLLER_AVAILABLE", False):
+        with patch("src.framework.graph.builder._META_CONTROLLER_AVAILABLE", False):
             from src.framework.graph import GraphBuilder
 
             builder = GraphBuilder.__new__(GraphBuilder)

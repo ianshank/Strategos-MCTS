@@ -12,8 +12,9 @@ from dataclasses import dataclass
 
 from src.benchmark.config.benchmark_settings import CostConfig
 from src.benchmark.evaluation.models import BenchmarkResult
+from src.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True)
