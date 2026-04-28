@@ -20,9 +20,9 @@ except ImportError:
     # Stubs for development without LangGraph installed.
     # END must match langgraph.graph.END's actual value so visualization
     # comparisons against "__end__" still match in the stubbed path.
-    StateGraph = None
+    StateGraph = None  # type: ignore[assignment,misc]
     END = "__end__"
-    MemorySaver = None
+    MemorySaver = None  # type: ignore[assignment,misc]
 
 # Import new MCTS modules
 from ..mcts.config import MCTSConfig
