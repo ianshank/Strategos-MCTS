@@ -24,58 +24,8 @@ except ImportError:
     END = "__end__"
     MemorySaver = None  # type: ignore[assignment,misc]
 
-# Import new MCTS modules
 from ..mcts.config import MCTSConfig
 from ..mcts.experiments import ExperimentTracker
-
-# Neural Meta-Controller imports (optional)
-try:
-    from src.agents.meta_controller.base import (
-        AbstractMetaController,
-        MetaControllerFeatures,
-    )
-    from src.agents.meta_controller.bert_controller import BERTMetaController
-    from src.agents.meta_controller.config_loader import (
-        MetaControllerConfig,
-        MetaControllerConfigLoader,
-    )
-    from src.agents.meta_controller.rnn_controller import RNNMetaController
-
-    _META_CONTROLLER_AVAILABLE = True
-except ImportError:
-    _META_CONTROLLER_AVAILABLE = False
-    AbstractMetaController = None  # type: ignore
-    MetaControllerFeatures = None  # type: ignore
-    RNNMetaController = None  # type: ignore
-    BERTMetaController = None  # type: ignore
-    MetaControllerConfig = None  # type: ignore
-    MetaControllerConfigLoader = None  # type: ignore
-
-# Neuro-Symbolic imports (optional)
-try:
-    from src.neuro_symbolic import (
-        ConstraintSystem,
-        NeuroSymbolicConfig,
-        NeuroSymbolicMCTSConfig,
-        NeuroSymbolicMCTSIntegration,
-        SymbolicAgentGraphExtension,
-        SymbolicAgentNodeConfig,
-        SymbolicReasoningAgent,
-    )
-    from src.neuro_symbolic.config import ConstraintConfig
-
-    _NEURO_SYMBOLIC_AVAILABLE = True
-except ImportError:
-    _NEURO_SYMBOLIC_AVAILABLE = False
-    NeuroSymbolicConfig = None  # type: ignore
-    SymbolicReasoningAgent = None  # type: ignore
-    SymbolicAgentGraphExtension = None  # type: ignore
-    SymbolicAgentNodeConfig = None  # type: ignore
-    NeuroSymbolicMCTSIntegration = None  # type: ignore
-    NeuroSymbolicMCTSConfig = None  # type: ignore
-    ConstraintSystem = None  # type: ignore
-    ConstraintConfig = None  # type: ignore
-
 from .builder import GraphBuilder
 
 
