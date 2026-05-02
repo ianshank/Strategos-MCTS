@@ -99,3 +99,17 @@ def test_spec_loader_missing_file_raises(tmp_path: Path) -> None:
     """Missing files raise a clear, typed error."""
     with pytest.raises(SpecParseError):
         SpecLoader().load(tmp_path / "absent.md")
+
+
+def test_spec_loader_handles_multi_digit_numbered_lists() -> None:
+    """Numbered lists with two-or-more-digit indices must parse correctly."""
+    text = "# Acceptance Criteria\n" "1. first\n" "2. second\n" "10. tenth\n" "11) eleventh\n" "100. hundredth\n"
+    spec = SpecLoader().parse(text)
+    assert spec.acceptance_criteria == ["first", "second", "tenth", "eleventh", "hundredth"]
+
+
+def test_spec_loader_mixes_bullets_and_numbers() -> None:
+    """A section with mixed bullet and numeric markers is parsed faithfully."""
+    text = "# Constraints\n" "- bulleted\n" "12. twelve\n" "* asterisk\n" "13) thirteen\n"
+    spec = SpecLoader().parse(text)
+    assert spec.constraints == ["bulleted", "twelve", "asterisk", "thirteen"]

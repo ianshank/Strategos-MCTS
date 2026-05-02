@@ -70,6 +70,8 @@ class ToolExecutor(Protocol):
 
     def list_tools(self) -> Sequence[str]: ...
 
+    def tool_schemas(self) -> Sequence[dict[str, Any]]: ...
+
 
 @runtime_checkable
 class OutputVerifier(Protocol):

@@ -113,6 +113,14 @@ class HarnessSettings(BaseSettings):
     PLANNER_ENABLED: bool = Field(default=True)
     PLANNER_MAX_TOKENS: int = Field(default=2_000, ge=1, le=200_000)
 
+    # Reasoner (per-iteration LLM call inside the control loop)
+    REASON_MAX_TOKENS: int = Field(
+        default=4_000,
+        ge=1,
+        le=200_000,
+        description="Max tokens for the per-iteration Reason phase LLM call",
+    )
+
     # Ralph loop
     RALPH_ENABLED: bool = Field(default=False)
     RALPH_COMPLETION_MARKER: str = Field(default="<!-- HARNESS:DONE -->")

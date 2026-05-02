@@ -13,7 +13,7 @@ import pytest
 
 from src.framework.harness.cli import main
 
-pytestmark = pytest.mark.integration
+pytestmark = pytest.mark.unit
 
 
 def _spec(tmp_path: Path) -> Path:

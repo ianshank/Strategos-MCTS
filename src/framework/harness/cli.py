@@ -24,6 +24,7 @@ from pathlib import Path
 
 from src.framework.harness.factories import HarnessFactory
 from src.framework.harness.intent import SpecLoader, SpecParseError
+from src.framework.harness.outcomes import Terminal
 from src.framework.harness.planner import HeuristicPlanner
 from src.framework.harness.settings import HarnessSettings
 
@@ -97,8 +98,10 @@ async def _cmd_run(args: argparse.Namespace) -> int:
     if args.ralph:
         loop = factory.create_ralph(runner, spec_path=args.spec)
         result = await loop.run()
+        ralph_accepted = result.status in {"accepted", "done"}
         payload = {
             "status": result.status,
+            "accepted": ralph_accepted,
             "rounds": result.rounds,
             "stuck_kind": result.stuck_kind,
             "outcome": result.last_run.outcome.kind if result.last_run else None,
@@ -106,8 +109,10 @@ async def _cmd_run(args: argparse.Namespace) -> int:
         }
     else:
         run_result = await runner.run(intent)
+        accepted = isinstance(run_result.outcome, Terminal) and run_result.outcome.accepted
         payload = {
             "outcome": run_result.outcome.kind,
+            "accepted": accepted,
             "iterations": run_result.iterations,
             "duration_ms": round(run_result.duration_ms, 2),
             "confidence": run_result.confidence,
@@ -123,7 +128,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
                 continue
             sys.stdout.write(f"{k}={v}\n")
 
-    return 0 if payload.get("outcome") == "terminal" or payload.get("status") in {"accepted", "done"} else 2
+    return 0 if payload.get("accepted") else 2
 
 
 async def _cmd_dry_run(args: argparse.Namespace) -> int:

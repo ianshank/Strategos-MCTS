@@ -119,8 +119,11 @@ class SpecLoader:
             stripped = line.strip()
             if stripped.startswith(("- ", "* ", "+ ")):
                 out.append(stripped[2:].strip())
-            elif stripped and stripped[0].isdigit() and stripped[1:3] in (". ", ") "):
-                out.append(stripped[3:].strip())
+                continue
+            # Numbered lists with arbitrary digit width: "12. text" / "12) text".
+            head, sep, rest = stripped.partition(" ")
+            if rest and (head.endswith(".") or head.endswith(")")) and head[:-1].isdigit():
+                out.append(rest.strip())
         return out
 
 

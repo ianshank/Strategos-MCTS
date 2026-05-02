@@ -220,12 +220,12 @@ class HarnessRunner:
         ctx = state.last_context
         assert ctx is not None
         messages = ctx.render()
-        tools = list(getattr(self.tool_executor, "tool_schemas", lambda: [])())
+        tools = list(self.tool_executor.tool_schemas())
         try:
             response = await self.llm.generate(
                 messages=messages,
                 temperature=0.0,
-                max_tokens=self.settings.PLANNER_MAX_TOKENS,
+                max_tokens=self.settings.REASON_MAX_TOKENS,
                 tools=tools or None,
             )
         except Exception as exc:  # noqa: BLE001

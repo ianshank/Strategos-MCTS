@@ -88,6 +88,39 @@ def test_render_index_groups_by_correlation_id() -> None:
 
 
 @pytest.mark.asyncio
+async def test_compactor_uses_filesystem_lock(tmp_path: Path) -> None:
+    """The compactor's file lock blocks a second holder until the first releases."""
+    from src.framework.harness.memory.compactor import CompactorLockTimeout, _file_lock
+
+    lock_path = tmp_path / ".compactor.lock"
+    with _file_lock(lock_path, timeout_seconds=0.5):
+        # Holding the lock — a second acquisition must time out fast.
+        with pytest.raises(CompactorLockTimeout):
+            with _file_lock(lock_path, timeout_seconds=0.05):
+                pass
+    # After the outer block exits, the lock file is gone.
+    assert not lock_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_compactor_reaps_stale_lock(tmp_path: Path) -> None:
+    """An ancient orphaned lock file is reaped instead of blocking forever."""
+    import os
+    import time
+
+    from src.framework.harness.memory.compactor import _file_lock
+
+    lock_path = tmp_path / ".compactor.lock"
+    lock_path.write_text("12345")
+    # Backdate the mtime so the reaping branch trips.
+    very_old = time.time() - 3600
+    os.utime(lock_path, (very_old, very_old))
+    # Should acquire promptly because the stale lock is reaped.
+    with _file_lock(lock_path, timeout_seconds=1.0):
+        pass
+
+
+@pytest.mark.asyncio
 async def test_compactor_idempotent(tmp_path: Path) -> None:
     """Running the compactor twice produces byte-identical output."""
     log = MemoryEventLog(root=tmp_path / "events")

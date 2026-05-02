@@ -13,7 +13,7 @@ from tests.fixtures.harness_fixtures import (
     llm_tool_call,
 )
 
-pytestmark = pytest.mark.integration
+pytestmark = pytest.mark.unit
 
 
 @pytest.mark.asyncio
