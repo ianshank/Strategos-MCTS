@@ -32,6 +32,7 @@ from src.framework.harness.settings import HarnessPermissions, HarnessSettings, 
 from src.framework.harness.tools import AsyncToolExecutor, ToolRegistry
 from src.framework.harness.tools.builtins import register_builtin_tools
 from src.framework.harness.verifier import AcceptanceCriteriaVerifier
+from src.observability.logging import get_logger
 
 
 @dataclass
@@ -48,7 +49,7 @@ class HarnessFactory:
             self.settings or get_settings(),
             self.harness_settings or get_harness_settings(),
             self.perms or HarnessPermissions(),
-            self.logger or logging.getLogger("src.framework.harness"),
+            self.logger or get_logger(__name__),
         )
 
     def create_llm(self) -> LLMClient:

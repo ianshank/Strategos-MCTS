@@ -124,6 +124,81 @@ def test_verifier_fail_fast_setting_removed() -> None:
     assert not hasattr(s, "VERIFIER_FAIL_FAST")
 
 
+def test_truncate_with_spillover_sanitizes_path_components(tmp_path: Path) -> None:
+    """Path-traversal attempts in correlation_id / step_id are neutralised."""
+    from src.framework.harness.tools.truncation import truncate_with_spillover
+
+    long_payload = "x" * 5000
+    out, spill = truncate_with_spillover(
+        long_payload,
+        head_chars=10,
+        tail_chars=10,
+        spillover_dir=tmp_path,
+        correlation_id="../../etc",
+        step_id="../../passwd",
+        marker_template="\n…[{path}]…\n",
+    )
+    assert spill is not None
+    spill_path = Path(spill).resolve()
+    # Final spillover path must live under the configured root.
+    spill_path.relative_to(tmp_path.resolve())
+    # Sanitized components must not contain any traversal sequences.
+    assert ".." not in spill_path.parts
+
+
+def test_truncate_with_spillover_handles_empty_components(tmp_path: Path) -> None:
+    """Empty / dotfile-only identifiers fall back to safe defaults."""
+    from src.framework.harness.tools.truncation import truncate_with_spillover
+
+    long_payload = "y" * 3000
+    out, spill = truncate_with_spillover(
+        long_payload,
+        head_chars=5,
+        tail_chars=5,
+        spillover_dir=tmp_path,
+        correlation_id="",
+        step_id="...",
+        marker_template="\n…[{path}]…\n",
+    )
+    assert spill is not None
+    spill_path = Path(spill)
+    assert spill_path.parent.name == "cid"
+    assert spill_path.stem == "step"
+
+
+@pytest.mark.asyncio
+async def test_shell_correlation_id_read_from_contextvar(tmp_path: Path) -> None:
+    """The shell tool reads the *current* correlation ID at invocation time."""
+    import sys
+
+    from src.framework.harness.settings import HarnessPermissions
+    from src.framework.harness.tools.builtins.shell import shell_tool
+    from src.observability.logging import set_correlation_id
+
+    set_correlation_id("cid-from-contextvar")
+    perms = HarnessPermissions(SHELL=True)
+    _, handler = shell_tool(
+        cwd=tmp_path,
+        perms=perms,
+        correlation_id="construction-time-fallback",  # superseded by contextvar
+        allowlist=[sys.executable],
+    )
+    out = await handler(
+        {"argv": [sys.executable, "-c", "import os; print(os.environ['STRATEGOS_CORRELATION_ID'])"]}
+    )
+    assert "cid-from-contextvar" in out
+    assert "construction-time-fallback" not in out
+
+
+def test_factory_logger_uses_mcts_prefix() -> None:
+    """``HarnessFactory`` constructs loggers via the project convention."""
+    from src.framework.harness.factories import HarnessFactory
+
+    factory = HarnessFactory()
+    _, _, _, log = factory._resolve()
+    assert log.name.startswith("mcts.")
+
+
 def test_harness_module_loggers_use_mcts_prefix() -> None:
     """Per-module loggers carry the ``mcts.`` namespace from ``get_logger``."""
     from src.framework.harness.loop.runner import HarnessRunner as _HR

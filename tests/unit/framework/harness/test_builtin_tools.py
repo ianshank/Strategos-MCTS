@@ -202,18 +202,40 @@ async def test_shell_enforces_disabled_permission(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_shell_propagates_correlation_id(tmp_path: Path) -> None:
-    """The correlation ID must reach the subprocess via env var."""
+    """The current correlation ID (read at invocation time) reaches the subprocess."""
+    from src.observability.logging import set_correlation_id
+
     perms = HarnessPermissions(SHELL=True)
+    set_correlation_id("abc-123")
     _, handler = shell_tool(
         cwd=tmp_path,
         perms=perms,
-        correlation_id="abc-123",
         allowlist=[sys.executable],
     )
     out = await handler(
         {"argv": [sys.executable, "-c", "import os; print(os.environ.get('STRATEGOS_CORRELATION_ID'))"]}
     )
     assert "abc-123" in out
+
+
+@pytest.mark.asyncio
+async def test_shell_falls_back_to_construction_correlation_id(tmp_path: Path) -> None:
+    """When no contextvar is set, the construction-time override is used."""
+    from src.observability.logging import set_correlation_id
+
+    perms = HarnessPermissions(SHELL=True)
+    # Explicitly clear so the contextvar doesn't leak from a prior test.
+    set_correlation_id("")
+    _, handler = shell_tool(
+        cwd=tmp_path,
+        perms=perms,
+        correlation_id="static-fallback",
+        allowlist=[sys.executable],
+    )
+    out = await handler(
+        {"argv": [sys.executable, "-c", "import os; print(os.environ.get('STRATEGOS_CORRELATION_ID'))"]}
+    )
+    assert "static-fallback" in out
 
 
 # ---------------------------------------------------------------------
