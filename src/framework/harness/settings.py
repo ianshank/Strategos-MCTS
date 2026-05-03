@@ -140,6 +140,13 @@ class HarnessSettings(BaseSettings):
         le=128_000,
         description="Max tokens for the reviewer agent's review.",
     )
+    BENCHMARK_TASK_ID: str | None = Field(
+        default=None,
+        description=(
+            "Default benchmark task id (e.g. 'A1') for harness demos. "
+            "If None, demos require an explicit --task flag."
+        ),
+    )
 
     # Ralph loop
     RALPH_ENABLED: bool = Field(default=False)
