@@ -121,6 +121,26 @@ class HarnessSettings(BaseSettings):
         description="Max tokens for the per-iteration Reason phase LLM call",
     )
 
+    # Producer-Reviewer agents (Stream 2)
+    PRODUCER_REVIEWER_ROUNDS: int = Field(
+        default=3,
+        ge=1,
+        le=20,
+        description="Maximum rounds for producer-reviewer topology.",
+    )
+    PRODUCER_MAX_TOKENS: int = Field(
+        default=4_000,
+        ge=64,
+        le=128_000,
+        description="Max tokens for the producer agent's draft.",
+    )
+    REVIEWER_MAX_TOKENS: int = Field(
+        default=1_500,
+        ge=64,
+        le=128_000,
+        description="Max tokens for the reviewer agent's review.",
+    )
+
     # Ralph loop
     RALPH_ENABLED: bool = Field(default=False)
     RALPH_COMPLETION_MARKER: str = Field(default="<!-- HARNESS:DONE -->")

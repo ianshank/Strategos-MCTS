@@ -151,3 +151,45 @@ def test_permissions_independent_env_prefix(monkeypatch: pytest.MonkeyPatch) -> 
     assert perms.SHELL is True
     assert perms.NETWORK is False
     assert perms.READ is True  # default preserved
+
+
+def test_producer_reviewer_rounds_default_is_3() -> None:
+    """Stream-2 default round budget for the producer-reviewer topology."""
+    s = HarnessSettings()
+    assert s.PRODUCER_REVIEWER_ROUNDS == 3
+
+
+def test_producer_reviewer_rounds_validates_range(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Zero rounds is nonsense — validator should reject it."""
+    monkeypatch.setenv("HARNESS_PRODUCER_REVIEWER_ROUNDS", "0")
+    with pytest.raises(ValidationError):
+        HarnessSettings()
+
+
+def test_producer_reviewer_rounds_upper_bound(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Upper bound prevents accidental runaway loops."""
+    monkeypatch.setenv("HARNESS_PRODUCER_REVIEWER_ROUNDS", "21")
+    with pytest.raises(ValidationError):
+        HarnessSettings()
+
+
+def test_producer_max_tokens_default() -> None:
+    s = HarnessSettings()
+    assert s.PRODUCER_MAX_TOKENS == 4_000
+
+
+def test_producer_max_tokens_lower_bound(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HARNESS_PRODUCER_MAX_TOKENS", "1")
+    with pytest.raises(ValidationError):
+        HarnessSettings()
+
+
+def test_reviewer_max_tokens_default() -> None:
+    s = HarnessSettings()
+    assert s.REVIEWER_MAX_TOKENS == 1_500
+
+
+def test_reviewer_max_tokens_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HARNESS_REVIEWER_MAX_TOKENS", "2048")
+    s = HarnessSettings()
+    assert s.REVIEWER_MAX_TOKENS == 2048
