@@ -161,6 +161,12 @@ DEFAULT_ANTHROPIC_TIMEOUT: Final[float] = 120.0
 DEFAULT_LMSTUDIO_TIMEOUT: Final[float] = 300.0
 DEFAULT_LLM_TIMEOUT: Final[float] = 60.0
 
+# Default sampling temperature for LMStudio when neither the caller, the
+# active model preset, nor settings override it. Kept identical to the
+# generic DEFAULT_LLM_TEMPERATURE so that wire payloads always carry a
+# numeric value (LM Studio rejects ``temperature: null``).
+DEFAULT_LMSTUDIO_TEMPERATURE: Final[float] = 0.7
+
 # Default max tokens
 DEFAULT_MAX_TOKENS: Final[int] = 4096
 DEFAULT_MAX_RETRIES: Final[int] = 5

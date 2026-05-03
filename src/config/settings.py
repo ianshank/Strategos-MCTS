@@ -10,6 +10,7 @@ Provides:
 """
 
 from enum import Enum
+from typing import Literal
 
 from pydantic import (
     Field,
@@ -94,6 +95,29 @@ class Settings(BaseSettings):
     )
 
     LMSTUDIO_MODEL: str | None = Field(default=None, description="LM Studio model identifier (e.g., liquid/lfm2-1.2b)")
+
+    LMSTUDIO_PRESET: str | None = Field(
+        default=None,
+        description=(
+            "Optional preset name override (e.g., 'phi4-reasoning'). If None, "
+            "preset is auto-detected from LMSTUDIO_MODEL via name_pattern matching."
+        ),
+    )
+
+    LMSTUDIO_REASONING_EFFORT: Literal["low", "medium", "high"] | None = Field(
+        default=None,
+        description=("LM Studio reasoning effort hint. Only honored if the active preset " "has reasoning=True."),
+    )
+
+    LMSTUDIO_TEMPERATURE: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=2.0,
+        description=(
+            "LMStudio default sampling temperature override. None = let preset "
+            "or DEFAULT_LMSTUDIO_TEMPERATURE constant decide."
+        ),
+    )
 
     # MCTS Configuration with bounds validation
     MCTS_ENABLED: bool = Field(default=True, description="Enable MCTS for agent decision-making")
