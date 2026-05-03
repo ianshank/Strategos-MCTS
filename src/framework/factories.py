@@ -83,20 +83,73 @@ class LLMClientFactory:
         """
         from src.adapters.llm import create_client
 
-        provider = provider or self.settings.LLM_PROVIDER
-        model = model or self._get_default_model(provider)
+        # ``LLM_PROVIDER`` is an Enum on Settings but a plain string on
+        # MagicMock-based test settings; coerce to ``str`` so downstream
+        # code can do simple equality checks.
+        provider_resolved = provider if provider is not None else self.settings.LLM_PROVIDER
+        provider_str = provider_resolved.value if hasattr(provider_resolved, "value") else str(provider_resolved)
+
+        model = model or self._get_default_model(provider_str)
         timeout = timeout if timeout is not None else self.settings.HTTP_TIMEOUT_SECONDS
         max_retries = max_retries if max_retries is not None else self.settings.HTTP_MAX_RETRIES
 
-        self.logger.info(f"Creating LLM client: provider={provider}, model={model}")
+        # Provider-specific augmentation: attach a model preset for LM Studio
+        # so per-model quirks (stops, reasoning flag, default temperature)
+        # are looked up by regex match on the model name.
+        if provider_str == "lmstudio":
+            kwargs = self._augment_lmstudio_kwargs(model=model, kwargs=kwargs)
+
+        self.logger.info(f"Creating LLM client: provider={provider_str}, model={model}")
 
         return create_client(
-            provider=provider,
+            provider=provider_str,
             model=model,
             timeout=timeout,
             max_retries=max_retries,
             **kwargs,
         )
+
+    def _augment_lmstudio_kwargs(
+        self,
+        *,
+        model: str | None,
+        kwargs: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Attach ``preset`` and ``reasoning_effort`` to LM Studio client kwargs.
+
+        Resolution order for ``preset``:
+
+        1. Explicit ``kwargs["preset"]`` (highest precedence — caller wins).
+        2. Settings override: ``settings.LMSTUDIO_PRESET`` looked up by name.
+        3. Auto-detect from ``model`` via :func:`get_preset` (regex match).
+
+        ``reasoning_effort`` is taken from ``kwargs`` if provided, else from
+        ``settings.LMSTUDIO_REASONING_EFFORT``.
+        """
+        # Local imports to avoid pulling LM Studio adapters into module
+        # import time when the active provider is something else.
+        from src.adapters.llm.model_presets import get_preset, get_preset_by_name
+
+        # Don't mutate the caller's dict.
+        result = dict(kwargs)
+
+        if "preset" not in result:
+            preset = None
+            preset_name_override = getattr(self.settings, "LMSTUDIO_PRESET", None)
+            if preset_name_override:
+                preset = get_preset_by_name(preset_name_override)
+            if preset is None:
+                preset = get_preset(model)
+            if preset is not None:
+                result["preset"] = preset
+
+        if "reasoning_effort" not in result:
+            effort = getattr(self.settings, "LMSTUDIO_REASONING_EFFORT", None)
+            if effort is not None:
+                result["reasoning_effort"] = effort
+
+        return result
 
     def create_from_settings(self) -> LLMClient:
         """
