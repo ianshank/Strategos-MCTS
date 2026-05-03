@@ -186,6 +186,35 @@ async def test_run_includes_decision_in_metadata() -> None:
 
 
 @pytest.mark.asyncio
+async def test_run_response_is_marker_only_not_full_text() -> None:
+    """The outcome.response must be exactly the ACCEPT/REJECT marker.
+
+    Topology accept gates do an unanchored substring search. If the full
+    reviewer body were embedded, a REJECT body that mentions the word
+    "ACCEPT" anywhere (e.g. "does not meet the ACCEPT criteria") would
+    silently bypass the gate. Full body is preserved in metadata["text"].
+    """
+    text = "REJECT\nscore: 0.2\nissues:\n- mentions ACCEPT criteria but fails\nsuggestions:\n- rewrite"
+    fake = FakeLLMClient(responses=[LLMResponse(text=text, finish_reason="stop")])
+    agent = LLMReviewerAgent(llm=fake)
+    outcome = await agent.run(_review_task())
+    assert outcome.response == "REJECT"
+    assert "ACCEPT" not in outcome.response
+    assert outcome.metadata["text"] == text
+    assert outcome.metadata["decision"] is False
+
+
+@pytest.mark.asyncio
+async def test_run_accepted_response_is_marker_only() -> None:
+    text = "ACCEPT\nscore: 0.95\nnotes: thorough"
+    fake = FakeLLMClient(responses=[LLMResponse(text=text, finish_reason="stop")])
+    agent = LLMReviewerAgent(llm=fake)
+    outcome = await agent.run(_review_task())
+    assert outcome.response == "ACCEPT"
+    assert outcome.metadata["text"] == text
+
+
+@pytest.mark.asyncio
 async def test_run_uses_score_as_confidence_when_in_range() -> None:
     fake = FakeLLMClient(responses=[LLMResponse(text="ACCEPT\nscore: 0.73\nnotes: ok", finish_reason="length")])
     agent = LLMReviewerAgent(llm=fake)
@@ -246,13 +275,14 @@ async def test_run_passes_max_tokens() -> None:
 
 
 @pytest.mark.asyncio
-async def test_run_outcome_response_preserves_original_text_after_marker() -> None:
+async def test_run_outcome_response_is_marker_only_full_text_in_metadata() -> None:
+    """The response is the marker only; the body is preserved on metadata['text']."""
     text = "ACCEPT\nscore: 0.9\nnotes: great"
     fake = FakeLLMClient(responses=[LLMResponse(text=text, finish_reason="stop")])
     agent = LLMReviewerAgent(llm=fake)
     outcome = await agent.run(_review_task())
-    # Marker on its own line, then the original text.
-    assert outcome.response == "ACCEPT\n" + text
+    assert outcome.response == "ACCEPT"
+    assert outcome.metadata["text"] == text
 
 
 def test_agent_satisfies_agent_like_protocol() -> None:

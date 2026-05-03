@@ -1,10 +1,19 @@
 """LLM-only reviewer agent.
 
 Critiques a producer draft against a task and returns an outcome whose
-``response`` field begins with the literal ``ACCEPT`` or ``REJECT`` marker so
-the producer-reviewer topology's substring-based acceptance check works
-deterministically. Robust to prompt-injection: only an ``ACCEPT`` /
-``REJECT`` literal at the start of the first non-empty line is recognised.
+``response`` field is **exactly** the literal ``ACCEPT`` or ``REJECT`` marker
+(no surrounding text). The full reviewer body is preserved on
+``outcome.metadata["text"]`` for audit and downstream consumers.
+
+Two layered defences against prompt injection:
+
+1. ``parse_review_decision`` only recognises ``ACCEPT`` / ``REJECT`` at the
+   start of the first non-empty line — a producer draft that mentions either
+   word in its body cannot fool the parser.
+2. The outcome's ``response`` field never carries the full body, so the
+   topology's substring-based accept gate (``"ACCEPT" in text.upper()``)
+   cannot be bypassed by a reviewer reply that legitimately rejects but
+   echoes the word "ACCEPT" in its prose.
 """
 
 from __future__ import annotations
@@ -199,12 +208,13 @@ class LLMReviewerAgent:
 
         return AgentOutcome(
             agent_name=self.name,
-            response=f"{marker}\n{text}",
+            response=marker,
             confidence=confidence,
             success=bool(text.strip()),
             metadata={
                 "decision": accepted,
                 "feedback": parsed,
+                "text": text,
                 "finish_reason": response.finish_reason,
                 "usage": dict(response.usage),
             },
