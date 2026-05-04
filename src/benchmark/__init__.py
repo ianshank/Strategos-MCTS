@@ -21,6 +21,7 @@ from src.benchmark.config.benchmark_settings import BenchmarkSettings, get_bench
 from src.benchmark.evaluation.harness import EvaluationHarness
 from src.benchmark.evaluation.models import BenchmarkResult, ScoringResult
 from src.benchmark.factory import BenchmarkFactory
+from src.benchmark.harness_bridge import BenchmarkTaskAdapter
 from src.benchmark.reporting.report_generator import ReportGenerator
 from src.benchmark.tasks.models import BenchmarkTask, TaskCategory, TaskComplexity
 from src.benchmark.tasks.registry import BenchmarkTaskRegistry
@@ -31,6 +32,7 @@ __all__ = [
     "BenchmarkResult",
     "BenchmarkSettings",
     "BenchmarkTask",
+    "BenchmarkTaskAdapter",
     "BenchmarkTaskRegistry",
     "EvaluationHarness",
     "ReportGenerator",

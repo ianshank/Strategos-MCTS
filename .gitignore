@@ -232,3 +232,11 @@ benchmark_results/
 benchmark_report.md
 benchmark_results.json
 .claude/worktrees/
+
+# Agent Harness — ephemeral run state
+# `.harness/` is the default `HARNESS_OUTPUT_DIR`; per-run logs and
+# spillover files land here. `memory/` is the default `HARNESS_MEMORY_ROOT`
+# (event log + MEMORY.md). Both are ephemeral; cassettes intended for
+# replay should be committed under `tests/fixtures/cassettes/` instead.
+.harness/
+/memory/

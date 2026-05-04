@@ -11,7 +11,11 @@ from typing import Any
 
 import httpx
 
-from src.config.constants import DEFAULT_LMSTUDIO_TIMEOUT, DEFAULT_LMSTUDIO_URL
+from src.config.constants import (
+    DEFAULT_LMSTUDIO_TEMPERATURE,
+    DEFAULT_LMSTUDIO_TIMEOUT,
+    DEFAULT_LMSTUDIO_URL,
+)
 from src.observability.logging import get_logger
 
 from .base import BaseLLMClient, LLMResponse
@@ -23,6 +27,8 @@ from .exceptions import (
     LLMStreamError,
     LLMTimeoutError,
 )
+from .model_presets import ModelPreset, ReasoningEffort
+from .preset_applier import apply_preset
 
 logger = get_logger(__name__)
 
@@ -52,6 +58,9 @@ class LMStudioClient(BaseLLMClient):
         max_retries: int = 2,  # Fewer retries for local
         # Rate limiting
         rate_limit_per_minute: int | None = None,
+        *,
+        preset: ModelPreset | None = None,
+        reasoning_effort: ReasoningEffort | None = None,
     ):
         """
         Initialize LM Studio client.
@@ -63,6 +72,11 @@ class LMStudioClient(BaseLLMClient):
             timeout: Request timeout in seconds (default longer for local models)
             max_retries: Max retry attempts (fewer for local)
             rate_limit_per_minute: Rate limit for requests per minute (None to disable)
+            preset: Optional :class:`ModelPreset` whose stops, reasoning flag,
+                and default temperature are merged into every request payload.
+                When ``None`` (default), no preset shaping is applied.
+            reasoning_effort: Hint forwarded as ``reasoning.effort`` in the
+                payload, only when ``preset.reasoning`` is ``True``.
         """
         import os
 
@@ -79,6 +93,8 @@ class LMStudioClient(BaseLLMClient):
         )
 
         self._client: httpx.AsyncClient | None = None
+        self._preset: ModelPreset | None = preset
+        self._reasoning_effort: ReasoningEffort | None = reasoning_effort
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create the HTTP client."""
@@ -110,7 +126,7 @@ class LMStudioClient(BaseLLMClient):
         except Exception:
             return False
 
-    async def list_models(self) -> list[dict]:
+    async def list_models(self) -> list[dict[str, Any]]:
         """
         List available models on the LM Studio server.
 
@@ -146,11 +162,11 @@ class LMStudioClient(BaseLLMClient):
     async def generate(
         self,
         *,
-        messages: list[dict] | None = None,
+        messages: list[dict[str, Any]] | None = None,
         prompt: str | None = None,
-        temperature: float = 0.7,
+        temperature: float | None = None,
         max_tokens: int | None = None,
-        tools: list[dict] | None = None,
+        tools: list[dict[str, Any]] | None = None,
         stream: bool = False,
         stop: list[str] | None = None,
         **kwargs: Any,
@@ -161,7 +177,9 @@ class LMStudioClient(BaseLLMClient):
         Args:
             messages: Chat messages in OpenAI format
             prompt: Simple string prompt
-            temperature: Sampling temperature
+            temperature: Sampling temperature. ``None`` means "use the active
+                preset's default, or :data:`DEFAULT_LMSTUDIO_TEMPERATURE` if
+                no preset is configured".
             max_tokens: Maximum tokens to generate
             tools: Tool definitions (limited support in local models)
             stream: If True, returns AsyncIterator
@@ -198,19 +216,21 @@ class LMStudioClient(BaseLLMClient):
     async def _generate_non_stream(
         self,
         *,
-        messages: list[dict] | None = None,
+        messages: list[dict[str, Any]] | None = None,
         prompt: str | None = None,
-        temperature: float = 0.7,
+        temperature: float | None = None,
         max_tokens: int | None = None,
-        tools: list[dict] | None = None,
+        tools: list[dict[str, Any]] | None = None,
         stop: list[str] | None = None,
         **kwargs: Any,
     ) -> LLMResponse:
         """Non-streaming generation."""
         client = await self._get_client()
 
-        # Build request payload (OpenAI-compatible)
-        payload = {
+        # Build request payload (OpenAI-compatible). We start with the
+        # caller's explicit temperature (which may be None) so that the
+        # preset applier can decide whether to fill it in.
+        payload: dict[str, Any] = {
             "model": self.model,
             "messages": self._build_messages(messages, prompt),
             "temperature": temperature,
@@ -230,6 +250,20 @@ class LMStudioClient(BaseLLMClient):
         for key in ["top_p", "top_k", "repeat_penalty", "presence_penalty", "frequency_penalty"]:
             if key in kwargs:
                 payload[key] = kwargs[key]
+
+        # Merge preset-derived fields. The applier honors the caller's
+        # explicit temperature (``user_temperature=temperature``) and only
+        # falls back to the preset default when ``temperature is None``.
+        payload = apply_preset(
+            payload,
+            self._preset,
+            reasoning_effort=self._reasoning_effort,
+            user_temperature=temperature,
+        )
+
+        # Final guard: LM Studio requires a numeric temperature on the wire.
+        if payload.get("temperature") is None:
+            payload["temperature"] = DEFAULT_LMSTUDIO_TEMPERATURE
 
         # Retry logic for local server
         last_error: LLMClientError | None = None
@@ -280,19 +314,21 @@ class LMStudioClient(BaseLLMClient):
     async def _generate_stream(
         self,
         *,
-        messages: list[dict] | None = None,
+        messages: list[dict[str, Any]] | None = None,
         prompt: str | None = None,
-        temperature: float = 0.7,
+        temperature: float | None = None,
         max_tokens: int | None = None,
-        tools: list[dict] | None = None,  # noqa: ARG002
+        tools: list[dict[str, Any]] | None = None,  # noqa: ARG002
         stop: list[str] | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[str]:
         """Streaming generation."""
         client = await self._get_client()
 
-        # Build request payload
-        payload = {
+        # Build request payload. ``temperature`` flows through as the
+        # caller's explicit value (possibly None) so the preset applier
+        # can decide whether to fill it in from the active preset.
+        payload: dict[str, Any] = {
             "model": self.model,
             "messages": self._build_messages(messages, prompt),
             "temperature": temperature,
@@ -307,6 +343,18 @@ class LMStudioClient(BaseLLMClient):
         for key in ["top_p", "top_k", "repeat_penalty"]:
             if key in kwargs:
                 payload[key] = kwargs[key]
+
+        # Merge preset-derived fields (stops, reasoning, default temp).
+        payload = apply_preset(
+            payload,
+            self._preset,
+            reasoning_effort=self._reasoning_effort,
+            user_temperature=temperature,
+        )
+
+        # Final guard: ensure a numeric temperature for the server.
+        if payload.get("temperature") is None:
+            payload["temperature"] = DEFAULT_LMSTUDIO_TEMPERATURE
 
         async def stream_generator() -> AsyncIterator[str]:
             try:

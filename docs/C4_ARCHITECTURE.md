@@ -301,6 +301,99 @@ graph TB
     style TRMBase fill:#3498DB,stroke:#1F618D,stroke-width:2px,color:#fff
 ```
 
+### 3.3 Agent Harness — Producer-Reviewer Subsystem (Local-LLM Pipeline)
+
+Sibling subsystem to the neural agents above. Wires the existing
+`ProducerReviewerTopology` to **any** OpenAI-compatible local LLM
+(LM Studio, vLLM, Ollama). Designed for sequential, latency-bounded
+inference on a single local model — producer and reviewer share one
+`LLMClient` to avoid concurrent VRAM pressure on memory-bound GPUs
+such as the Tesla P40 (24 GB).
+
+```mermaid
+graph TB
+    subgraph "demos / harness CLI"
+        Demo[producer_reviewer_phi4_demo<br/><br/>argparse + env-driven defaults]
+    end
+
+    subgraph "Agent Harness — agents/"
+        Producer[LLMProducerAgent<br/><br/>drafts response]
+        Reviewer[LLMReviewerAgent<br/><br/>ACCEPT/REJECT + score]
+        Prompts[prompts.py<br/><br/>provider-agnostic templates]
+        Topology[ProducerReviewerTopology<br/><br/>max_rounds loop]
+    end
+
+    subgraph "Benchmark bridge"
+        Adapter[BenchmarkTaskAdapter<br/><br/>BenchmarkTask -> harness Task]
+        Template[benchmark_task_template.md<br/><br/>parametric markdown spec]
+        Tasks[ALL_TASKS<br/><br/>A1 .. C3]
+    end
+
+    subgraph "LLM adapter layer"
+        Factory[LLMClientFactory<br/><br/>provider switch]
+        LMS[LMStudioClient<br/><br/>OpenAI-compatible HTTP]
+        PresetReg[ModelPreset registry<br/><br/>regex match by model name]
+        Applier[apply_preset<br/><br/>merge into payload]
+    end
+
+    subgraph "Configuration"
+        Settings[Settings<br/><br/>LMSTUDIO_*]
+        HSettings[HarnessSettings<br/><br/>HARNESS_PRODUCER_*<br/>HARNESS_REVIEWER_*<br/>HARNESS_BENCHMARK_TASK_ID]
+    end
+
+    subgraph "Local model (out of process)"
+        LMStudio[LM Studio server<br/><br/>Phi-4 14B Q4_K_M]
+    end
+
+    Demo -->|--task A1| Adapter
+    Adapter -->|lookup| Tasks
+    Adapter -->|to_task / to_spec_text| Template
+    Demo -->|create_llm| Factory
+    Factory -->|auto-attach preset| PresetReg
+    Factory -->|build| LMS
+    LMS -->|apply_preset payload| Applier
+    Applier -->|stop / temp / reasoning| LMS
+    Demo -->|run_pipeline| Topology
+    Topology -->|round 1..N| Producer
+    Topology -->|review| Reviewer
+    Producer -->|generate| LMS
+    Reviewer -->|generate| LMS
+    LMS -->|HTTP /chat/completions| LMStudio
+    Producer -.->|uses| Prompts
+    Reviewer -.->|uses| Prompts
+    Settings --> Factory
+    HSettings --> Demo
+    HSettings --> Topology
+
+    style Producer fill:#9B59B6,stroke:#6C3483,stroke-width:2px,color:#fff
+    style Reviewer fill:#9B59B6,stroke:#6C3483,stroke-width:2px,color:#fff
+    style Topology fill:#3498DB,stroke:#1F618D,stroke-width:2px,color:#fff
+    style PresetReg fill:#F39C12,stroke:#B9770E,stroke-width:2px
+    style LMStudio fill:#2ECC71,stroke:#1E8449,stroke-width:2px,color:#fff
+```
+
+**Key invariants enforced by this subsystem:**
+
+| Invariant | Where enforced |
+|---|---|
+| Provider-agnostic agents (no model-specific strings in `agents/`) | `prompts.py` test asserts no `"phi"` / `"openai"` / `"anthropic"` / `"lmstudio"` literal |
+| Per-model decoding rules attach by **regex** match on model name | `ModelPreset.name_pattern`, `get_preset(model_name)` |
+| Reviewer accept-gate cannot be bypassed by injection in the body | `LLMReviewerAgent.run` returns `response=marker` only; full body in `metadata["text"]` |
+| Producer + reviewer never run concurrently | Topology runs serially; helpers share one `LLMClient` instance |
+| All defaults are env-driven (no hardcoded values in `demos/` body) | `Settings`, `HarnessSettings`, `constants.DEFAULT_LMSTUDIO_TEMPERATURE` |
+
+**New environment variables (all optional, defaults preserve current behaviour):**
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `LMSTUDIO_PRESET` | `None` | Override preset lookup by name |
+| `LMSTUDIO_REASONING_EFFORT` | `None` | Reasoning hint (`low`/`medium`/`high`) |
+| `LMSTUDIO_TEMPERATURE` | `None` | Default sampling temperature |
+| `HARNESS_PRODUCER_REVIEWER_ROUNDS` | `3` | Loop cap |
+| `HARNESS_PRODUCER_MAX_TOKENS` | `4000` | Producer draft budget |
+| `HARNESS_REVIEWER_MAX_TOKENS` | `1500` | Reviewer review budget |
+| `HARNESS_BENCHMARK_TASK_ID` | `None` | Default benchmark task id for the demo |
+
 ---
 
 ## Deployment Architecture
@@ -364,7 +457,8 @@ This updated C4 architecture reflects the **current state** of the application, 
 |-------|-------------|
 | **Core ML** | PyTorch 2.1+, Transformers, PEFT, NumPy |
 | **Models** | DeBERTa-v3, ResNet, GRU |
-| **Orchestration** | Python AsyncIO, LangGraph |
-| **Data** | Pinecone, ArXiv API, OpenAI API |
-| **Monitoring** | Weights & Biases, Prometheus |
+| **Local LLM** | LM Studio (OpenAI-compatible HTTP), Phi-4 14B reasoning preset |
+| **Orchestration** | Python AsyncIO, LangGraph, Producer-Reviewer harness topology |
+| **Data** | Pinecone, ArXiv API, OpenAI API, Anthropic API, LM Studio |
+| **Monitoring** | Weights & Biases, Prometheus, structured stdlib logging |
 | **Deployment** | Docker, Docker Compose |

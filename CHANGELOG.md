@@ -5,6 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Producer-Reviewer LLM pipeline for LM Studio + reasoning models**
+  (PR #57). Drop-in components for the existing `ProducerReviewerTopology`,
+  designed for sequential, latency-bounded inference on a single local
+  model (e.g. Phi-4 14B Q4_K_M on Tesla P40 / 24 GB).
+  - `src/adapters/llm/model_presets.py` — provider-agnostic
+    `ModelPreset` registry keyed by regex match against the model name.
+    Built-in `PHI4_REASONING` preset (stop tokens, reasoning flag,
+    default temperature) — no `"phi-4"` literal in agent code.
+  - `src/adapters/llm/preset_applier.py` — pure `apply_preset()`
+    payload merger; caller temperature always wins over preset defaults.
+  - `src/framework/harness/agents/{llm_producer,llm_reviewer,prompts}.py`
+    — provider-agnostic `LLMProducerAgent` / `LLMReviewerAgent`
+    implementing `AgentLike`. Reviewer parser requires `ACCEPT` /
+    `REJECT` at the start of the first non-empty line (prompt-injection
+    guard) and the outcome's `response` field is exactly the marker
+    (substring-bypass guard).
+  - `src/benchmark/harness_bridge.py` — `BenchmarkTaskAdapter`
+    converts `BenchmarkTask` → harness `Task` and renders a single
+    parametric markdown spec template that round-trips through
+    `SpecLoader` for tasks containing `#` headers and code fences.
+  - `src/framework/harness/factories.py` — `HarnessFactory` helpers
+    `create_producer_reviewer_agents()` and
+    `create_producer_reviewer_topology()` (purely additive).
+  - `demos/producer_reviewer_phi4_demo.py` — env-driven CLI runner
+    (`python -m demos.producer_reviewer_phi4_demo --task A1`).
+
+### Changed
+
+- `LMStudioClient.__init__` now accepts optional keyword-only `preset`
+  and `reasoning_effort` kwargs (default `None`). When omitted the
+  client behaves identically to before.
+- `LMStudioClient.generate` now defaults `temperature=None`, treated as
+  "use preset / settings / `DEFAULT_LMSTUDIO_TEMPERATURE` constant" so
+  the wire payload always carries a numeric temperature.
+
+### Configuration
+
+New optional environment variables, all defaulting to `None` /
+existing behaviour:
+
+- `LMSTUDIO_PRESET` — explicit preset name override.
+- `LMSTUDIO_REASONING_EFFORT` — `low` / `medium` / `high` hint.
+- `LMSTUDIO_TEMPERATURE` — default sampling temperature for LM Studio.
+- `HARNESS_PRODUCER_REVIEWER_ROUNDS` — iteration cap (default `3`).
+- `HARNESS_PRODUCER_MAX_TOKENS` — producer draft budget (default `4000`).
+- `HARNESS_REVIEWER_MAX_TOKENS` — reviewer review budget (default `1500`).
+- `HARNESS_BENCHMARK_TASK_ID` — default benchmark task id for demos.
+
+### Security
+
+- Reviewer accept-gate bypass closed: the `outcome.response` field is
+  now exactly the `ACCEPT`/`REJECT` marker, with the full reviewer body
+  preserved on `metadata["text"]`. Prevents a substring-match bypass
+  through the topology's accept gate when a reviewer body legitimately
+  rejects but echoes the word "ACCEPT" in its prose.
+
 ## [0.2.0] - Production Training Pipeline Release
 
 ### Added

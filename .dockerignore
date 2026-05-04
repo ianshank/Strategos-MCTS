@@ -113,3 +113,13 @@ test_api_integrations.py
 *.crt
 credentials.json
 secrets.json
+
+# Agent Harness ephemeral state (created at runtime per HARNESS_* env vars)
+.harness/
+memory/
+
+# Replay cassettes are test-only fixtures; not needed in production images
+tests/fixtures/cassettes/
+
+# Worktrees created by Claude Code agents (development only)
+.claude/

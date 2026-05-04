@@ -27,6 +27,14 @@ from .exceptions import (
     LLMStreamError,
     LLMTimeoutError,
 )
+from .model_presets import (
+    ModelPreset,
+    get_preset,
+    get_preset_by_name,
+    list_presets,
+    register_preset,
+)
+from .preset_applier import apply_preset
 
 logger = get_logger(__name__)
 
@@ -254,4 +262,11 @@ __all__ = [
     "register_provider",
     "list_providers",
     "get_provider_class",
+    # Model preset registry
+    "ModelPreset",
+    "register_preset",
+    "get_preset",
+    "get_preset_by_name",
+    "list_presets",
+    "apply_preset",
 ]
