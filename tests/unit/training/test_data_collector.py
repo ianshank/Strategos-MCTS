@@ -404,9 +404,9 @@ class TestExperienceBufferPersistenceSafety:
             buf.load("legacy.pkl")
 
     def test_legacy_pickle_migrated_when_trusted(self, tmp_path):
-        from src.config.constants import EXPERIENCE_BUFFER_FORMAT_VERSION
-
         import pickle
+
+        from src.config.constants import EXPERIENCE_BUFFER_FORMAT_VERSION
 
         path = tmp_path / "legacy.pkl"
         with open(path, "wb") as f:
