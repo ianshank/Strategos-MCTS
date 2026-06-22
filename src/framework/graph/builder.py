@@ -12,22 +12,26 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-# LangGraph imports (these would be installed dependencies). The langgraph typed API
-# shifts across versions; bind StateGraph/MemorySaver as Any so static type-checking stays
-# stable across version drift while the runtime targets whichever langgraph is installed.
-try:
-    from langgraph.checkpoint.memory import MemorySaver as _MemorySaver
-    from langgraph.graph import END
-    from langgraph.graph import StateGraph as _StateGraph
-except ImportError:
-    # Stubs for development without LangGraph installed.
-    # END must match langgraph.graph.END's actual value so visualization
-    # comparisons against "__end__" still match in the stubbed path.
-    _StateGraph = None
+# LangGraph is an optional dependency whose typed API shifts across versions. For static
+# analysis treat its symbols as Any (the TYPE_CHECKING branch is the only one mypy sees), so
+# type-checking is stable regardless of the installed langgraph; at runtime the real import
+# is used, falling back to lightweight stubs when langgraph is absent.
+if TYPE_CHECKING:
+    StateGraph: Any = None
+    MemorySaver: Any = None
     END = "__end__"
-    _MemorySaver = None
+else:
+    try:
+        from langgraph.checkpoint.memory import MemorySaver
+        from langgraph.graph import END, StateGraph
+    except ImportError:
+        # END must match langgraph.graph.END's actual value so visualization
+        # comparisons against "__end__" still match in the stubbed path.
+        StateGraph = None
+        END = "__end__"
+        MemorySaver = None
 
 # Import new MCTS modules
 from ..mcts.config import ConfigPreset, MCTSConfig, create_preset_config
@@ -88,11 +92,6 @@ except ImportError:
 from src.observability.logging import get_logger
 
 from .state import AgentState
-
-# Bind the optional langgraph symbols as Any (declared after imports to satisfy E402) so
-# static type-checking is stable across langgraph's shifting typed API.
-StateGraph: Any = _StateGraph
-MemorySaver: Any = _MemorySaver
 
 logger = get_logger(__name__)
 
