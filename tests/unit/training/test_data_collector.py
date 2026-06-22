@@ -361,3 +361,78 @@ class TestExperienceDataclass:
         assert traj.outcome == 1.0
         assert traj.game_id == 42
         assert traj.metadata == {}
+
+
+@pytest.mark.unit
+@pytest.mark.security
+class TestExperienceBufferPersistenceSafety:
+    """The buffer must persist via safe torch (weights_only) and never auto-load a pickle."""
+
+    def test_save_uses_safe_versioned_torch_format(self, tmp_path):
+        from src.config.constants import EXPERIENCE_BUFFER_FORMAT_VERSION
+
+        buf = ExperienceBuffer(max_size=100, save_dir=str(tmp_path))
+        buf.add(_make_experience(value=1.0))
+        buf.save("buf.pkl")
+
+        # Loadable with weights_only=True (no arbitrary globals) and carries version header.
+        payload = torch.load(tmp_path / "buf.pkl", map_location="cpu", weights_only=True)
+        assert payload["format_version"] == EXPERIENCE_BUFFER_FORMAT_VERSION
+        assert len(payload["experiences"]) == 1
+
+    def test_round_trip_restores_experiences(self, tmp_path):
+        buf = ExperienceBuffer(max_size=100, save_dir=str(tmp_path))
+        for i in range(4):
+            buf.add(_make_experience(value=float(i)))
+        buf.save("buf.pkl")
+
+        restored = ExperienceBuffer(max_size=100, save_dir=str(tmp_path))
+        restored.load("buf.pkl")
+        assert len(restored) == 4
+        assert restored.get_all()[0].metadata == {"test": True}
+
+    def test_legacy_pickle_rejected_by_default(self, tmp_path):
+        # Write a legacy raw pickle of Experience objects.
+        import pickle
+
+        path = tmp_path / "legacy.pkl"
+        with open(path, "wb") as f:
+            pickle.dump([_make_experience()], f)
+
+        buf = ExperienceBuffer(max_size=100, save_dir=str(tmp_path))
+        with pytest.raises(RuntimeError, match="TRAINING_TRUST_LEGACY_PICKLE"):
+            buf.load("legacy.pkl")
+
+    def test_legacy_pickle_migrated_when_trusted(self, tmp_path):
+        from src.config.constants import EXPERIENCE_BUFFER_FORMAT_VERSION
+
+        import pickle
+
+        path = tmp_path / "legacy.pkl"
+        with open(path, "wb") as f:
+            pickle.dump([_make_experience(value=7.0), _make_experience(value=8.0)], f)
+
+        buf = ExperienceBuffer(max_size=100, save_dir=str(tmp_path), trust_legacy_pickle=True)
+        buf.load("legacy.pkl")
+        assert len(buf) == 2
+
+        # File migrated in place to the safe format: a default (untrusting) buffer can now load it.
+        payload = torch.load(path, map_location="cpu", weights_only=True)
+        assert payload["format_version"] == EXPERIENCE_BUFFER_FORMAT_VERSION
+        safe_buf = ExperienceBuffer(max_size=100, save_dir=str(tmp_path))
+        safe_buf.load("legacy.pkl")
+        assert len(safe_buf) == 2
+
+    def test_non_primitive_metadata_is_sanitized(self, tmp_path):
+        # A non-primitive metadata value must not break the safe loader.
+        exp = _make_experience()
+        exp.metadata = {"obj": object(), "nested": {"n": 1}, "items": [1, object()]}
+        buf = ExperienceBuffer(max_size=100, save_dir=str(tmp_path))
+        buf.add(exp)
+        buf.save("buf.pkl")
+
+        restored = ExperienceBuffer(max_size=100, save_dir=str(tmp_path))
+        restored.load("buf.pkl")  # would raise if metadata held arbitrary objects
+        meta = restored.get_all()[0].metadata
+        assert isinstance(meta["obj"], str)
+        assert meta["nested"] == {"n": 1}

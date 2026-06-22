@@ -331,3 +331,92 @@ class TestSubstructureLibrary:
                 lib.add_pattern([str(i)])
             # After 100 additions, auto-save should have been triggered
             assert Path(path).exists()
+
+
+# ---------------------------------------------------------------------------
+# Persistence safety: JSON format + gated legacy-pickle migration
+# ---------------------------------------------------------------------------
+
+
+def _write_legacy_pickle(path: str, patterns: dict) -> None:
+    """Write a file in the historical pickle schema used before the JSON migration."""
+    import pickle
+
+    data = {
+        "patterns": patterns,
+        "stats": {"total_additions": len(patterns)},
+        "max_size": 10000,
+        "similarity_threshold": 0.7,
+    }
+    with open(path, "wb") as f:
+        pickle.dump(data, f)
+
+
+@pytest.mark.unit
+@pytest.mark.security
+class TestSubstructurePersistenceSafety:
+    """The library must persist as safe JSON and never load a legacy pickle unless opted in."""
+
+    def test_save_writes_versioned_json_not_pickle(self):
+        from src.config.constants import SUBSTRUCTURE_LIBRARY_FORMAT_VERSION
+
+        with tempfile.TemporaryDirectory() as td:
+            path = str(Path(td) / "lib.pkl")
+            lib = SubstructureLibrary(enable_persistence=True, persistence_path=path)
+            lib.add_pattern(["a", "b"], frequency=3)
+            lib._save_to_disk()
+
+            # File is valid JSON (not a pickle) and carries the version header.
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            assert data["format_version"] == SUBSTRUCTURE_LIBRARY_FORMAT_VERSION
+            assert len(data["patterns"]) == 1
+            assert data["patterns"][0]["frequency"] == 3
+
+    def test_json_round_trip_restores_patterns(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = str(Path(td) / "lib.pkl")
+            lib = SubstructureLibrary(enable_persistence=True, persistence_path=path)
+            lib.add_pattern(["x", "y"], frequency=2, src="test")
+            lib._save_to_disk()
+
+            restored = SubstructureLibrary(enable_persistence=True, persistence_path=path)
+            assert len(restored._patterns) == 1
+            _seq, freq, _ts, meta = next(iter(restored._patterns.values()))
+            assert freq == 2
+            assert meta == {"src": "test"}
+
+    def test_legacy_pickle_skipped_by_default(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = str(Path(td) / "lib.pkl")
+            _write_legacy_pickle(path, {"p1": (["a", "b"], 5, 123.0, {})})
+
+            # Default (trust disabled): legacy pickle ignored, library starts empty.
+            lib = SubstructureLibrary(enable_persistence=True, persistence_path=path)
+            assert len(lib._patterns) == 0
+
+    def test_legacy_pickle_migrated_when_trusted(self):
+        from src.config.constants import SUBSTRUCTURE_LIBRARY_FORMAT_VERSION
+
+        with tempfile.TemporaryDirectory() as td:
+            path = str(Path(td) / "lib.pkl")
+            _write_legacy_pickle(path, {"p1": (["a", "b"], 5, 123.0, {"k": "v"})})
+
+            lib = SubstructureLibrary(enable_persistence=True, persistence_path=path, trust_legacy_pickle=True)
+            assert len(lib._patterns) == 1
+            _seq, freq, _ts, meta = lib._patterns["p1"]
+            assert freq == 5
+            assert meta == {"k": "v"}
+
+            # The file is migrated in place to safe JSON.
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            assert data["format_version"] == SUBSTRUCTURE_LIBRARY_FORMAT_VERSION
+
+    def test_explicit_flag_overrides_settings(self):
+        # Explicit False must win even if settings would enable it.
+        with tempfile.TemporaryDirectory() as td:
+            path = str(Path(td) / "lib.pkl")
+            _write_legacy_pickle(path, {"p1": (["a"], 1, 1.0, {})})
+            lib = SubstructureLibrary(enable_persistence=True, persistence_path=path, trust_legacy_pickle=False)
+            assert len(lib._patterns) == 0
