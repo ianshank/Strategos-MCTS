@@ -12,21 +12,29 @@ from __future__ import annotations
 
 from typing import Any
 
-# LangGraph imports (these would be installed dependencies)
+# LangGraph imports (these would be installed dependencies). The langgraph typed API
+# shifts across versions; bind StateGraph/MemorySaver as Any so static type-checking stays
+# stable across version drift while the runtime targets whichever langgraph is installed.
 try:
-    from langgraph.checkpoint.memory import MemorySaver
-    from langgraph.graph import END, StateGraph
+    from langgraph.checkpoint.memory import MemorySaver as _MemorySaver
+    from langgraph.graph import END
+    from langgraph.graph import StateGraph as _StateGraph
 except ImportError:
     # Stubs for development without LangGraph installed.
     # END must match langgraph.graph.END's actual value so visualization
     # comparisons against "__end__" still match in the stubbed path.
-    StateGraph = None  # type: ignore[assignment,misc]
+    _StateGraph = None
     END = "__end__"
-    MemorySaver = None  # type: ignore[assignment,misc]
+    _MemorySaver = None
 
 from ..mcts.config import MCTSConfig
 from ..mcts.experiments import ExperimentTracker
 from .builder import GraphBuilder
+
+# Bind the optional langgraph symbols as Any (declared after imports to satisfy E402) so
+# static type-checking is stable across langgraph's shifting typed API.
+StateGraph: Any = _StateGraph
+MemorySaver: Any = _MemorySaver
 
 
 class IntegratedFramework:

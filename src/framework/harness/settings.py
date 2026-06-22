@@ -180,7 +180,8 @@ class HarnessSettings(BaseSettings):
 
     def safe_dict(self) -> dict[str, object]:
         """Return settings as a dict suitable for logging (no secrets stored here)."""
-        return self.model_dump(mode="json")
+        data: dict[str, object] = self.model_dump(mode="json")
+        return data
 
 
 _harness_settings: HarnessSettings | None = None

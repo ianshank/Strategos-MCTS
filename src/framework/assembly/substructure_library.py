@@ -454,7 +454,9 @@ class SubstructureLibrary:
             persistence_path.parent.mkdir(parents=True, exist_ok=True)
 
             with open(persistence_path, "w", encoding="utf-8") as f:
-                json.dump(self._serialize(), f)
+                # default=str coerces any non-JSON value in pattern metadata so a single bad
+                # entry can never make the whole library fail to persist.
+                json.dump(self._serialize(), f, default=str)
 
             logger.debug(
                 "Saved substructure library",

@@ -420,3 +420,18 @@ class TestSubstructurePersistenceSafety:
             _write_legacy_pickle(path, {"p1": (["a"], 1, 1.0, {})})
             lib = SubstructureLibrary(enable_persistence=True, persistence_path=path, trust_legacy_pickle=False)
             assert len(lib._patterns) == 0
+
+    def test_non_json_metadata_does_not_break_save(self):
+        # A non-JSON-serializable metadata value must not make the whole library fail to save.
+        with tempfile.TemporaryDirectory() as td:
+            path = str(Path(td) / "lib.pkl")
+            lib = SubstructureLibrary(enable_persistence=True, persistence_path=path)
+            lib.add_pattern(["a", "b"], obj=object())  # non-serializable metadata value
+            lib._save_to_disk()
+
+            # File is still valid JSON and the pattern persisted (bad value coerced to str).
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            assert len(data["patterns"]) == 1
+            restored = SubstructureLibrary(enable_persistence=True, persistence_path=path)
+            assert len(restored._patterns) == 1
