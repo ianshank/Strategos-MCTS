@@ -100,6 +100,29 @@ except ImportError:
         "unit/test_chess_verification_types.py",
     ]
 
+# Property-based tests require the optional `hypothesis` dependency (dev extra). Skip
+# collecting them when it is absent (e.g. minimal smoke-test environments) so collection
+# does not error.
+try:
+    import hypothesis  # noqa: F401
+except ImportError:
+    collect_ignore_glob += [
+        "test_properties.py",
+        "property/test_mcts_invariants.py",
+        "neuro_symbolic/test_config.py",
+        "neuro_symbolic/test_state.py",
+        "games/chess/unit/test_property_based.py",
+    ]
+
+# The Gradio demo entrypoint (`app.py`) and its UI test require the optional `gradio`
+# dependency; skip when it is absent.
+try:
+    import gradio  # noqa: F401
+except ImportError:
+    collect_ignore_glob += [
+        "ui/test_gradio_app.py",
+    ]
+
 
 def pytest_configure(config):
     """Configure pytest with custom markers and settings."""
