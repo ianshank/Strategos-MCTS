@@ -241,11 +241,11 @@ def test_client(test_authenticator: APIKeyAuthenticator) -> TestClient:
     if not FASTAPI_AVAILABLE or not API_AVAILABLE:
         pytest.skip("FastAPI or API module not available")
 
-    # Set up the authenticator
-    set_authenticator(test_authenticator)
-
-    # Create test client without lifespan to avoid initialization
+    # Enter the client context first (this runs the app lifespan, which initializes a
+    # default authenticator from settings), then install the test authenticator so it is
+    # not clobbered by startup.
     with TestClient(app, raise_server_exceptions=False) as client:
+        set_authenticator(test_authenticator)
         yield client
 
 

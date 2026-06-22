@@ -61,6 +61,10 @@ dev = [
 prometheus = [
     "prometheus-client>=0.18.0",
 ]
+api = [
+    "fastapi>=0.110.0,<1.0.0",
+    "uvicorn[standard]>=0.27.0,<1.0.0",
+]
 neural = [
     "torch>=2.0.0",
     "transformers>=4.30.0",
@@ -95,7 +99,7 @@ benchmark = [
     "pydantic-settings>=2.0.0",
 ]
 all = [
-    "langgraph-multi-agent-mcts[dev,prometheus,neural,experiment,vectordb,google-adk,benchmark]",
+    "langgraph-multi-agent-mcts[dev,prometheus,api,neural,experiment,vectordb,google-adk,benchmark]",
 ]
 
 [project.scripts]

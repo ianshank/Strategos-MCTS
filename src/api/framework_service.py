@@ -25,6 +25,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Protocol, runtime_checkable
 
+from src.api.exceptions import ConfigurationError, LLMError
+from src.config.constants import MOCK_LLM_RESPONSE_TEXT
 from src.config.settings import Settings, get_settings
 
 # Try to import structured logging
@@ -228,6 +230,9 @@ class FrameworkService:
         self._request_count: int = 0
         self._error_count: int = 0
         self._total_processing_time_ms: float = 0.0
+        # Active operating mode, surfaced for health/readiness reporting.
+        self._llm_is_mock: bool = False
+        self._framework_mode: str = "uninitialized"
 
     @classmethod
     async def get_instance(
@@ -302,15 +307,24 @@ class FrameworkService:
                         provider=self._settings.LLM_PROVIDER.value,
                     )
             except Exception as e:
+                # Fail loud by default: never silently serve mock output in production.
+                if not self._settings.ALLOW_MOCK_LLM_FALLBACK:
+                    raise LLMError(
+                        "LLM client creation failed and mock fallback is disabled. "
+                        "Set ALLOW_MOCK_LLM_FALLBACK=true to allow a mock client (tests/dev only)."
+                    ) from e
                 if _HAS_STRUCTURED_LOGGING:
                     self._logger.warning(
-                        "LLM client creation failed, using mock",
+                        "LLM client creation failed; falling back to mock (ALLOW_MOCK_LLM_FALLBACK enabled)",
                         correlation_id=correlation_id,
+                        event="mock_llm_fallback",
+                        provider=self._settings.LLM_PROVIDER.value,
                         error=str(e),
                     )
                 else:
-                    self._logger.warning(f"LLM client creation failed: {e}, using mock")
+                    self._logger.warning(f"LLM client creation failed: {e}, using mock (fallback enabled)")
                 llm_client = MockLLMClient()
+                self._llm_is_mock = True
 
             # Initialize RAG retriever
             try:
@@ -355,6 +369,7 @@ class FrameworkService:
                     consensus_threshold=self._config.consensus_threshold,
                     enable_parallel_agents=self._config.enable_parallel_agents,
                 )
+                self._framework_mode = "integrated"
                 if _HAS_STRUCTURED_LOGGING:
                     self._logger.info(
                         "Full framework initialized",
@@ -362,10 +377,19 @@ class FrameworkService:
                         framework_type="integrated",
                     )
             except (ImportError, NotImplementedError) as e:
+                # Lightweight mode still issues real LLM calls (legitimate degraded mode),
+                # but make it explicit and opt-out-able rather than silent.
+                if not self._settings.ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK:
+                    raise ConfigurationError(
+                        "Integrated framework is unavailable and lightweight fallback is "
+                        "disabled. Set ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK=true to allow it."
+                    ) from e
                 if _HAS_STRUCTURED_LOGGING:
                     self._logger.warning(
-                        "Full framework unavailable, using lightweight mode",
+                        "Full framework unavailable; using lightweight mode "
+                        "(ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK enabled)",
                         correlation_id=correlation_id,
+                        event="lightweight_framework_fallback",
                         error=str(e),
                     )
                 else:
@@ -376,6 +400,7 @@ class FrameworkService:
                     logger=self._logger,
                     rag_retriever=self._rag_retriever,
                 )
+                self._framework_mode = "lightweight"
 
             self._state = FrameworkState.READY
             init_time = (time.perf_counter() - init_start) * 1000
@@ -642,6 +667,20 @@ class FrameworkService:
         """Get current framework state."""
         return self._state
 
+    @property
+    def active_mode(self) -> dict[str, Any]:
+        """
+        Describe the active operating mode for health/readiness reporting.
+
+        ``degraded`` is True when the service is running on a mock LLM (correctness
+        risk) so callers (e.g. ``/health``) can report ``degraded`` rather than ``ready``.
+        """
+        return {
+            "framework_mode": self._framework_mode,
+            "llm_is_mock": self._llm_is_mock,
+            "degraded": self._llm_is_mock,
+        }
+
 
 class MockLLMClient:
     """Mock LLM client for testing and fallback."""
@@ -651,7 +690,7 @@ class MockLLMClient:
 
         @dataclass
         class MockResponse:
-            text: str = "This is a mock response for testing purposes."
+            text: str = MOCK_LLM_RESPONSE_TEXT
 
         return MockResponse()
 

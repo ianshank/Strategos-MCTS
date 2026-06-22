@@ -380,14 +380,18 @@ async def readiness_check():
     """
     # Check framework service status
     framework_ready = False
+    framework_degraded = False
     if framework_service is not None:
         framework_ready = framework_service.is_ready
+        # Surface degraded operation (e.g. running on a mock LLM) so operators can act.
+        framework_degraded = bool(framework_service.active_mode.get("degraded", False))
 
     checks = {
         "imports_available": IMPORTS_AVAILABLE,
         "authenticator_configured": True,
         "framework_service_available": FRAMEWORK_SERVICE_AVAILABLE,
         "framework_ready": framework_ready,
+        "framework_degraded": framework_degraded,
         "prometheus_available": PROMETHEUS_AVAILABLE,
     }
 
