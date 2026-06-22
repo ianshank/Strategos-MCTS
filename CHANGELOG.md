@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - Security & Reliability Hardening
+
+### Security
+- Removed both unsafe `pickle.load` deserialization sites. The substructure library now
+  persists as versioned JSON; the experience buffer via `torch.save` + `torch.load(weights_only=True)`.
+
+### Changed (behavior — review before upgrading)
+- **Fail-loud fallbacks (default behavior change).** The framework service no longer silently
+  serves mock LLM output when the real LLM client can't initialize; it raises instead. Set
+  `ALLOW_MOCK_LLM_FALLBACK=true` to restore the mock fallback (tests/dev). The
+  LightweightFramework fallback remains on by default but is now explicit and logged
+  (`ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK`).
+- **Training step failures** can now raise instead of returning zero metrics when
+  `TRAINING_STRICT_ERRORS=true`; the default still returns zeros but emits a
+  `training_step_degraded` warning.
+
+### Migration
+- **Legacy persisted artifacts.** Existing `.pkl` substructure libraries and experience
+  buffers are **not** read by default. To migrate them once to the safe format, set
+  `ASSEMBLY_TRUST_LEGACY_PICKLE=true` / `TRAINING_TRUST_LEGACY_PICKLE=true`; the file is
+  re-saved in the new format on first load. Otherwise the substructure library starts empty
+  and the buffer load raises a clear error pointing to the flag.
+- **Packaging.** `pydantic-settings` is now a core dependency and a new `api` extra
+  (`fastapi`, `uvicorn`) was added; the production Docker image installs `.[api,prometheus]`.
+
 ## [0.2.0] - Production Training Pipeline Release
 
 ### Added
