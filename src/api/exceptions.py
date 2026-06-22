@@ -279,6 +279,28 @@ class ConfigurationError(FrameworkError):
         )
 
 
+class TrainingError(FrameworkError):
+    """Raised when a training step fails and strict error handling is enabled."""
+
+    def __init__(
+        self,
+        user_message: str = "Training step failed",
+        internal_details: str | None = None,
+        stage: str | None = None,
+        **kwargs,
+    ):
+        context = kwargs.pop("context", {})
+        if stage:
+            context["stage"] = stage
+        super().__init__(
+            user_message=user_message,
+            internal_details=internal_details,
+            error_code="TRAINING_ERROR",
+            context=context,
+            **kwargs,
+        )
+
+
 # Convenience function for wrapping exceptions
 def wrap_exception(
     exc: Exception, user_message: str = "An unexpected error occurred", error_class: type = FrameworkError, **kwargs
