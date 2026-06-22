@@ -436,3 +436,25 @@ class TestExperienceBufferPersistenceSafety:
         meta = restored.get_all()[0].metadata
         assert isinstance(meta["obj"], str)
         assert meta["nested"] == {"n": 1}
+        # Primitive inside list preserved; non-primitive inside list coerced.
+        assert meta["items"][0] == 1
+        assert isinstance(meta["items"][1], str)
+
+    def test_nested_structures_in_lists_preserved(self, tmp_path):
+        # Structured metadata (dict/list inside a list) must survive, not be str-coerced.
+        exp = _make_experience()
+        exp.metadata = {"history": [{"step": 1}, {"step": 2}], "pairs": [[1, 2], [3, 4]]}
+        buf = ExperienceBuffer(max_size=100, save_dir=str(tmp_path))
+        buf.add(exp)
+        buf.save("buf.pkl")
+
+        restored = ExperienceBuffer(max_size=100, save_dir=str(tmp_path))
+        restored.load("buf.pkl")
+        meta = restored.get_all()[0].metadata
+        assert meta["history"] == [{"step": 1}, {"step": 2}]
+        assert meta["pairs"] == [[1, 2], [3, 4]]
+
+    def test_load_missing_file_raises_filenotfound(self, tmp_path):
+        buf = ExperienceBuffer(max_size=100, save_dir=str(tmp_path))
+        with pytest.raises(FileNotFoundError, match="Buffer file not found"):
+            buf.load("does_not_exist.pkl")

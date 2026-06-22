@@ -50,24 +50,24 @@ def _resolve_trust_legacy_pickle(explicit: bool | None) -> bool:
 def _sanitize_metadata(meta: dict[str, Any]) -> dict[str, Any]:
     """
     Ensure metadata only contains primitives so the safe loader (``weights_only=True``)
-    can restore it. Non-primitive values are coerced to ``str`` and a debug line is logged,
-    rather than silently breaking a later load.
+    can restore it. Nested dicts/lists/tuples are sanitized recursively; any other value
+    is coerced to ``str`` (and logged), rather than silently breaking a later load.
     """
-    safe: dict[str, Any] = {}
-    for key, value in meta.items():
+
+    def _sanitize(value: Any, key_path: str) -> Any:
         if isinstance(value, _PRIMITIVE_METADATA_TYPES):
-            safe[str(key)] = value
-        elif isinstance(value, dict):
-            safe[str(key)] = _sanitize_metadata(value)
-        elif isinstance(value, (list, tuple)):
-            safe[str(key)] = [v if isinstance(v, _PRIMITIVE_METADATA_TYPES) else str(v) for v in value]
-        else:
-            logger.debug(
-                "Coercing non-primitive experience metadata value to str",
-                extra={"event": "experience_metadata_coerced", "key": str(key), "type": type(value).__name__},
-            )
-            safe[str(key)] = str(value)
-    return safe
+            return value
+        if isinstance(value, dict):
+            return {str(k): _sanitize(v, f"{key_path}.{k}") for k, v in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [_sanitize(v, f"{key_path}[]") for v in value]
+        logger.debug(
+            "Coercing non-primitive experience metadata value to str",
+            extra={"event": "experience_metadata_coerced", "key": key_path, "type": type(value).__name__},
+        )
+        return str(value)
+
+    return {str(key): _sanitize(value, str(key)) for key, value in meta.items()}
 
 
 def _experience_to_record(exp: Experience) -> dict[str, Any]:
@@ -240,6 +240,9 @@ class ExperienceBuffer:
             raise ValueError("save_dir not specified")
 
         filepath = self.save_dir / filename
+        if not filepath.is_file():
+            # Surface a clear error rather than a misleading legacy-pickle migration message.
+            raise FileNotFoundError(f"Buffer file not found: {filepath}")
 
         try:
             payload = torch.load(filepath, map_location=DEFAULT_TENSOR_LOAD_MAP_LOCATION, weights_only=True)
