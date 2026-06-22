@@ -208,6 +208,14 @@ MAX_EXPERIENCE_BUFFER_MAX_SIZE: Final[int] = 100000000
 DEFAULT_TENSOR_LOAD_MAP_LOCATION: Final[str] = "cpu"
 
 # ============================================================================
+# Hybrid Agent Parsing Fallbacks
+# ============================================================================
+
+# Returned when an LLM response cannot be parsed into an action/value.
+DEFAULT_HYBRID_ACTION_FALLBACK: Final[int] = 0
+DEFAULT_HYBRID_VALUE_FALLBACK: Final[float] = 0.0
+
+# ============================================================================
 # Mock / Fallback (test & dev only)
 # ============================================================================
 
