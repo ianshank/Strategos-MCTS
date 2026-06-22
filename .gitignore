@@ -49,9 +49,15 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+coverage.json
+test_results.txt
 *.cover
 *.py,cover
 .hypothesis/
+
+# Local workspace persistence artifacts (substructure library, replay buffers)
+workspace/
+*.pkl
 .pytest_cache/
 
 # Translations
