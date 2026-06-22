@@ -189,12 +189,23 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 show_error_codes = true
 
-# LangGraph ships inline types whose API shifts across releases (add_node,
-# Pregel.ainvoke/astream overloads, etc.), which makes type-checking non-deterministic
-# across versions. Treat the package as untyped (Any) so static analysis is stable
-# regardless of the installed langgraph version; the runtime still uses the real library.
+# Heavy ML/orchestration libraries ship inline types whose strictness and API shift across
+# releases (langgraph's Pregel overloads, torch's LR-scheduler hierarchy and Module.__call__,
+# transformers' lazy module, etc.). With unpinned versions this makes type-checking
+# non-deterministic between local and CI. Treat them as untyped (Any) so static analysis is
+# stable regardless of the resolved version; the runtime still uses the real libraries.
 [[tool.mypy.overrides]]
-module = ["langgraph.*", "langgraph"]
+module = [
+    "langgraph.*",
+    "langgraph",
+    "torch.*",
+    "torch",
+    "transformers.*",
+    "transformers",
+    "peft.*",
+    "datasets.*",
+    "sentence_transformers.*",
+]
 follow_imports = "skip"
 follow_imports_for_stubs = true
 
