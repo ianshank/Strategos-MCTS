@@ -372,10 +372,9 @@ class TestInferenceServerRoutes:
                 "use_trm_refinement": False,
             },
         )
-        # The source code puts "device" (str) into performance_stats dict[str, float],
-        # which causes a Pydantic validation error caught by the broad except -> 500.
-        # This is a known source code issue. The handler still exercises the MCTS path.
-        assert resp.status_code == 500
+        # performance_stats now accepts string metadata (e.g. "device") alongside numeric
+        # timings, so the MCTS inference path completes successfully.
+        assert resp.status_code == 200
 
     @patch("src.api.inference_server.torch")
     def test_inference_empty_state_returns_400(self, mock_torch):

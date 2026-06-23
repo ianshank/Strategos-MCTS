@@ -45,7 +45,7 @@ import numpy as np
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.framework.assembly import (
+from src.framework.assembly import (  # noqa: E402
     AssemblyFeatureExtractor,
     AssemblyFeatures,
 )
@@ -151,6 +151,7 @@ def fill_template(template: str) -> str:
 
     # Extract placeholders
     import re
+
     placeholders = re.findall(r"\{(\w+)\}", template)
 
     for placeholder in placeholders:
@@ -215,8 +216,7 @@ def select_ground_truth_agent(
     # Medium complexity
     if complexity == "medium" or ai < 7:
         return "hrm", (
-            f"Medium complexity (AI={ai:.1f}) routes to HRM for "
-            "structured hierarchical reasoning and task breakdown"
+            f"Medium complexity (AI={ai:.1f}) routes to HRM for " "structured hierarchical reasoning and task breakdown"
         )
 
     # Complex query → MCTS
@@ -308,14 +308,10 @@ def generate_training_sample(
     assembly_features = feature_extractor.extract(query)
 
     # Select ground truth agent
-    ground_truth_agent, reasoning = select_ground_truth_agent(
-        assembly_features, complexity
-    )
+    ground_truth_agent, reasoning = select_ground_truth_agent(assembly_features, complexity)
 
     # Generate meta-controller features
-    mc_features = generate_meta_controller_features(
-        assembly_features, ground_truth_agent
-    )
+    mc_features = generate_meta_controller_features(assembly_features, ground_truth_agent)
 
     return {
         "query": query,
@@ -394,6 +390,7 @@ def validate_dataset(samples: list[dict[str, Any]]) -> tuple[bool, list[str]]:
 
         # Agent distribution
         from collections import Counter
+
         agent_counts = Counter(agents)
 
         logger.info(f"Agent distribution: {dict(agent_counts)}")
@@ -457,11 +454,7 @@ def generate_dataset(
     # Generate samples by complexity
     samples = []
 
-    complexities = (
-        ["simple"] * num_simple +
-        ["medium"] * num_medium +
-        ["complex"] * num_complex
-    )
+    complexities = ["simple"] * num_simple + ["medium"] * num_medium + ["complex"] * num_complex
     random.shuffle(complexities)
 
     for i, complexity in enumerate(complexities):

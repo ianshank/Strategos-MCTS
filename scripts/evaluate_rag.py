@@ -204,7 +204,9 @@ async def evaluate_with_ragas(
 
                 # Record RAG metrics
                 num_docs = len(retrieved_docs) if retrieved_docs else 0
-                relevance_scores = [doc.get("metadata", {}).get("score", 0.5) for doc in retrieved_docs] if retrieved_docs else []
+                relevance_scores = (
+                    [doc.get("metadata", {}).get("score", 0.5) for doc in retrieved_docs] if retrieved_docs else []
+                )
                 record_rag_retrieval(num_docs, relevance_scores, latency)
 
                 predictions.append(

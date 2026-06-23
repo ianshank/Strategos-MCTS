@@ -131,15 +131,11 @@ async def run_experiment_on_example(
 
     # Create mock LLM client (in production, this would be real LLM)
     mock_client = create_mock_llm(provider="openai")
-    mock_client.set_responses(
-        [
-            f"""Analysis using {config.model}:
+    mock_client.set_responses([f"""Analysis using {config.model}:
             Strategy: {config.agent_strategy}
             MCTS: {"enabled" if config.use_mcts else "disabled"}
             Recommendation: Comprehensive tactical analysis complete.
-            Confidence: 0.85"""
-        ]
-    )
+            Confidence: 0.85"""])
 
     start_time = time.time()
 

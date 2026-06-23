@@ -205,6 +205,15 @@ module = [
     "peft.*",
     "datasets.*",
     "sentence_transformers.*",
+    "numpy.*",
+    "numpy",
+    "httpx.*",
+    "httpx",
+    "opentelemetry.*",
+    "psutil",
+    "psutil.*",
+    "prometheus_client",
+    "prometheus_client.*",
 ]
 follow_imports = "skip"
 follow_imports_for_stubs = true

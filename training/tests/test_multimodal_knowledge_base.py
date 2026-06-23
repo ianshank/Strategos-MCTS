@@ -449,9 +449,7 @@ class TestPerformance:
         extractor = CodeBlockExtractor({"min_code_lines": 3})
 
         # Generate large text with many code blocks
-        text = "\n\n".join(
-            [
-                f"""
+        text = "\n\n".join([f"""
             Section {i}:
             ```python
             def function_{i}():
@@ -459,10 +457,7 @@ class TestPerformance:
                     process(j)
                 return True
             ```
-            """
-                for i in range(100)
-            ]
-        )
+            """ for i in range(100)])
 
         start = time.time()
         codes = extractor.extract_code_blocks(text, "perf_test")
