@@ -21,7 +21,7 @@ except ImportError:  # pragma: no cover
     # Lightweight stubs when pydantic is not installed
     PYDANTIC_AVAILABLE = False
 
-    class BaseModel:  # type: ignore[no-redef]
+    class BaseModel:
         def __init__(self, **kwargs: Any) -> None:
             for k, v in kwargs.items():
                 setattr(self, k, v)

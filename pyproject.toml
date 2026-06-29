@@ -239,6 +239,15 @@ module = [
 ]
 disable_error_code = ["import-untyped"]
 
+# chess/mcp_chess_tools.py defines fallback stubs for pydantic in an
+# `except ImportError` block. Whether mypy flags these as [no-redef] depends on
+# whether it resolves the real pydantic import, which differs between local and
+# CI environments. Disable the code for this one module so the optional-import
+# fallback pattern type-checks identically everywhere.
+[[tool.mypy.overrides]]
+module = ["src.games.chess.mcp_chess_tools"]
+disable_error_code = ["no-redef"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
