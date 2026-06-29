@@ -366,5 +366,10 @@ This updated C4 architecture reflects the **current state** of the application, 
 | **Models** | DeBERTa-v3, ResNet, GRU |
 | **Orchestration** | Python AsyncIO, LangGraph |
 | **Data** | Pinecone, ArXiv API, OpenAI API |
-| **Monitoring** | Weights & Biases, Prometheus |
+| **Monitoring** | Weights & Biases, Prometheus, OpenTelemetry |
 | **Deployment** | Docker, Docker Compose |
+| **LLM adapters** | Provider-agnostic clients (OpenAI, Anthropic, LM Studio) over a shared resilience layer (`src/adapters/llm/resilience.py` — `CircuitBreaker`) with tenacity retries |
+
+> **Cross-cutting:** LLM client resilience (circuit breaker + exponential-backoff retries)
+> lives in `src/adapters/llm/resilience.py` and is shared by all provider clients, rather
+> than duplicated per provider.

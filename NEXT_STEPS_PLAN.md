@@ -10,6 +10,13 @@
 
 This document outlines the logical next steps for the LangGraph Multi-Agent MCTS framework based on a comprehensive codebase analysis. The project is **~90% feature complete** with **88.4% test pass rate** (771/872 tests). The plan prioritizes critical bugs, test coverage gaps, and feature enhancements.
 
+> **Status update (CI hardening):** the CI pipeline is now **green and deterministic** —
+> lint/type/test/build/docker jobs pass, tool versions (`ruff`/`mypy`) are pinned for
+> CI/local parity, and the unit suite holds **~88.85% coverage** against an 85% gate.
+> Phase 2.1 (LLM adapter tests) has progressed: the shared `CircuitBreaker`
+> (`src/adapters/llm/resilience.py`) is now covered by dedicated regression tests
+> (`tests/unit/adapters/test_resilience.py`), including enforcement of `half_open_max_calls`.
+
 ---
 
 ## Phase 1: Critical Bug Fixes (Priority: 🔴 CRITICAL)
