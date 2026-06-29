@@ -41,7 +41,10 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # Docker repository names must be lowercase; ${{ github.repository }} contains a
+  # capital "S" (ianshank/Strategos-MCTS), which buildx rejects on manually-built
+  # tags (e.g. the ":latest" tag below). Hardcode the lowercase form.
+  IMAGE_NAME: ianshank/strategos-mcts
   PYTHON_VERSION: '3.11'
 
 jobs:
