@@ -39,3 +39,18 @@ def test_get_reset_time_positive_when_open():
     cb.record_failure()
     assert cb.state == "open"
     assert cb.get_reset_time() > 0.0
+
+
+def test_half_open_enforces_max_calls():
+    """half_open_max_calls must cap the number of trial calls in half-open state."""
+    cb = CircuitBreaker(failure_threshold=1, reset_timeout=0.0, half_open_max_calls=2)
+    cb.record_failure()
+    assert cb.state == "open"
+
+    # reset_timeout=0.0 -> first call transitions to half-open and is allowed (call 1)
+    assert cb.can_execute() is True
+    assert cb.state == "half-open"
+    # second trial call still allowed (max=2)
+    assert cb.can_execute() is True
+    # third call is blocked: the limit is now enforced
+    assert cb.can_execute() is False

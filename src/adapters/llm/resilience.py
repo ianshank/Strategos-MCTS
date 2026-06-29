@@ -35,12 +35,17 @@ class CircuitBreaker:
             # Check if reset timeout has passed
             if time.time() - self.last_failure_time >= self.reset_timeout:
                 self.state = "half-open"
-                self.half_open_calls = 0
+                # Count this transition call as the first half-open trial so
+                # half_open_max_calls is actually enforced from the start.
+                self.half_open_calls = 1
                 return True
             return False
 
         if self.state == "half-open":
-            return self.half_open_calls < self.half_open_max_calls
+            if self.half_open_calls < self.half_open_max_calls:
+                self.half_open_calls += 1
+                return True
+            return False
 
         return False
 

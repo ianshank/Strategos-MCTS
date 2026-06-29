@@ -54,7 +54,10 @@ dev = [
     "pytest-timeout>=2.1.0",
     "pytest-xdist>=3.3.0",
     "hypothesis>=6.88.0",
-    "mypy>=1.7.0",
+    # Pin mypy to the validated minor: the no-redef diagnosis for optional-import
+    # fallbacks (e.g. chess/mcp_chess_tools.py) varies across mypy releases, so an
+    # unbounded range makes CI disagree with local. Bump deliberately when revalidated.
+    "mypy>=1.19.0,<1.20.0",
     "types-psutil>=5.9.0",
     "types-requests>=2.31.0",
     # Cap ruff to the validated minor: ruff introduces new lint rules in minor releases,
