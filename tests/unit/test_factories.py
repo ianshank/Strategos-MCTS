@@ -9,6 +9,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.config.constants import (
+    DEFAULT_ANTHROPIC_MODEL,
+    DEFAULT_LMSTUDIO_MODEL,
+    DEFAULT_OPENAI_MODEL,
+)
 from src.framework.factories import (
     AgentFactory,
     FrameworkFactory,
@@ -69,19 +74,19 @@ class TestLLMClientFactory:
 
     def test_get_default_model_openai(self):
         factory = LLMClientFactory(settings=_mock_settings())
-        assert factory._get_default_model("openai") == "gpt-4-turbo-preview"
+        assert factory._get_default_model("openai") == DEFAULT_OPENAI_MODEL
 
     def test_get_default_model_anthropic(self):
         factory = LLMClientFactory(settings=_mock_settings())
-        assert factory._get_default_model("anthropic") == "claude-3-sonnet-20240229"
+        assert factory._get_default_model("anthropic") == DEFAULT_ANTHROPIC_MODEL
 
     def test_get_default_model_lmstudio(self):
         factory = LLMClientFactory(settings=_mock_settings())
-        assert factory._get_default_model("lmstudio") == "local-model"
+        assert factory._get_default_model("lmstudio") == DEFAULT_LMSTUDIO_MODEL
 
     def test_get_default_model_unknown(self):
         factory = LLMClientFactory(settings=_mock_settings())
-        assert factory._get_default_model("unknown") == "gpt-4-turbo-preview"
+        assert factory._get_default_model("unknown") == DEFAULT_OPENAI_MODEL
 
     @patch("src.framework.factories.LLMClientFactory.create")
     def test_create_from_settings(self, mock_create):

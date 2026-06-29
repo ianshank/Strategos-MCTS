@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from src.adapters.llm.base import LLMClient
+from src.config.constants import CHESS_ROUTING_CONFIDENCE_BOOST
 from src.framework.agents.base import (
     AgentContext,
     AgentResult,
@@ -290,7 +291,7 @@ class LLMChessMetaController:
 
         primary = max(weights, key=lambda k: weights[k])
         sorted_w = sorted(weights.values(), reverse=True)
-        confidence = (sorted_w[0] - sorted_w[1] + 0.3) if len(sorted_w) > 1 else 1.0
+        confidence = (sorted_w[0] - sorted_w[1] + CHESS_ROUTING_CONFIDENCE_BOOST) if len(sorted_w) > 1 else 1.0
         confidence = min(1.0, confidence)
 
         reasoning = self._build_reasoning(phase, primary)

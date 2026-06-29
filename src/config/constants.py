@@ -154,6 +154,8 @@ DEFAULT_OTLP_HTTP_ENDPOINT: Final[str] = "http://localhost:4317"
 # Default model names
 DEFAULT_OPENAI_MODEL: Final[str] = "gpt-4-turbo-preview"
 DEFAULT_ANTHROPIC_MODEL: Final[str] = "claude-3-5-sonnet-20241022"
+DEFAULT_LMSTUDIO_MODEL: Final[str] = "local-model"
+DEFAULT_GOOGLE_GEMINI_MODEL: Final[str] = "gemini-2.0-flash-001"
 
 # Default timeouts per provider (seconds)
 DEFAULT_OPENAI_TIMEOUT: Final[float] = 60.0
@@ -214,6 +216,23 @@ DEFAULT_TENSOR_LOAD_MAP_LOCATION: Final[str] = "cpu"
 # Returned when an LLM response cannot be parsed into an action/value.
 DEFAULT_HYBRID_ACTION_FALLBACK: Final[int] = 0
 DEFAULT_HYBRID_VALUE_FALLBACK: Final[float] = 0.0
+
+# ============================================================================
+# Diagram Rendering (Kroki)
+# ============================================================================
+
+# Kroki service used to render Mermaid diagrams to image formats. Overridable so
+# deployments can point at a self-hosted Kroki instance.
+DEFAULT_KROKI_BASE_URL: Final[str] = "https://kroki.io"
+DEFAULT_KROKI_TIMEOUT_SECONDS: Final[float] = 30.0
+
+# ============================================================================
+# Chess Agent Routing
+# ============================================================================
+
+# Confidence boost applied when a single agent clearly dominates the routing
+# weights. Shared by the chess meta-controller and the LLM chess engine.
+CHESS_ROUTING_CONFIDENCE_BOOST: Final[float] = 0.3
 
 # ============================================================================
 # Mock / Fallback (test & dev only)

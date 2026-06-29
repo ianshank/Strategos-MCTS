@@ -37,7 +37,9 @@ from src.config.constants import (
     SERVICE_VERSION,
 )
 
-from .logging import get_correlation_id
+from .logging import get_correlation_id, get_logger
+
+logger = get_logger(__name__)
 
 
 class TracingManager:
@@ -138,9 +140,13 @@ class TracingManager:
         try:
             HTTPXClientInstrumentor().instrument()
             self._httpx_instrumented = True
-        except Exception:
-            # httpx instrumentation is optional
-            pass
+        except Exception as exc:
+            # httpx instrumentation is optional; degrade gracefully but record why
+            # so missing HTTP spans are diagnosable instead of silently absent.
+            logger.debug(
+                "HTTPX instrumentation unavailable; continuing without HTTP request tracing",
+                extra={"correlation_id": get_correlation_id(), "error": str(exc)},
+            )
 
     def shutdown(self) -> None:
         """Shutdown tracing provider."""

@@ -31,6 +31,8 @@ else:
         END = "__end__"
         MemorySaver = None
 
+from src.config.constants import DEFAULT_KROKI_BASE_URL, DEFAULT_KROKI_TIMEOUT_SECONDS
+
 from ..mcts.config import MCTSConfig
 from ..mcts.experiments import ExperimentTracker
 from .builder import GraphBuilder
@@ -573,10 +575,10 @@ class IntegratedFramework:
             encoded = base64.urlsafe_b64encode(compressed).decode("ascii")
 
             # Build Kroki URL
-            kroki_url = f"https://kroki.io/mermaid/{format}/{encoded}"
+            kroki_url = f"{DEFAULT_KROKI_BASE_URL}/mermaid/{format}/{encoded}"
 
             # Fetch rendered diagram
-            with httpx.Client(timeout=30.0) as client:
+            with httpx.Client(timeout=DEFAULT_KROKI_TIMEOUT_SECONDS) as client:
                 response = client.get(kroki_url)
                 response.raise_for_status()
 
