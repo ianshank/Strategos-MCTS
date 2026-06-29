@@ -8,7 +8,7 @@ to train policy and value networks.
 from __future__ import annotations
 
 import asyncio
-import pickle
+import pickle  # nosec B403 - only used for gated, opt-in legacy migration (see ExperienceBuffer.load)
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -16,9 +16,86 @@ from typing import Any
 
 import torch
 
+from src.config.constants import (
+    DEFAULT_EXPERIENCE_BUFFER_MAX_SIZE,
+    DEFAULT_TENSOR_LOAD_MAP_LOCATION,
+    EXPERIENCE_BUFFER_FORMAT_VERSION,
+)
 from src.observability.logging import get_logger
 
 logger = get_logger(__name__)
+
+# Types that ``torch.load(weights_only=True)`` can safely restore inside metadata.
+_PRIMITIVE_METADATA_TYPES = (int, float, bool, str, type(None))
+
+
+def _resolve_trust_legacy_pickle(explicit: bool | None) -> bool:
+    """
+    Resolve the "trust legacy pickle" flag for the experience buffer.
+
+    Precedence: explicit arg > ``Settings.TRAINING_TRUST_LEGACY_PICKLE`` > ``False``.
+    Settings access is defensive so the buffer constructs even when full settings
+    validation (e.g. API keys) is unavailable.
+    """
+    if explicit is not None:
+        return explicit
+    try:
+        from src.config.settings import get_settings
+
+        return bool(get_settings().TRAINING_TRUST_LEGACY_PICKLE)
+    except Exception:  # pragma: no cover - defensive: settings unavailable/invalid
+        return False
+
+
+def _sanitize_metadata(meta: dict[str, Any]) -> dict[str, Any]:
+    """
+    Ensure metadata only contains primitives so the safe loader (``weights_only=True``)
+    can restore it. Nested dicts/lists/tuples are sanitized recursively; any other value
+    is coerced to ``str`` (and logged), rather than silently breaking a later load.
+    """
+
+    def _sanitize(value: Any, key_path: str) -> Any:
+        if isinstance(value, _PRIMITIVE_METADATA_TYPES):
+            return value
+        if isinstance(value, dict):
+            return {str(k): _sanitize(v, f"{key_path}.{k}") for k, v in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [_sanitize(v, f"{key_path}[]") for v in value]
+        logger.debug(
+            "Coercing non-primitive experience metadata value to str",
+            extra={"event": "experience_metadata_coerced", "key": key_path, "type": type(value).__name__},
+        )
+        return str(value)
+
+    return {str(key): _sanitize(value, str(key)) for key, value in meta.items()}
+
+
+def _experience_to_record(exp: Experience) -> dict[str, Any]:
+    """Convert an Experience into a plain dict of tensors + primitives (torch.save-friendly)."""
+    return {
+        "state": exp.state,
+        "action": exp.action,
+        "value": exp.value,
+        "policy": exp.policy,
+        "reward": exp.reward,
+        "next_state": exp.next_state,
+        "done": exp.done,
+        "metadata": _sanitize_metadata(exp.metadata),
+    }
+
+
+def _record_to_experience(record: dict[str, Any]) -> Experience:
+    """Inverse of :func:`_experience_to_record`."""
+    return Experience(
+        state=record["state"],
+        action=record["action"],
+        value=record["value"],
+        policy=record.get("policy"),
+        reward=record.get("reward", 0.0),
+        next_state=record.get("next_state"),
+        done=record.get("done", False),
+        metadata=dict(record.get("metadata", {})),
+    )
 
 
 @dataclass
@@ -53,17 +130,26 @@ class ExperienceBuffer:
     neural network training data.
     """
 
-    def __init__(self, max_size: int = 100000, save_dir: str | None = None):
+    def __init__(
+        self,
+        max_size: int = DEFAULT_EXPERIENCE_BUFFER_MAX_SIZE,
+        save_dir: str | None = None,
+        trust_legacy_pickle: bool | None = None,
+    ):
         """
         Initialize experience buffer.
 
         Args:
             max_size: Maximum buffer size (oldest removed when full)
             save_dir: Directory for saving/loading buffer
+            trust_legacy_pickle: Allow a one-time read of a legacy pickled buffer before
+                migrating to the safe torch format. If ``None``, resolved from settings
+                (``TRAINING_TRUST_LEGACY_PICKLE``), defaulting to ``False`` (fail-safe).
         """
         self.buffer: deque[Experience] = deque(maxlen=max_size)
         self.max_size = max_size
         self.save_dir = Path(save_dir) if save_dir else None
+        self._trust_legacy_pickle = _resolve_trust_legacy_pickle(trust_legacy_pickle)
 
         if self.save_dir:
             self.save_dir.mkdir(parents=True, exist_ok=True)
@@ -117,27 +203,89 @@ class ExperienceBuffer:
         self.buffer.clear()
 
     def save(self, filename: str) -> None:
-        """Save buffer to disk."""
+        """
+        Save buffer to disk in the safe, versioned torch format.
+
+        Experiences are stored as plain dicts of tensors + primitives (not pickled class
+        instances) so they can be reloaded with ``weights_only=True``.
+        """
         if self.save_dir is None:
             raise ValueError("save_dir not specified")
 
         filepath = self.save_dir / filename
-        with open(filepath, "wb") as f:
-            pickle.dump(list(self.buffer), f)
+        payload = {
+            "format_version": EXPERIENCE_BUFFER_FORMAT_VERSION,
+            "experiences": [_experience_to_record(exp) for exp in self.buffer],
+        }
+        torch.save(payload, filepath)
 
-        logger.info(f"Saved {len(self.buffer)} experiences to {filepath}")
+        logger.info(
+            f"Saved {len(self.buffer)} experiences to {filepath}",
+            extra={
+                "event": "experience_buffer_save",
+                "count": len(self.buffer),
+                "format_version": EXPERIENCE_BUFFER_FORMAT_VERSION,
+                "path": str(filepath),
+            },
+        )
 
     def load(self, filename: str) -> None:
-        """Load buffer from disk."""
+        """
+        Load buffer from disk.
+
+        Prefers the safe versioned torch format (``weights_only=True``). A legacy pickle is
+        read only when ``trust_legacy_pickle`` is enabled, then re-saved in the safe format.
+        """
         if self.save_dir is None:
             raise ValueError("save_dir not specified")
 
         filepath = self.save_dir / filename
-        with open(filepath, "rb") as f:
-            experiences = pickle.load(f)
-            self.buffer.extend(experiences)
+        if not filepath.is_file():
+            # Surface a clear error rather than a misleading legacy-pickle migration message.
+            raise FileNotFoundError(f"Buffer file not found: {filepath}")
 
-        logger.info(f"Loaded {len(experiences)} experiences from {filepath}")
+        try:
+            payload = torch.load(filepath, map_location=DEFAULT_TENSOR_LOAD_MAP_LOCATION, weights_only=True)
+            experiences = [_record_to_experience(record) for record in payload["experiences"]]
+            self.buffer.extend(experiences)
+            logger.info(
+                f"Loaded {len(experiences)} experiences from {filepath}",
+                extra={
+                    "event": "experience_buffer_load",
+                    "count": len(experiences),
+                    "format_version": payload.get("format_version"),
+                    "weights_only": True,
+                    "path": str(filepath),
+                },
+            )
+            return
+        except Exception as e:
+            # Either a legacy pickle (rejected by weights_only) or a genuine error.
+            self._load_legacy_pickle(filepath, reason=str(e))
+
+    def _load_legacy_pickle(self, filepath: Path, reason: str) -> None:
+        """Read a legacy pickled buffer (opt-in) and migrate to the safe format, or fail loud."""
+        if not self._trust_legacy_pickle:
+            raise RuntimeError(
+                f"Could not load {filepath} in the safe format ({reason}). If this is a legacy "
+                "pickle file, set TRAINING_TRUST_LEGACY_PICKLE=true (or pass "
+                "trust_legacy_pickle=True) to migrate it once to the safe torch format."
+            )
+
+        with open(filepath, "rb") as f:
+            experiences = pickle.load(f)  # nosec B301 - gated by TRAINING_TRUST_LEGACY_PICKLE, opt-in migration
+
+        self.buffer.extend(experiences)
+        logger.warning(
+            f"Migrated legacy pickled experience buffer from {filepath}",
+            extra={
+                "event": "legacy_pickle_migration",
+                "count": len(experiences),
+                "path": str(filepath),
+            },
+        )
+        # Re-save immediately in the safe format.
+        self.save(filepath.name)
 
     def __len__(self) -> int:
         return len(self.buffer)

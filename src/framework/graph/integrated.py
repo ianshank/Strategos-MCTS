@@ -10,19 +10,26 @@ Provides:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-# LangGraph imports (these would be installed dependencies)
-try:
-    from langgraph.checkpoint.memory import MemorySaver
-    from langgraph.graph import END, StateGraph
-except ImportError:
-    # Stubs for development without LangGraph installed.
-    # END must match langgraph.graph.END's actual value so visualization
-    # comparisons against "__end__" still match in the stubbed path.
-    StateGraph = None  # type: ignore[assignment,misc]
+# LangGraph is an optional dependency whose typed API shifts across versions. For static
+# analysis treat its symbols as Any (the TYPE_CHECKING branch is the only one mypy sees), so
+# type-checking is stable regardless of the installed langgraph; at runtime the real import
+# is used, falling back to lightweight stubs when langgraph is absent.
+if TYPE_CHECKING:
+    StateGraph: Any = None
+    MemorySaver: Any = None
     END = "__end__"
-    MemorySaver = None  # type: ignore[assignment,misc]
+else:
+    try:
+        from langgraph.checkpoint.memory import MemorySaver
+        from langgraph.graph import END, StateGraph
+    except ImportError:
+        # END must match langgraph.graph.END's actual value so visualization
+        # comparisons against "__end__" still match in the stubbed path.
+        StateGraph = None
+        END = "__end__"
+        MemorySaver = None
 
 from ..mcts.config import MCTSConfig
 from ..mcts.experiments import ExperimentTracker

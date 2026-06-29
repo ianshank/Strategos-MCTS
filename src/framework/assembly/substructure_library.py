@@ -7,15 +7,38 @@ reasoning subsequences.
 
 import hashlib
 import json
-import pickle
+import pickle  # nosec B403 - only used for gated, opt-in legacy migration (see _load_from_disk)
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from src.observability.logging import get_logger
+from src.config.constants import (
+    DEFAULT_SUBSTRUCTURE_MAX_SIZE,
+    DEFAULT_SUBSTRUCTURE_SIMILARITY_THRESHOLD,
+    SUBSTRUCTURE_LIBRARY_FORMAT_VERSION,
+)
+from src.observability.logging import get_structured_logger
 
-logger = get_logger(__name__)
+logger = get_structured_logger(__name__)
+
+
+def _resolve_trust_legacy_pickle(explicit: bool | None) -> bool:
+    """
+    Resolve the "trust legacy pickle" flag.
+
+    Precedence: explicit constructor arg > ``Settings.ASSEMBLY_TRUST_LEGACY_PICKLE``
+    > ``False``. Settings access is defensive so this low-level library never fails to
+    construct in environments where full settings validation (e.g. API keys) is unavailable.
+    """
+    if explicit is not None:
+        return explicit
+    try:
+        from src.config.settings import get_settings
+
+        return bool(get_settings().ASSEMBLY_TRUST_LEGACY_PICKLE)
+    except Exception:  # pragma: no cover - defensive: settings unavailable/invalid
+        return False
 
 
 @dataclass
@@ -62,10 +85,11 @@ class SubstructureLibrary:
 
     def __init__(
         self,
-        max_size: int = 10000,
-        similarity_threshold: float = 0.7,
+        max_size: int = DEFAULT_SUBSTRUCTURE_MAX_SIZE,
+        similarity_threshold: float = DEFAULT_SUBSTRUCTURE_SIMILARITY_THRESHOLD,
         enable_persistence: bool = True,
         persistence_path: str | None = None,
+        trust_legacy_pickle: bool | None = None,
     ):
         """
         Initialize substructure library.
@@ -75,11 +99,15 @@ class SubstructureLibrary:
             similarity_threshold: Minimum similarity for pattern matching
             enable_persistence: Enable auto-save to disk
             persistence_path: Path for persistence file
+            trust_legacy_pickle: Allow a one-time read of a legacy pickled library before
+                migrating to JSON. If ``None``, resolved from settings
+                (``ASSEMBLY_TRUST_LEGACY_PICKLE``), defaulting to ``False`` (fail-safe).
         """
         self.max_size = max_size
         self.similarity_threshold = similarity_threshold
         self.enable_persistence = enable_persistence
         self.persistence_path = persistence_path or "./workspace/assembly/substructure_library.pkl"
+        self._trust_legacy_pickle = _resolve_trust_legacy_pickle(trust_legacy_pickle)
 
         # Pattern storage: pattern_id -> (sequence, frequency, last_used_timestamp, metadata)
         self._patterns: dict[str, tuple[list[Any], int, float, dict]] = {}
@@ -377,62 +405,161 @@ class SubstructureLibrary:
 
         self._stats["evictions"] += 1
 
+    @staticmethod
+    def _pattern_to_record(pid: str, seq: list[Any], freq: int, timestamp: float, meta: dict) -> dict[str, Any]:
+        """
+        Build a single JSON-serializable persistence record for a stored pattern.
+
+        Shared by ``_save_to_disk`` and ``save_json`` so the on-disk schema (including the
+        ``sequence`` string-coercion) is defined in exactly one place.
+        """
+        return {
+            "pattern_id": pid,
+            "sequence": [str(s) for s in seq],
+            "frequency": freq,
+            "timestamp": timestamp,
+            "metadata": meta,
+        }
+
+    @staticmethod
+    def _record_to_pattern(record: dict[str, Any]) -> tuple[str, tuple[list[Any], int, float, dict]]:
+        """Inverse of :meth:`_pattern_to_record`: produce ``(pattern_id, (seq, freq, ts, meta))``."""
+        return (
+            record["pattern_id"],
+            (
+                list(record["sequence"]),
+                int(record["frequency"]),
+                float(record["timestamp"]),
+                dict(record.get("metadata", {})),
+            ),
+        )
+
+    def _serialize(self) -> dict[str, Any]:
+        """Build the versioned, JSON-serializable representation of the library."""
+        return {
+            "format_version": SUBSTRUCTURE_LIBRARY_FORMAT_VERSION,
+            "patterns": [
+                self._pattern_to_record(pid, seq, freq, timestamp, meta)
+                for pid, (seq, freq, timestamp, meta) in self._patterns.items()
+            ],
+            "stats": self._stats,
+            "max_size": self.max_size,
+            "similarity_threshold": self.similarity_threshold,
+        }
+
     def _save_to_disk(self) -> None:
-        """Save library to disk."""
+        """Persist the library to disk as versioned JSON (safe, human-inspectable)."""
         try:
             persistence_path = Path(self.persistence_path)
             persistence_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Convert to serializable format
-            data = {
-                "patterns": {
-                    pid: (
-                        [str(s) for s in seq],  # Convert to strings
-                        freq,
-                        timestamp,
-                        meta,
-                    )
-                    for pid, (seq, freq, timestamp, meta) in self._patterns.items()
-                },
-                "stats": self._stats,
-                "max_size": self.max_size,
-                "similarity_threshold": self.similarity_threshold,
-            }
+            with open(persistence_path, "w", encoding="utf-8") as f:
+                # default=str coerces any non-JSON value in pattern metadata so a single bad
+                # entry can never make the whole library fail to persist.
+                json.dump(self._serialize(), f, default=str)
 
-            with open(persistence_path, "wb") as f:
-                pickle.dump(data, f)
-
+            logger.debug(
+                "Saved substructure library",
+                event="substructure_library_save",
+                path=str(persistence_path),
+                pattern_count=len(self._patterns),
+                format_version=SUBSTRUCTURE_LIBRARY_FORMAT_VERSION,
+            )
         except Exception as e:
-            logger.warning("Failed to save substructure library: %s", e)
+            logger.warning(
+                "Failed to save substructure library",
+                event="substructure_library_save_failed",
+                path=str(self.persistence_path),
+                error=str(e),
+            )
+
+    def _apply_loaded(self, records: list[dict[str, Any]], stats: dict[str, Any]) -> None:
+        """Restore in-memory state from deserialized records."""
+        self._patterns = dict(self._record_to_pattern(record) for record in records)
+        self._hash_index = {pid: pid for pid in self._patterns}
+        self._stats.update(stats or {})
 
     def _load_from_disk(self) -> None:
-        """Load library from disk."""
+        """
+        Load the library from disk.
+
+        Prefers the safe versioned-JSON format. If the file is a legacy pickle, it is read
+        only when ``trust_legacy_pickle`` is enabled and then immediately re-saved as JSON
+        (one-time migration); otherwise the load is skipped and the library starts empty.
+        """
+        persistence_path = Path(self.persistence_path)
+        if not persistence_path.exists():
+            return
+
+        # Preferred path: safe versioned JSON.
         try:
-            persistence_path = Path(self.persistence_path)
+            with open(persistence_path, encoding="utf-8") as f:
+                data = json.load(f)
+            self._apply_loaded(data.get("patterns", []), data.get("stats", {}))
+            logger.debug(
+                "Loaded substructure library",
+                event="substructure_library_load",
+                path=str(persistence_path),
+                pattern_count=len(self._patterns),
+                format_version=data.get("format_version"),
+            )
+            return
+        except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError):
+            # Not valid JSON — possibly a legacy pickle file. Fall through to migration.
+            pass
+        except Exception as e:  # pragma: no cover - unexpected IO error
+            logger.warning(
+                "Failed to load substructure library",
+                event="substructure_library_load_failed",
+                path=str(persistence_path),
+                error=str(e),
+            )
+            self._patterns = {}
+            self._hash_index = {}
+            return
 
-            if not persistence_path.exists():
-                return
+        self._migrate_legacy_pickle(persistence_path)
 
+    def _migrate_legacy_pickle(self, persistence_path: Path) -> None:
+        """Read a legacy pickled library (opt-in) and migrate it to JSON, or skip safely."""
+        if not self._trust_legacy_pickle:
+            logger.warning(
+                "Ignoring legacy pickled substructure library (set ASSEMBLY_TRUST_LEGACY_PICKLE "
+                "to migrate it); starting empty",
+                event="substructure_library_legacy_pickle_skipped",
+                path=str(persistence_path),
+            )
+            self._patterns = {}
+            self._hash_index = {}
+            return
+
+        try:
             with open(persistence_path, "rb") as f:
-                data = pickle.load(f)
+                data = pickle.load(f)  # nosec B301 - gated by ASSEMBLY_TRUST_LEGACY_PICKLE, opt-in migration
 
-            # Restore patterns
-            self._patterns = {
-                pid: (seq, freq, timestamp, meta) for pid, (seq, freq, timestamp, meta) in data["patterns"].items()
-            }
+            # Legacy schema stored patterns as {pid: (seq, freq, ts, meta)}.
+            legacy_patterns = data.get("patterns", {})
+            records = [
+                self._pattern_to_record(pid, seq, freq, timestamp, meta)
+                for pid, (seq, freq, timestamp, meta) in legacy_patterns.items()
+            ]
+            self._apply_loaded(records, data.get("stats", {}))
 
-            # Rebuild hash index
-            self._hash_index = {pid: pid for pid in self._patterns}
-
-            # Restore stats
-            self._stats.update(data.get("stats", {}))
-
-            # Update config (but preserve constructor values if different)
-            # self.max_size = data.get('max_size', self.max_size)
-            # self.similarity_threshold = data.get('similarity_threshold', self.similarity_threshold)
-
+            logger.warning(
+                "Migrated legacy pickled substructure library to JSON",
+                event="legacy_pickle_migration",
+                path=str(persistence_path),
+                pattern_count=len(self._patterns),
+            )
+            # Re-save immediately in the safe format.
+            self._save_to_disk()
         except Exception as e:
-            logger.warning("Failed to load substructure library: %s", e)
+            logger.warning(
+                "Failed to migrate legacy substructure library",
+                event="substructure_library_legacy_migration_failed",
+                path=str(persistence_path),
+                error=str(e),
+            )
             self._patterns = {}
             self._hash_index = {}
 
@@ -448,13 +575,7 @@ class SubstructureLibrary:
 
         data = {
             "patterns": [
-                {
-                    "pattern_id": pid,
-                    "sequence": [str(s) for s in seq],
-                    "frequency": freq,
-                    "timestamp": timestamp,
-                    "metadata": meta,
-                }
+                self._pattern_to_record(pid, seq, freq, timestamp, meta)
                 for pid, (seq, freq, timestamp, meta) in self._patterns.items()
             ],
             "statistics": self.get_statistics(),

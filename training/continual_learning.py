@@ -346,8 +346,7 @@ class ProductionInteractionLogger:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS interactions (
                 interaction_id TEXT PRIMARY KEY,
                 timestamp REAL NOT NULL,
@@ -368,26 +367,19 @@ class ProductionInteractionLogger:
                 metadata TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """
-        )
+        """)
 
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_timestamp ON interactions(timestamp)
-        """
-        )
+        """)
 
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_session ON interactions(session_id)
-        """
-        )
+        """)
 
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_feedback ON interactions(user_feedback_score)
-        """
-        )
+        """)
 
         conn.commit()
         conn.close()

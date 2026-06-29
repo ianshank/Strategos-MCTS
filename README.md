@@ -1,10 +1,24 @@
 # LangGraph Multi-Agent MCTS Framework
 
-**Production-Ready DeepMind-Style AI System with Neural MCTS and Hierarchical Reasoning**
+**Production-quality components for a DeepMind-style AI system with Neural MCTS and Hierarchical Reasoning** (pre-integration — see [Known Limitations](#-known-limitations))
 
 ![Architecture](docs/img/architecture_overview.png)
 
-This framework implements a state-of-the-art multi-agent system combining hierarchical reasoning (HRM), iterative refinement (TRM), and Monte Carlo Tree Search (MCTS) guided by neural networks. It features a complete training pipeline, synthetic data generation, and RAG integration.
+This framework implements a multi-agent system combining hierarchical reasoning (HRM), iterative refinement (TRM), and Monte Carlo Tree Search (MCTS) guided by neural networks. It features a training pipeline, synthetic data generation, and RAG integration. The individual components are well-tested and engineered to a production standard; full end-to-end integration is still in progress.
+
+## ⚠️ Known Limitations
+
+- **Mock/lightweight fallbacks are opt-in.** When the configured LLM or the full integrated
+  framework can't initialize, the service fails loud by default rather than silently serving
+  mock output. Enable `ALLOW_MOCK_LLM_FALLBACK` / `ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK` for
+  tests/dev (see `.env.example`).
+- **Persisted artifacts changed format.** The substructure library now persists as JSON and
+  the experience buffer via `torch.save(weights_only=True)`. Legacy `pickle` files are only
+  read when `ASSEMBLY_TRUST_LEGACY_PICKLE` / `TRAINING_TRUST_LEGACY_PICKLE` are set, then
+  migrated in place. See [CHANGELOG.md](CHANGELOG.md).
+- **Some training and hybrid-agent paths are extension points.** Domain-specific prompt/parse
+  logic and certain training loops ship as overridable defaults, not finished implementations.
+- See `GAP_ANALYSIS_REPORT.md` for the current component-by-component status.
 
 ## 🚀 Key Features
 

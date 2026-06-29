@@ -10,9 +10,9 @@ Usage:
 """
 
 import argparse
+import dataclasses
 import logging
 import sys
-import dataclasses
 from pathlib import Path
 
 import yaml

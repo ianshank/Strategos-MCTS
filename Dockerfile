@@ -18,14 +18,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
+# Copy project metadata and source needed to install the package with its real deps
 COPY requirements.txt pyproject.toml ./
+COPY src/ ./src/
 
-# Create virtual environment and install dependencies
+# Create virtual environment and install dependencies.
+# requirements.txt covers the model/demo deps (torch, transformers, numpy);
+# installing the package with the api+prometheus extras pulls the actual API runtime
+# dependencies (fastapi, uvicorn, langgraph, pydantic-settings, opentelemetry, ...) that
+# the served `uvicorn src.api.rest_server:app` process needs.
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install -r requirements.txt
+    pip install -r requirements.txt && \
+    pip install ".[api,prometheus]"
 
 # Stage 2: Production image
 FROM python:3.11-slim as production

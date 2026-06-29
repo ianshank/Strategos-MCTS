@@ -178,3 +178,47 @@ DEFAULT_S3_BUCKET_NAME: Final[str] = "mcts-framework-storage"
 SERVICE_VERSION: Final[str] = "0.1.0"
 DEFAULT_ENVIRONMENT: Final[str] = "development"
 DEFAULT_OTEL_SERVICE_NAME: Final[str] = "mcts-framework"
+
+# ============================================================================
+# Persistence / Serialization
+# ============================================================================
+
+# On-disk format versions for safe, forward-compatible (de)serialization.
+# Bump when the persisted record schema changes.
+SUBSTRUCTURE_LIBRARY_FORMAT_VERSION: Final[int] = 1
+EXPERIENCE_BUFFER_FORMAT_VERSION: Final[int] = 1
+
+# Substructure library sizing/matching defaults and bounds
+DEFAULT_SUBSTRUCTURE_MAX_SIZE: Final[int] = 10000
+MIN_SUBSTRUCTURE_MAX_SIZE: Final[int] = 1
+MAX_SUBSTRUCTURE_MAX_SIZE: Final[int] = 1000000
+
+DEFAULT_SUBSTRUCTURE_SIMILARITY_THRESHOLD: Final[float] = 0.7
+MIN_SUBSTRUCTURE_SIMILARITY_THRESHOLD: Final[float] = 0.0
+MAX_SUBSTRUCTURE_SIMILARITY_THRESHOLD: Final[float] = 1.0
+
+# Experience replay buffer sizing defaults and bounds
+DEFAULT_EXPERIENCE_BUFFER_MAX_SIZE: Final[int] = 100000
+MIN_EXPERIENCE_BUFFER_MAX_SIZE: Final[int] = 1
+MAX_EXPERIENCE_BUFFER_MAX_SIZE: Final[int] = 100000000
+
+# Default device for loading persisted tensors. "cpu" is the safe default so a
+# buffer saved on GPU can be reloaded on a CPU-only host; callers move tensors
+# to the training device afterwards.
+DEFAULT_TENSOR_LOAD_MAP_LOCATION: Final[str] = "cpu"
+
+# ============================================================================
+# Hybrid Agent Parsing Fallbacks
+# ============================================================================
+
+# Returned when an LLM response cannot be parsed into an action/value.
+DEFAULT_HYBRID_ACTION_FALLBACK: Final[int] = 0
+DEFAULT_HYBRID_VALUE_FALLBACK: Final[float] = 0.0
+
+# ============================================================================
+# Mock / Fallback (test & dev only)
+# ============================================================================
+
+# Text returned by the in-process mock LLM client. Centralized so it is greppable
+# and can never be mistaken for a real model response.
+MOCK_LLM_RESPONSE_TEXT: Final[str] = "This is a mock response for testing purposes."

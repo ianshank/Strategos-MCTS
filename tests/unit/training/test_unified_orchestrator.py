@@ -443,3 +443,51 @@ class TestSystemConfigIntegration:
         assert "neural_net" in d
         assert "training" in d
         assert d["device"] == "cpu"
+
+
+# ---------------------------------------------------------------------------
+# Strict-error mode (P2.2): training failures raise vs. return zero metrics
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestTrainingFailureHandling:
+    """_handle_training_failure honors TRAINING_STRICT_ERRORS."""
+
+    _ZEROS = {"hrm_loss": 0.0, "hrm_halt_step": 0.0}
+
+    def test_degraded_mode_returns_zeros_and_logs(self, caplog):
+        import logging
+
+        from src.training import unified_orchestrator as uo
+
+        with patch.object(uo, "_strict_training_errors", return_value=False):
+            with caplog.at_level(logging.WARNING):
+                result = uo._handle_training_failure("hrm_train_epoch", "boom", dict(self._ZEROS))
+
+        assert result == self._ZEROS
+        assert any("training_step_degraded" in r.getMessage() or "degraded" in r.getMessage() for r in caplog.records)
+
+    def test_strict_mode_raises_training_error(self):
+        from src.api.exceptions import TrainingError
+        from src.training import unified_orchestrator as uo
+
+        with patch.object(uo, "_strict_training_errors", return_value=True):
+            with pytest.raises(TrainingError) as exc_info:
+                uo._handle_training_failure("hrm_train_epoch", "boom", dict(self._ZEROS))
+
+        assert exc_info.value.context.get("stage") == "hrm_train_epoch"
+
+    def test_strict_flag_resolves_from_settings(self):
+        from src.training import unified_orchestrator as uo
+
+        fake_settings = MagicMock()
+        fake_settings.TRAINING_STRICT_ERRORS = True
+        with patch("src.config.settings.get_settings", return_value=fake_settings):
+            assert uo._strict_training_errors() is True
+
+    def test_strict_flag_defaults_false_when_settings_unavailable(self):
+        from src.training import unified_orchestrator as uo
+
+        with patch("src.config.settings.get_settings", side_effect=RuntimeError("no settings")):
+            assert uo._strict_training_errors() is False

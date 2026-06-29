@@ -8,13 +8,15 @@ for routine decisions and LLM for complex reasoning tasks.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Literal
 
 import torch
 
-from src.observability.logging import get_logger
+from src.config.constants import DEFAULT_HYBRID_ACTION_FALLBACK, DEFAULT_HYBRID_VALUE_FALLBACK
+from src.observability.logging import get_logger, sanitize_dict
 
 from ..models.policy_network import PolicyNetwork
 from ..models.value_network import ValueNetwork
@@ -105,11 +107,23 @@ class HybridAgent:
         value_net: ValueNetwork | None = None,
         llm_client: Any | None = None,
         config: HybridConfig | None = None,
+        *,
+        prompt_builder: Callable[[torch.Tensor, dict[str, Any] | None], str] | None = None,
+        eval_prompt_builder: Callable[[torch.Tensor], str] | None = None,
+        action_parser: Callable[[dict[str, Any]], int] | None = None,
+        value_parser: Callable[[dict[str, Any]], float] | None = None,
     ):
         self.policy_net = policy_net
         self.value_net = value_net
         self.llm_client = llm_client
         self.config = config or HybridConfig()
+
+        # Optional domain-specific hooks. When not supplied, the generic default
+        # implementations below are used (override these for real LLM integration).
+        self._prompt_builder = prompt_builder
+        self._eval_prompt_builder = eval_prompt_builder
+        self._action_parser = action_parser
+        self._value_parser = value_parser
 
         # Move networks to eval mode
         if self.policy_net is not None:
@@ -410,37 +424,61 @@ class HybridAgent:
             return self.config.policy_confidence_threshold
 
     def _state_to_prompt(self, state: torch.Tensor, context: dict[str, Any] | None = None) -> str:
-        """Convert state to LLM prompt for action selection."""
-        # This is a placeholder - should be implemented based on domain
+        """
+        Convert state to an LLM prompt for action selection.
+
+        Uses the injected ``prompt_builder`` hook when provided; otherwise falls back to a
+        generic, domain-agnostic prompt. Override the hook for real domain integration.
+        """
+        if self._prompt_builder is not None:
+            return self._prompt_builder(state, context)
         state_desc = f"State: {state.tolist()}"
         if context:
             state_desc += f"\nContext: {context}"
         return f"Given the following state, select the best action:\n{state_desc}\n\nAction:"
 
     def _state_to_evaluation_prompt(self, state: torch.Tensor) -> str:
-        """Convert state to LLM prompt for position evaluation."""
+        """
+        Convert state to an LLM prompt for position evaluation.
+
+        Uses the injected ``eval_prompt_builder`` hook when provided; otherwise a generic prompt.
+        """
+        if self._eval_prompt_builder is not None:
+            return self._eval_prompt_builder(state)
         state_desc = f"State: {state.tolist()}"
         return f"Evaluate the following position (return value between -1 and 1):\n{state_desc}\n\nValue:"
 
     def _parse_action(self, response: dict[str, Any]) -> int:
-        """Parse action from LLM response."""
-        # Placeholder - should be implemented based on LLM response format
-        text = response.get("text", "0")
+        """
+        Parse an action from an LLM response.
+
+        Uses the injected ``action_parser`` hook when provided; otherwise a generic parser
+        that reads the leading integer, returning ``DEFAULT_HYBRID_ACTION_FALLBACK`` on failure.
+        """
+        if self._action_parser is not None:
+            return self._action_parser(response)
+        text = response.get("text", str(DEFAULT_HYBRID_ACTION_FALLBACK))
         try:
             return int(text.strip().split()[0])
         except (ValueError, IndexError):
-            logger.warning(f"Failed to parse action from response: {text}")
-            return 0
+            logger.warning("Failed to parse action from LLM response", extra={"response": sanitize_dict(response)})
+            return DEFAULT_HYBRID_ACTION_FALLBACK
 
     def _parse_value(self, response: dict[str, Any]) -> float:
-        """Parse value from LLM response."""
-        # Placeholder - should be implemented based on LLM response format
-        text = response.get("text", "0.0")
+        """
+        Parse a value from an LLM response.
+
+        Uses the injected ``value_parser`` hook when provided; otherwise a generic parser
+        that reads the leading float, returning ``DEFAULT_HYBRID_VALUE_FALLBACK`` on failure.
+        """
+        if self._value_parser is not None:
+            return self._value_parser(response)
+        text = response.get("text", str(DEFAULT_HYBRID_VALUE_FALLBACK))
         try:
             return float(text.strip().split()[0])
         except (ValueError, IndexError):
-            logger.warning(f"Failed to parse value from response: {text}")
-            return 0.0
+            logger.warning("Failed to parse value from LLM response", extra={"response": sanitize_dict(response)})
+            return DEFAULT_HYBRID_VALUE_FALLBACK
 
     def get_cost_savings(self) -> CostSavings:
         """

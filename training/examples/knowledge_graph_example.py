@@ -335,8 +335,7 @@ def example_6_hybrid_retrieval():
     logger.info("This example requires a vector index from rag_builder.py")
     logger.info("For a complete implementation, integrate with VectorIndexBuilder:")
 
-    logger.info(
-        """
+    logger.info("""
     from training.rag_builder import VectorIndexBuilder
     from training.knowledge_graph import HybridKnowledgeRetriever
 
@@ -360,8 +359,7 @@ def example_6_hybrid_retrieval():
         print(f"Score: {result['score']:.3f}")
         print(f"Text: {result['text'][:200]}...")
         print(f"Relationships: {len(result['relationships'])}")
-    """
-    )
+    """)
 
 
 def example_7_advanced_queries():

@@ -136,7 +136,7 @@ class DABStepLoader:
             List of TaskSample objects converted from synthetic data
         """
         synthetic_samples = []
-        
+
         if not self.synthetic_data_dir.exists():
             logger.info(f"Synthetic data directory not found: {self.synthetic_data_dir}")
             return synthetic_samples
@@ -151,10 +151,10 @@ class DABStepLoader:
                 # Skip non-dataset files (like stats or checkpoints)
                 if json_file.name.endswith("_stats.json") or json_file.name.endswith("_checkpoint.json"):
                     continue
-                    
+
                 with open(json_file, "r") as f:
                     data = json.load(f)
-                    
+
                 # Handle list of records
                 if isinstance(data, list):
                     for item in data:
@@ -167,17 +167,15 @@ class DABStepLoader:
                         synthetic_samples.append(sample)
                 else:
                     logger.warning(f"Unexpected data type in {json_file}: {type(data).__name__}. Skipping file.")
-                            
+
             except (json.JSONDecodeError, IOError) as e:
                 logger.warning(f"Failed to load synthetic data file {json_file}: {e}")
             except Exception as e:
                 logger.warning(f"Unexpected error loading {json_file}: {e}")
 
         if synthetic_samples:
-            logger.info(
-                f"Loaded {len(synthetic_samples)} samples from {len(json_files)} synthetic data files"
-            )
-            
+            logger.info(f"Loaded {len(synthetic_samples)} samples from {len(json_files)} synthetic data files")
+
         return synthetic_samples
 
     def _convert_synthetic_to_task_sample(self, item: dict[str, Any]) -> TaskSample | None:
@@ -192,15 +190,15 @@ class DABStepLoader:
                 question = item.get("question", "")
                 answer = item.get("answer", "")
                 metadata = item.get("metadata", {})
-            
+
             # Extract reasoning steps if available, otherwise just answer
             steps = item.get("reasoning_paths", [])
             if not steps:
                 steps = [answer]
-            
+
             # Generate deterministic ID
             task_id = hashlib.md5(question.encode()).hexdigest()[:16]
-            
+
             return TaskSample(
                 task_id=task_id,
                 task_text=question,
@@ -208,7 +206,7 @@ class DABStepLoader:
                 category=metadata.get("category", "general"),
                 steps=steps,
                 expected_output=answer,
-                metadata={**metadata, "is_synthetic": True}
+                metadata={**metadata, "is_synthetic": True},
             )
         except (KeyError, TypeError) as e:
             logger.debug(f"Failed to convert synthetic item: {e}")
@@ -216,7 +214,6 @@ class DABStepLoader:
         except Exception as e:
             logger.debug(f"Unexpected error converting synthetic item: {e}")
             return None
-
 
     def _create_synthetic_dataset(self) -> None:
         """Create synthetic DABStep-like dataset for development."""

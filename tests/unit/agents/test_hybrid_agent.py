@@ -822,3 +822,40 @@ class TestResponseParsing:
         value = hybrid_agent._parse_value(response)
 
         assert value == 0.0
+
+
+@skip_without_torch
+@pytest.mark.unit
+class TestParsingAndPromptHooks:
+    """Injected hooks override the default prompt/parse behavior (P2.1)."""
+
+    def test_injected_action_parser_used(self):
+        from src.agents.hybrid_agent import HybridAgent
+
+        agent = HybridAgent(action_parser=lambda resp: 42)
+        assert agent._parse_action({"text": "ignored"}) == 42
+
+    def test_injected_value_parser_used(self):
+        from src.agents.hybrid_agent import HybridAgent
+
+        agent = HybridAgent(value_parser=lambda resp: 0.5)
+        assert agent._parse_value({"text": "ignored"}) == 0.5
+
+    def test_injected_prompt_builders_used(self):
+        from src.agents.hybrid_agent import HybridAgent
+
+        agent = HybridAgent(
+            prompt_builder=lambda state, ctx: "CUSTOM_ACTION_PROMPT",
+            eval_prompt_builder=lambda state: "CUSTOM_EVAL_PROMPT",
+        )
+        state = torch.zeros(4)
+        assert agent._state_to_prompt(state) == "CUSTOM_ACTION_PROMPT"
+        assert agent._state_to_evaluation_prompt(state) == "CUSTOM_EVAL_PROMPT"
+
+    def test_default_parsers_use_constant_fallbacks(self):
+        from src.agents.hybrid_agent import HybridAgent
+        from src.config.constants import DEFAULT_HYBRID_ACTION_FALLBACK, DEFAULT_HYBRID_VALUE_FALLBACK
+
+        agent = HybridAgent()
+        assert agent._parse_action({"text": "not-an-int"}) == DEFAULT_HYBRID_ACTION_FALLBACK
+        assert agent._parse_value({"text": "not-a-float"}) == DEFAULT_HYBRID_VALUE_FALLBACK

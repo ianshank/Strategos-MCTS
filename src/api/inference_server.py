@@ -57,7 +57,8 @@ class InferenceResponse(BaseModel):
     value_estimate: float | None = None
     subproblems: list[dict[str, Any]] | None = None
     refinement_info: dict[str, Any] | None = None
-    performance_stats: dict[str, float]
+    # Values are mostly numeric timings but may include string metadata (e.g. device).
+    performance_stats: dict[str, float | str]
     error: str | None = None
 
 
@@ -296,7 +297,7 @@ class InferenceServer:
                 elapsed_ms = (time.perf_counter() - start_time) * 1000
                 self.monitor.log_inference(elapsed_ms)
 
-                perf_stats = {
+                perf_stats: dict[str, float | str] = {
                     "inference_time_ms": elapsed_ms,
                     "device": self.device,
                 }

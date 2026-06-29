@@ -124,16 +124,18 @@ class AssemblyMetaControllerDataset(Dataset):
         # Add assembly features if requested
         if self.include_assembly:
             assembly = sample["assembly_features"]
-            features.extend([
-                assembly["assembly_index"] / 30.0,  # Normalize to ~[0, 1]
-                assembly["copy_number"] / 20.0,
-                assembly["decomposability_score"],  # Already [0, 1]
-                assembly["graph_depth"] / 10.0,
-                assembly["constraint_count"] / 20.0,
-                assembly["concept_count"] / 30.0,
-                assembly["technical_complexity"],  # Already [0, 1]
-                assembly["normalized_assembly_index"],  # Already [0, 1]
-            ])
+            features.extend(
+                [
+                    assembly["assembly_index"] / 30.0,  # Normalize to ~[0, 1]
+                    assembly["copy_number"] / 20.0,
+                    assembly["decomposability_score"],  # Already [0, 1]
+                    assembly["graph_depth"] / 10.0,
+                    assembly["constraint_count"] / 20.0,
+                    assembly["concept_count"] / 30.0,
+                    assembly["technical_complexity"],  # Already [0, 1]
+                    assembly["normalized_assembly_index"],  # Already [0, 1]
+                ]
+            )
 
         feature_array = np.array(features, dtype=np.float32)
 
@@ -174,7 +176,7 @@ class AssemblyAwareRouter(nn.Module):
     def __init__(
         self,
         input_dim: int,
-        hidden_dims: list[int] = [128, 64, 32],
+        hidden_dims: list[int] = [128, 64, 32],  # noqa: B006
         num_agents: int = 3,
         dropout: float = 0.2,
     ):
@@ -197,12 +199,14 @@ class AssemblyAwareRouter(nn.Module):
         prev_dim = input_dim
 
         for hidden_dim in hidden_dims:
-            layers.extend([
-                nn.Linear(prev_dim, hidden_dim),
-                nn.LayerNorm(hidden_dim),
-                nn.ReLU(),
-                nn.Dropout(dropout),
-            ])
+            layers.extend(
+                [
+                    nn.Linear(prev_dim, hidden_dim),
+                    nn.LayerNorm(hidden_dim),
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                ]
+            )
             prev_dim = hidden_dim
 
         # Output layer
@@ -419,7 +423,7 @@ class MetaControllerTrainer:
         Returns:
             Training history
         """
-        best_val_loss = float('inf')
+        best_val_loss = float("inf")
         patience_counter = 0
 
         for epoch in range(num_epochs):
@@ -727,7 +731,7 @@ def main():
 
         baseline_train_loader = DataLoader(baseline_train, batch_size=args.batch_size, shuffle=True)
         baseline_val_loader = DataLoader(baseline_val, batch_size=args.batch_size)
-        baseline_test_loader = DataLoader(baseline_test, batch_size=args.batch_size)
+        baseline_test_loader = DataLoader(baseline_test, batch_size=args.batch_size)  # noqa: F841
 
         # Train baseline
         baseline_input_dim = baseline_dataset.get_feature_dim()
@@ -768,22 +772,28 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     assembly_model_path = output_dir / "assembly_meta_controller.pt"
-    torch.save({
-        "model_state_dict": assembly_model.state_dict(),
-        "input_dim": input_dim,
-        "test_metrics": test_metrics,
-        "feature_importance": importance_scores,
-        "history": history,
-    }, assembly_model_path)
+    torch.save(
+        {
+            "model_state_dict": assembly_model.state_dict(),
+            "input_dim": input_dim,
+            "test_metrics": test_metrics,
+            "feature_importance": importance_scores,
+            "history": history,
+        },
+        assembly_model_path,
+    )
 
     logger.info(f"\n✓ Saved assembly model to {assembly_model_path}")
 
     if args.compare_baseline and baseline_model is not None:
         baseline_model_path = output_dir / "baseline_meta_controller.pt"
-        torch.save({
-            "model_state_dict": baseline_model.state_dict(),
-            "input_dim": baseline_input_dim,
-        }, baseline_model_path)
+        torch.save(
+            {
+                "model_state_dict": baseline_model.state_dict(),
+                "input_dim": baseline_input_dim,
+            },
+            baseline_model_path,
+        )
 
         logger.info(f"✓ Saved baseline model to {baseline_model_path}")
 

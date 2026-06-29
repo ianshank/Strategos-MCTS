@@ -305,6 +305,52 @@ class Settings(BaseSettings):
     MCTS_MAX_ROLLOUT_DEPTH: int = Field(default=50, ge=1, le=500, description="Maximum MCTS rollout depth")
 
     # ========================================
+    # Safety / Fallback Gating
+    # ========================================
+
+    ALLOW_MOCK_LLM_FALLBACK: bool = Field(
+        default=False,
+        description=(
+            "When True, the framework service silently falls back to an in-process mock LLM "
+            "if a real client cannot be created. Default False fails loud so production never "
+            "serves mock output. Enable only in tests/dev."
+        ),
+    )
+
+    ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK: bool = Field(
+        default=True,
+        description=(
+            "When True, the framework service falls back to LightweightFramework (real LLM "
+            "calls, no full agent orchestration) if the integrated framework is unavailable. "
+            "Default True preserves the documented zero-dependency path; set False to fail loud."
+        ),
+    )
+
+    ASSEMBLY_TRUST_LEGACY_PICKLE: bool = Field(
+        default=False,
+        description=(
+            "Allow a one-time read of a legacy pickled substructure library before migrating "
+            "it to the safe JSON format. Default False (fail-safe): legacy pickle is ignored."
+        ),
+    )
+
+    TRAINING_TRUST_LEGACY_PICKLE: bool = Field(
+        default=False,
+        description=(
+            "Allow a one-time read of a legacy pickled experience buffer before migrating it "
+            "to the safe torch (weights_only) format. Default False (fail-safe)."
+        ),
+    )
+
+    TRAINING_STRICT_ERRORS: bool = Field(
+        default=False,
+        description=(
+            "When True, training-step failures raise instead of returning zero-filled metrics. "
+            "Default False preserves current behavior but emits a structured degraded-event warning."
+        ),
+    )
+
+    # ========================================
     # Chess / Stockfish Engine Configuration
     # ========================================
 

@@ -197,8 +197,7 @@ async def main():
 
     print("\nUsage Example:")
     print("-" * 40)
-    print(
-        """
+    print("""
 # In your code:
 from src.adapters.llm import create_client
 from src.config.settings import get_settings
@@ -210,8 +209,7 @@ client = create_client(provider=settings.LLM_PROVIDER.value)
 # Or specify provider explicitly
 openai_client = create_client(provider="openai")
 anthropic_client = create_client(provider="anthropic")
-    """
-    )
+    """)
 
     return all_passed
 

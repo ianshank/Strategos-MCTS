@@ -24,6 +24,7 @@ from torch.cuda.amp import GradScaler, autocast
 
 from ..agents.hrm_agent import HRMLoss, create_hrm_agent
 from ..agents.trm_agent import TRMLoss, create_trm_agent
+from ..api.exceptions import TrainingError
 from ..framework.mcts.neural_mcts import GameState, NeuralMCTS, SelfPlayCollector
 from ..models.policy_value_net import (
     AlphaZeroLoss,
@@ -41,6 +42,45 @@ from .system_config import SystemConfig
 
 # Initialize structured logger for this module
 logger = get_structured_logger(__name__)
+
+
+def _strict_training_errors() -> bool:
+    """
+    Resolve whether training-step failures should raise (vs. return zero metrics).
+
+    Reads ``Settings.TRAINING_STRICT_ERRORS`` defensively so the orchestrator still works
+    when full settings validation is unavailable; defaults to ``False`` (current behavior).
+    """
+    try:
+        from src.config.settings import get_settings
+
+        return bool(get_settings().TRAINING_STRICT_ERRORS)
+    except Exception:  # pragma: no cover - defensive: settings unavailable/invalid
+        return False
+
+
+def _handle_training_failure(stage: str, reason: str, zero_metrics: dict[str, float]) -> dict[str, float]:
+    """
+    Centralize the strict-vs-degraded decision for a failed training step.
+
+    When ``TRAINING_STRICT_ERRORS`` is enabled, raise a ``TrainingError`` so a failed step
+    can never masquerade as a successful one with zero loss. Otherwise emit a structured
+    ``training_step_degraded`` warning (so the silent degradation is observable) and return
+    the zero-filled metrics, preserving the previous behavior.
+    """
+    if _strict_training_errors():
+        raise TrainingError(
+            user_message=f"Training step '{stage}' failed",
+            internal_details=reason,
+            stage=stage,
+        )
+    logger.warning(
+        "Training step degraded; returning zero metrics",
+        event="training_step_degraded",
+        stage=stage,
+        reason=reason,
+    )
+    return zero_metrics
 
 
 class UnifiedTrainingOrchestrator:
@@ -574,8 +614,11 @@ class UnifiedTrainingOrchestrator:
     async def _train_policy_value_network(self) -> dict[str, float]:
         """Train policy-value network on replay buffer data."""
         if not self.replay_buffer.is_ready(self.config.training.batch_size):
+            # Not an error: the buffer simply hasn't accumulated enough data yet. Distinct
+            # event name keeps this skip separable from genuine training failures.
             logger.warning(
                 "Replay buffer not ready for training",
+                event="training_step_skipped_buffer_not_ready",
                 required_size=self.config.training.batch_size,
                 current_size=len(self.replay_buffer) if hasattr(self.replay_buffer, "__len__") else "unknown",
             )
@@ -780,7 +823,11 @@ class UnifiedTrainingOrchestrator:
                 error=str(e),
                 batch_size=hrm_train_config.batch_size,
             )
-            return {"hrm_loss": 0.0, "hrm_halt_step": 0.0, "hrm_ponder_cost": 0.0, "hrm_gradient_norm": 0.0}
+            return _handle_training_failure(
+                stage="hrm_data_loader",
+                reason=str(e),
+                zero_metrics={"hrm_loss": 0.0, "hrm_halt_step": 0.0, "hrm_ponder_cost": 0.0, "hrm_gradient_norm": 0.0},
+            )
 
         # Train for epoch
         try:
@@ -790,7 +837,11 @@ class UnifiedTrainingOrchestrator:
                 "HRM agent training epoch failed",
                 error=str(e),
             )
-            return {"hrm_loss": 0.0, "hrm_halt_step": 0.0, "hrm_ponder_cost": 0.0, "hrm_gradient_norm": 0.0}
+            return _handle_training_failure(
+                stage="hrm_train_epoch",
+                reason=str(e),
+                zero_metrics={"hrm_loss": 0.0, "hrm_halt_step": 0.0, "hrm_ponder_cost": 0.0, "hrm_gradient_norm": 0.0},
+            )
 
         # Extract key metrics for logging
         result = {
@@ -875,7 +926,16 @@ class UnifiedTrainingOrchestrator:
                 error=str(e),
                 batch_size=trm_train_config.batch_size,
             )
-            return {"trm_loss": 0.0, "trm_convergence_step": 0.0, "trm_final_residual": 0.0, "trm_gradient_norm": 0.0}
+            return _handle_training_failure(
+                stage="trm_data_loader",
+                reason=str(e),
+                zero_metrics={
+                    "trm_loss": 0.0,
+                    "trm_convergence_step": 0.0,
+                    "trm_final_residual": 0.0,
+                    "trm_gradient_norm": 0.0,
+                },
+            )
 
         # Train for epoch
         try:
@@ -885,7 +945,16 @@ class UnifiedTrainingOrchestrator:
                 "TRM agent training epoch failed",
                 error=str(e),
             )
-            return {"trm_loss": 0.0, "trm_convergence_step": 0.0, "trm_final_residual": 0.0, "trm_gradient_norm": 0.0}
+            return _handle_training_failure(
+                stage="trm_train_epoch",
+                reason=str(e),
+                zero_metrics={
+                    "trm_loss": 0.0,
+                    "trm_convergence_step": 0.0,
+                    "trm_final_residual": 0.0,
+                    "trm_gradient_norm": 0.0,
+                },
+            )
 
         # Extract key metrics for logging
         result = {

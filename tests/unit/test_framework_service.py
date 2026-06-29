@@ -366,5 +366,106 @@ class TestGetFrameworkService:
         await FrameworkService.reset_instance()
 
 
+@pytest.mark.unit
+class TestFallbackGating:
+    """Fail-loud gating of the mock-LLM and lightweight-framework fallbacks (P0.3)."""
+
+    def _settings(self, *, allow_mock: bool, allow_lightweight: bool) -> MagicMock:
+        settings = MagicMock()
+        settings.ALLOW_MOCK_LLM_FALLBACK = allow_mock
+        settings.ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK = allow_lightweight
+        settings.LLM_PROVIDER = MagicMock(value="openai")
+        return settings
+
+    def _config(self) -> FrameworkConfig:
+        return FrameworkConfig(
+            mcts_enabled=True,
+            mcts_iterations=100,
+            mcts_exploration_weight=1.414,
+            seed=42,
+            max_iterations=3,
+            consensus_threshold=0.75,
+            top_k_retrieval=5,
+            enable_parallel_agents=True,
+            timeout_seconds=30.0,
+        )
+
+    @pytest.mark.asyncio
+    async def test_mock_llm_fallback_disabled_fails_loud(self):
+        from src.api.exceptions import LLMError
+
+        settings = self._settings(allow_mock=False, allow_lightweight=True)
+        service = FrameworkService(config=self._config(), settings=settings)
+
+        with patch(
+            "src.framework.factories.LLMClientFactory.create_from_settings",
+            side_effect=RuntimeError("no api key"),
+        ):
+            ok = await service.initialize()
+
+        assert ok is False
+        assert service.state == FrameworkState.ERROR
+        assert isinstance(service._init_error, LLMError)
+        assert service.active_mode["llm_is_mock"] is False
+
+    @pytest.mark.asyncio
+    async def test_mock_llm_fallback_enabled_uses_mock(self):
+        settings = self._settings(allow_mock=True, allow_lightweight=True)
+        service = FrameworkService(config=self._config(), settings=settings)
+
+        with (
+            patch(
+                "src.framework.factories.LLMClientFactory.create_from_settings",
+                side_effect=RuntimeError("no api key"),
+            ),
+            patch("src.framework.graph.IntegratedFramework", side_effect=ImportError("no langgraph")),
+        ):
+            ok = await service.initialize()
+
+        assert ok is True
+        assert service.state == FrameworkState.READY
+        assert service.active_mode["llm_is_mock"] is True
+        assert service.active_mode["degraded"] is True
+
+    @pytest.mark.asyncio
+    async def test_lightweight_fallback_disabled_fails_loud(self):
+        from src.api.exceptions import ConfigurationError
+
+        settings = self._settings(allow_mock=True, allow_lightweight=False)
+        service = FrameworkService(config=self._config(), settings=settings)
+
+        with (
+            patch(
+                "src.framework.factories.LLMClientFactory.create_from_settings",
+                return_value=MockLLMClient(),
+            ),
+            patch("src.framework.graph.IntegratedFramework", side_effect=ImportError("no langgraph")),
+        ):
+            ok = await service.initialize()
+
+        assert ok is False
+        assert service.state == FrameworkState.ERROR
+        assert isinstance(service._init_error, ConfigurationError)
+
+    @pytest.mark.asyncio
+    async def test_lightweight_fallback_enabled_uses_lightweight(self):
+        settings = self._settings(allow_mock=True, allow_lightweight=True)
+        service = FrameworkService(config=self._config(), settings=settings)
+
+        with (
+            patch(
+                "src.framework.factories.LLMClientFactory.create_from_settings",
+                return_value=MockLLMClient(),
+            ),
+            patch("src.framework.graph.IntegratedFramework", side_effect=ImportError("no langgraph")),
+        ):
+            ok = await service.initialize()
+
+        assert ok is True
+        assert service.state == FrameworkState.READY
+        assert isinstance(service._framework, LightweightFramework)
+        assert service.active_mode["framework_mode"] == "lightweight"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

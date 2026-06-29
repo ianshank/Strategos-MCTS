@@ -27,10 +27,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import wandb
 from dotenv import load_dotenv
 from langsmith import Client as LangSmithClient
-
-import wandb
 
 # Load environment
 load_dotenv()
