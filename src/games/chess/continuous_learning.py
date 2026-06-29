@@ -39,6 +39,11 @@ from src.games.chess.state import ChessGameState
 
 logger = get_logger(__name__)
 
+# Elo rating constants (shared by ScoreCard defaults and the Elo update rule).
+DEFAULT_ELO_RATING = 1500.0  # Standard starting Elo
+ELO_K_FACTOR = 32  # Standard K-factor controlling rating volatility
+ELO_EXPECTED_SCORE = 0.5  # Expected score vs an equal-strength opponent
+
 
 class GameResult(Enum):
     """Possible game results."""
@@ -79,7 +84,7 @@ class ScoreCard:
     total_moves: int = 0
     avg_game_length: float = 0.0
     avg_game_time_ms: float = 0.0
-    elo_estimate: float = 1500.0
+    elo_estimate: float = DEFAULT_ELO_RATING
     win_streak: int = 0
     loss_streak: int = 0
     current_streak: int = 0
@@ -150,9 +155,6 @@ class ScoreCard:
 
     def _update_elo(self, is_win: bool | None) -> None:
         """Update Elo estimate based on game result."""
-        k_factor = 32  # Standard K-factor
-        expected = 0.5  # Assume opponent is equal strength
-
         if is_win is True:
             actual = 1.0
         elif is_win is False:
@@ -160,7 +162,7 @@ class ScoreCard:
         else:
             actual = 0.5
 
-        self.elo_estimate += k_factor * (actual - expected)
+        self.elo_estimate += ELO_K_FACTOR * (actual - ELO_EXPECTED_SCORE)
 
     @property
     def win_rate(self) -> float:
@@ -213,7 +215,7 @@ class ScoreCard:
         self.total_moves = 0
         self.avg_game_length = 0.0
         self.avg_game_time_ms = 0.0
-        self.elo_estimate = 1500.0
+        self.elo_estimate = DEFAULT_ELO_RATING
         self.win_streak = 0
         self.loss_streak = 0
         self.current_streak = 0

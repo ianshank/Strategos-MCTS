@@ -57,8 +57,10 @@ dev = [
     "mypy>=1.7.0",
     "types-psutil>=5.9.0",
     "types-requests>=2.31.0",
-    "ruff>=0.1.9",
-    "black>=23.12.0",
+    # Cap ruff to the validated minor: ruff introduces new lint rules in minor releases,
+    # so an unbounded range causes CI to drift and fail on code that passed locally.
+    "ruff>=0.15.0,<0.16.0",
+    "black>=24.0,<27.0",
     "pre-commit>=3.6.0",
     "bandit[toml]>=1.7.0",
     "pip-audit>=2.6.0",
@@ -221,6 +223,18 @@ follow_imports_for_stubs = true
 [[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
+
+# PyYAML ships no type stubs. mypy reports `import-untyped` at each `import yaml`
+# site, which `ignore_missing_imports` does not suppress (that only covers
+# `import-not-found`). Disable the code for exactly the three modules that import
+# yaml — environment-independent (works whether or not types-PyYAML resolves).
+[[tool.mypy.overrides]]
+module = [
+    "src.framework.assembly.config",
+    "src.agents.meta_controller.config_loader",
+    "src.utils.planning_loader",
+]
+disable_error_code = ["import-untyped"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

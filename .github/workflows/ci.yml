@@ -32,7 +32,9 @@ jobs:
           cache: 'pip'
 
       - name: Install linting tools
-        run: pip install ruff black
+        # Install the pinned ruff/black from the package's [dev] extra so the lint job
+        # uses the same versions validated locally (prevents tool-version drift).
+        run: pip install -e ".[dev]"
 
       - name: Check formatting with black
         run: black src/ tests/ --check --line-length 120
@@ -277,7 +279,7 @@ jobs:
       packages: write
     steps:
       - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
+        uses: jlumbroso/free-disk-space@v1.3.1
         with:
           tool-cache: true
           android: true
@@ -380,7 +382,7 @@ jobs:
           docker rm mcts-api-test
 
       - name: Scan Docker image for vulnerabilities
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: langgraph-mcts:test
           format: 'sarif'
