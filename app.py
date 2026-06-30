@@ -16,12 +16,10 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Debug marker
@@ -43,7 +41,18 @@ except Exception as e:
     logger.error(f"❌ PEFT import failed with unexpected error: {type(e).__name__}: {e}")
     logger.warning("⚠️ Will attempt to use base BERT without LoRA")
 
-import gradio as gr
+# Gradio is an optional UI dependency (install via the ``[ui]`` extra). Guard the
+# import so this module can be imported (and unit-collected) without it; only the
+# live UI construction at the bottom of the file requires it.
+try:
+    import gradio as gr
+
+    _GRADIO_AVAILABLE = True
+except ImportError as exc:  # pragma: no cover - exercised only when extra absent
+    gr = None
+    _GRADIO_AVAILABLE = False
+    logger.warning(f"gradio not installed; UI disabled. Install with `pip install -e '.[ui]'`. ({exc})")
+
 import torch
 
 # Import the trained controllers
@@ -59,6 +68,7 @@ try:
         FeatureExtractor,
         FeatureExtractorConfig,
     )
+
     _FEATURE_EXTRACTOR_AVAILABLE = True
     logger.info("✅ Feature Extractor imports available")
 except Exception as e:
@@ -68,7 +78,14 @@ except Exception as e:
     logger.warning(f"⚠️ Feature Extractor unavailable: {type(e).__name__}: {e}")
     logger.warning("⚠️ Will use heuristic-based feature extraction")
 
+from src.config.constants import DEFAULT_SERVER_HOST
+from src.config.settings import get_settings
+from src.observability.logging import get_logger
 from src.utils.personality_response import PersonalityResponseGenerator
+
+# Structured logger for the Phase 4 service-backed UI handlers. The module-level
+# ``logger`` (stdlib) is retained for the existing startup/diagnostic messages.
+ui_logger = get_logger(__name__)
 
 
 @dataclass
@@ -411,10 +428,7 @@ def process_query_sync(
     # Generate personality-infused response
     personality_gen = PersonalityResponseGenerator()
     try:
-        personality_response = personality_gen.generate_response(
-            agent_response=final_response,
-            query=query
-        )
+        personality_response = personality_gen.generate_response(agent_response=final_response, query=query)
     except Exception as e:
         # Fallback to a simple wrapper if personality generation fails
         personality_response = f"Here's what I found:\n\n{final_response}"
@@ -467,127 +481,348 @@ EXAMPLE_QUERIES = [
 ]
 
 
-# Gradio Interface
-with gr.Blocks(
-    title="LangGraph Multi-Agent MCTS - Trained Models Demo",
-    theme=gr.themes.Soft(),
-    css="""
-    .agent-box { border: 1px solid #ddd; padding: 10px; border-radius: 5px; margin: 5px 0; }
-    .highlight { background-color: #e3f2fd; padding: 10px; border-radius: 5px; margin: 10px 0; }
-    """,
-) as demo:
-    gr.Markdown(
-        """
-        # 🎯 LangGraph Multi-Agent MCTS Framework
-        ## Production Demo with Trained Neural Meta-Controllers
+# ===========================================================================
+# Phase 4 service-backed UI handlers
+#
+# These handlers contain NO business logic: each one constructs the relevant
+# already-tested service (ComparisonService / GraphService / StreamingService),
+# delegates the work, and formats the structured result for display. Settings
+# flags (ENABLE_DEMO_COMPARISON / ENABLE_GRAPH_VISUALIZATION / ENABLE_STREAMING)
+# gate both the UI sections and the handlers themselves.
+# ===========================================================================
 
-        This demo uses **REAL trained models**:
-        - 🧠 **RNN Meta-Controller**: GRU-based sequential pattern recognition
-        - 🤖 **BERT with LoRA**: Transformer-based text understanding for routing
+# Cached heavyweight LangGraph framework for the Graph/Streaming services. Built
+# lazily on first use so importing this module (and the existing query flow)
+# never pays for the LangGraph stack.
+_graph_framework: Any | None = None
 
-        The meta-controllers learn to route queries to the optimal agent:
-        - **HRM**: Hierarchical reasoning for complex decomposition
-        - **TRM**: Iterative refinement for progressive improvement
-        - **MCTS**: Strategic exploration for optimization problems
 
-        ---
-        """
+async def _get_graph_framework() -> Any:
+    """Lazily build and cache the LangGraph IntegratedFramework via FrameworkService.
+
+    Reuses the exact construction the REST server uses (FrameworkService), so the
+    Graph and Streaming UI sections share one initialized framework instance.
+    """
+    global _graph_framework
+    if _graph_framework is not None:
+        return _graph_framework
+
+    from src.api.framework_service import FrameworkConfig, FrameworkService
+
+    settings = get_settings()
+    service = await FrameworkService.get_instance(
+        config=FrameworkConfig.from_settings(settings),
+        settings=settings,
     )
+    await service.initialize()
+    if service.framework is None:
+        raise RuntimeError("Framework service did not produce a usable framework instance")
+    _graph_framework = service.framework
+    return _graph_framework
 
-    with gr.Row():
-        with gr.Column(scale=2):
-            query_input = gr.Textbox(
-                label="Query", placeholder="Enter your question or reasoning task...", lines=4, max_lines=10
-            )
 
-            gr.Markdown("**Example Queries:**")
-            example_dropdown = gr.Dropdown(choices=EXAMPLE_QUERIES, label="Select an example", interactive=True)
+def run_comparison_ui(query: str, provider: str) -> tuple[str, str, dict]:
+    """Run single-shot vs MCTS via ComparisonService and format for the UI.
 
-            def load_example(example):
-                return example
+    Returns a (summary_markdown, tree_text, raw_dict) tuple.
+    """
+    from src.api.comparison_service import ComparisonDisabledError, ComparisonService
 
-            example_dropdown.change(load_example, example_dropdown, query_input)
+    settings = get_settings()
+    if not settings.ENABLE_DEMO_COMPARISON:
+        return ("Comparison is disabled (set ENABLE_DEMO_COMPARISON=true).", "", {})
+    if not query.strip():
+        return ("Please enter a query.", "", {})
 
-        with gr.Column(scale=1):
-            gr.Markdown("**Meta-Controller Selection**")
-            controller_type = gr.Radio(
-                choices=["RNN", "BERT"],
-                value="RNN",
-                label="Controller Type",
-                info="Choose which trained controller to use",
-            )
+    ui_logger.info("UI comparison requested", extra={"provider": provider, "query_len": len(query)})
+    try:
+        service = ComparisonService(provider=provider, settings=settings)
+        result = service.compare(query, include_tree=True)
+    except ComparisonDisabledError as exc:
+        return (f"Comparison unavailable: {exc}", "", {})
+    except (ValueError, RuntimeError) as exc:  # config / provider errors surface to the user
+        ui_logger.warning("UI comparison failed", extra={"error": str(exc)})
+        return (f"Comparison failed: {exc}", "", {})
 
-            gr.Markdown(
-                """
-            **Controller Comparison:**
-            - **RNN**: Fast, captures sequential patterns
-            - **BERT**: More context-aware, text understanding
-            """
-            )
-
-    process_btn = gr.Button("🚀 Process Query", variant="primary", size="lg")
-
-    gr.Markdown("---")
-
-    with gr.Row():
-        with gr.Column():
-            gr.Markdown("### 🎯 Agent Response")
-            final_response_output = gr.Textbox(label="Response", lines=4, interactive=False)
-
-            gr.Markdown("### 🤝 Personality-Infused Response")
-            gr.Markdown("*A conversational, balanced advisor interpretation*")
-            personality_output = gr.Textbox(label="Balanced Advisor Response", lines=8, interactive=False)
-
-            gr.Markdown("### 📈 Performance Metrics")
-            metrics_output = gr.Markdown()
-
-        with gr.Column():
-            routing_viz = gr.Markdown(label="Controller Decision")
-            features_viz = gr.Markdown(label="Features")
-
-    with gr.Accordion("🔍 Detailed Agent Information", open=False):
-        agent_details_output = gr.JSON(label="Agent Execution Details")
-
-    # Wire up the processing
-    process_btn.click(
-        fn=process_query_sync,
-        inputs=[
-            query_input,
-            controller_type,
-        ],
-        outputs=[final_response_output, agent_details_output, routing_viz, features_viz, metrics_output, personality_output],
-        api_name="process_query"
+    summary = (
+        "### Single-Shot vs MCTS\n\n"
+        f"**Provider:** `{result.provider}`\n\n"
+        f"- **Single-shot score:** {result.single_shot.score:.3f} "
+        f"({result.single_shot.latency_ms:.0f} ms)\n"
+        f"- **MCTS score:** {result.mcts.best_score:.3f} "
+        f"(best strategy: `{result.mcts.best_strategy}`, {result.mcts.llm_calls} LLM calls, "
+        f"{result.mcts.total_time_ms:.0f} ms)\n"
+        f"- **Delta:** {result.delta:+.3f} ({result.improvement_pct:+.1f}%)\n"
     )
+    return summary, (result.tree or "(no tree available)"), result.to_dict()
 
-    gr.Markdown(
-        """
-        ---
 
-        ### 📚 About This Demo
+def run_graph_ui(theme: str) -> tuple[str, dict, str]:
+    """Produce Mermaid source, structure, and a Kroki render URL via GraphService.
 
-        This is a **production demonstration** of trained neural meta-controllers for multi-agent routing.
+    Returns a (mermaid_markdown, structure_dict, kroki_url) tuple.
+    """
+    from src.api.graph_service import GraphService, GraphVisualizationDisabledError
 
-        **Models:**
-        - RNN Meta-Controller: 10-dimensional feature vector → 3-class routing (HRM/TRM/MCTS)
-        - BERT with LoRA: Text features → routing decision with adapters
+    settings = get_settings()
+    if not settings.ENABLE_GRAPH_VISUALIZATION:
+        return ("Graph visualization is disabled (set ENABLE_GRAPH_VISUALIZATION=true).", {}, "")
 
-        **Training:**
-        - Synthetic dataset: 1000+ samples with balanced routing decisions
-        - Optimization: Adam optimizer, cross-entropy loss
-        - Validation: 80/20 train/val split with early stopping
+    ui_logger.info("UI graph visualization requested", extra={"theme": theme})
+    try:
+        framework = asyncio.run(_get_graph_framework())
+        service = GraphService(framework=framework, settings=settings)
+        mermaid = service.get_mermaid(theme=theme)
+        structure = service.get_structure()
+    except GraphVisualizationDisabledError as exc:
+        return (f"Graph visualization unavailable: {exc}", {}, "")
+    except (RuntimeError, ValueError) as exc:
+        ui_logger.warning("UI graph visualization failed", extra={"error": str(exc)})
+        return (f"Graph visualization failed: {exc}", {}, "")
 
-        **Repository:** [GitHub - langgraph_multi_agent_mcts](https://github.com/ianshank/langgraph_multi_agent_mcts)
+    kroki_url = GraphService.kroki_url(mermaid)
+    mermaid_md = f"```mermaid\n{mermaid}\n```"
+    return mermaid_md, structure, kroki_url
 
-        ---
-        *Built with PyTorch, Transformers, PEFT, and Gradio*
-        """
-    )
+
+def run_streaming_ui(query: str, use_mcts: bool) -> str:
+    """Consume StreamingService end-to-end and return the collected event log.
+
+    Gradio's synchronous handler model makes token-level streaming awkward, so we
+    drain the async event stream and return the accumulated, formatted output.
+    """
+    from src.api.streaming import StreamingDisabledError, StreamingService
+
+    settings = get_settings()
+    if not settings.ENABLE_STREAMING:
+        return "Streaming is disabled (set ENABLE_STREAMING=true)."
+    if not query.strip():
+        return "Please enter a query."
+
+    ui_logger.info("UI streaming requested", extra={"use_mcts": use_mcts, "query_len": len(query)})
+
+    async def _collect() -> list[str]:
+        framework = await _get_graph_framework()
+        service = StreamingService(framework=framework, settings=settings)
+        lines: list[str] = []
+        async for event in service.stream_events(query, use_mcts=use_mcts):
+            event_type = event.get("event_type", event.get("event", "event"))
+            lines.append(f"[{event_type}] {event}")
+        return lines
+
+    try:
+        collected = asyncio.run(_collect())
+    except StreamingDisabledError as exc:
+        return f"Streaming unavailable: {exc}"
+    except (RuntimeError, ValueError) as exc:
+        ui_logger.warning("UI streaming failed", extra={"error": str(exc)})
+        return f"Streaming failed: {exc}"
+
+    if not collected:
+        return "(no events emitted)"
+    return "\n".join(collected)
+
+
+def _build_demo() -> "gr.Blocks":
+    """Construct the Gradio UI. Requires the ``[ui]`` extra (gradio).
+
+    Factored into a function so importing this module never touches gradio; the
+    module-level ``demo`` is only built when gradio is available.
+    """
+    _settings = get_settings()
+    with gr.Blocks(
+        title="LangGraph Multi-Agent MCTS - Trained Models Demo",
+        theme=gr.themes.Soft(),
+        css="""
+        .agent-box { border: 1px solid #ddd; padding: 10px; border-radius: 5px; margin: 5px 0; }
+        .highlight { background-color: #e3f2fd; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        """,
+    ) as demo:
+        gr.Markdown("""
+            # 🎯 LangGraph Multi-Agent MCTS Framework
+            ## Production Demo with Trained Neural Meta-Controllers
+
+            This demo uses **REAL trained models**:
+            - 🧠 **RNN Meta-Controller**: GRU-based sequential pattern recognition
+            - 🤖 **BERT with LoRA**: Transformer-based text understanding for routing
+
+            The meta-controllers learn to route queries to the optimal agent:
+            - **HRM**: Hierarchical reasoning for complex decomposition
+            - **TRM**: Iterative refinement for progressive improvement
+            - **MCTS**: Strategic exploration for optimization problems
+
+            ---
+            """)
+
+        with gr.Row():
+            with gr.Column(scale=2):
+                query_input = gr.Textbox(
+                    label="Query", placeholder="Enter your question or reasoning task...", lines=4, max_lines=10
+                )
+
+                gr.Markdown("**Example Queries:**")
+                example_dropdown = gr.Dropdown(choices=EXAMPLE_QUERIES, label="Select an example", interactive=True)
+
+                def load_example(example):
+                    return example
+
+                example_dropdown.change(load_example, example_dropdown, query_input)
+
+            with gr.Column(scale=1):
+                gr.Markdown("**Meta-Controller Selection**")
+                controller_type = gr.Radio(
+                    choices=["RNN", "BERT"],
+                    value="RNN",
+                    label="Controller Type",
+                    info="Choose which trained controller to use",
+                )
+
+                gr.Markdown("""
+                **Controller Comparison:**
+                - **RNN**: Fast, captures sequential patterns
+                - **BERT**: More context-aware, text understanding
+                """)
+
+        process_btn = gr.Button("🚀 Process Query", variant="primary", size="lg")
+
+        gr.Markdown("---")
+
+        with gr.Row():
+            with gr.Column():
+                gr.Markdown("### 🎯 Agent Response")
+                final_response_output = gr.Textbox(label="Response", lines=4, interactive=False)
+
+                gr.Markdown("### 🤝 Personality-Infused Response")
+                gr.Markdown("*A conversational, balanced advisor interpretation*")
+                personality_output = gr.Textbox(label="Balanced Advisor Response", lines=8, interactive=False)
+
+                gr.Markdown("### 📈 Performance Metrics")
+                metrics_output = gr.Markdown()
+
+            with gr.Column():
+                routing_viz = gr.Markdown(label="Controller Decision")
+                features_viz = gr.Markdown(label="Features")
+
+        with gr.Accordion("🔍 Detailed Agent Information", open=False):
+            agent_details_output = gr.JSON(label="Agent Execution Details")
+
+        # Wire up the processing
+        process_btn.click(
+            fn=process_query_sync,
+            inputs=[
+                query_input,
+                controller_type,
+            ],
+            outputs=[
+                final_response_output,
+                agent_details_output,
+                routing_viz,
+                features_viz,
+                metrics_output,
+                personality_output,
+            ],
+            api_name="process_query",
+        )
+
+        # -------------------------------------------------------------------
+        # Phase 4 service-backed sections (each gated on its settings flag).
+        # Handlers above call the already-tested services; no logic lives here.
+        # -------------------------------------------------------------------
+        if _settings.ENABLE_DEMO_COMPARISON:
+            with gr.Accordion("⚖️ Single-Shot vs MCTS Comparison", open=False):
+                gr.Markdown("Compare a direct single-shot answer against MCTS multi-strategy exploration.")
+                with gr.Row():
+                    compare_query = gr.Textbox(label="Query", lines=2, placeholder="Enter a query to compare...")
+                    compare_provider = gr.Dropdown(
+                        choices=["mock", "openai", "anthropic"],
+                        value="mock",
+                        label="Provider",
+                    )
+                compare_btn = gr.Button("Run Comparison", variant="secondary")
+                compare_summary = gr.Markdown(label="Comparison Summary")
+                compare_tree = gr.Textbox(label="MCTS Tree", lines=10, interactive=False)
+                compare_raw = gr.JSON(label="Raw Comparison Result")
+                compare_btn.click(
+                    fn=run_comparison_ui,
+                    inputs=[compare_query, compare_provider],
+                    outputs=[compare_summary, compare_tree, compare_raw],
+                    api_name="compare",
+                )
+
+        if _settings.ENABLE_GRAPH_VISUALIZATION:
+            with gr.Accordion("🕸️ Graph Visualization", open=False):
+                gr.Markdown("Render the LangGraph workflow as Mermaid plus a Kroki image URL.")
+                graph_theme = gr.Dropdown(
+                    choices=["default", "dark", "forest", "neutral"],
+                    value="default",
+                    label="Mermaid Theme",
+                )
+                graph_btn = gr.Button("Render Graph", variant="secondary")
+                graph_mermaid = gr.Markdown(label="Mermaid Diagram")
+                graph_kroki = gr.Textbox(label="Kroki Render URL", interactive=False)
+                graph_structure = gr.JSON(label="Graph Structure")
+                graph_btn.click(
+                    fn=run_graph_ui,
+                    inputs=[graph_theme],
+                    outputs=[graph_mermaid, graph_structure, graph_kroki],
+                    api_name="graph",
+                )
+
+        if _settings.ENABLE_STREAMING:
+            with gr.Accordion("📡 Streaming Execution", open=False):
+                gr.Markdown(
+                    "Consume the LangGraph event stream via StreamingService. "
+                    "Events are collected and shown once the stream completes."
+                )
+                with gr.Row():
+                    stream_query = gr.Textbox(label="Query", lines=2, placeholder="Enter a query to stream...")
+                    stream_use_mcts = gr.Checkbox(value=False, label="Use MCTS")
+                stream_btn = gr.Button("Start Streaming", variant="secondary")
+                stream_output = gr.Textbox(label="Streamed Events", lines=12, interactive=False)
+                stream_btn.click(
+                    fn=run_streaming_ui,
+                    inputs=[stream_query, stream_use_mcts],
+                    outputs=[stream_output],
+                    api_name="stream",
+                )
+
+        gr.Markdown("""
+            ---
+
+            ### 📚 About This Demo
+
+            This is a **production demonstration** of trained neural meta-controllers for multi-agent routing.
+
+            **Models:**
+            - RNN Meta-Controller: 10-dimensional feature vector → 3-class routing (HRM/TRM/MCTS)
+            - BERT with LoRA: Text features → routing decision with adapters
+
+            **Training:**
+            - Synthetic dataset: 1000+ samples with balanced routing decisions
+            - Optimization: Adam optimizer, cross-entropy loss
+            - Validation: 80/20 train/val split with early stopping
+
+            **Repository:** [GitHub - langgraph_multi_agent_mcts](https://github.com/ianshank/langgraph_multi_agent_mcts)
+
+            ---
+            *Built with PyTorch, Transformers, PEFT, and Gradio*
+            """)
+
+    return demo
+
+
+# Build the UI only when gradio is installed. ``demo`` stays None without the
+# ``[ui]`` extra so ``import app`` always succeeds (e.g. for unit collection).
+demo = _build_demo() if _GRADIO_AVAILABLE else None
 
 
 if __name__ == "__main__":
+    if not _GRADIO_AVAILABLE or demo is None:
+        raise SystemExit("gradio is not installed. Install the UI extra: pip install -e '.[ui]'")
+
     # Initialize framework
     print("Initializing framework with trained models...")
     framework = IntegratedFramework()
 
     # Launch the demo
-    demo.launch(server_name="0.0.0.0", share=False, show_error=True)
+    demo.launch(server_name=DEFAULT_SERVER_HOST, share=False, show_error=True)
