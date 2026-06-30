@@ -82,8 +82,13 @@ milestones:
 
   - id: M5
     name: Advanced Features
-    status: planned
-    completion: 0
+    status: in_progress
+    completion: 70  # Phase 5 landed: generalized single-agent self-play, domain registry
+    note: >-
+      Phase 5 (2026-H2) implemented the generalized SelfPlayTrainer with a single-agent path,
+      the domain registry + reasoning/planning domains, the domain-type-aware policy-comparison
+      benchmark (>=20% lift harness), and the meta-controller learning loop. Remaining: run the
+      lift benchmark to convergence on a target domain and tune. See docs/STATUS.md.
     goal: Extend framework with neural enhancements and multi-domain support
     epics:
       - $ref: "./epics/epic_5_1_neural_mcts.yaml"

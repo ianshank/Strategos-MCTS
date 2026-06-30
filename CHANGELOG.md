@@ -97,6 +97,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   synthesis fallback against an empty `agent_outputs`; explicit `sub`-claim check in JWT
   verification.
 
+### Added (2026-H2 implementation: Phase 4 — streaming / visualization / comparison)
+- **MCTS early termination wired through the graph** behind `MCTSConfig.enable_early_termination`
+  (default off = historical behavior); thresholds remain a single source of truth on `MCTSConfig`.
+- **Coverage-bearing service layer** exposing existing framework capabilities, with thin REST
+  adapters (`rest_server` is coverage-omitted) and settings flags `ENABLE_STREAMING` /
+  `ENABLE_GRAPH_VISUALIZATION` / `ENABLE_DEMO_COMPARISON` (behavior-preserving defaults):
+  - `src/api/streaming.py` (`StreamingService`, SSE over `astream_events`),
+  - `src/api/graph_service.py` (`GraphService`: structure / mermaid / Kroki render),
+  - `src/api/comparison_service.py` (`ComparisonService`: single-shot vs MCTS + tree); `demo.py`
+    refactored to delegate to it (behavior preserved).
+- **REST endpoints**: `POST /query-stream`, `GET /graph/structure`, `GET /graph/mermaid`,
+  `POST /graph/render`, `POST /compare` (flag-gated). **Gradio UI** (`app.py`) extended with
+  comparison / streaming / graph views via those services; new `[ui]` extra (`gradio`).
+
+### Added (2026-H2 implementation: Phase 5 — M5 neural self-play)
+- **Generalized `SelfPlayTrainer`** (`src/training/self_play_trainer.py`) with an opt-in
+  **single-agent** path: `NeuralMCTS`/`SelfPlayCollector` skip negamax value negation, player
+  alternation, and sign-flipped targets when `single_agent=True` (two-player behavior unchanged by
+  default). Torch-safe (`state_dict`) checkpoints; named-constant config.
+- **Domain registry** (`src/framework/domain_registry.py`) with config-driven selection, plus a
+  schema-agnostic `StringActionGameState` wrapper (`single_agent_domains.py`) that makes the
+  dict-action `ReasoningState`/`PlanningState` hashable for NeuralMCTS. Registers the two non-chess
+  M5 domains (reasoning, planning).
+- **Policy-comparison benchmark** (`src/benchmark/policy_comparison.py`) with a domain-type-aware
+  lift metric (mean terminal reward for single-agent; win-rate for adversarial) to measure the M5
+  ≥20% decision-quality lift.
+- **Meta-controller learning loop** (`src/training/meta_controller_data_collector.py`): routing-
+  decision collection + reproducible supervised train/validate reporting accuracy vs a majority
+  baseline; guide in `docs/META_CONTROLLER_TRAINING.md`.
+
 ## [0.2.0] - Production Training Pipeline Release
 
 ### Added
