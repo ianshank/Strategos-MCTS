@@ -374,6 +374,34 @@ class Settings(BaseSettings):
     )
 
     # ========================================
+    # API Feature Flags (Phase 4.2-4.4)
+    # ========================================
+
+    ENABLE_STREAMING: bool = Field(
+        default=True,
+        description=(
+            "Enable the SSE streaming query endpoint (/query-stream) backed by StreamingService. "
+            "Default True preserves the documented streaming behavior."
+        ),
+    )
+
+    ENABLE_GRAPH_VISUALIZATION: bool = Field(
+        default=True,
+        description=(
+            "Enable the graph introspection/visualization endpoints (/graph/*) backed by "
+            "GraphService. Default True preserves the documented visualization behavior."
+        ),
+    )
+
+    ENABLE_DEMO_COMPARISON: bool = Field(
+        default=False,
+        description=(
+            "Enable the single-shot vs MCTS comparison endpoint (/compare) backed by "
+            "ComparisonService. Default False keeps the demo-only feature off by default."
+        ),
+    )
+
+    # ========================================
     # Chess / Stockfish Engine Configuration
     # ========================================
 

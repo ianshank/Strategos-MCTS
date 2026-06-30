@@ -282,6 +282,61 @@ def print_tree(result: PipelineResult):
 # ---------------------------------------------------------------------------
 
 
+def _compute_comparison(pipeline: MultiAgentMCTSPipeline, query: str, provider: str, callback):
+    """Compute the single-shot vs MCTS comparison data.
+
+    Delegates to :class:`src.api.comparison_service.ComparisonService` when it can
+    be imported (the shared, coverage-bearing implementation). Falls back to the
+    inline computation when the service's dependencies (e.g. numpy / pydantic
+    settings) are unavailable, preserving the demo's zero-dependency guarantee.
+    Returns a ``ComparisonResult``-shaped object (the service result, or the
+    fallback namespace mirroring its fields).
+    """
+    try:
+        from types import SimpleNamespace
+
+        from src.api.comparison_service import ComparisonService
+
+        # Force the feature on for the CLI without constructing full Settings
+        # (which would require provider API keys). The service only reads the flag.
+        service = ComparisonService(
+            pipeline=pipeline,
+            provider=provider,
+            settings=SimpleNamespace(ENABLE_DEMO_COMPARISON=True),
+        )
+        return service.compare(query, on_iteration=callback, include_tree=True)
+    except Exception:
+        # Fallback: inline computation using the importlib-loaded llm_mcts so the
+        # demo keeps working in minimal environments.
+        from types import SimpleNamespace
+
+        llm_client = MockLLMClient() if provider == "mock" else StdlibLLMClient(provider=provider)
+        runner = SingleShotRunner(llm_client)
+        ss_response, ss_score, ss_latency = runner.run(query)
+        result = pipeline.run(query, on_iteration=callback)
+        mcts = result.mcts_result
+        delta = round(mcts.best_score - ss_score, 3)
+        improvement_pct = round(delta / ss_score * 100, 1) if ss_score > 0 else 0.0
+        tree = TreeVisualizer.render(result.tree_root) if result.tree_root is not None else None
+        return SimpleNamespace(
+            query=query,
+            provider=provider,
+            single_shot=SimpleNamespace(
+                response=ss_response, score=round(ss_score, 3), latency_ms=round(ss_latency, 1)
+            ),
+            mcts=SimpleNamespace(
+                best_strategy=mcts.best_strategy,
+                best_response=mcts.best_response,
+                best_score=round(mcts.best_score, 3),
+                total_time_ms=result.total_time_ms,
+                llm_calls=len(mcts.llm_calls),
+            ),
+            delta=delta,
+            improvement_pct=improvement_pct,
+            tree=tree,
+        )
+
+
 def run_comparison(pipeline: MultiAgentMCTSPipeline, query: str, provider: str, streaming: bool):
     """Run MCTS vs single-shot comparison."""
     print(c("=" * 72, DIM))
@@ -290,26 +345,29 @@ def run_comparison(pipeline: MultiAgentMCTSPipeline, query: str, provider: str, 
     print()
     print_query(query)
 
+    callback = make_streaming_callback() if streaming else None
+
     # --- Single-shot ---
     print(c("--- [A] Single-Shot (direct prompt) ---", YELLOW))
     print()
 
-    if provider == "mock":
-        llm_client = MockLLMClient()
-    else:
-        llm_client = StdlibLLMClient(provider=provider)
+    if streaming:
+        print(c("  (computing both arms; MCTS exploration progress below)", DIM))
 
-    runner = SingleShotRunner(llm_client)
-    ss_response, ss_score, ss_latency = runner.run(query)
+    comparison = _compute_comparison(pipeline, query, provider, callback)
 
-    for line in ss_response.split("\n"):
+    if streaming:
+        print()
+
+    ss = comparison.single_shot
+    for line in ss.response.split("\n"):
         if line.strip():
             print(f"  {line}")
         else:
             print()
     print()
-    print(f"  Score:   {c(f'{ss_score:.3f}', YELLOW)}")
-    print(f"  Time:    {ss_latency:.0f} ms")
+    print(f"  Score:   {c(f'{ss.score:.3f}', YELLOW)}")
+    print(f"  Time:    {ss.latency_ms:.0f} ms")
     print(f"  Calls:   1")
     print()
 
@@ -317,16 +375,7 @@ def run_comparison(pipeline: MultiAgentMCTSPipeline, query: str, provider: str, 
     print(c("--- [B] MCTS (multi-strategy exploration) ---", GREEN))
     print()
 
-    callback = make_streaming_callback() if streaming else None
-    if streaming:
-        print(c("  Exploration progress:", DIM))
-
-    result = pipeline.run(query, on_iteration=callback)
-
-    if streaming:
-        print()
-
-    mcts = result.mcts_result
+    mcts = comparison.mcts
 
     # Print best response
     for line in mcts.best_response.split("\n"):
@@ -336,26 +385,32 @@ def run_comparison(pipeline: MultiAgentMCTSPipeline, query: str, provider: str, 
             print()
     print()
     print(f"  Score:   {c(f'{mcts.best_score:.3f}', GREEN)}")
-    print(f"  Time:    {result.total_time_ms:.0f} ms")
-    print(f"  Calls:   {len(mcts.llm_calls)}")
+    print(f"  Time:    {mcts.total_time_ms:.0f} ms")
+    print(f"  Calls:   {mcts.llm_calls}")
     print(f"  Best:    {mcts.best_strategy}")
     print()
 
     # Tree visualization
-    print_tree(result)
+    if comparison.tree is not None:
+        print(c("--- MCTS Tree ---", BOLD))
+        print()
+        for line in comparison.tree.split("\n"):
+            print(f"  {line}")
+        print()
 
     # --- Comparison summary ---
     print(c("--- Comparison ---", BOLD))
     print()
 
-    delta = mcts.best_score - ss_score
+    delta = comparison.delta
+    ss_score = ss.score
     if delta > 0:
-        pct = (delta / ss_score * 100) if ss_score > 0 else 0
+        pct = comparison.improvement_pct
         print(f"  Single-shot score: {ss_score:.3f}")
         print(f"  MCTS score:        {mcts.best_score:.3f}")
         print(f"  Improvement:       {c(f'+{pct:.0f}%', GREEN)} ({c(f'+{delta:.3f}', GREEN)})")
     elif delta < 0:
-        pct = (abs(delta) / ss_score * 100) if ss_score > 0 else 0
+        pct = abs(comparison.improvement_pct)
         print(f"  Single-shot score: {ss_score:.3f}")
         print(f"  MCTS score:        {mcts.best_score:.3f}")
         print(f"  Difference:        {c(f'-{pct:.0f}%', RED)} ({c(f'{delta:.3f}', RED)})")

@@ -668,6 +668,15 @@ class FrameworkService:
         return self._state
 
     @property
+    def framework(self) -> FrameworkProtocol | None:
+        """Expose the underlying framework for visualization/streaming adapters.
+
+        Returns the integrated (or lightweight fallback) framework instance, or
+        ``None`` if the service has not been initialized.
+        """
+        return self._framework
+
+    @property
     def active_mode(self) -> dict[str, Any]:
         """
         Describe the active operating mode for health/readiness reporting.
