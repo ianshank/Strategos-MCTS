@@ -44,7 +44,7 @@ from .exceptions import (
     LLMStreamError,
     LLMTimeoutError,
 )
-from .openai_client import CircuitBreaker
+from .resilience import CircuitBreaker
 
 logger = get_logger(__name__)
 

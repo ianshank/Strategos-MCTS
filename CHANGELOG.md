@@ -30,6 +30,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Packaging.** `pydantic-settings` is now a core dependency and a new `api` extra
   (`fastapi`, `uvicorn`) was added; the production Docker image installs `.[api,prometheus]`.
 
+### Fixed (CI determinism)
+- **Green, deterministic CI.** The pytest job no longer fails collection on a missing
+  `pydantic_settings` import (now a core dependency). `ruff` and `mypy` are pinned in the
+  `[dev]` extra and the lint job installs `.[dev]` so CI uses the same tool versions
+  validated locally (previously `pip install ruff black` drifted to latest on every run).
+- **Targeted mypy overrides** instead of brittle inline ignores: `import-untyped` is
+  disabled for the three `yaml` importers (PyYAML ships no stubs; `ignore_missing_imports`
+  does not cover that code), and `no-redef` is disabled for `chess/mcp_chess_tools.py`
+  whose optional-import fallback is flagged inconsistently across mypy environments.
+- **Pinned GitHub Action refs**: `aquasecurity/trivy-action@v0.36.0` and
+  `jlumbroso/free-disk-space@v1.3.1` (were `@master` / `@main`).
+
+### Changed (internal refactor — no public API change)
+- **`CircuitBreaker` extracted** from `adapters/llm/openai_client.py` into a new
+  provider-agnostic `adapters/llm/resilience.py`, re-exported from `openai_client` for
+  backward compatibility and imported by both the OpenAI and Anthropic clients. Fixed a
+  latent bug where `half_open_max_calls` was never enforced (`half_open_calls` is now
+  incremented per trial).
+- **Centralized hardcoded values** into `src/config/constants.py`:
+  `DEFAULT_LMSTUDIO_MODEL`, `DEFAULT_GOOGLE_GEMINI_MODEL`, `DEFAULT_KROKI_BASE_URL`,
+  `DEFAULT_KROKI_TIMEOUT_SECONDS`, `CHESS_ROUTING_CONFIDENCE_BOOST`. The LLM client factory,
+  Google ADK config, Kroki diagram rendering, and chess routing now reference these instead
+  of inline literals (the factory's stale Anthropic default is corrected to the constant).
+
+### Added
+- **Fallback logging** where failures were previously silent: HTTPX tracing-instrumentation
+  unavailability (`observability/tracing.py`) and settings-unavailable fallback when
+  resolving the legacy-pickle flag (`training/data_collector.py`).
+- **Regression tests**: `tests/unit/adapters/test_resilience.py` (CircuitBreaker behavior +
+  back-compat re-export invariant + `half_open_max_calls` enforcement) and
+  `tests/unit/test_config_constants_centralization.py` (guards the constant centralization).
+
 ## [0.2.0] - Production Training Pipeline Release
 
 ### Added

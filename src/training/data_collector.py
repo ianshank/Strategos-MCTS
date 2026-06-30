@@ -43,7 +43,11 @@ def _resolve_trust_legacy_pickle(explicit: bool | None) -> bool:
         from src.config.settings import get_settings
 
         return bool(get_settings().TRAINING_TRUST_LEGACY_PICKLE)
-    except Exception:  # pragma: no cover - defensive: settings unavailable/invalid
+    except Exception as exc:  # pragma: no cover - defensive: settings unavailable/invalid
+        logger.debug(
+            "Settings unavailable when resolving TRAINING_TRUST_LEGACY_PICKLE; defaulting to False",
+            extra={"error": str(exc)},
+        )
         return False
 
 

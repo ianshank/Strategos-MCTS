@@ -54,6 +54,8 @@ coverage.xml
 *.cover
 .hypothesis/
 .mypy_cache/
+.ruff_cache/
+*-report.json
 
 # Documentation
 docs/

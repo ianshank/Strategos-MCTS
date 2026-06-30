@@ -21,7 +21,11 @@ import logging
 from typing import Any, Protocol
 
 from src.adapters.llm.base import LLMClient
-from src.config.constants import DEFAULT_OPENAI_MODEL
+from src.config.constants import (
+    DEFAULT_ANTHROPIC_MODEL,
+    DEFAULT_LMSTUDIO_MODEL,
+    DEFAULT_OPENAI_MODEL,
+)
 from src.config.settings import Settings, get_settings
 
 
@@ -111,8 +115,8 @@ class LLMClientFactory:
         """Get default model for a provider."""
         defaults = {
             "openai": DEFAULT_OPENAI_MODEL,
-            "anthropic": "claude-3-sonnet-20240229",
-            "lmstudio": "local-model",
+            "anthropic": DEFAULT_ANTHROPIC_MODEL,
+            "lmstudio": DEFAULT_LMSTUDIO_MODEL,
         }
         return defaults.get(provider, DEFAULT_OPENAI_MODEL)
 

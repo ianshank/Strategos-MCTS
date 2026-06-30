@@ -22,6 +22,9 @@ pytest tests/ -m harness
 pytest tests/ -m "not slow" --cov=src --cov-report=term-missing
 ```
 
+`ruff`/`mypy` are pinned in the `[dev]` extra (CI lint job installs `.[dev]`) for CI/local
+parity — bump deliberately and re-validate. Coverage gate: 85% (`--cov-fail-under=85`).
+
 ## Harness CLI
 
 ```bash
@@ -54,11 +57,11 @@ python -m src.benchmark --systems langgraph_mcts --tasks A1
 
 | Concern | Path |
 | --- | --- |
-| Settings | `src/config/settings.py`, `src/framework/harness/settings.py` |
+| Settings | `src/config/settings.py`, `src/config/constants.py` (shared defaults/bounds), `src/framework/harness/settings.py` |
 | Existing agents | `src/agents/`, `src/framework/agents/base.py` |
 | LangGraph orchestration | `src/framework/graph/builder.py` |
 | MCTS engine | `src/framework/mcts/core.py` |
-| LLM adapters | `src/adapters/llm/{base,openai_client,anthropic_client,lmstudio_client}.py` |
+| LLM adapters | `src/adapters/llm/{base,resilience,openai_client,anthropic_client,lmstudio_client}.py` (`resilience.py` = shared `CircuitBreaker`) |
 | Observability | `src/observability/{logging,metrics,tracing}.py` |
 | Benchmark harness | `src/benchmark/` |
 | Agent harness framework | `src/framework/harness/` |

@@ -18,6 +18,7 @@ import torch.nn.functional as F
 if TYPE_CHECKING:
     import chess
 
+from src.config.constants import CHESS_ROUTING_CONFIDENCE_BOOST
 from src.games.chess.config import AgentType, ChessEnsembleConfig, GamePhase
 from src.games.chess.state import ChessGameState
 
@@ -462,7 +463,7 @@ class ChessMetaController:
         # Calculate confidence based on how dominant the primary agent is
         sorted_weights = sorted(weights.values(), reverse=True)
         confidence = sorted_weights[0] - sorted_weights[1] if len(sorted_weights) > 1 else 1.0
-        confidence = min(1.0, confidence + 0.3)  # Boost confidence
+        confidence = min(1.0, confidence + CHESS_ROUTING_CONFIDENCE_BOOST)  # Boost confidence
 
         # Generate reasoning
         reasoning = self._generate_reasoning(features, primary_agent)

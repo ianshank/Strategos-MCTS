@@ -41,6 +41,11 @@ pytest tests/unit -v --tb=short -q
 | `ruff check src/ tests/ --fix` | Lint with auto-fix |
 | `mypy src/ --strict` | Type check |
 
+> **Tooling is pinned for CI/local parity.** `ruff` and `mypy` are pinned to a validated
+> minor in the `[dev]` extra (the CI lint job installs `.[dev]`). Bump them deliberately and
+> re-run the full local gate (`ruff`/`black`/`mypy`/`pytest`) before changing the pins —
+> e.g. mypy's `no-redef`/`unused-ignore` behavior shifts across releases.
+
 ---
 
 ## Test Commands
@@ -76,6 +81,7 @@ pytest tests/unit -v --tb=short -q
 ```
 CONFIGURATION
 ├── src/config/settings.py       # Pydantic Settings (all config here)
+├── src/config/constants.py      # Shared defaults & bounds (model names, URLs, magic numbers)
 ├── .env                         # Environment variables (secrets)
 └── pyproject.toml               # Dependencies, tool config
 
@@ -92,6 +98,7 @@ AGENTS
 
 LLM ADAPTERS
 ├── src/adapters/llm/base.py     # Protocol & interfaces
+├── src/adapters/llm/resilience.py   # Shared CircuitBreaker (provider-agnostic)
 ├── src/adapters/llm/openai_client.py
 ├── src/adapters/llm/anthropic_client.py
 └── src/adapters/llm/lmstudio_client.py

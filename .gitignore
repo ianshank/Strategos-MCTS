@@ -55,6 +55,12 @@ test_results.txt
 *.py,cover
 .hypothesis/
 
+# Linter / static-analysis caches and generated scan reports
+.ruff_cache/
+# Bandit / pip-audit / other tooling JSON reports (e.g. bandit-report.json,
+# pip-audit-report.json) emitted by CI and local security/audit runs.
+*-report.json
+
 # Local workspace persistence artifacts (substructure library, replay buffers)
 workspace/
 *.pkl

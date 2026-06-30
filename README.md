@@ -103,6 +103,20 @@ pytest tests/integration/
 pytest tests/integration/test_deployed_models.py
 ```
 
+### Continuous integration & quality gates
+
+To reproduce CI locally, install with the same extras CI uses and run the unit suite with
+the coverage gate:
+
+```bash
+pip install -e ".[dev,neural]"
+ruff check src/ tests/ && black src/ tests/ --check --line-length 120 && mypy src/
+pytest tests/unit/ --cov=src --cov-fail-under=85
+```
+
+The CI pipeline enforces an **85% coverage gate** and pins `ruff`/`mypy` (in the `[dev]`
+extra, installed by the lint job) so local and CI runs use identical tool versions.
+
 ## 📚 Documentation
 
 - **[Architecture Guide](docs/C4_ARCHITECTURE.md)**: Detailed C4 diagrams of system components.

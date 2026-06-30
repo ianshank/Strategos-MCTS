@@ -16,6 +16,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from src.config.constants import DEFAULT_GOOGLE_GEMINI_MODEL
+
 
 class ADKBackend(str, Enum):
     """Supported ADK execution backends."""
@@ -46,7 +48,7 @@ class ADKConfig:
 
     project_id: str | None = None
     location: str = "us-central1"
-    model_name: str = "gemini-2.0-flash-001"
+    model_name: str = DEFAULT_GOOGLE_GEMINI_MODEL
     backend: ADKBackend = ADKBackend.LOCAL
     workspace_dir: str = "./workspace/adk"
     enable_tracing: bool = True
@@ -65,7 +67,7 @@ class ADKConfig:
         return cls(
             project_id=os.getenv("GOOGLE_CLOUD_PROJECT"),
             location=os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1"),
-            model_name=os.getenv("ROOT_AGENT_MODEL", "gemini-2.0-flash-001"),
+            model_name=os.getenv("ROOT_AGENT_MODEL", DEFAULT_GOOGLE_GEMINI_MODEL),
             backend=backend,
             workspace_dir=os.getenv("ADK_WORKSPACE_DIR", "./workspace/adk"),
             enable_tracing=os.getenv("ADK_ENABLE_TRACING", "true").lower() == "true",
