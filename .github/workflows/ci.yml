@@ -425,6 +425,9 @@ jobs:
 
       - name: Scan Docker image for vulnerabilities
         uses: aquasecurity/trivy-action@v0.36.0
+        # Advisory only (exit-code 0). Don't fail the job if Trivy's DB download flakes
+        # (a recurring infra issue) — the SARIF upload below is guarded on file existence.
+        continue-on-error: true
         with:
           image-ref: langgraph-mcts:test
           format: 'sarif'
@@ -434,7 +437,9 @@ jobs:
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        # Only upload when Trivy actually produced the SARIF (avoids
+        # "Path does not exist: trivy-results.sarif" failing the job on a Trivy flake).
+        if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
 
