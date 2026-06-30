@@ -256,6 +256,7 @@ class NeuralMCTS:
         policy_value_network: nn.Module,
         config: MCTSConfig,
         device: str = "cpu",
+        single_agent: bool = False,
     ):
         """
         Initialize neural MCTS.
@@ -264,10 +265,14 @@ class NeuralMCTS:
             policy_value_network: Network that outputs (policy, value)
             config: MCTS configuration
             device: Device for neural network
+            single_agent: When True, treat the search as a single-agent (non-adversarial)
+                problem — values are NOT negated between plies during backpropagation.
+                Defaults to False, preserving two-player zero-sum (negamax) behavior.
         """
         self.network = policy_value_network
         self.config = config
         self.device = device
+        self.single_agent = single_agent
 
         # Caching for network evaluations
         self.cache: dict[str, tuple[np.ndarray, float]] = {}
@@ -464,8 +469,11 @@ class NeuralMCTS:
             node_in_path.update(value)
             node_in_path.revert_virtual_loss(self.config.virtual_loss)
 
-            # Flip value for opponent
-            value = -value
+            # Flip value for opponent in two-player zero-sum games. For single-agent
+            # (non-adversarial) problems the value is shared across the path, so the
+            # negamax flip must be skipped to avoid inverting training targets.
+            if not self.single_agent:
+                value = -value
 
         return value
 
@@ -540,9 +548,20 @@ class SelfPlayCollector:
         self,
         mcts: NeuralMCTS,
         config: MCTSConfig,
+        action_space_size: int | None = None,
     ):
+        """
+        Args:
+            mcts: Neural MCTS search driver.
+            config: MCTS configuration.
+            action_space_size: When provided, ``play_game`` emits fixed-size policy
+                targets aligned to ``GameState.action_to_index`` (required for training a
+                fixed-output policy head). When None, the raw per-state visit-prob vector
+                is stored (legacy behavior).
+        """
         self.mcts = mcts
         self.config = config
+        self.action_space_size = action_space_size
 
     async def play_game(
         self,
@@ -575,9 +594,17 @@ class SelfPlayCollector:
             # Run MCTS
             action_probs, root = await self.mcts.search(state, temperature=temperature, add_root_noise=True)
 
-            # Store training example
-            # Convert action probs to array for all actions
-            probs = np.array(list(action_probs.values()))
+            # Store training example. When an action space size is configured, align the
+            # visit-probability target to fixed action indices so it matches a fixed
+            # policy head; otherwise keep the raw per-state vector (legacy).
+            if self.action_space_size is not None:
+                probs = np.zeros(self.action_space_size, dtype=np.float64)
+                for action, prob in action_probs.items():
+                    idx = state.action_to_index(action)
+                    if 0 <= idx < self.action_space_size:
+                        probs[idx] = prob
+            else:
+                probs = np.array(list(action_probs.values()))
 
             examples.append(
                 MCTSExample(
@@ -592,17 +619,22 @@ class SelfPlayCollector:
             action = self.mcts.select_action(action_probs, temperature=temperature)
             state = state.apply_action(action)
 
-            # Switch player
-            player = -player
+            # Switch player (two-player games only; single-agent keeps player == 1).
+            if not self.mcts.single_agent:
+                player = -player
             move_count += 1
 
         # Get game outcome
         outcome = state.get_reward()
 
-        # Assign values to examples
+        # Assign values to examples. In two-player games the target is from the
+        # perspective of the player who moved (negamax); single-agent problems share
+        # the same absolute outcome for every step.
         for example in examples:
-            # Value is from perspective of the player who made the move
-            example.value_target = outcome if example.player == 1 else -outcome
+            if self.mcts.single_agent:
+                example.value_target = outcome
+            else:
+                example.value_target = outcome if example.player == 1 else -outcome
 
         return examples
 
