@@ -83,6 +83,13 @@ class MCTSConfig:
     max_children_per_node: int = 50
     """Maximum children per node (action branching limit)."""
 
+    # Master switch for value-convergence early termination in graph-driven search.
+    # Defaults to False to preserve historical behavior (the graph builder previously
+    # ran search with value-convergence disabled). Visit-fraction termination still
+    # applies with the thresholds below.
+    enable_early_termination: bool = False
+    """Enable value-convergence early stopping in graph-driven MCTS search."""
+
     # Early termination (visit-fraction based)
     early_termination_threshold: float = 0.95
     """Stop if best action has this fraction of total visits."""

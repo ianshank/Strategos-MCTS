@@ -815,7 +815,13 @@ class GraphBuilder:
             random_weight=0.3,
         )
 
-        # Run MCTS search
+        # Run MCTS search. Early-termination thresholds come from MCTSConfig (single
+        # source of truth). Value-convergence stopping is gated by
+        # ``enable_early_termination`` (default off) so historical behavior is preserved;
+        # passing ``early_stop_threshold=0.0`` disables it in core.search().
+        early_stop_threshold = (
+            self.mcts_config.early_stop_threshold if self.mcts_config.enable_early_termination else 0.0
+        )
         best_action, stats = await self.mcts_engine.search(
             root=root,
             num_iterations=self.mcts_config.num_iterations,
@@ -824,7 +830,21 @@ class GraphBuilder:
             rollout_policy=rollout_policy,
             max_rollout_depth=self.mcts_config.max_rollout_depth,
             selection_policy=self.mcts_config.selection_policy,
+            early_termination_threshold=self.mcts_config.early_termination_threshold,
+            min_iterations_before_termination=self.mcts_config.min_iterations_before_termination,
+            early_stop_threshold=early_stop_threshold,
+            early_stop_patience=self.mcts_config.early_stop_patience,
         )
+
+        if stats.get("early_stopped") or stats.get("termination_reason"):
+            self.logger.debug(
+                "MCTS search terminated early",
+                extra={
+                    "termination_reason": stats.get("termination_reason"),
+                    "iterations_run": stats.get("iterations_run"),
+                    "early_stopped": stats.get("early_stopped"),
+                },
+            )
 
         end_time = time.perf_counter()
         execution_time_ms = (end_time - start_time) * 1000
