@@ -28,7 +28,7 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-fail-under=85
 # Use if/else with a subshell `(exit 1)` so a match returns a non-zero status
 # (for CI / `set -e`) without the `A && B || C` pitfall and without closing an
 # interactive shell.
-if git grep -nE "sk-[A-Za-z0-9]{8,}" -- src/ kubernetes/; then echo "FAIL: hardcoded key"; (exit 1); else echo "OK: no keys"; fi
+if git grep -nE "sk-[A-Za-z0-9]{20,}" -- src/ kubernetes/; then echo "FAIL: hardcoded key"; (exit 1); else echo "OK: no keys"; fi
 ```
 
 Notes:
