@@ -615,6 +615,11 @@ class Settings(BaseSettings):
                 )
         elif self.LLM_PROVIDER == LLMProvider.LMSTUDIO and self.LMSTUDIO_BASE_URL is None:
             raise ValueError("LMSTUDIO_BASE_URL is required when using LM Studio provider.")
+
+        # Fail fast on JWT misconfiguration at startup rather than per-request (which would
+        # surface to clients as a misleading 401). See docs/SECRETS_MANAGEMENT.md.
+        if self.AUTH_MODE == "jwt" and self.JWT_SECRET is None:
+            raise ValueError("JWT_SECRET is required when AUTH_MODE='jwt'. Set the JWT_SECRET environment variable.")
         return self
 
     def get_api_key(self) -> str | None:

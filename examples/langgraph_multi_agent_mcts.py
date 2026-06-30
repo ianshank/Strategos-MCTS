@@ -48,6 +48,10 @@ DEFAULT_DECOMPOSITION_QUALITY_SCORE = 0.7  # HRM hierarchical-decomposition conf
 DEFAULT_FINAL_QUALITY_SCORE = 0.7  # TRM post-refinement confidence
 DEFAULT_HRM_TEMPERATURE = 0.3  # Lower temp: structured, deterministic decomposition
 DEFAULT_TRM_TEMPERATURE = 0.5  # Moderate temp: iterative refinement
+DEFAULT_SYNTHESIS_TEMPERATURE = 0.5  # Final-answer synthesis temperature
+DEFAULT_AGENT_CONFIDENCE = 0.5  # Neutral confidence when an agent result is absent
+MCTS_SIM_BASE_VALUE_RANGE = (0.3, 0.7)  # Random base-value range for the reference MCTS rollout
+MCTS_AGENT_CONFIDENCE_BIAS = 0.15  # Weight applied to agent confidence in the rollout value
 
 
 class _LLMOrchestrationAgent:
@@ -69,7 +73,7 @@ class _LLMOrchestrationAgent:
 
         Args:
             model_adapter: Async LLM adapter exposing ``generate(...)`` that
-                returns an object with ``.text`` (str) and ``.tokens_used``.
+                returns an object with a ``.text`` (str) attribute.
             logger: Logger-like object (``.info``/``.error``).
             **kwargs: Arbitrary extra configuration (e.g. the framework passes
                 ``**(hrm_config or {})``). Unknown keys are accepted and
@@ -410,7 +414,9 @@ class LangGraphMultiAgentFramework:
                 {
                     "agent": "hrm",
                     "response": result["response"],
-                    "confidence": result["metadata"].get("decomposition_quality_score", 0.7),
+                    "confidence": result["metadata"].get(
+                        "decomposition_quality_score", DEFAULT_DECOMPOSITION_QUALITY_SCORE
+                    ),
                 }
             ],
         }
@@ -434,7 +440,7 @@ class LangGraphMultiAgentFramework:
                 {
                     "agent": "trm",
                     "response": result["response"],
-                    "confidence": result["metadata"].get("final_quality_score", 0.7),
+                    "confidence": result["metadata"].get("final_quality_score", DEFAULT_FINAL_QUALITY_SCORE),
                 }
             ],
         }
@@ -486,7 +492,9 @@ class LangGraphMultiAgentFramework:
                 {
                     "agent": "mcts",
                     "response": f"Simulated {self.mcts_iterations} scenarios. Recommended action: {best_action}",
-                    "confidence": min(best_child.visits / self.mcts_iterations if best_child else 0.5, 1.0),
+                    "confidence": min(
+                        best_child.visits / self.mcts_iterations if best_child else DEFAULT_AGENT_CONFIDENCE, 1.0
+                    ),
                 }
             ],
         }
@@ -533,16 +541,18 @@ class LangGraphMultiAgentFramework:
         # In production, this could run a lightweight simulation
 
         # Simplified: random evaluation with bias from agents
-        base_value = random.uniform(0.3, 0.7)
+        base_value = random.uniform(*MCTS_SIM_BASE_VALUE_RANGE)
 
         # Bias based on agent confidence
         if state.get("hrm_results"):
-            hrm_confidence = state["hrm_results"]["metadata"].get("decomposition_quality_score", 0.5)
-            base_value += hrm_confidence * 0.15
+            hrm_confidence = state["hrm_results"]["metadata"].get(
+                "decomposition_quality_score", DEFAULT_AGENT_CONFIDENCE
+            )
+            base_value += hrm_confidence * MCTS_AGENT_CONFIDENCE_BIAS
 
         if state.get("trm_results"):
-            trm_confidence = state["trm_results"]["metadata"].get("final_quality_score", 0.5)
-            base_value += trm_confidence * 0.15
+            trm_confidence = state["trm_results"]["metadata"].get("final_quality_score", DEFAULT_AGENT_CONFIDENCE)
+            base_value += trm_confidence * MCTS_AGENT_CONFIDENCE_BIAS
 
         return min(base_value, 1.0)
 
@@ -630,14 +640,17 @@ Final Response:"""
         try:
             response = await self.model_adapter.generate(
                 prompt=synthesis_prompt,
-                temperature=0.5,
+                temperature=DEFAULT_SYNTHESIS_TEMPERATURE,
             )
             final_response = response.text
         except Exception as e:
             self.logger.error(f"Synthesis failed: {e}")
-            # Fallback: highest confidence response
-            best_output = max(agent_outputs, key=lambda o: o["confidence"])
-            final_response = best_output["response"]
+            # Fallback: highest-confidence response, or empty when no agent ran
+            # (guard against max() on an empty sequence).
+            if agent_outputs:
+                final_response = max(agent_outputs, key=lambda o: o["confidence"])["response"]
+            else:
+                final_response = ""
 
         # Build metadata
         metadata = {

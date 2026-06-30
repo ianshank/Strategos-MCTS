@@ -329,23 +329,28 @@ class JWTAuthenticator:
     This is a placeholder for JWT support.
     """
 
-    def __init__(self, secret_key: str, algorithm: str = "HS256"):
+    DEFAULT_EXPIRY_HOURS = 24
+
+    def __init__(self, secret_key: str, algorithm: str = "HS256", default_expiry_hours: int | None = None):
         """
         Initialize JWT authenticator.
 
         Args:
             secret_key: Secret key for signing tokens
             algorithm: JWT signing algorithm
+            default_expiry_hours: Default token validity used by ``create_token`` when no
+                explicit ``expires_in_hours`` is passed. Falls back to ``DEFAULT_EXPIRY_HOURS``.
         """
         self.secret_key = secret_key
         self.algorithm = algorithm
+        self.default_expiry_hours = default_expiry_hours or self.DEFAULT_EXPIRY_HOURS
         self._token_blacklist: set[str] = set()
 
     def create_token(
         self,
         client_id: str,
         roles: set[str],
-        expires_in_hours: int = 24,
+        expires_in_hours: int | None = None,
     ) -> str:
         """
         Create a JWT token.
@@ -353,11 +358,14 @@ class JWTAuthenticator:
         Args:
             client_id: Client identifier
             roles: Client roles
-            expires_in_hours: Token validity period
+            expires_in_hours: Token validity period; defaults to the authenticator's
+                ``default_expiry_hours`` (settings-driven via the factory) when not given.
 
         Returns:
             JWT token string
         """
+        if expires_in_hours is None:
+            expires_in_hours = self.default_expiry_hours
         try:
             import jwt
         except ImportError as e:
@@ -406,8 +414,16 @@ class JWTAuthenticator:
                 algorithms=[self.algorithm],
             )
 
+            subject = payload.get("sub")
+            if not subject:
+                logger.warning("Authentication failed: JWT missing 'sub' claim")
+                raise AuthenticationError(
+                    user_message="Invalid token",
+                    internal_details="JWT payload missing required 'sub' claim",
+                )
+
             return ClientInfo(
-                client_id=payload["sub"],
+                client_id=subject,
                 roles=set(payload.get("roles", ["user"])),
             )
         except jwt.ExpiredSignatureError as e:
@@ -490,6 +506,7 @@ def get_jwt_authenticator() -> JWTAuthenticator:
         _default_jwt_authenticator = JWTAuthenticator(
             secret_key=settings.JWT_SECRET.get_secret_value(),
             algorithm=settings.JWT_ALGORITHM,
+            default_expiry_hours=settings.JWT_EXPIRY_HOURS,
         )
     return _default_jwt_authenticator
 
