@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,11 @@ logger = get_logger(__name__)
 # HarnessSettings (FILE_READ_MAX_ANCHORS / HASHED_EDIT_WINDOW) via registration.
 _DEFAULT_MAX_ANCHORS = 200
 _DEFAULT_WINDOW = 1
+
+
+def _read_and_hash(target: Path) -> tuple[str, str]:
+    """Read UTF-8 text and compute the file SHA-256 (blocking; run off-loop)."""
+    return target.read_text(encoding="utf-8"), file_sha256(target)
 
 
 def _resolve(path: str, root: Path) -> Path:
@@ -64,8 +70,18 @@ def file_read_tool(
         if not target.exists():
             logger.debug("file_read miss: %s", target)
             return f"file not found: {target}"
-        text = target.read_text(encoding="utf-8")
-        digest = file_sha256(target)
+        if not target.is_file():
+            logger.debug("file_read not a regular file: %s", target)
+            return f"error: not a file: {target}"
+        try:
+            # Offload blocking file I/O so the event loop stays responsive.
+            text, digest = await asyncio.to_thread(_read_and_hash, target)
+        except UnicodeDecodeError:
+            logger.debug("file_read non-utf8: %s", target)
+            return f"error: file is not valid UTF-8: {target}"
+        except OSError as exc:
+            logger.warning("file_read io error for %s: %s", path, exc)
+            return f"io_error: {exc}"
         lines = text.splitlines()
         # Surface line-window hashes so the model can build hashed edits.
         windows = "\n".join(f"L{i}: {window_hash(lines, i, window)[:12]}" for i in range(min(len(lines), max_anchors)))
@@ -121,7 +137,8 @@ def file_edit_hashed_tool(
         except (TypeError, ValueError) as exc:
             return f"error: invalid arguments: {exc}"
         try:
-            apply_edit(edit)
+            # Offload blocking write/hash work off the event loop.
+            await asyncio.to_thread(apply_edit, edit)
         except HashAnchorMismatch as exc:
             logger.warning("file_edit hash mismatch for %s: %s", path, exc)
             return f"hash_mismatch: {exc}"

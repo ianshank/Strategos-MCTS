@@ -9,6 +9,7 @@ temperature) through ``HarnessFactory`` and ``register_builtin_tools``.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -73,16 +74,24 @@ class TestEpisodicCompressor:
 
     def test_from_settings_uses_configured_budgets(self) -> None:
         hs = HarnessSettings(
-            CONTEXT_COMPRESS_MAX_CHARS=7,
+            CONTEXT_COMPRESS_MAX_CHARS=40,
             CONTEXT_COMPRESS_HEAD_CHARS=2,
             CONTEXT_COMPRESS_TAIL_CHARS=2,
         )
         comp = EpisodicCompressor.from_settings(hs)
-        assert comp.max_chars == 7
+        assert comp.max_chars == 40
         assert comp.head_chars == 2
         assert comp.tail_chars == 2
         assert comp.compress("abcdefghij").startswith("ab")
         assert comp.compress("abcdefghij").endswith("ij")
+
+    def test_compress_never_exceeds_max_chars(self) -> None:
+        # head/tail budgets deliberately larger than the cap; output must still
+        # respect max_chars (clamped around the marker).
+        comp = EpisodicCompressor(max_chars=120, head_chars=500, tail_chars=500)
+        out = comp.compress("x" * 1000)
+        assert len(out) <= 120
+        assert comp.truncation_marker in out
 
 
 # ---------------------------------------------------------------------------
@@ -291,6 +300,43 @@ class TestBuiltinToolWiring:
         names = set(registry.list_names())
         assert {"file_read", "file_edit_hashed", "shell", "test_run", "lint_run", "type_check_run"} <= names
 
+    def test_register_builtin_tools_propagates_timeouts(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Capture the timeouts/window/anchors actually forwarded to each builder
+        # so this guards the settings->tool wiring, not just registration.
+        import src.framework.harness.tools.builtins.registration as reg
+
+        captured: dict[str, Any] = {}
+
+        def _capture(key: str, real: Any) -> Any:
+            def _factory(**kwargs: Any) -> Any:
+                captured[key] = kwargs
+                return real(**kwargs)
+
+            return _factory
+
+        monkeypatch.setattr(reg, "test_run_tool", _capture("test", reg.test_run_tool))
+        monkeypatch.setattr(reg, "lint_run_tool", _capture("lint", reg.lint_run_tool))
+        monkeypatch.setattr(reg, "type_check_run_tool", _capture("typecheck", reg.type_check_run_tool))
+        monkeypatch.setattr(reg, "file_read_tool", _capture("read", reg.file_read_tool))
+
+        reg.register_builtin_tools(
+            ToolRegistry(),
+            root=tmp_path,
+            perms=HarnessPermissions(),
+            settings=HarnessSettings(
+                TOOL_TEST_TIMEOUT_SECONDS=42.0,
+                TOOL_LINT_TIMEOUT_SECONDS=7.0,
+                TOOL_TYPECHECK_TIMEOUT_SECONDS=9.0,
+                FILE_READ_MAX_ANCHORS=11,
+                HASHED_EDIT_WINDOW=3,
+            ),
+        )
+        assert captured["test"]["timeout"] == 42.0
+        assert captured["lint"]["timeout"] == 7.0
+        assert captured["typecheck"]["timeout"] == 9.0
+        assert captured["read"]["max_anchors"] == 11
+        assert captured["read"]["window"] == 3
+
     def test_register_builtin_tools_defaults_settings(self, tmp_path: Path) -> None:
         # settings=None must still register every tool (defaults sourced internally).
         registry = ToolRegistry()
@@ -334,7 +380,9 @@ class TestBuiltinToolWiring:
     @pytest.mark.asyncio
     async def test_shell_timeout(self, tmp_path: Path) -> None:
         _, handler = shell_tool(cwd=tmp_path, perms=HarnessPermissions(SHELL=True))
-        out = await handler({"argv": ["sleep", "5"], "timeout": 0.1})
+        # Use the Python interpreter rather than a platform-specific `sleep`
+        # binary so the timeout path is exercised deterministically on any OS.
+        out = await handler({"argv": [sys.executable, "-c", "import time; time.sleep(5)"], "timeout": 0.1})
         assert out.startswith("timeout:")
 
     @pytest.mark.asyncio

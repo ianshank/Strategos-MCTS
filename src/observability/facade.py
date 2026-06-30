@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
 from src.config.settings import get_settings
+from src.observability.logging import sanitize_dict
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,10 @@ class ObservabilityFacade:
 
         # Lazy-load modules
         self._tracer = None
+        # Latch: once tracer initialization fails (broken/misconfigured backend),
+        # stop retrying on every trace() call so a hot path can't flood logs.
+        # Cleared only by constructing a fresh instance (e.g. via reset()).
+        self._tracer_init_failed = False
         self._metrics: Any = None
         self._profiler = None
 
@@ -299,22 +304,26 @@ class ObservabilityFacade:
 
         The tracer is optional: a missing module, or a misconfigured/unavailable
         backend that raises during initialization, must never break the operation
-        being traced. On any failure ``self._tracer`` stays ``None`` and callers
-        run without a span.
+        being traced. On any failure ``self._tracer`` stays ``None``, the failure
+        is latched (so subsequent calls skip re-initialization and don't flood
+        logs), and callers run without a span.
         """
-        if self._tracer is None and self.config.tracing_enabled:
-            try:
-                from src.observability.tracing import get_tracer
+        if self._tracer is not None or self._tracer_init_failed or not self.config.tracing_enabled:
+            return
+        try:
+            from src.observability.tracing import get_tracer
 
-                self._tracer = get_tracer(self.config.service_name)
-            except ImportError:
-                logger.debug("Tracing module not available")
-            except Exception as exc:
-                logger.warning(
-                    "Tracer initialization failed; continuing without tracing: %s",
-                    exc,
-                )
-                self._tracer = None
+            self._tracer = get_tracer(self.config.service_name)
+        except ImportError:
+            self._tracer_init_failed = True
+            logger.debug("Tracing module not available; tracing disabled for this instance")
+        except Exception as exc:
+            self._tracer_init_failed = True
+            self._tracer = None
+            self.log_warning(
+                "tracer initialization failed; tracing disabled for this instance",
+                **sanitize_dict({"error": str(exc)}),
+            )
 
     def _start_span_safely(
         self,
@@ -348,17 +357,15 @@ class ObservabilityFacade:
                     span.set_attribute(key, str(value))
             return span_cm, span
         except Exception as exc:
-            logger.warning(
-                "Tracing backend error starting span %r; continuing without tracing: %s",
-                name,
-                exc,
+            self.log_warning(
+                "tracing backend error starting span; continuing without tracing",
+                **sanitize_dict({"span": name, "error": str(exc)}),
             )
             if span_cm is not None:
                 self._safe_exit_span(span_cm, exc)
             return None, None
 
-    @staticmethod
-    def _safe_exit_span(span_cm: Any, exc: BaseException | None) -> None:
+    def _safe_exit_span(self, span_cm: Any, exc: BaseException | None) -> None:
         """Exit a span context manager, swallowing tracing-layer errors.
 
         Args:
@@ -372,7 +379,10 @@ class ObservabilityFacade:
             else:
                 span_cm.__exit__(type(exc), exc, exc.__traceback__)
         except Exception as exit_exc:
-            logger.warning("Failed to close trace span cleanly: %s", exit_exc)
+            self.log_warning(
+                "failed to close trace span cleanly",
+                **sanitize_dict({"error": str(exit_exc)}),
+            )
 
     @contextmanager
     def trace(

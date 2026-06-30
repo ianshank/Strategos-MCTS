@@ -115,7 +115,27 @@ class LangGraphMultiAgentFramework:
         max_iterations: int = 3,
         consensus_threshold: float = 0.75,
     ):
-        """Initialize LangGraph multi-agent framework."""
+        """Initialize LangGraph multi-agent framework.
+
+        Raises:
+            ImportError: if the optional ``langchain``/``langgraph`` extras are
+                not installed. The module imports without them (so the class can
+                be referenced), but constructing a framework requires them.
+        """
+        _missing = [
+            name
+            for name, sym in (
+                ("langchain-openai", OpenAIEmbeddings),
+                ("langgraph", StateGraph),
+                ("langgraph", MemorySaver),
+            )
+            if sym is None
+        ]
+        if _missing:
+            raise ImportError(
+                "LangGraphMultiAgentFramework requires optional extras that are not installed: "
+                f"{', '.join(sorted(set(_missing)))}. Install them, e.g. `pip install langchain-openai langgraph`."
+            )
 
         self.model_adapter = model_adapter
         self.logger = logger

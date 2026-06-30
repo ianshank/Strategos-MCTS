@@ -41,11 +41,21 @@ class EpisodicCompressor:
         )
 
     def compress(self, text: str) -> str:
-        """Return ``text`` if short enough, else head + marker + tail."""
+        """Return ``text`` if short enough, else head + marker + tail.
+
+        ``max_chars`` is a hard upper bound: the head/tail slices are clamped to
+        fit around the marker so the result never exceeds ``max_chars`` even when
+        ``head_chars``/``tail_chars`` were configured larger than the cap. (The
+        sole exception is a marker longer than ``max_chars`` itself, which is
+        pathological — markers are short fixed strings.)
+        """
         if len(text) <= self.max_chars:
             return text
-        head = text[: self.head_chars]
-        tail = text[-self.tail_chars :]
+        budget = max(0, self.max_chars - len(self.truncation_marker))
+        head_len = min(self.head_chars, budget)
+        tail_len = min(self.tail_chars, budget - head_len)
+        head = text[:head_len]
+        tail = text[-tail_len:] if tail_len > 0 else ""
         return f"{head}{self.truncation_marker}{tail}"
 
 
