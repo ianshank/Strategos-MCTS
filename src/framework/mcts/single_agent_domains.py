@@ -17,6 +17,7 @@ working regardless of the underlying action schema (``ReasoningState`` uses ``"t
 
 from __future__ import annotations
 
+from dataclasses import MISSING
 from typing import Any
 
 import torch
@@ -92,9 +93,14 @@ class StringActionGameState(GameState):
 
 
 # Action-space sizes (policy-head width) for the wrapped domains.
-# ReasoningState's types are read from a freshly-constructed instance (construction does
-# not touch settings); planning uses the named vocabulary above (+1 unknown bucket).
-REASONING_ACTION_SPACE = len(ReasoningState(problem="_")._action_types)
+# ReasoningState's action types are read from the dataclass field's default_factory WITHOUT
+# instantiating it — constructing ReasoningState reads Settings (which require OPENAI_API_KEY
+# under the default provider), so import-time instantiation could fail in credential-less envs.
+# Planning uses the named vocabulary above (+1 unknown bucket).
+_reasoning_action_factory = ReasoningState.__dataclass_fields__["_action_types"].default_factory
+if _reasoning_action_factory is MISSING:  # pragma: no cover - the field always defines a factory
+    raise RuntimeError("ReasoningState._action_types must define a default_factory")
+REASONING_ACTION_SPACE = len(_reasoning_action_factory())
 PLANNING_ACTION_SPACE = len(_PLANNING_ACTIONS) + 1
 
 

@@ -61,7 +61,7 @@ def test_registered_domains_satisfy_gamestate_contract(domain):
     size = DomainRegistry.action_space_size(domain)
     for action in actions:
         idx = state.action_to_index(action)
-        assert 0 <= idx <= size  # <= size allows the documented "unknown" bucket
+        assert 0 <= idx < size  # index must fit a fixed-width policy head (0..size-1)
 
     # One-step transition sanity: applying a legal action yields a new state.
     nxt = state.apply_action(actions[0])
