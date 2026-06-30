@@ -343,7 +343,9 @@ class JWTAuthenticator:
         """
         self.secret_key = secret_key
         self.algorithm = algorithm
-        self.default_expiry_hours = default_expiry_hours or self.DEFAULT_EXPIRY_HOURS
+        self.default_expiry_hours = (
+            default_expiry_hours if default_expiry_hours is not None else self.DEFAULT_EXPIRY_HOURS
+        )
         self._token_blacklist: set[str] = set()
 
     def create_token(

@@ -322,7 +322,10 @@ async def verify_api_key(x_api_key: str = Header(..., description="API key or JW
 
     try:
         if get_settings().AUTH_MODE == "jwt":
-            return get_jwt_authenticator().verify_token(x_api_key)
+            # Accept either a bare JWT or an "Authorization: Bearer <jwt>"-style value
+            # (case-insensitive prefix), so standard bearer-token clients work too.
+            token = x_api_key[7:] if x_api_key[:7].lower() == "bearer " else x_api_key
+            return get_jwt_authenticator().verify_token(token)
         authenticator = get_authenticator()
         client_info = authenticator.require_auth(x_api_key)
         return client_info

@@ -529,6 +529,16 @@ class TestJWTAuthenticator:
 
         assert auth.algorithm == "HS512"
 
+    def test_default_expiry_hours_defaults_when_none(self):
+        """Omitting default_expiry_hours falls back to DEFAULT_EXPIRY_HOURS."""
+        auth = JWTAuthenticator(secret_key="secret")
+        assert auth.default_expiry_hours == JWTAuthenticator.DEFAULT_EXPIRY_HOURS
+
+    def test_default_expiry_hours_preserves_explicit_value(self):
+        """An explicit default_expiry_hours is honored, including falsey 0 (not coerced)."""
+        auth = JWTAuthenticator(secret_key="secret", default_expiry_hours=0)
+        assert auth.default_expiry_hours == 0
+
     @pytest.mark.skipif(True, reason="PyJWT library required for full JWT tests")  # Skip if PyJWT not installed
     def test_create_token_requires_pyjwt(self):
         """Test that create_token raises ImportError without PyJWT."""
