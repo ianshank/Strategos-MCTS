@@ -108,12 +108,16 @@ tooling — see §5), **Size**, and **Acceptance Criteria (AC)**. ACs inherit §
   - **AC:** `mypy src/` clean; the policy test subclasses conform to the protocol; the
     early-termination + framework + parallel-mcts suites pass. (Files: `tests/unit/test_mcts_early_termination.py`,
     `tests/unit/test_mcts_framework.py`, `tests/unit/test_parallel_mcts_ext.py`, `tests/e2e/test_user_journeys.py`.)
-- **1.2 Make `HRMAgent` importable from `examples` without optional deps.** Move the
-  `langchain_openai`/embedding imports behind a lazy/`TYPE_CHECKING` guard (mirror the
-  existing optional-import pattern used for `langgraph`/`chess`) and re-export `HRMAgent` from
-  `examples/__init__.py`.
-  - **AC:** `from examples import HRMAgent` succeeds in a `[dev]`-only env (no `langchain_openai`);
-    the 14 previously-erroring import tests pass; no circular imports.
+- **1.2 Make the `examples/langgraph_multi_agent_mcts` module importable without optional deps.**
+  The module hard-imports `langchain_openai` at top level (`examples/langgraph_multi_agent_mcts.py:19`),
+  so its public class `LangGraphMultiAgentFramework` (and the `HRMAgent`/`TRMAgent` it re-imports
+  from `src/agents/`) cannot load without optional embedding deps. Move the
+  `langchain_openai`/embedding imports behind a lazy/`TYPE_CHECKING` guard (mirror the existing
+  optional-import pattern used for `langgraph`/`chess`); optionally add `examples/__init__.py`
+  re-exporting `LangGraphMultiAgentFramework`.
+  - **AC:** `from langgraph_multi_agent_mcts import LangGraphMultiAgentFramework` succeeds in a
+    `[dev]`-only env (no `langchain_openai`); the previously-skipped/erroring `AGENTS_AVAILABLE`
+    tests (e.g. `tests/chaos/test_resilience.py`) run; no circular imports.
 - **1.3 DABStep `split` regression test.** The feature exists (`dataset_loader.py:98`); ensure
   a regression test pins the backward-compatible default and the unknown-split fallback.
   - **AC:** Test asserts `load()` defaults to `train` and that an unknown split falls back to an
@@ -209,9 +213,11 @@ never collides:
 - **Worktrees** (`isolation: "worktree"`): any phase that installs the heavy ML stack or mutates
   files in parallel (Phase 0 baseline, Phase 2 test authoring, Phase 5 training) runs in its own
   git worktree so installs/edits don't conflict.
-- **Subagents** map to the `planning/milestones.yaml` roles: `general-purpose`/Coder for
-  implementation, an SQE pass for test authoring (Phase 2), a `code-review`/`security-review`
-  skill pass before each push, and `Explore` for any further codebase verification.
+- **Subagents** follow the `planning/milestones.yaml` role keys (`planner`, `coder`, `sge`,
+  `reviewer`, `orchestrator`), realized with the available tooling: `coder` → implementation
+  (general-purpose subagent), `sge` (Software Quality Engineering) → test authoring (Phase 2),
+  `reviewer` → a `code-review`/`security-review` skill pass before each push, `planner` →
+  codebase verification (Explore subagent), `orchestrator` → cross-phase coordination.
 - **Parallelizable fan-out:** Phase 2.1 (5 independent ADK agents) and Phase 5.2 (independent
   domain adapters) are natural per-item fan-outs — one subagent per agent/adapter, each in a
   worktree, results merged after the shared contract test passes.
