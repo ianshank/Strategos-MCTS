@@ -16,8 +16,10 @@ The project uses spec-driven development: each phase has a `specs/phase_N_*.SPEC
 # Validate one spec
 harness validate-spec specs/phase_0_baseline.SPEC.md
 
-# Validate all specs (exit non-zero if any fail to parse)
-for f in specs/*.SPEC.md; do echo "== $f =="; harness validate-spec "$f" || exit 1; done
+# Validate all specs (exit non-zero if any fail to parse).
+# Wrapped in a subshell so the `exit 1` terminates only the subshell and does
+# not close an interactive terminal session.
+(for f in specs/*.SPEC.md; do echo "== $f =="; harness validate-spec "$f" || exit 1; done)
 
 # Plan-only preview of a spec (no LLM calls)
 harness dry-run --spec specs/phase_1_correctness.SPEC.md
