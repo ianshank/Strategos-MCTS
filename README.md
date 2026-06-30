@@ -41,6 +41,21 @@ This framework implements a multi-agent system combining hierarchical reasoning 
 - **Experiment Tracking**: Full integration with Weights & Biases.
 - **Production Monitoring**: Prometheus/Grafana metrics for latency, memory, and model performance.
 
+### 🔌 Serving, Streaming & Visualization
+- **Streaming**: token/node-level LangGraph event streaming (`/query-stream`, SSE) via `src/api/streaming.py`.
+- **Graph visualization**: structure / Mermaid / Kroki render (`/graph/*`) via `src/api/graph_service.py`.
+- **MCTS vs single-shot comparison**: `/compare` + `demo.py --compare` + Gradio UI (`app.py`, `[ui]` extra).
+- All gated by settings flags (`ENABLE_STREAMING` / `ENABLE_GRAPH_VISUALIZATION` / `ENABLE_DEMO_COMPARISON`).
+
+### 🔁 Neural Self-Play (M5)
+- **Generalized `SelfPlayTrainer`** (`src/training/self_play_trainer.py`) with a single-agent path for
+  non-adversarial domains, composing neural MCTS + replay buffer + AlphaZero loss (torch-safe checkpoints).
+- **Domain registry** (`src/framework/domain_registry.py`) — config-driven selection; reasoning/planning
+  domains plus a schema-agnostic hashable-action wrapper.
+- **Policy-comparison benchmark** (`src/benchmark/policy_comparison.py`) with a domain-type-aware
+  decision-quality lift metric, and a **meta-controller learning loop**
+  (`docs/META_CONTROLLER_TRAINING.md`).
+
 ## 📦 Installation
 
 ### Prerequisites
@@ -143,6 +158,7 @@ helper skills live in `.claude/skills/` (`quality-gate`, `validate-specs`, `cove
 - **[Project Status](docs/STATUS.md)**: Reproducible test/coverage baseline (source of truth).
 - **[Active Roadmap](docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md)**: Current implementation plan.
 - **[Architecture Guide](docs/C4_ARCHITECTURE.md)**: Detailed C4 diagrams of system components.
+- **[Meta-Controller Training](docs/META_CONTROLLER_TRAINING.md)**: Routing learning loop (M5).
 - **[Secrets Management](docs/SECRETS_MANAGEMENT.md)**: External Secrets Operator setup & rotation.
 - **[Training Guide](docs/LOCAL_TRAINING_GUIDE.md)**: How to train models locally or in the cloud.
 - **[Synthetic Data](training/SYNTHETIC_DATA_GENERATION_GUIDE.md)**: Guide to generating training data.

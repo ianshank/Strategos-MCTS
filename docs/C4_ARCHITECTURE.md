@@ -358,6 +358,42 @@ graph TB
   `ExternalSecret`); locally they resolve via env → Pydantic `SecretStr`. See
   `docs/SECRETS_MANAGEMENT.md`. A CI `spec-validate` job also greps for committed key material.
 
+### Serving, streaming & visualization (Phase 4)
+
+Framework capabilities are exposed through thin REST endpoints that delegate to coverage-bearing
+service modules (so `rest_server.py`, which is omitted from coverage, stays logic-free):
+
+- `src/api/streaming.py` (`StreamingService`) → `POST /query-stream` (SSE over LangGraph
+  `astream_events`).
+- `src/api/graph_service.py` (`GraphService`) → `GET /graph/structure|mermaid`, `POST /graph/render`
+  (Kroki).
+- `src/api/comparison_service.py` (`ComparisonService`) → `POST /compare` (MCTS vs single-shot); also
+  drives `demo.py --compare` and the Gradio UI (`app.py`, `[ui]` extra). All gated by `ENABLE_*` flags.
+
+### Neural self-play & multi-domain learning (M5 / Phase 5)
+
+```mermaid
+graph LR
+    Registry[DomainRegistry<br/>reasoning / planning / chess] --> Trainer[SelfPlayTrainer<br/>single_agent flag]
+    Trainer --> NMCTS[NeuralMCTS<br/>+ SelfPlayCollector]
+    NMCTS --> Buffer[ExperienceBuffer<br/>torch-safe]
+    Buffer --> Loss[AlphaZeroLoss]
+    Loss --> Net[PolicyValueNetwork]
+    Net --> NMCTS
+    Trainer --> Bench[policy_comparison<br/>lift metric]
+    MCtrl[MetaControllerDataCollector] --> MCtrlTrain[train_and_validate]
+    style Trainer fill:#8E44AD,stroke:#5B2C6F,stroke-width:2px,color:#fff
+    style Bench fill:#2ECC71,stroke:#1E8449,stroke-width:2px,color:#fff
+```
+
+- `SelfPlayTrainer` (`src/training/self_play_trainer.py`) composes `NeuralMCTS` + `ExperienceBuffer` +
+  `AlphaZeroLoss`; `single_agent=True` bypasses the two-player negamax assumptions for non-adversarial
+  domains. Domains are selected via `DomainRegistry` (`src/framework/domain_registry.py`); dict-action
+  states are made hashable by `single_agent_domains.StringActionGameState`.
+- Decision-quality lift is measured by `src/benchmark/policy_comparison.py` (mean-reward for
+  single-agent, win-rate for adversarial). The meta-controller learning loop lives in
+  `src/training/meta_controller_data_collector.py` (`docs/META_CONTROLLER_TRAINING.md`).
+
 ---
 
 ## Summary

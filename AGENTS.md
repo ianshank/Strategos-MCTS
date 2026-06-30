@@ -60,10 +60,14 @@ python -m src.benchmark --systems langgraph_mcts --tasks A1
 | Settings | `src/config/settings.py`, `src/config/constants.py` (shared defaults/bounds), `src/framework/harness/settings.py` |
 | Existing agents | `src/agents/`, `src/framework/agents/base.py` |
 | LangGraph orchestration | `src/framework/graph/builder.py` |
-| MCTS engine | `src/framework/mcts/core.py` |
+| MCTS engine | `src/framework/mcts/core.py` (baseline), `src/framework/mcts/neural_mcts.py` (AlphaZero-style; `single_agent` flag) |
+| Neural self-play (M5) | `src/training/self_play_trainer.py`, domains via `src/framework/domain_registry.py` + `src/framework/mcts/single_agent_domains.py` |
+| Meta-controller learning (M5) | `src/training/meta_controller_data_collector.py` (see `docs/META_CONTROLLER_TRAINING.md`) |
+| API services (streaming/viz/compare) | `src/api/{streaming,graph_service,comparison_service}.py` (thin endpoints in `rest_server.py`) |
 | LLM adapters | `src/adapters/llm/{base,resilience,openai_client,anthropic_client,lmstudio_client}.py` (`resilience.py` = shared `CircuitBreaker`) |
+| API authentication | `src/api/auth.py` (`AUTH_MODE`: api_key default / jwt) |
 | Observability | `src/observability/{logging,metrics,tracing}.py` |
-| Benchmark harness | `src/benchmark/` |
+| Benchmark harness | `src/benchmark/` (+ `policy_comparison.py` for trained-vs-baseline lift) |
 | Agent harness framework | `src/framework/harness/` |
 |  · runner | `src/framework/harness/loop/runner.py` |
 |  · facade (`AsyncAgentBase` adapter) | `src/framework/harness/loop/facade.py` |
