@@ -10,6 +10,20 @@
 > `planning/milestones.yaml`, `planning/epics/*.yaml`) **against the source tree**. Where a
 > document's claim disagreed with the code, the code wins and the evidence is cited inline.
 
+> **Correction (2026-06-30, verified):** three rows in the §1.1 table below have themselves gone
+> stale and are superseded by `docs/STATUS.md`:
+> - *"`examples` cannot export `HRMAgent`" / hard-imports `langchain_openai`* — **false now**:
+>   `examples/langgraph_multi_agent_mcts.py:25-36` already guards `langchain_openai`/`langgraph`
+>   behind `try/except ImportError`; the module imports without optional deps. The real residual
+>   defect is the dead `improved_hrm_agent`/`improved_trm_agent` guard that silently skips
+>   `tests/chaos/test_resilience.py` and `tests/performance/test_load.py` (Phase 1.2).
+> - *"Google ADK per-agent implementations untested"* — **false now**:
+>   `tests/unit/test_google_adk_agents.py` (793 lines) + `tests/integration/google_adk/` cover all
+>   five agents; only `agents/data_science.py` (78.7%) is below the 85% line. No fan-out needed.
+> - *"RolloutPolicy signature mismatch → 24 failures"* — **resolved**: `mypy src/` is clean and the
+>   policy test subclasses already carry the `rng`/`max_depth` annotations; the suite is green
+>   (7769 passed, 0 failed). See `docs/STATUS.md`.
+
 ---
 
 ## 1. Why this plan exists

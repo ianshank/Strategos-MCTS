@@ -102,6 +102,10 @@ Fixtures: `tests/fixtures/harness_fixtures.py` (helpers), `tests/integration/har
 
 ## Pointers to deeper docs
 
+- Active roadmap: `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`
+- Current test/coverage status (source of truth): `docs/STATUS.md`
+- Spec-driven specs: `specs/*.SPEC.md` (validate with `harness validate-spec`)
+- Project skills: `.claude/skills/{quality-gate,validate-specs,coverage-baseline}`
 - Comprehensive template: `MULTI_AGENT_MCTS_TEMPLATE.md`
 - Original patterns: `CLAUDE_CODE_IMPLEMENTATION_TEMPLATE.md`
 - Architecture: `docs/C4_ARCHITECTURE.md`
