@@ -197,6 +197,29 @@ class Settings(BaseSettings):
         default=60, ge=1, le=1000, description="Rate limit for API requests per minute"
     )
 
+    # Authentication Settings
+    AUTH_MODE: str = Field(
+        default="api_key",
+        description="API authentication mode: 'api_key' (default, unchanged behavior) or 'jwt'",
+    )
+
+    JWT_SECRET: SecretStr | None = Field(
+        default=None,
+        description="Secret key for signing/verifying JWTs (required when AUTH_MODE='jwt')",
+    )
+
+    JWT_ALGORITHM: str = Field(
+        default="HS256",
+        description="JWT signing algorithm (e.g. HS256, RS256)",
+    )
+
+    JWT_EXPIRY_HOURS: int = Field(
+        default=24,
+        ge=1,
+        le=8760,
+        description="JWT token validity period in hours",
+    )
+
     # Framework Service Configuration
     FRAMEWORK_MAX_ITERATIONS: int = Field(
         default=3, ge=1, le=100, description="Maximum iterations for agent processing"
@@ -435,6 +458,16 @@ class Settings(BaseSettings):
     CHESS_FEN_LOG_TRUNCATE_LENGTH: int = Field(
         default=40, ge=20, le=100, description="FEN truncation length for logging"
     )
+
+    @field_validator("AUTH_MODE")
+    @classmethod
+    def validate_auth_mode(cls, v: str) -> str:
+        """Restrict AUTH_MODE to the supported authentication modes."""
+        allowed = {"api_key", "jwt"}
+        normalized = v.strip().lower()
+        if normalized not in allowed:
+            raise ValueError(f"AUTH_MODE must be one of {sorted(allowed)}, got '{v}'")
+        return normalized
 
     @field_validator("OPENAI_API_KEY")
     @classmethod

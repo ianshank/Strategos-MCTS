@@ -461,6 +461,51 @@ def set_authenticator(authenticator: APIKeyAuthenticator) -> None:
     _default_authenticator = authenticator
 
 
+# Default JWT authenticator instance (used when settings.AUTH_MODE == "jwt")
+_default_jwt_authenticator: JWTAuthenticator | None = None
+
+
+def get_jwt_authenticator() -> JWTAuthenticator:
+    """
+    Get or create the default JWT authenticator from settings.
+
+    The signing secret, algorithm, and expiry are sourced from
+    ``src.config.settings`` (``JWT_SECRET`` / ``JWT_ALGORITHM`` / ``JWT_EXPIRY_HOURS``).
+    This is independent of :func:`get_authenticator`, whose API-key contract is
+    unchanged; JWT support is purely additive and selected via ``AUTH_MODE``.
+
+    Raises:
+        AuthenticationError: if no ``JWT_SECRET`` is configured.
+    """
+    global _default_jwt_authenticator
+    if _default_jwt_authenticator is None:
+        from src.config.settings import get_settings
+
+        settings = get_settings()
+        if settings.JWT_SECRET is None:
+            raise AuthenticationError(
+                user_message="Server authentication is misconfigured",
+                internal_details="AUTH_MODE='jwt' requires JWT_SECRET to be set",
+            )
+        _default_jwt_authenticator = JWTAuthenticator(
+            secret_key=settings.JWT_SECRET.get_secret_value(),
+            algorithm=settings.JWT_ALGORITHM,
+        )
+    return _default_jwt_authenticator
+
+
+def set_jwt_authenticator(authenticator: JWTAuthenticator | None) -> None:
+    """
+    Set (or reset) the default JWT authenticator instance.
+
+    Args:
+        authenticator: Authenticator to use, or ``None`` to clear the cache
+            (e.g. between tests with different settings).
+    """
+    global _default_jwt_authenticator
+    _default_jwt_authenticator = authenticator
+
+
 # Exports
 __all__ = [
     "APIKeyAuthenticator",
@@ -469,4 +514,6 @@ __all__ = [
     "RateLimitConfig",
     "get_authenticator",
     "set_authenticator",
+    "get_jwt_authenticator",
+    "set_jwt_authenticator",
 ]

@@ -44,6 +44,7 @@ try:
         ClientInfo,
         RateLimitConfig,
         get_authenticator,
+        get_jwt_authenticator,
         set_authenticator,
     )
     from src.api.exceptions import (
@@ -307,12 +308,21 @@ async def metrics_middleware(request: Request, call_next):
 
 
 # Authentication dependency
-async def verify_api_key(x_api_key: str = Header(..., description="API key for authentication")):
-    """Verify API key and return client info."""
+async def verify_api_key(x_api_key: str = Header(..., description="API key or JWT bearer token for authentication")):
+    """Verify the request credential and return client info.
+
+    The credential type is selected by ``settings.AUTH_MODE``:
+    - ``"api_key"`` (default): the ``X-API-Key`` header is validated against the
+      :class:`APIKeyAuthenticator` (unchanged behavior).
+    - ``"jwt"``: the same header carries a JWT, validated via the
+      :class:`JWTAuthenticator` built from settings.
+    """
     if not IMPORTS_AVAILABLE:
         raise HTTPException(status_code=500, detail="Authentication module not available")
 
     try:
+        if get_settings().AUTH_MODE == "jwt":
+            return get_jwt_authenticator().verify_token(x_api_key)
         authenticator = get_authenticator()
         client_info = authenticator.require_auth(x_api_key)
         return client_info
