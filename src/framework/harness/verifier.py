@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 import re
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from src.framework.harness.state import (
     AcceptanceCriterion,
@@ -33,11 +33,7 @@ class AcceptanceCriteriaVerifier:
     description itself is used as a literal needle).
     """
 
-    logger: logging.Logger = None  # type: ignore[assignment]
-
-    def __post_init__(self) -> None:
-        if self.logger is None:
-            self.logger = get_logger(__name__)
+    logger: logging.Logger = field(default_factory=lambda: get_logger(__name__))
 
     async def verify(
         self,
@@ -83,14 +79,17 @@ class AcceptanceCriteriaVerifier:
             notes=f"{passes}/{total} criteria satisfied",
         )
 
-    @staticmethod
-    def _matches(crit: AcceptanceCriterion, haystack: str) -> bool:
+    def _matches(self, crit: AcceptanceCriterion, haystack: str) -> bool:
         needle = crit.check or crit.description
         if not needle:
             return False
         try:
             return re.search(needle, haystack, re.IGNORECASE) is not None
         except re.error:
+            self.logger.debug(
+                "criterion %s check is not valid regex; falling back to substring match",
+                crit.id,
+            )
             return needle.lower() in haystack.lower()
 
 

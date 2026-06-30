@@ -61,10 +61,12 @@ class LLMPlanner:
         llm: LLMClient,
         *,
         max_tokens: int,
+        temperature: float = 0.0,
         logger: logging.Logger | None = None,
     ) -> None:
         self._llm = llm
         self._max_tokens = max_tokens
+        self._temperature = temperature
         self._logger = logger or get_logger(__name__)
         self._fallback = HeuristicPlanner(logger=self._logger)
 
@@ -77,7 +79,7 @@ class LLMPlanner:
                     {"role": "system", "content": self.SYSTEM_PROMPT},
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.0,
+                temperature=self._temperature,
                 max_tokens=self._max_tokens,
             )
         except Exception as exc:  # noqa: BLE001 — defensive

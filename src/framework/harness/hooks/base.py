@@ -64,6 +64,7 @@ class HookChain:
     """Ordered collection of hooks executed cheapest-first."""
 
     hooks: list[BaseHook] = field(default_factory=list)
+    logger: logging.Logger = field(default_factory=lambda: get_logger(__name__))
 
     def __post_init__(self) -> None:
         self._sort_stable()
@@ -87,6 +88,12 @@ class HookChain:
             try:
                 violation = await hook(state)
             except Exception as exc:  # noqa: BLE001
+                self.logger.warning(
+                    "hook %s raised %s; treating as violation: %s",
+                    hook.name,
+                    type(exc).__name__,
+                    exc,
+                )
                 violation = HookViolation(
                     hook_name=hook.name,
                     detail=f"hook raised {type(exc).__name__}: {exc}",

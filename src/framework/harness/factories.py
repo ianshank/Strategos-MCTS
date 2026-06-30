@@ -16,6 +16,7 @@ from src.adapters.llm.base import LLMClient
 from src.config.settings import Settings, get_settings
 from src.framework.factories import LLMClientFactory
 from src.framework.harness.context import DefaultContextInjector
+from src.framework.harness.context.compressor import EpisodicCompressor
 from src.framework.harness.hooks import HookChain
 from src.framework.harness.intent import DefaultIntentNormalizer
 from src.framework.harness.loop.runner import HarnessRunner
@@ -28,9 +29,23 @@ from src.framework.harness.replay import (
     make_replay_client,
 )
 from src.framework.harness.replay.clock import DeterministicClock, RecordingClock
-from src.framework.harness.settings import HarnessPermissions, HarnessSettings, get_harness_settings
+from src.framework.harness.settings import (
+    HarnessPermissions,
+    HarnessSettings,
+    TopologyName,
+    get_harness_settings,
+)
 from src.framework.harness.tools import AsyncToolExecutor, ToolRegistry
 from src.framework.harness.tools.builtins import register_builtin_tools
+from src.framework.harness.topology import (
+    BaseTopology,
+    ExpertPoolTopology,
+    FanOutInTopology,
+    HierarchicalTopology,
+    PipelineTopology,
+    ProducerReviewerTopology,
+    SupervisorTopology,
+)
 from src.framework.harness.verifier import AcceptanceCriteriaVerifier
 from src.observability.logging import get_logger
 
@@ -92,10 +107,10 @@ class HarnessFactory:
             perms=perms,
             correlation_id=correlation_id,
             shell_allowlist=shell_allowlist,
+            settings=hs,
         )
         if memory_store is not None:
             register_memory_tools(registry, memory_store)
-        del hs  # unused but documents the dependency
         return registry
 
     def create_runner(
@@ -113,11 +128,20 @@ class HarnessFactory:
         executor = AsyncToolExecutor(registry, hs, logger=log.getChild("tools"))
         intent = DefaultIntentNormalizer(logger=log.getChild("intent"))
         planner = (
-            LLMPlanner(llm, max_tokens=hs.PLANNER_MAX_TOKENS, logger=log.getChild("planner"))
+            LLMPlanner(
+                llm,
+                max_tokens=hs.PLANNER_MAX_TOKENS,
+                temperature=hs.PLANNER_TEMPERATURE,
+                logger=log.getChild("planner"),
+            )
             if hs.PLANNER_ENABLED
             else HeuristicPlanner(logger=log.getChild("planner"))
         )
-        injector = DefaultContextInjector(memory=memory_store, logger=log.getChild("context"))
+        injector = DefaultContextInjector(
+            memory=memory_store,
+            compressor=EpisodicCompressor.from_settings(hs),
+            logger=log.getChild("context"),
+        )
         verifier = AcceptanceCriteriaVerifier(logger=log.getChild("verifier"))
 
         async def persist(event: dict[str, object]) -> None:
@@ -136,6 +160,42 @@ class HarnessFactory:
             persist=persist,
             logger=log.getChild("runner"),
         )
+
+    def create_topology(self, name: TopologyName | None = None) -> BaseTopology:
+        """Construct the configured multi-agent topology.
+
+        Resolves ``name`` (default: ``HARNESS_TOPOLOGY``) to its implementation
+        and injects round/group caps from settings, so the previously-unused
+        ``TOPOLOGY`` and ``TOPOLOGY_*`` settings now drive composition. Returns a
+        :class:`BaseTopology`; callers pass agents + an aggregation policy to
+        :meth:`BaseTopology.run`.
+        """
+        _, hs, _, log = self._resolve()
+        chosen = name or hs.TOPOLOGY
+        topo_logger = log.getChild("topology")
+        if chosen is TopologyName.PIPELINE:
+            return PipelineTopology(logger=topo_logger)
+        if chosen is TopologyName.FAN_OUT_IN:
+            return FanOutInTopology(logger=topo_logger)
+        if chosen is TopologyName.EXPERT_POOL:
+            return ExpertPoolTopology(logger=topo_logger)
+        if chosen is TopologyName.PRODUCER_REVIEWER:
+            return ProducerReviewerTopology(
+                max_rounds=hs.TOPOLOGY_PRODUCER_REVIEWER_MAX_ROUNDS,
+                logger=topo_logger,
+            )
+        if chosen is TopologyName.SUPERVISOR:
+            return SupervisorTopology(
+                max_rounds=hs.TOPOLOGY_SUPERVISOR_MAX_ROUNDS,
+                logger=topo_logger,
+            )
+        if chosen is TopologyName.HIERARCHICAL:
+            return HierarchicalTopology(
+                group_size=hs.TOPOLOGY_HIERARCHICAL_GROUP_SIZE,
+                logger=topo_logger,
+            )
+        # Defensive: enum is exhaustive today, but guard against future additions.
+        raise ValueError(f"unsupported topology: {chosen}")
 
     def create_ralph(self, runner: HarnessRunner, spec_path: Path | None = None) -> RalphLoop:
         _, hs, _, log = self._resolve()
