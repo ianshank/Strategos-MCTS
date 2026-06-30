@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import operator
 import random
+import uuid
 from typing import Annotated, NotRequired, TypedDict
 
 # Optional third-party deps. Guarded so the module (and its public
@@ -38,14 +39,121 @@ except ImportError:  # pragma: no cover - exercised only without the optional de
 # Import core MCTS components
 from src.framework.mcts.core import MCTSNode, MCTSState
 
-# Import our enhanced agents
-try:
-    from src.agents.hrm_agent import HRMAgent
-    from src.agents.trm_agent import TRMAgent
-except ImportError:
-    # Fallback for when running from different directory
-    from agents.hrm_agent import HRMAgent
-    from agents.trm_agent import TRMAgent
+# ---------------------------------------------------------------------------
+# Default tunables for the reference LLM-orchestration agents below. These are
+# intentionally named constants (no magic numbers inline) so callers and tests
+# can reason about / override them via the ``**kwargs`` accepted by each agent.
+# ---------------------------------------------------------------------------
+DEFAULT_DECOMPOSITION_QUALITY_SCORE = 0.7  # HRM hierarchical-decomposition confidence
+DEFAULT_FINAL_QUALITY_SCORE = 0.7  # TRM post-refinement confidence
+DEFAULT_HRM_TEMPERATURE = 0.3  # Lower temp: structured, deterministic decomposition
+DEFAULT_TRM_TEMPERATURE = 0.5  # Moderate temp: iterative refinement
+
+
+class _LLMOrchestrationAgent:
+    """Base class for the reference LLM-backed orchestration agents.
+
+    These agents realise their roles (hierarchical reasoning / iterative
+    refinement) purely through an injected ``model_adapter`` and deliberately do
+    NOT use the neural ``nn.Module`` agents in ``src.agents``. The base captures
+    the shared construction + prompt/generate plumbing; subclasses supply a
+    role-specific system preamble and metadata.
+    """
+
+    #: Subclasses override these.
+    _ROLE_PREAMBLE: str = ""
+    _TEMPERATURE: float = DEFAULT_HRM_TEMPERATURE
+
+    def __init__(self, model_adapter, logger, **kwargs) -> None:
+        """Store injected dependencies.
+
+        Args:
+            model_adapter: Async LLM adapter exposing ``generate(...)`` that
+                returns an object with ``.text`` (str) and ``.tokens_used``.
+            logger: Logger-like object (``.info``/``.error``).
+            **kwargs: Arbitrary extra configuration (e.g. the framework passes
+                ``**(hrm_config or {})``). Unknown keys are accepted and
+                ignored so config drift never breaks construction. Recognised:
+                ``temperature`` (float) to override the role default.
+        """
+        self.model_adapter = model_adapter
+        self.logger = logger
+        self.temperature = float(kwargs.get("temperature", self._TEMPERATURE))
+        # Retain any extra config for introspection without failing on it.
+        self.config = dict(kwargs)
+
+    def _build_prompt(self, query: str, rag_context: str | None) -> str:
+        """Construct the role-specific prompt from query (+ optional context)."""
+        parts = [self._ROLE_PREAMBLE.strip(), f"Query:\n{query}"]
+        if rag_context:
+            parts.append(f"Retrieved context:\n{rag_context}")
+        parts.append("Response:")
+        return "\n\n".join(p for p in parts if p)
+
+    def _metadata(self) -> dict:
+        """Role-specific metadata. Overridden by subclasses."""
+        raise NotImplementedError
+
+    async def process(self, query: str, rag_context: str | None = None) -> dict:
+        """Run the agent: build prompt, call the LLM, return response+metadata.
+
+        Returns:
+            ``{"response": <str>, "metadata": <dict>}``. On LLM failure the
+            response degrades to an empty string while metadata is preserved,
+            so downstream nodes can still fall back gracefully.
+        """
+        prompt = self._build_prompt(query, rag_context)
+        try:
+            response = await self.model_adapter.generate(
+                prompt=prompt,
+                temperature=self.temperature,
+            )
+            text = response.text
+        except Exception as exc:  # pragma: no cover - exercised via failing-LLM tests
+            self.logger.error(f"{type(self).__name__} generation failed: {exc}")
+            text = ""
+        return {"response": text, "metadata": self._metadata()}
+
+
+class HRMAgent(_LLMOrchestrationAgent):
+    """Hierarchical Reasoning agent (LLM-orchestration reference).
+
+    Decomposes the query into structured sub-goals via the model adapter.
+    """
+
+    _ROLE_PREAMBLE = (
+        "You are a hierarchical reasoning module. Decompose the query into a "
+        "structured hierarchy of sub-goals, then outline how solving them "
+        "answers the query."
+    )
+    _TEMPERATURE = DEFAULT_HRM_TEMPERATURE
+
+    def _metadata(self) -> dict:
+        return {
+            "agent": "hrm",
+            "decomposition_quality_score": float(
+                self.config.get("decomposition_quality_score", DEFAULT_DECOMPOSITION_QUALITY_SCORE)
+            ),
+        }
+
+
+class TRMAgent(_LLMOrchestrationAgent):
+    """Recursive/iterative Refinement agent (LLM-orchestration reference).
+
+    Iteratively refines a candidate answer via the model adapter.
+    """
+
+    _ROLE_PREAMBLE = (
+        "You are an iterative refinement module. Produce an answer to the "
+        "query, then critique and refine it for correctness and completeness."
+    )
+    _TEMPERATURE = DEFAULT_TRM_TEMPERATURE
+
+    def _metadata(self) -> dict:
+        return {
+            "agent": "trm",
+            "final_quality_score": float(self.config.get("final_quality_score", DEFAULT_FINAL_QUALITY_SCORE)),
+        }
 
 
 class AgentState(TypedDict):
@@ -554,7 +662,14 @@ Final Response:"""
         use_mcts: bool = False,
         config: dict | None = None,
     ) -> dict:
-        """Process query through LangGraph."""
+        """Process query through LangGraph.
+
+        Each call is independent: unless an explicit ``config`` (with a
+        ``thread_id``) is supplied, a fresh thread id is generated so the
+        checkpointer does not replay accumulated state from prior calls
+        (``agent_outputs`` uses an additive reducer, so a shared thread would
+        otherwise accumulate across calls and never reach a stop condition).
+        """
 
         # Initial state
         initial_state = {
@@ -566,8 +681,9 @@ Final Response:"""
             "agent_outputs": [],
         }
 
-        # Run graph
-        config = config or {"configurable": {"thread_id": "default"}}
+        # Run graph. Use a unique thread per invocation by default so repeated
+        # calls are isolated from one another.
+        config = config or {"configurable": {"thread_id": uuid.uuid4().hex}}
 
         result = await self.app.ainvoke(initial_state, config=config)
 

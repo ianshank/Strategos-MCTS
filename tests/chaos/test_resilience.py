@@ -10,17 +10,23 @@ Tests:
 """
 
 import contextlib
+import os
 import sys
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-sys.path.insert(0, ".")
+# The reference LangGraph framework under test lives in ``examples/``; add it to
+# the path so the resilience suite can import it regardless of the working dir.
+_EXAMPLES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "examples"))
+if _EXAMPLES_DIR not in sys.path:
+    sys.path.insert(0, _EXAMPLES_DIR)
 
-# Skip tests if required agents are not available
+# Skip tests only if the reference framework genuinely cannot be imported (e.g.
+# the optional ``langgraph`` extra is absent). The module guards its own
+# optional deps, so this succeeds in a standard [dev] environment.
 try:
-    import improved_hrm_agent  # noqa: F401
-    import improved_trm_agent  # noqa: F401
+    from langgraph_multi_agent_mcts import LangGraphMultiAgentFramework  # noqa: F401
 
     AGENTS_AVAILABLE = True
 except ImportError:
@@ -338,15 +344,15 @@ class TestMemoryPressure:
 
     def test_deep_mcts_tree_memory(self, framework):
         """Deep MCTS trees should not cause memory issues."""
-        from langgraph_multi_agent_mcts import MCTSNode
+        from langgraph_multi_agent_mcts import MCTSNode, MCTSState
 
         # Create deep tree (potential stack overflow)
-        root = MCTSNode(state_id="root")
+        root = MCTSNode(state=MCTSState("root"))
         current = root
 
         # 1000 level deep tree
         for i in range(1000):
-            child = current.add_child(f"action_{i}", f"state_{i}")
+            child = current.add_child(f"action_{i}", MCTSState(f"state_{i}"))
             current = child
 
         # Backpropagation should handle deep recursion
@@ -358,19 +364,19 @@ class TestMemoryPressure:
 
     def test_wide_mcts_tree_memory(self, framework):  # noqa: ARG002
         """Wide MCTS trees should be handled efficiently."""
-        from langgraph_multi_agent_mcts import MCTSNode
+        from langgraph_multi_agent_mcts import MCTSNode, MCTSState
 
-        root = MCTSNode(state_id="root")
+        root = MCTSNode(state=MCTSState("root"))
         root.visits = 10000
 
         # Very wide tree (1000 children)
         for i in range(1000):
-            child = root.add_child(f"action_{i}", f"state_{i}")
+            child = root.add_child(f"action_{i}", MCTSState(f"state_{i}"))
             child.visits = i + 1
-            child.value = (i + 1) * 0.5
+            child.value_sum = (i + 1) * 0.5
 
-        # best_child should still work efficiently
-        best = root.best_child()
+        # Child selection (UCB1) should still work efficiently on a wide tree.
+        best = root.select_child(framework.mcts_exploration_weight)
         assert best is not None
 
 

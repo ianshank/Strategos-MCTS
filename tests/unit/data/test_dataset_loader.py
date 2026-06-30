@@ -301,6 +301,53 @@ class TestDABStepLoader:
         assert tasks[0].id == "1"
         assert tasks[1].id == "4"
 
+    def test_load_defaults_to_train_split(self):
+        """load() should default to the 'train' split for backward compatibility."""
+        fake_dataset = {"train": [{"question": "Q1"}], "test": [{"question": "Q2"}]}
+        fake_datasets = MagicMock()
+        fake_datasets.load_dataset.return_value = fake_dataset
+
+        loader = DABStepLoader()
+        with patch.dict("sys.modules", {"datasets": fake_datasets}):
+            samples = loader.load()
+
+        assert len(samples) == 1
+        assert samples[0].id == "dabstep_train_0"
+        assert samples[0].metadata["split"] == "train"
+
+    def test_load_unknown_split_falls_back_to_available(self):
+        """Unknown split should fall back to an available split with a warning.
+
+        Exercises the real ``DABStepLoader.load()`` fallback path (not mocked
+        away): when the requested split is absent, the loader logs a warning and
+        uses the first available split instead of raising, preserving
+        backward-compatible behavior.
+        """
+        fake_dataset = {
+            "train": [
+                {"question": "Q1", "difficulty": "easy", "steps": ["s1"]},
+                {"question": "Q2", "difficulty": "hard", "steps": []},
+            ]
+        }
+        fake_datasets = MagicMock()
+        fake_datasets.load_dataset.return_value = fake_dataset
+
+        loader = DABStepLoader()
+        with (
+            patch.dict("sys.modules", {"datasets": fake_datasets}),
+            patch("src.data.dataset_loader.logger") as mock_logger,
+        ):
+            samples = loader.load(split="validation")  # absent -> falls back to "train"
+
+        assert len(samples) == 2
+        # Fallback applied: ids and metadata reflect the available split, not the request.
+        assert all(s.id.startswith("dabstep_train_") for s in samples)
+        assert all(s.metadata["split"] == "train" for s in samples)
+        # A warning naming the missing split was emitted.
+        assert mock_logger.warning.called
+        warning_msg = " ".join(str(call.args[0]) for call in mock_logger.warning.call_args_list)
+        assert "validation" in warning_msg
+
 
 # =============================================================================
 # PRIMUSLoader Tests
