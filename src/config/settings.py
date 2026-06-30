@@ -197,6 +197,29 @@ class Settings(BaseSettings):
         default=60, ge=1, le=1000, description="Rate limit for API requests per minute"
     )
 
+    # Authentication Settings
+    AUTH_MODE: str = Field(
+        default="api_key",
+        description="API authentication mode: 'api_key' (default, unchanged behavior) or 'jwt'",
+    )
+
+    JWT_SECRET: SecretStr | None = Field(
+        default=None,
+        description="Secret key for signing/verifying JWTs (required when AUTH_MODE='jwt')",
+    )
+
+    JWT_ALGORITHM: str = Field(
+        default="HS256",
+        description="JWT signing algorithm (e.g. HS256, RS256)",
+    )
+
+    JWT_EXPIRY_HOURS: int = Field(
+        default=24,
+        ge=1,
+        le=8760,
+        description="JWT token validity period in hours",
+    )
+
     # Framework Service Configuration
     FRAMEWORK_MAX_ITERATIONS: int = Field(
         default=3, ge=1, le=100, description="Maximum iterations for agent processing"
@@ -351,6 +374,34 @@ class Settings(BaseSettings):
     )
 
     # ========================================
+    # API Feature Flags (Phase 4.2-4.4)
+    # ========================================
+
+    ENABLE_STREAMING: bool = Field(
+        default=True,
+        description=(
+            "Enable the SSE streaming query endpoint (/query-stream) backed by StreamingService. "
+            "Default True preserves the documented streaming behavior."
+        ),
+    )
+
+    ENABLE_GRAPH_VISUALIZATION: bool = Field(
+        default=True,
+        description=(
+            "Enable the graph introspection/visualization endpoints (/graph/*) backed by "
+            "GraphService. Default True preserves the documented visualization behavior."
+        ),
+    )
+
+    ENABLE_DEMO_COMPARISON: bool = Field(
+        default=False,
+        description=(
+            "Enable the single-shot vs MCTS comparison endpoint (/compare) backed by "
+            "ComparisonService. Default False keeps the demo-only feature off by default."
+        ),
+    )
+
+    # ========================================
     # Chess / Stockfish Engine Configuration
     # ========================================
 
@@ -435,6 +486,16 @@ class Settings(BaseSettings):
     CHESS_FEN_LOG_TRUNCATE_LENGTH: int = Field(
         default=40, ge=20, le=100, description="FEN truncation length for logging"
     )
+
+    @field_validator("AUTH_MODE")
+    @classmethod
+    def validate_auth_mode(cls, v: str) -> str:
+        """Restrict AUTH_MODE to the supported authentication modes."""
+        allowed = {"api_key", "jwt"}
+        normalized = v.strip().lower()
+        if normalized not in allowed:
+            raise ValueError(f"AUTH_MODE must be one of {sorted(allowed)}, got '{v}'")
+        return normalized
 
     @field_validator("OPENAI_API_KEY")
     @classmethod
@@ -582,6 +643,11 @@ class Settings(BaseSettings):
                 )
         elif self.LLM_PROVIDER == LLMProvider.LMSTUDIO and self.LMSTUDIO_BASE_URL is None:
             raise ValueError("LMSTUDIO_BASE_URL is required when using LM Studio provider.")
+
+        # Fail fast on JWT misconfiguration at startup rather than per-request (which would
+        # surface to clients as a misleading 401). See docs/SECRETS_MANAGEMENT.md.
+        if self.AUTH_MODE == "jwt" and self.JWT_SECRET is None:
+            raise ValueError("JWT_SECRET is required when AUTH_MODE='jwt'. Set the JWT_SECRET environment variable.")
         return self
 
     def get_api_key(self) -> str | None:

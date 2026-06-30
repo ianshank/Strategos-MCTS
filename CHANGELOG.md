@@ -62,6 +62,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   back-compat re-export invariant + `half_open_max_calls` enforcement) and
   `tests/unit/test_config_constants_centralization.py` (guards the constant centralization).
 
+### Added (2026-H2 implementation: Phases 0–3, close M3/M4)
+- **Spec-driven development**: `specs/phase_0_baseline..phase_3_production.SPEC.md` parsed by the
+  harness (`harness validate-spec`), plus a CI `spec-validate` job and a hardcoded-secret scan
+  (`sk-[A-Za-z0-9]{20,}` over `src/`+`kubernetes/`).
+- **Project skills** under `.claude/skills/`: `quality-gate`, `validate-specs`, `coverage-baseline`.
+- **Authentication — settings-driven JWT path (additive, backward compatible).** New `AUTH_MODE`
+  (`api_key` default), `JWT_SECRET`/`JWT_ALGORITHM`/`JWT_EXPIRY_HOURS` settings with an `AUTH_MODE`
+  validator and a **startup guard** (`JWT_SECRET` required when `AUTH_MODE=jwt`). New
+  `get_jwt_authenticator`/`set_jwt_authenticator` factories build the existing `JWTAuthenticator`
+  from settings (expiry now threaded through `create_token`); `get_authenticator()`'s API-key
+  contract is unchanged and selected by default. `PyJWT` added to the `[api]` extra.
+- **Evidence-backed status**: `docs/STATUS.md` (reproducible baseline — 7785+ tests, ~89% branch
+  coverage, mypy clean) supersedes stale figures in older roadmap docs.
+- **Regression tests**: DABStep unknown-split fallback (`tests/unit/data/test_dataset_loader.py`),
+  Google ADK `data_science` agent → 100% (`tests/unit/test_google_adk_agents.py`), JWT factory +
+  `AUTH_MODE` validator + startup guard (`tests/unit/test_api_auth.py`), and the revived example
+  LLM agents (`tests/unit/test_example_llm_agents.py`).
+
+### Security (2026-H2)
+- **No plaintext secrets in VCS**: `kubernetes/deployment.yaml` now uses an External Secrets
+  Operator `ExternalSecret` (producing the same `llm-secrets`/keys) instead of an inline plaintext
+  `Secret`; rotation runbook in `docs/SECRETS_MANAGEMENT.md`.
+
+### Fixed (2026-H2)
+- **Revived the `examples/langgraph_multi_agent_mcts.py` reference framework**, which was
+  incompatible with the current neural `src/agents` (it called a non-existent `.process()` on the
+  `nn.Module` agents). Replaced with self-contained LLM-backed HRM/TRM agents; fixed a latent
+  non-termination bug (shared checkpointer `thread_id` replayed accumulated state → now a per-call
+  uuid). This un-skips the chaos (`tests/chaos/test_resilience.py`) and load
+  (`tests/performance/test_load.py`) suites, which were silently skipped on a guard importing
+  non-existent `improved_hrm_agent`/`improved_trm_agent` modules.
+- **Hardening**: named constants for all example tunables (no inline magic numbers); guarded the
+  synthesis fallback against an empty `agent_outputs`; explicit `sub`-claim check in JWT
+  verification.
+
+### Added (2026-H2 implementation: Phase 4 — streaming / visualization / comparison)
+- **MCTS early termination wired through the graph** behind `MCTSConfig.enable_early_termination`
+  (default off = historical behavior); thresholds remain a single source of truth on `MCTSConfig`.
+- **Coverage-bearing service layer** exposing existing framework capabilities, with thin REST
+  adapters (`rest_server` is coverage-omitted) and settings flags `ENABLE_STREAMING` /
+  `ENABLE_GRAPH_VISUALIZATION` / `ENABLE_DEMO_COMPARISON` (behavior-preserving defaults):
+  - `src/api/streaming.py` (`StreamingService`, SSE over `astream_events`),
+  - `src/api/graph_service.py` (`GraphService`: structure / mermaid / Kroki render),
+  - `src/api/comparison_service.py` (`ComparisonService`: single-shot vs MCTS + tree); `demo.py`
+    refactored to delegate to it (behavior preserved).
+- **REST endpoints**: `POST /query-stream`, `GET /graph/structure`, `GET /graph/mermaid`,
+  `POST /graph/render`, `POST /compare` (flag-gated). **Gradio UI** (`app.py`) extended with
+  comparison / streaming / graph views via those services; new `[ui]` extra (`gradio`).
+
+### Added (2026-H2 implementation: Phase 5 — M5 neural self-play)
+- **Generalized `SelfPlayTrainer`** (`src/training/self_play_trainer.py`) with an opt-in
+  **single-agent** path: `NeuralMCTS`/`SelfPlayCollector` skip negamax value negation, player
+  alternation, and sign-flipped targets when `single_agent=True` (two-player behavior unchanged by
+  default). Torch-safe (`state_dict`) checkpoints; named-constant config.
+- **Domain registry** (`src/framework/domain_registry.py`) with config-driven selection, plus a
+  schema-agnostic `StringActionGameState` wrapper (`single_agent_domains.py`) that makes the
+  dict-action `ReasoningState`/`PlanningState` hashable for NeuralMCTS. Registers the two non-chess
+  M5 domains (reasoning, planning).
+- **Policy-comparison benchmark** (`src/benchmark/policy_comparison.py`) with a domain-type-aware
+  lift metric (mean terminal reward for single-agent; win-rate for adversarial) to measure the M5
+  ≥20% decision-quality lift.
+- **Meta-controller learning loop** (`src/training/meta_controller_data_collector.py`): routing-
+  decision collection + reproducible supervised train/validate reporting accuracy vs a majority
+  baseline; guide in `docs/META_CONTROLLER_TRAINING.md`.
+
 ## [0.2.0] - Production Training Pipeline Release
 
 ### Added

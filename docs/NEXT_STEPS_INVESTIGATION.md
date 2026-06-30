@@ -1,5 +1,9 @@
 # Next Steps Investigation Report
 
+> **⚠️ SUPERSEDED (2026-06-30).** Superseded by `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`
+> (active plan) and `docs/STATUS.md` (authoritative, reproducible test/coverage baseline). Where this
+> report's status claims conflict with those, they govern. Historical context only.
+
 **Date**: 2026-02-01
 **Branch**: `claude/investigate-agentic-next-steps-MGrxu`
 **Based on**: Universal Dev Agent Prompt Template

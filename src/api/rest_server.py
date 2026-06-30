@@ -27,7 +27,7 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from src.config.constants import DEFAULT_SERVER_HOST
@@ -44,8 +44,10 @@ try:
         ClientInfo,
         RateLimitConfig,
         get_authenticator,
+        get_jwt_authenticator,
         set_authenticator,
     )
+    from src.api.comparison_service import ComparisonService
     from src.api.exceptions import (
         AuthenticationError,
         FrameworkError,
@@ -57,6 +59,8 @@ try:
         FrameworkService,
         FrameworkState,
     )
+    from src.api.graph_service import GraphService, GraphVisualizationDisabledError
+    from src.api.streaming import StreamingDisabledError, StreamingService
     from src.models.validation import QueryInput
 
     IMPORTS_AVAILABLE = True
@@ -124,6 +128,22 @@ class QueryResponse(BaseModel):
     mcts_stats: dict[str, Any] | None = Field(default=None, description="MCTS simulation statistics")
     processing_time_ms: float = Field(..., description="Total processing time in milliseconds")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+
+class GraphRenderRequest(BaseModel):
+    """Request model for rendering the graph diagram."""
+
+    format: str = Field(default="png", description="Output format: 'png' or 'svg'")
+    include_descriptions: bool = Field(default=True, description="Include node descriptions in labels")
+
+
+class CompareRequest(BaseModel):
+    """Request model for single-shot vs MCTS comparison."""
+
+    query: str = Field(..., min_length=1, max_length=10000, description="Query to compare strategies on")
+    provider: str = Field(default="mock", description="LLM provider: 'mock', 'openai', or 'anthropic'")
+    iterations: int = Field(default=10, ge=1, le=1000, description="MCTS iterations")
+    include_tree: bool = Field(default=True, description="Include ASCII MCTS tree in the result")
 
 
 class HealthResponse(BaseModel):
@@ -307,12 +327,24 @@ async def metrics_middleware(request: Request, call_next):
 
 
 # Authentication dependency
-async def verify_api_key(x_api_key: str = Header(..., description="API key for authentication")):
-    """Verify API key and return client info."""
+async def verify_api_key(x_api_key: str = Header(..., description="API key or JWT bearer token for authentication")):
+    """Verify the request credential and return client info.
+
+    The credential type is selected by ``settings.AUTH_MODE``:
+    - ``"api_key"`` (default): the ``X-API-Key`` header is validated against the
+      :class:`APIKeyAuthenticator` (unchanged behavior).
+    - ``"jwt"``: the same header carries a JWT, validated via the
+      :class:`JWTAuthenticator` built from settings.
+    """
     if not IMPORTS_AVAILABLE:
         raise HTTPException(status_code=500, detail="Authentication module not available")
 
     try:
+        if get_settings().AUTH_MODE == "jwt":
+            # Accept either a bare JWT or an "Authorization: Bearer <jwt>"-style value
+            # (case-insensitive prefix), so standard bearer-token clients work too.
+            token = x_api_key[7:] if x_api_key[:7].lower() == "bearer " else x_api_key
+            return get_jwt_authenticator().verify_token(token)
         authenticator = get_authenticator()
         client_info = authenticator.require_auth(x_api_key)
         return client_info
@@ -529,6 +561,128 @@ async def process_query(request: QueryRequest, client_info: ClientInfo = Depends
             status_code=500,
             detail="An unexpected error occurred. Please try again.",
         ) from e
+
+
+def _require_framework() -> Any:
+    """Return the underlying framework or raise 503 if unavailable."""
+    if framework_service is None or framework_service.framework is None:
+        if PROMETHEUS_AVAILABLE:
+            ERROR_COUNT.labels(error_type="service_unavailable").inc()
+        raise HTTPException(status_code=503, detail="Framework service not available. Please try again later.")
+    return framework_service.framework
+
+
+@app.post("/query-stream", tags=["query"])
+async def query_stream(request: QueryRequest, client_info: ClientInfo = Depends(verify_api_key)):  # noqa: B008
+    """Process a query and stream results as Server-Sent Events (SSE).
+
+    Returns 404 when streaming is disabled via ``ENABLE_STREAMING``.
+    """
+    if not IMPORTS_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Streaming module not available")
+
+    settings = get_settings()
+    if not settings.ENABLE_STREAMING:
+        raise HTTPException(status_code=404, detail="Streaming endpoint is disabled (ENABLE_STREAMING=False)")
+
+    framework = _require_framework()
+    service = StreamingService(framework=framework, settings=settings)
+
+    async def _event_generator():
+        try:
+            async for record in service.stream_sse(request.query, use_rag=request.use_rag, use_mcts=request.use_mcts):
+                yield record
+        except StreamingDisabledError as exc:  # pragma: no cover - guarded above
+            logger.warning(f"Streaming disabled mid-request for client {client_info.client_id}: {exc}")
+
+    return StreamingResponse(_event_generator(), media_type="text/event-stream")
+
+
+@app.get("/graph/structure", tags=["query"])
+async def graph_structure(_client_info: ClientInfo = Depends(verify_api_key)):  # noqa: B008
+    """Return the graph structure (nodes, edges, routing).
+
+    Returns 404 when visualization is disabled via ``ENABLE_GRAPH_VISUALIZATION``.
+    """
+    if not IMPORTS_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Graph module not available")
+
+    settings = get_settings()
+    if not settings.ENABLE_GRAPH_VISUALIZATION:
+        raise HTTPException(status_code=404, detail="Graph visualization is disabled")
+
+    framework = _require_framework()
+    service = GraphService(framework=framework, settings=settings)
+    try:
+        return service.get_structure()
+    except GraphVisualizationDisabledError as exc:  # pragma: no cover - guarded above
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/graph/mermaid", tags=["query"])
+async def graph_mermaid(theme: str = "default", _client_info: ClientInfo = Depends(verify_api_key)):  # noqa: B008
+    """Return Mermaid flowchart source for the graph.
+
+    Returns 404 when visualization is disabled via ``ENABLE_GRAPH_VISUALIZATION``.
+    """
+    if not IMPORTS_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Graph module not available")
+
+    settings = get_settings()
+    if not settings.ENABLE_GRAPH_VISUALIZATION:
+        raise HTTPException(status_code=404, detail="Graph visualization is disabled")
+
+    framework = _require_framework()
+    service = GraphService(framework=framework, settings=settings)
+    return {"mermaid": service.get_mermaid(theme=theme), "theme": theme}
+
+
+@app.post("/graph/render", tags=["query"])
+async def graph_render(request: GraphRenderRequest, _client_info: ClientInfo = Depends(verify_api_key)):  # noqa: B008
+    """Render the graph diagram and return Mermaid source plus a Kroki URL.
+
+    Returns 404 when visualization is disabled via ``ENABLE_GRAPH_VISUALIZATION``.
+    """
+    if not IMPORTS_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Graph module not available")
+
+    settings = get_settings()
+    if not settings.ENABLE_GRAPH_VISUALIZATION:
+        raise HTTPException(status_code=404, detail="Graph visualization is disabled")
+
+    framework = _require_framework()
+    service = GraphService(framework=framework, settings=settings)
+    try:
+        return service.render(fmt=request.format, include_descriptions=request.include_descriptions)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=f"Diagram rendering failed: {exc}") from exc
+
+
+@app.post("/compare", tags=["query"])
+async def compare(request: CompareRequest, _client_info: ClientInfo = Depends(verify_api_key)):  # noqa: B008
+    """Run a single-shot vs MCTS comparison.
+
+    Returns 404 when the comparison feature is disabled via ``ENABLE_DEMO_COMPARISON``.
+    """
+    if not IMPORTS_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Comparison module not available")
+
+    settings = get_settings()
+    if not settings.ENABLE_DEMO_COMPARISON:
+        raise HTTPException(status_code=404, detail="Comparison endpoint is disabled (ENABLE_DEMO_COMPARISON=False)")
+
+    try:
+        service = ComparisonService(
+            provider=request.provider,
+            iterations=request.iterations,
+            settings=settings,
+        )
+        result = service.compare(request.query, include_tree=request.include_tree)
+        return result.to_dict()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/stats", tags=["metrics"])

@@ -42,6 +42,48 @@ jobs:
       - name: Check linting with ruff
         run: ruff check src/ tests/ --output-format=github
 
+  spec-validate:
+    name: Spec Validation & Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install package (for the harness CLI)
+        run: pip install -e ".[dev]"
+
+      - name: Validate spec-driven specs
+        # Each specs/*.SPEC.md must parse under the harness spec schema.
+        run: |
+          shopt -s nullglob
+          specs=(specs/*.SPEC.md)
+          if [ ${#specs[@]} -eq 0 ]; then
+            echo "No specs found under specs/ — skipping."
+            exit 0
+          fi
+          rc=0
+          for f in "${specs[@]}"; do
+            echo "== $f =="
+            harness validate-spec "$f" || rc=1
+          done
+          exit $rc
+
+      - name: Scan for hardcoded secrets
+        # No plaintext API-key material may be committed to source or manifests.
+        run: |
+          # Match real key shapes (>=20 chars) to avoid prose false-positives like "task-specific".
+          if git grep -nE "sk-[A-Za-z0-9]{20,}" -- src/ kubernetes/; then
+            echo "::error::Hardcoded API key material detected in src/ or kubernetes/"
+            exit 1
+          fi
+          echo "OK: no hardcoded key material found"
+
   type-check:
     name: Type Check with MyPy
     runs-on: ubuntu-latest
@@ -383,6 +425,9 @@ jobs:
 
       - name: Scan Docker image for vulnerabilities
         uses: aquasecurity/trivy-action@v0.36.0
+        # Advisory only (exit-code 0). Don't fail the job if Trivy's DB download flakes
+        # (a recurring infra issue) — the SARIF upload below is guarded on file existence.
+        continue-on-error: true
         with:
           image-ref: langgraph-mcts:test
           format: 'sarif'
@@ -392,7 +437,9 @@ jobs:
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        # Only upload when Trivy actually produced the SARIF (avoids
+        # "Path does not exist: trivy-results.sarif" failing the job on a Trivy flake).
+        if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
 

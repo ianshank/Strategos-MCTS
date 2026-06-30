@@ -308,7 +308,22 @@ harness run --spec spec.md --ralph # outer Ralph loop
 - **Architecture**: See `docs/C4_ARCHITECTURE.md` for system diagrams
 - **Training**: See `docs/LOCAL_TRAINING_GUIDE.md` for ML pipeline
 - **Deployment**: See `docs/DEPLOYMENT_REPORT.md` for deployment status
+- **Current status (source of truth)**: See `docs/STATUS.md` for the reproducible test/coverage
+  baseline, and `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md` for the active roadmap.
+
+## Spec-Driven Development
+
+Phase work is specified as Markdown specs under `specs/*.SPEC.md` (Goal / Acceptance Criteria /
+Constraints), parsed by `src/framework/harness/intent/spec_loader.py`:
+
+```bash
+harness validate-spec specs/phase_0_baseline.SPEC.md   # schema check
+harness dry-run --spec specs/phase_1_correctness.SPEC.md  # plan only, no LLM
+```
+
+Reusable project skills live in `.claude/skills/`: `quality-gate` (full local gate),
+`validate-specs` (validate all specs), `coverage-baseline` (refresh `docs/STATUS.md`).
 
 ---
 
-*Last Updated: 2025-01*
+*Last Updated: 2026-06-30*

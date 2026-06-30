@@ -185,16 +185,44 @@ data:
   consensus_threshold: "0.75"
   max_iterations: "3"
 ---
-apiVersion: v1
-kind: Secret
+# Secrets are NOT stored in version control. The `llm-secrets` Secret consumed
+# by the Deployment (secretKeyRef above) is materialized at runtime by the
+# External Secrets Operator from an external secret store (Vault / AWS Secrets
+# Manager / GCP Secret Manager / Azure Key Vault). See docs/SECRETS_MANAGEMENT.md
+# for backend setup and rotation. The ExternalSecret produces a Secret with the
+# SAME name and keys, so no Deployment change is required.
+#
+# Prerequisite (install once per cluster):
+#   helm repo add external-secrets https://charts.external-secrets.io
+#   helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace
+# Then create a SecretStore named `llm-secret-store` pointing at your backend
+# (example template in docs/SECRETS_MANAGEMENT.md).
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
 metadata:
   name: llm-secrets
   namespace: mcts-framework
-type: Opaque
-stringData:
-  openai-api-key: "your-openai-key-here"
-  anthropic-api-key: "your-anthropic-key-here"
-  api-keys: "demo-api-key-1,demo-api-key-2"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: llm-secret-store
+    kind: SecretStore
+  target:
+    name: llm-secrets        # produces the Opaque Secret the Deployment consumes
+    creationPolicy: Owner
+  data:
+    - secretKey: openai-api-key
+      remoteRef:
+        key: strategos/llm
+        property: openai-api-key
+    - secretKey: anthropic-api-key
+      remoteRef:
+        key: strategos/llm
+        property: anthropic-api-key
+    - secretKey: api-keys
+      remoteRef:
+        key: strategos/llm
+        property: api-keys
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

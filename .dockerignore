@@ -62,6 +62,12 @@ docs/
 *.md
 !README.md
 
+# Development-only assets not needed in the runtime image
+specs/
+.claude/
+planning/
+.github/
+
 # Local development
 .pre-commit-config.yaml
 .secrets.baseline

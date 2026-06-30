@@ -236,34 +236,57 @@ env:
   WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
 ```
 
-### Kubernetes Secrets
+### Kubernetes Secrets (External Secrets Operator)
 
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: mcts-api-keys
-type: Opaque
-stringData:
-  OPENAI_API_KEY: "your-key-here"
-  ANTHROPIC_API_KEY: "your-key-here"
-  # ... other keys
-```
+> **Do NOT commit plaintext `kind: Secret` manifests with `stringData` values.** `kubernetes/deployment.yaml`
+> defines an `ExternalSecret` (not an inline Secret) that materializes `llm-secrets` at runtime from an
+> external store via the [External Secrets Operator](https://external-secrets.io/). The Deployment's
+> `secretKeyRef` references are unchanged.
 
-Apply with:
+One-time cluster setup:
+
 ```bash
-kubectl apply -f secrets.yaml
+# 1. Install the operator
+helm repo add external-secrets https://charts.external-secrets.io
+helm install external-secrets external-secrets/external-secrets \
+  -n external-secrets --create-namespace
+
+# 2. Create a SecretStore in the mcts-framework namespace (AWS Secrets Manager example;
+#    swap the provider block for vault/gcpsm/azurekv as needed).
+cat <<'EOF' | kubectl apply -f -
+apiVersion: external-secrets.io/v1beta1
+kind: SecretStore
+metadata:
+  name: llm-secret-store
+  namespace: mcts-framework
+spec:
+  provider:
+    aws:
+      service: SecretsManager
+      region: us-west-2
+      auth:
+        jwt:
+          serviceAccountRef:
+            name: mcts-eso-sa   # IRSA-bound SA with secretsmanager:GetSecretValue
+EOF
 ```
 
-Reference in deployment:
-```yaml
-env:
-  - name: OPENAI_API_KEY
-    valueFrom:
-      secretKeyRef:
-        name: mcts-api-keys
-        key: OPENAI_API_KEY
+Store the actual values in the backend under key `strategos/llm` with properties `openai-api-key`,
+`anthropic-api-key`, `api-keys`. The `ExternalSecret` in `kubernetes/deployment.yaml` syncs them into the
+`llm-secrets` Secret every `refreshInterval` (1h). Force an immediate sync after rotation:
+
+```bash
+kubectl annotate externalsecret llm-secrets -n mcts-framework force-sync=$(date +%s) --overwrite
+kubectl rollout restart deployment/langgraph-mcts -n mcts-framework
+kubectl rollout status deployment/langgraph-mcts -n mcts-framework
 ```
+
+### Application auth secrets (JWT)
+
+API authentication is selected by `AUTH_MODE` (`api_key` default, or `jwt`). In `jwt` mode the signing
+secret comes from `JWT_SECRET` (env → `src/config/settings.py`, `SecretStr`); `JWT_ALGORITHM` /
+`JWT_EXPIRY_HOURS` are settings too. Never hardcode `JWT_SECRET` — supply it via the same external store
+(add a `jwt-secret` property and an `ExternalSecret` data entry).
 
 ## Security Best Practices
 

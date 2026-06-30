@@ -26,7 +26,9 @@ from src.api.auth import (
     JWTAuthenticator,
     RateLimitConfig,
     get_authenticator,
+    get_jwt_authenticator,
     set_authenticator,
+    set_jwt_authenticator,
 )
 from src.api.exceptions import (
     AuthenticationError,
@@ -527,6 +529,16 @@ class TestJWTAuthenticator:
 
         assert auth.algorithm == "HS512"
 
+    def test_default_expiry_hours_defaults_when_none(self):
+        """Omitting default_expiry_hours falls back to DEFAULT_EXPIRY_HOURS."""
+        auth = JWTAuthenticator(secret_key="secret")
+        assert auth.default_expiry_hours == JWTAuthenticator.DEFAULT_EXPIRY_HOURS
+
+    def test_default_expiry_hours_preserves_explicit_value(self):
+        """An explicit default_expiry_hours is honored, including falsey 0 (not coerced)."""
+        auth = JWTAuthenticator(secret_key="secret", default_expiry_hours=0)
+        assert auth.default_expiry_hours == 0
+
     @pytest.mark.skipif(True, reason="PyJWT library required for full JWT tests")  # Skip if PyJWT not installed
     def test_create_token_requires_pyjwt(self):
         """Test that create_token raises ImportError without PyJWT."""
@@ -749,3 +761,89 @@ class TestEdgeCases:
         # Should fail immediately due to burst limit of 0
         with pytest.raises(RateLimitError):
             auth.authenticate(api_key)
+
+
+class TestJWTAuthenticatorFactory:
+    """Tests for the settings-driven JWT authenticator factory (AUTH_MODE='jwt')."""
+
+    def teardown_method(self):
+        """Reset the cached JWT authenticator after each test."""
+        set_jwt_authenticator(None)
+
+    @staticmethod
+    def _fake_settings(secret, algorithm="HS256", expiry_hours=24):
+        """Build a minimal stand-in for Settings exposing only the JWT fields."""
+        from pydantic import SecretStr
+
+        return type(
+            "S",
+            (),
+            {
+                "JWT_SECRET": SecretStr(secret) if secret is not None else None,
+                "JWT_ALGORITHM": algorithm,
+                "JWT_EXPIRY_HOURS": expiry_hours,
+            },
+        )()
+
+    def test_raises_when_jwt_secret_missing(self):
+        """get_jwt_authenticator raises AuthenticationError when JWT_SECRET is unset."""
+        with patch("src.config.settings.get_settings", return_value=self._fake_settings(None)):
+            with pytest.raises(AuthenticationError):
+                get_jwt_authenticator()
+
+    def test_builds_from_settings(self):
+        """get_jwt_authenticator builds a JWTAuthenticator from settings values."""
+        fake = self._fake_settings("super-secret-value", algorithm="HS512", expiry_hours=12)
+        with patch("src.config.settings.get_settings", return_value=fake):
+            authenticator = get_jwt_authenticator()
+
+        assert isinstance(authenticator, JWTAuthenticator)
+        assert authenticator.secret_key == "super-secret-value"
+        assert authenticator.algorithm == "HS512"
+        # JWT_EXPIRY_HOURS is threaded through (M1 fix — otherwise dead config).
+        assert authenticator.default_expiry_hours == 12
+
+    def test_caches_instance(self):
+        """The factory caches and reuses a single instance."""
+        with patch("src.config.settings.get_settings", return_value=self._fake_settings("s")):
+            first = get_jwt_authenticator()
+            second = get_jwt_authenticator()
+
+        assert first is second
+
+    def test_set_jwt_authenticator_overrides(self):
+        """set_jwt_authenticator injects a custom instance (for DI/testing)."""
+        custom = JWTAuthenticator(secret_key="injected")
+        set_jwt_authenticator(custom)
+
+        assert get_jwt_authenticator() is custom
+
+
+class TestAuthModeSetting:
+    """Tests for the AUTH_MODE settings validator and JWT startup guard."""
+
+    def test_defaults_and_accepts_supported_modes(self):
+        from src.config.settings import Settings
+
+        assert Settings(AUTH_MODE="api_key").AUTH_MODE == "api_key"
+        # jwt mode requires a JWT_SECRET (enforced at startup — see test below).
+        assert Settings(AUTH_MODE="jwt", JWT_SECRET="x-secret").AUTH_MODE == "jwt"
+        # Case-insensitive / whitespace tolerant.
+        assert Settings(AUTH_MODE="JWT", JWT_SECRET="x-secret").AUTH_MODE == "jwt"
+
+    def test_rejects_unknown_mode(self):
+        from pydantic import ValidationError as PydanticValidationError
+
+        from src.config.settings import Settings
+
+        with pytest.raises(PydanticValidationError):
+            Settings(AUTH_MODE="oauth")
+
+    def test_jwt_mode_requires_secret_at_startup(self):
+        """AUTH_MODE='jwt' without JWT_SECRET fails fast at config load (H1 fix)."""
+        from pydantic import ValidationError as PydanticValidationError
+
+        from src.config.settings import Settings
+
+        with pytest.raises(PydanticValidationError):
+            Settings(AUTH_MODE="jwt", JWT_SECRET=None)

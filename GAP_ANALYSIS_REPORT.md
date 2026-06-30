@@ -1,5 +1,10 @@
 # Gap Analysis Report: LangGraph Multi-Agent MCTS Framework
 
+> **⚠️ SUPERSEDED (2026-06-30).** Status figures in this report (e.g. REST API "40%", domain
+> training "30% placeholder", coverage "70%") are stale and code-contradicted. The authoritative
+> baseline is `docs/STATUS.md` (88.98% coverage, suite green) and the active plan is
+> `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`. Read this only for historical context.
+
 **Date:** December 9, 2025
 **Branch:** `claude/gap-analysis-planning-01HDfJDAsYKh3ie5cgru9Tos`
 **Analyst:** Claude Code

@@ -1,5 +1,16 @@
 # Next-Steps Implementation Plan — 2026 H2
 
+> **Implementation progress (branch `claude/implementation-plan-roadmap-nq1cwv`):**
+> Phases **0–5 implemented**. 0–3: re-baseline (`docs/STATUS.md`) + doc reconciliation; correctness &
+> packaging fixes; targeted coverage (all Google ADK agents ≥85%); production readiness (ESO secret
+> hygiene, settings-driven JWT `AUTH_MODE`). **Phase 4**: MCTS early-termination wiring + streaming /
+> graph-visualization / comparison services + REST endpoints + Gradio UI (`[ui]` extra). **Phase 5
+> (M5)**: generalized `SelfPlayTrainer` with a single-agent path, domain registry + reasoning/planning
+> domains, domain-type-aware policy-comparison benchmark (≥20%-lift harness), and meta-controller
+> learning loop (`docs/META_CONTROLLER_TRAINING.md`). Workstream B (specs + `.claude/skills/` + CI
+> `spec-validate`) complete. Deploy-time only: Phase **3.3 staging soak** (runbook in
+> `docs/SECRETS_MANAGEMENT.md`); M5 lift target is to be run to convergence on a chosen domain.
+
 > **Version:** 2.0.0 · **Date:** 2026-06-30 · **Status:** Active
 > **Supersedes:** `NEXT_STEPS_PLAN.md` (v1.0), the status sections of `GAP_ANALYSIS_REPORT.md`,
 > and `docs/NEXT_STEPS_INVESTIGATION.md` where they conflict with the **Verified Status** table below.
@@ -9,6 +20,20 @@
 > `GAP_ANALYSIS_REPORT.md`, `docs/NEXT_STEPS_INVESTIGATION.md`, `PHASE_4_TEMPLATE_PLAN.md`,
 > `planning/milestones.yaml`, `planning/epics/*.yaml`) **against the source tree**. Where a
 > document's claim disagreed with the code, the code wins and the evidence is cited inline.
+
+> **Correction (2026-06-30, verified):** three rows in the §1.1 table below have themselves gone
+> stale and are superseded by `docs/STATUS.md`:
+> - *"`examples` cannot export `HRMAgent`" / hard-imports `langchain_openai`* — **false now**:
+>   `examples/langgraph_multi_agent_mcts.py:25-36` already guards `langchain_openai`/`langgraph`
+>   behind `try/except ImportError`; the module imports without optional deps. The real residual
+>   defect is the dead `improved_hrm_agent`/`improved_trm_agent` guard that silently skips
+>   `tests/chaos/test_resilience.py` and `tests/performance/test_load.py` (Phase 1.2).
+> - *"Google ADK per-agent implementations untested"* — **false now**:
+>   `tests/unit/test_google_adk_agents.py` (793 lines) + `tests/integration/google_adk/` cover all
+>   five agents; only `agents/data_science.py` (78.7%) is below the 85% line. No fan-out needed.
+> - *"RolloutPolicy signature mismatch → 24 failures"* — **resolved**: `mypy src/` is clean and the
+>   policy test subclasses already carry the `rng`/`max_depth` annotations; the suite is green
+>   (7769 passed, 0 failed). See `docs/STATUS.md`.
 
 ---
 

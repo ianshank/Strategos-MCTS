@@ -74,6 +74,7 @@ prometheus = [
 api = [
     "fastapi>=0.110.0,<1.0.0",
     "uvicorn[standard]>=0.27.0,<1.0.0",
+    "PyJWT>=2.8.0,<3.0.0",  # optional JWT auth path (AUTH_MODE=jwt)
 ]
 neural = [
     "torch>=2.0.0",
@@ -108,8 +109,13 @@ google-adk = [
 benchmark = [
     # Benchmark CLI needs only core dependencies now (pydantic-settings was promoted to core).
 ]
+ui = [
+    # Gradio UI (root app.py). Capped to <6.0.0 so a major release can't silently
+    # break the Blocks/launch API the app relies on; bump deliberately after revalidating.
+    "gradio>=4.0.0,<6.0.0",
+]
 all = [
-    "langgraph-multi-agent-mcts[dev,prometheus,api,neural,experiment,vectordb,google-adk,benchmark]",
+    "langgraph-multi-agent-mcts[dev,prometheus,api,neural,experiment,vectordb,google-adk,benchmark,ui]",
 ]
 
 [project.scripts]
@@ -169,6 +175,7 @@ line-ending = "auto"
 known-first-party = ["src"]
 
 [tool.ruff.lint.per-file-ignores]
+"app.py" = ["E402"]  # Imports follow logging.basicConfig setup and the guarded optional gradio import
 "tests/*" = ["ARG002", "E402"]  # Unused method argument - pytest fixtures; E402 for importorskip guards
 "training/tests/*" = ["ARG002", "E402"]  # Unused method argument - pytest fixtures; E402 for importorskip guards
 "tools/*" = ["ARG002"]  # Unused method argument - API handlers with required signatures

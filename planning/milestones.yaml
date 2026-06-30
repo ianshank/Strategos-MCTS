@@ -53,7 +53,10 @@ milestones:
   - id: M3
     name: Review and Polish
     status: in_progress
-    completion: 93
+    completion: 96  # test suite green (7769 passed/0 failed) + mypy clean; see docs/STATUS.md
+    note: >-
+      The previously-cited "44-failure blocker cluster" is not present (verified 2026-06-30).
+      Remaining: opportunistic coverage on docs/STATUS.md category-B modules.
     goal: Quality gate with Reviewer; Iterate via Orchestrator
     epics:
       - $ref: "./epics/epic_3_1_code_review.yaml"
@@ -79,8 +82,13 @@ milestones:
 
   - id: M5
     name: Advanced Features
-    status: planned
-    completion: 0
+    status: in_progress
+    completion: 70  # Phase 5 landed: generalized single-agent self-play, domain registry
+    note: >-
+      Phase 5 (2026-H2) implemented the generalized SelfPlayTrainer with a single-agent path,
+      the domain registry + reasoning/planning domains, the domain-type-aware policy-comparison
+      benchmark (>=20% lift harness), and the meta-controller learning loop. Remaining: run the
+      lift benchmark to convergence on a target domain and tune. See docs/STATUS.md.
     goal: Extend framework with neural enhancements and multi-domain support
     epics:
       - $ref: "./epics/epic_5_1_neural_mcts.yaml"
@@ -90,17 +98,18 @@ milestones:
       - Domain-specific state adapters
       - Performance optimization module
 
+# Metrics below are code-verified; see docs/STATUS.md for the reproducible baseline (2026-06-30).
 quality_metrics:
+  source_of_truth: docs/STATUS.md
+  measured_on: "2026-06-30"
   test_coverage:
-    current: 88.4
+    current: 88.98  # branch coverage on src/, mirrors CI (fail_under = 85.0)
     target: 90
   test_pass_rate:
-    unit: 1325/1477  # passed/total including skipped
-    integration: 101/164
-    training: 36/45
+    unit: 7769 passed / 0 failed / 53 skipped  # python -m pytest tests/unit (see docs/STATUS.md)
   code_quality:
     linting: passing
-    type_checking: passing
+    type_checking: passing   # mypy src/ clean, 290 files
     formatting: passing
 
 subagents:

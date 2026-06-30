@@ -329,23 +329,30 @@ class JWTAuthenticator:
     This is a placeholder for JWT support.
     """
 
-    def __init__(self, secret_key: str, algorithm: str = "HS256"):
+    DEFAULT_EXPIRY_HOURS = 24
+
+    def __init__(self, secret_key: str, algorithm: str = "HS256", default_expiry_hours: int | None = None):
         """
         Initialize JWT authenticator.
 
         Args:
             secret_key: Secret key for signing tokens
             algorithm: JWT signing algorithm
+            default_expiry_hours: Default token validity used by ``create_token`` when no
+                explicit ``expires_in_hours`` is passed. Falls back to ``DEFAULT_EXPIRY_HOURS``.
         """
         self.secret_key = secret_key
         self.algorithm = algorithm
+        self.default_expiry_hours = (
+            default_expiry_hours if default_expiry_hours is not None else self.DEFAULT_EXPIRY_HOURS
+        )
         self._token_blacklist: set[str] = set()
 
     def create_token(
         self,
         client_id: str,
         roles: set[str],
-        expires_in_hours: int = 24,
+        expires_in_hours: int | None = None,
     ) -> str:
         """
         Create a JWT token.
@@ -353,11 +360,14 @@ class JWTAuthenticator:
         Args:
             client_id: Client identifier
             roles: Client roles
-            expires_in_hours: Token validity period
+            expires_in_hours: Token validity period; defaults to the authenticator's
+                ``default_expiry_hours`` (settings-driven via the factory) when not given.
 
         Returns:
             JWT token string
         """
+        if expires_in_hours is None:
+            expires_in_hours = self.default_expiry_hours
         try:
             import jwt
         except ImportError as e:
@@ -406,8 +416,16 @@ class JWTAuthenticator:
                 algorithms=[self.algorithm],
             )
 
+            subject = payload.get("sub")
+            if not subject:
+                logger.warning("Authentication failed: JWT missing 'sub' claim")
+                raise AuthenticationError(
+                    user_message="Invalid token",
+                    internal_details="JWT payload missing required 'sub' claim",
+                )
+
             return ClientInfo(
-                client_id=payload["sub"],
+                client_id=subject,
                 roles=set(payload.get("roles", ["user"])),
             )
         except jwt.ExpiredSignatureError as e:
@@ -461,6 +479,52 @@ def set_authenticator(authenticator: APIKeyAuthenticator) -> None:
     _default_authenticator = authenticator
 
 
+# Default JWT authenticator instance (used when settings.AUTH_MODE == "jwt")
+_default_jwt_authenticator: JWTAuthenticator | None = None
+
+
+def get_jwt_authenticator() -> JWTAuthenticator:
+    """
+    Get or create the default JWT authenticator from settings.
+
+    The signing secret, algorithm, and expiry are sourced from
+    ``src.config.settings`` (``JWT_SECRET`` / ``JWT_ALGORITHM`` / ``JWT_EXPIRY_HOURS``).
+    This is independent of :func:`get_authenticator`, whose API-key contract is
+    unchanged; JWT support is purely additive and selected via ``AUTH_MODE``.
+
+    Raises:
+        AuthenticationError: if no ``JWT_SECRET`` is configured.
+    """
+    global _default_jwt_authenticator
+    if _default_jwt_authenticator is None:
+        from src.config.settings import get_settings
+
+        settings = get_settings()
+        if settings.JWT_SECRET is None:
+            raise AuthenticationError(
+                user_message="Server authentication is misconfigured",
+                internal_details="AUTH_MODE='jwt' requires JWT_SECRET to be set",
+            )
+        _default_jwt_authenticator = JWTAuthenticator(
+            secret_key=settings.JWT_SECRET.get_secret_value(),
+            algorithm=settings.JWT_ALGORITHM,
+            default_expiry_hours=settings.JWT_EXPIRY_HOURS,
+        )
+    return _default_jwt_authenticator
+
+
+def set_jwt_authenticator(authenticator: JWTAuthenticator | None) -> None:
+    """
+    Set (or reset) the default JWT authenticator instance.
+
+    Args:
+        authenticator: Authenticator to use, or ``None`` to clear the cache
+            (e.g. between tests with different settings).
+    """
+    global _default_jwt_authenticator
+    _default_jwt_authenticator = authenticator
+
+
 # Exports
 __all__ = [
     "APIKeyAuthenticator",
@@ -469,4 +533,6 @@ __all__ = [
     "RateLimitConfig",
     "get_authenticator",
     "set_authenticator",
+    "get_jwt_authenticator",
+    "set_jwt_authenticator",
 ]

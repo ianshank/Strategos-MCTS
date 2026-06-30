@@ -10,7 +10,9 @@ Tests:
 
 import asyncio
 import gc
+import os
 import statistics
+import sys
 import time
 from dataclasses import dataclass
 from unittest.mock import AsyncMock, Mock, patch
@@ -24,14 +26,17 @@ try:
 except ImportError:
     PSUTIL_AVAILABLE = False
 
-import sys
+# The reference LangGraph framework under test lives in ``examples/``; add it to
+# the path so the load suite can import it regardless of the working dir.
+_EXAMPLES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "examples"))
+if _EXAMPLES_DIR not in sys.path:
+    sys.path.insert(0, _EXAMPLES_DIR)
 
-sys.path.insert(0, ".")
-
-# Skip tests if required agents are not available
+# Skip tests only if the reference framework genuinely cannot be imported (e.g.
+# the optional ``langgraph`` extra is absent). The module guards its own
+# optional deps, so this succeeds in a standard [dev] environment.
 try:
-    import improved_hrm_agent  # noqa: F401
-    import improved_trm_agent  # noqa: F401
+    from langgraph_multi_agent_mcts import LangGraphMultiAgentFramework  # noqa: F401
 
     AGENTS_AVAILABLE = True
 except ImportError:
@@ -247,13 +252,13 @@ class TestMemoryStability:
         num_iterations = 100
         for i in range(num_iterations):
             # Simulate framework usage
-            from langgraph_multi_agent_mcts import MCTSNode
+            from langgraph_multi_agent_mcts import MCTSNode, MCTSState
 
-            root = MCTSNode(state_id=f"root_{i}")
+            root = MCTSNode(state=MCTSState(f"root_{i}"))
             for j in range(10):
-                child = root.add_child(f"action_{j}", f"state_{j}")
+                child = root.add_child(f"action_{j}", MCTSState(f"state_{j}"))
                 child.visits = j + 1
-                child.value = j * 0.5
+                child.value_sum = j * (j + 1) * 0.5
             del root
 
             if i % 20 == 0:
@@ -274,22 +279,22 @@ class TestMemoryStability:
     @pytest.mark.asyncio
     async def test_large_tree_memory_usage(self):
         """Test memory usage with large MCTS trees."""
-        from langgraph_multi_agent_mcts import MCTSNode
+        from langgraph_multi_agent_mcts import MCTSNode, MCTSState
 
         process = psutil.Process()
         gc.collect()
         baseline_mb = process.memory_info().rss / (1024 * 1024)
 
         # Create large tree
-        root = MCTSNode(state_id="root")
+        root = MCTSNode(state=MCTSState("root"))
         nodes = [root]
 
         # Build tree with 10,000 nodes
         for i in range(10000):
             parent = nodes[i % len(nodes)]
-            child = parent.add_child(f"action_{i}", f"state_{i}")
+            child = parent.add_child(f"action_{i}", MCTSState(f"state_{i}"))
             child.visits = i % 100
-            child.value = (i % 100) * 0.01
+            child.value_sum = (i % 100) * (i % 100) * 0.01
             nodes.append(child)
 
         gc.collect()
@@ -361,27 +366,27 @@ class TestMCTSScaling:
     @pytest.mark.slow
     def test_ucb1_computation_scaling(self):
         """Test UCB1 computation scales with tree size."""
-        from langgraph_multi_agent_mcts import MCTSNode
+        from langgraph_multi_agent_mcts import MCTSNode, MCTSState
 
         tree_sizes = [10, 100, 1000, 10000]
         results = {}
 
         for size in tree_sizes:
             # Build tree
-            root = MCTSNode(state_id="root")
+            root = MCTSNode(state=MCTSState("root"))
             root.visits = size * 10
             nodes = []
 
             for i in range(size):
-                child = root.add_child(f"action_{i}", f"state_{i}")
+                child = root.add_child(f"action_{i}", MCTSState(f"state_{i}"))
                 child.visits = i + 1
-                child.value = (i + 1) * 0.5
+                child.value_sum = (i + 1) * (i + 1) * 0.5
                 nodes.append(child)
 
-            # Benchmark best_child selection
+            # Benchmark UCB1-based child selection
             start = time.perf_counter()
             for _ in range(100):
-                root.best_child()
+                root.select_child()
             elapsed = time.perf_counter() - start
 
             results[size] = elapsed
