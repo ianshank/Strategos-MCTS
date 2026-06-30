@@ -661,6 +661,119 @@ class TestDataScienceAgent:
         resp = asyncio.run(agent.invoke(req))
         assert resp.status == "error"
 
+    def test_agent_initialize_sets_up_backends(self, tmp_path, monkeypatch):
+        """_agent_initialize succeeds (google.adk is mocked) and calls _setup_database_config."""
+        agent = DataScienceAgent(_local_config(tmp_path))
+        # Ensure no backend env vars leak in from the host environment.
+        for var in (
+            "GOOGLE_CLOUD_PROJECT",
+            "ALLOYDB_INSTANCE",
+            "ALLOYDB_DATABASE",
+            "ALLOYDB_USER",
+        ):
+            monkeypatch.delenv(var, raising=False)
+
+        asyncio.run(agent._agent_initialize())
+
+        # available_backends is created by _setup_database_config (line 65 -> 75-79).
+        assert agent.available_backends == []
+
+    def test_setup_database_config_no_env(self, tmp_path, monkeypatch):
+        """No backend env vars => empty available_backends (lines 70-79, no branches taken)."""
+        agent = DataScienceAgent(_local_config(tmp_path))
+        for var in (
+            "GOOGLE_CLOUD_PROJECT",
+            "ALLOYDB_INSTANCE",
+            "ALLOYDB_DATABASE",
+            "ALLOYDB_USER",
+        ):
+            monkeypatch.delenv(var, raising=False)
+
+        agent._setup_database_config()
+        assert agent.available_backends == []
+
+    def test_setup_database_config_bigquery(self, tmp_path, monkeypatch):
+        """GOOGLE_CLOUD_PROJECT set => bigquery backend available (line 77)."""
+        agent = DataScienceAgent(_local_config(tmp_path))
+        for var in ("ALLOYDB_INSTANCE", "ALLOYDB_DATABASE", "ALLOYDB_USER"):
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "my-proj")
+
+        agent._setup_database_config()
+        assert agent.available_backends == ["bigquery"]
+
+    def test_setup_database_config_alloydb(self, tmp_path, monkeypatch):
+        """All AlloyDB env vars set => alloydb backend available (line 79)."""
+        agent = DataScienceAgent(_local_config(tmp_path))
+        monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+        monkeypatch.setenv("ALLOYDB_INSTANCE", "inst")
+        monkeypatch.setenv("ALLOYDB_DATABASE", "db")
+        monkeypatch.setenv("ALLOYDB_USER", "user")
+
+        agent._setup_database_config()
+        assert agent.available_backends == ["alloydb"]
+
+    def test_setup_database_config_both_backends(self, tmp_path, monkeypatch):
+        """Both backends configured => both appended in order (lines 77 and 79)."""
+        agent = DataScienceAgent(_local_config(tmp_path))
+        monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "my-proj")
+        monkeypatch.setenv("ALLOYDB_INSTANCE", "inst")
+        monkeypatch.setenv("ALLOYDB_DATABASE", "db")
+        monkeypatch.setenv("ALLOYDB_USER", "user")
+
+        agent._setup_database_config()
+        assert agent.available_backends == ["bigquery", "alloydb"]
+
+    def test_query_database_helper(self, tmp_path):
+        """query_database builds an nl2sql request and delegates to invoke (lines 417-426)."""
+        agent = DataScienceAgent(_local_config(tmp_path))
+        agent._initialized = True
+        agent.available_backends = ["bigquery"]
+
+        resp = asyncio.run(
+            agent.query_database(
+                "Show total sales by region",
+                dataset_name="sales_db",
+                backend="bigquery",
+            )
+        )
+        assert resp.status == "success"
+        assert "NL2SQL" in resp.result
+        assert resp.metadata["backend"] == "bigquery"
+
+    def test_analyze_data_helper(self, tmp_path):
+        """analyze_data builds an analysis request and delegates to invoke (lines 445-454)."""
+        agent = DataScienceAgent(_local_config(tmp_path))
+        agent._initialized = True
+        agent.available_backends = []
+
+        resp = asyncio.run(
+            agent.analyze_data(
+                "Analyze customer churn",
+                data_source="/data/churn.csv",
+                analysis_type="statistical",
+            )
+        )
+        assert resp.status == "success"
+        assert "Analysis" in resp.result
+
+    def test_train_bqml_model_helper(self, tmp_path):
+        """train_bqml_model builds a bqml request and delegates to invoke (lines 473-482)."""
+        agent = DataScienceAgent(_local_config(tmp_path))
+        agent._initialized = True
+        agent.available_backends = []
+
+        resp = asyncio.run(
+            agent.train_bqml_model(
+                "Forecast revenue",
+                model_type="arima",
+                target_column="revenue",
+            )
+        )
+        assert resp.status == "success"
+        assert "ARIMA" in resp.result
+        assert resp.metadata["model_type"] == "arima"
+
 
 # ── Deep Search Agent tests ──────────────────────────────────────────────
 
