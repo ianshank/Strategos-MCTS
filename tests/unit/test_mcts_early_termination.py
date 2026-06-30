@@ -44,7 +44,7 @@ class ConstantRolloutPolicy(RolloutPolicy):
     def __init__(self, value: float = 0.5):
         self._value = value
 
-    async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+    async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
         return self._value
 
 
@@ -54,7 +54,7 @@ class ConvergingRolloutPolicy(RolloutPolicy):
     def __init__(self):
         self._call_count = 0
 
-    async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+    async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
         self._call_count += 1
         # Return 0.5 always -- values will converge instantly
         return 0.5
@@ -66,7 +66,7 @@ class ChangingRolloutPolicy(RolloutPolicy):
     def __init__(self):
         self._call_count = 0
 
-    async def evaluate(self, state: MCTSState, rng, max_depth: int = 10) -> float:
+    async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
         self._call_count += 1
         # Oscillate between high and low values to prevent convergence
         if self._call_count % 2 == 0:

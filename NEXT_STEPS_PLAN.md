@@ -1,8 +1,15 @@
 # LangGraph Multi-Agent MCTS: Next Steps Plan
 
+> ⚠️ **SUPERSEDED (2026-06-30).** This v1.0 plan is retained for history but several of its
+> "critical" items are already resolved in the source tree (the iteration-counter bug, the
+> DABStep `split` parameter, REST `/query` wiring, RAG wiring, and the LLM-adapter/hybrid-agent/
+> monitoring/observability test gaps). For the current, code-verified plan see
+> **`docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`**, whose §1.1 Verified-Status table governs
+> wherever it disagrees with this document.
+
 > **Version:** 1.0.0
 > **Date:** 2026-02-01
-> **Status:** Active Development
+> **Status:** Superseded by docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md
 
 ---
 

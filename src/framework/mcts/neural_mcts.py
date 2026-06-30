@@ -191,15 +191,15 @@ class NeuralMCTSNode:
 
         return best_action, best_child
 
-    def add_virtual_loss(self, virtual_loss: float):
+    def add_virtual_loss(self, virtual_loss: float) -> None:
         """Add virtual loss for parallel search."""
         self.virtual_loss += virtual_loss
 
-    def revert_virtual_loss(self, virtual_loss: float):
+    def revert_virtual_loss(self, virtual_loss: float) -> None:
         """Remove virtual loss after search completes."""
         self.virtual_loss -= virtual_loss
 
-    def update(self, value: float):
+    def update(self, value: float) -> None:
         """Update node statistics with search result."""
         self.visit_count += 1
         self.value_sum += value

@@ -17,7 +17,9 @@ from typing import Any
 
 from src.framework.harness.settings import HarnessPermissions
 from src.framework.harness.tools.registry import ToolHandler, ToolSchema
-from src.observability.logging import get_correlation_id
+from src.observability.logging import get_correlation_id, get_logger
+
+logger = get_logger(__name__)
 
 _DEFAULT_TIMEOUT = 60.0
 _CORRELATION_ENV = "STRATEGOS_CORRELATION_ID"
@@ -86,20 +88,26 @@ def shell_tool(
 
     async def handler(args: dict[str, Any]) -> str:
         if not perms.SHELL:
+            logger.debug("shell denied: SHELL permission disabled")
             return "permission denied: shell is disabled"
         argv = args.get("argv")
         if not isinstance(argv, list) or not argv or not all(isinstance(a, str) for a in argv):
             return "error: 'argv' must be a non-empty list of strings"
         if allowlist is not None and argv[0] not in allowlist:
+            logger.warning("shell denied: '%s' not in allowlist", argv[0])
             return f"permission denied: command '{argv[0]}' not in allowlist"
         timeout = float(args.get("timeout") or default_timeout)
         cid = _resolve_correlation_id(correlation_id)
+        logger.debug("shell exec: %s (cwd=%s timeout=%ss)", argv[0], cwd, timeout)
         try:
             rc, output = await _run_command(argv, cwd=cwd, timeout=timeout, correlation_id=cid)
         except TimeoutError:
+            logger.warning("shell timeout: %s exceeded %ss", argv[0], timeout)
             return f"timeout: command exceeded {timeout}s"
         except FileNotFoundError as exc:
+            logger.warning("shell not found: %s", exc)
             return f"not_found: {exc}"
+        logger.debug("shell done: %s exit=%d", argv[0], rc)
         return f"exit={rc}\n{output}"
 
     schema = ToolSchema(
@@ -131,12 +139,14 @@ def _wrap_check(
 
     async def handler(args: dict[str, Any]) -> str:
         if not perms.SHELL:
+            logger.debug("%s denied: SHELL permission disabled", name)
             return "permission denied: shell is disabled"
         extra = args.get("extra_args") or []
         if not isinstance(extra, list) or not all(isinstance(a, str) for a in extra):
             return "error: 'extra_args' must be a list of strings if provided"
         full_argv = argv + extra
         cid = _resolve_correlation_id(correlation_id)
+        logger.debug("%s exec: %s (cwd=%s timeout=%ss)", name, full_argv, cwd, timeout)
         try:
             rc, output = await _run_command(
                 full_argv,
@@ -145,10 +155,13 @@ def _wrap_check(
                 correlation_id=cid,
             )
         except TimeoutError:
+            logger.warning("%s timeout: exceeded %ss", name, timeout)
             return f"timeout: command exceeded {timeout}s"
         except FileNotFoundError as exc:
+            logger.warning("%s not found: %s", name, exc)
             return f"not_found: {exc}"
         verdict = "pass" if rc == 0 else "fail"
+        logger.debug("%s verdict=%s exit=%d", name, verdict, rc)
         return f"verdict={verdict} exit={rc}\n{output}"
 
     schema = ToolSchema(

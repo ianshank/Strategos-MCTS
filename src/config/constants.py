@@ -157,6 +157,11 @@ DEFAULT_ANTHROPIC_MODEL: Final[str] = "claude-3-5-sonnet-20241022"
 DEFAULT_LMSTUDIO_MODEL: Final[str] = "local-model"
 DEFAULT_GOOGLE_GEMINI_MODEL: Final[str] = "gemini-2.0-flash-001"
 
+# Anthropic Messages API version header (``anthropic-version``). Centralized
+# here so the REST adapter and the LLM-guided MCTS provider config stay in
+# lockstep instead of duplicating the literal.
+DEFAULT_ANTHROPIC_API_VERSION: Final[str] = "2023-06-01"
+
 # Default timeouts per provider (seconds)
 DEFAULT_OPENAI_TIMEOUT: Final[float] = 60.0
 DEFAULT_ANTHROPIC_TIMEOUT: Final[float] = 120.0

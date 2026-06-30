@@ -85,6 +85,17 @@ class HarnessSettings(BaseSettings):
     TOOL_OUTPUT_TRUNCATION_MARKER: str = Field(default="\n…[truncated; full log at {path}]…\n")
     TOOL_OUTPUT_SPILLOVER_DIR: Path = Field(default=Path(".harness/spillover"))
     TOOL_DEFAULT_TIMEOUT_SECONDS: float = Field(default=60.0, ge=0.1, le=3600.0)
+    # Per-check subprocess timeouts for the builtin test/lint/type-check tools.
+    TOOL_TEST_TIMEOUT_SECONDS: float = Field(default=600.0, ge=0.1, le=7200.0)
+    TOOL_LINT_TIMEOUT_SECONDS: float = Field(default=120.0, ge=0.1, le=7200.0)
+    TOOL_TYPECHECK_TIMEOUT_SECONDS: float = Field(default=300.0, ge=0.1, le=7200.0)
+    # Max number of line-window anchors surfaced by the ``file_read`` tool.
+    FILE_READ_MAX_ANCHORS: int = Field(default=200, ge=1, le=100_000)
+
+    # Context compression (cheap, non-LLM episodic-log trimming for prompts)
+    CONTEXT_COMPRESS_MAX_CHARS: int = Field(default=4000, ge=1, le=1_000_000)
+    CONTEXT_COMPRESS_HEAD_CHARS: int = Field(default=1500, ge=0, le=1_000_000)
+    CONTEXT_COMPRESS_TAIL_CHARS: int = Field(default=1500, ge=0, le=1_000_000)
 
     # Memory
     MEMORY_ROOT: Path = Field(default=Path("memory"))
@@ -99,6 +110,9 @@ class HarnessSettings(BaseSettings):
     # Topologies
     TOPOLOGY: TopologyName = Field(default=TopologyName.PRODUCER_REVIEWER)
     AGGREGATION_POLICY: AggregationPolicy = Field(default=AggregationPolicy.VERIFIER_RANKED)
+    TOPOLOGY_PRODUCER_REVIEWER_MAX_ROUNDS: int = Field(default=3, ge=1, le=1000)
+    TOPOLOGY_SUPERVISOR_MAX_ROUNDS: int = Field(default=5, ge=1, le=1000)
+    TOPOLOGY_HIERARCHICAL_GROUP_SIZE: int = Field(default=2, ge=1, le=1000)
 
     # Hashed-edit tool
     HASHED_EDIT_WINDOW: int = Field(default=1, ge=0, le=20, description="Lines on each side of anchor to hash")
@@ -112,6 +126,7 @@ class HarnessSettings(BaseSettings):
     # Planner
     PLANNER_ENABLED: bool = Field(default=True)
     PLANNER_MAX_TOKENS: int = Field(default=2_000, ge=1, le=200_000)
+    PLANNER_TEMPERATURE: float = Field(default=0.0, ge=0.0, le=2.0, description="Planner LLM sampling temperature")
 
     # Reasoner (per-iteration LLM call inside the control loop)
     REASON_MAX_TOKENS: int = Field(

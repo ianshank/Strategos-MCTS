@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from src.config.constants import (
+    DEFAULT_ANTHROPIC_API_VERSION,
     DEFAULT_ANTHROPIC_BASE_URL,
     DEFAULT_OPENAI_BASE_URL,
 )
@@ -146,7 +147,7 @@ PROVIDER_CONFIG: dict[str, dict[str, str]] = {
         "env_key": "ANTHROPIC_API_KEY",
         "default_model": "claude-sonnet-4-20250514",
         "base_url": f"{DEFAULT_ANTHROPIC_BASE_URL}/v1/messages",
-        "api_version": "2023-06-01",
+        "api_version": DEFAULT_ANTHROPIC_API_VERSION,
     },
 }
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,19 @@ from src.framework.harness.tools.hashed_edit import (
     window_hash,
 )
 from src.framework.harness.tools.registry import ToolHandler, ToolSchema
+from src.observability.logging import get_logger
+
+logger = get_logger(__name__)
+
+# Backward-compatible literal defaults; production callers inject values from
+# HarnessSettings (FILE_READ_MAX_ANCHORS / HASHED_EDIT_WINDOW) via registration.
+_DEFAULT_MAX_ANCHORS = 200
+_DEFAULT_WINDOW = 1
+
+
+def _read_and_hash(target: Path) -> tuple[str, str]:
+    """Read UTF-8 text and compute the file SHA-256 (blocking; run off-loop)."""
+    return target.read_text(encoding="utf-8"), file_sha256(target)
 
 
 def _resolve(path: str, root: Path) -> Path:
@@ -27,11 +41,23 @@ def _resolve(path: str, root: Path) -> Path:
     return target
 
 
-def file_read_tool(*, root: Path, perms: HarnessPermissions) -> tuple[ToolSchema, ToolHandler]:
-    """Return a (schema, handler) pair for the ``file_read`` tool."""
+def file_read_tool(
+    *,
+    root: Path,
+    perms: HarnessPermissions,
+    max_anchors: int = _DEFAULT_MAX_ANCHORS,
+    window: int = _DEFAULT_WINDOW,
+) -> tuple[ToolSchema, ToolHandler]:
+    """Return a (schema, handler) pair for the ``file_read`` tool.
+
+    ``max_anchors`` caps the number of line-window hashes surfaced and
+    ``window`` controls the neighbourhood hashed per anchor; both default to
+    the legacy literals and are injected from settings by registration.
+    """
 
     async def handler(args: dict[str, Any]) -> str:
         if not perms.READ:
+            logger.debug("file_read denied: READ permission disabled")
             return "permission denied: file reads are disabled"
         path = str(args.get("path") or "")
         if not path:
@@ -39,14 +65,27 @@ def file_read_tool(*, root: Path, perms: HarnessPermissions) -> tuple[ToolSchema
         try:
             target = _resolve(path, root)
         except PermissionError as exc:
+            logger.warning("file_read refused path outside root: %s", exc)
             return f"permission error: {exc}"
         if not target.exists():
+            logger.debug("file_read miss: %s", target)
             return f"file not found: {target}"
-        text = target.read_text(encoding="utf-8")
-        digest = file_sha256(target)
+        if not target.is_file():
+            logger.debug("file_read not a regular file: %s", target)
+            return f"error: not a file: {target}"
+        try:
+            # Offload blocking file I/O so the event loop stays responsive.
+            text, digest = await asyncio.to_thread(_read_and_hash, target)
+        except UnicodeDecodeError:
+            logger.debug("file_read non-utf8: %s", target)
+            return f"error: file is not valid UTF-8: {target}"
+        except OSError as exc:
+            logger.warning("file_read io error for %s: %s", path, exc)
+            return f"io_error: {exc}"
         lines = text.splitlines()
         # Surface line-window hashes so the model can build hashed edits.
-        windows = "\n".join(f"L{i}: {window_hash(lines, i, 1)[:12]}" for i in range(min(len(lines), 200)))
+        windows = "\n".join(f"L{i}: {window_hash(lines, i, window)[:12]}" for i in range(min(len(lines), max_anchors)))
+        logger.debug("file_read ok: %s (%d lines, %d anchors)", path, len(lines), min(len(lines), max_anchors))
         return f"# file: {path}\n# sha256: {digest}\n{text}\n# anchors:\n{windows}"
 
     schema = ToolSchema(
@@ -61,11 +100,22 @@ def file_read_tool(*, root: Path, perms: HarnessPermissions) -> tuple[ToolSchema
     return schema, handler
 
 
-def file_edit_hashed_tool(*, root: Path, perms: HarnessPermissions) -> tuple[ToolSchema, ToolHandler]:
-    """Return a (schema, handler) pair for the ``file_edit_hashed`` tool."""
+def file_edit_hashed_tool(
+    *,
+    root: Path,
+    perms: HarnessPermissions,
+    window: int = _DEFAULT_WINDOW,
+) -> tuple[ToolSchema, ToolHandler]:
+    """Return a (schema, handler) pair for the ``file_edit_hashed`` tool.
+
+    ``window`` is the default line-window size used when the caller does not
+    supply an explicit ``window`` argument; it defaults to the legacy literal
+    and is injected from ``HASHED_EDIT_WINDOW`` by registration.
+    """
 
     async def handler(args: dict[str, Any]) -> str:
         if not perms.WRITE:
+            logger.debug("file_edit denied: WRITE permission disabled")
             return "permission denied: file writes are disabled"
         path = str(args.get("path") or "")
         if not path:
@@ -73,6 +123,7 @@ def file_edit_hashed_tool(*, root: Path, perms: HarnessPermissions) -> tuple[Too
         try:
             target = _resolve(path, root)
         except PermissionError as exc:
+            logger.warning("file_edit refused path outside root: %s", exc)
             return f"permission error: {exc}"
         try:
             edit = HashedEdit(
@@ -81,16 +132,20 @@ def file_edit_hashed_tool(*, root: Path, perms: HarnessPermissions) -> tuple[Too
                 anchor_line=int(args.get("anchor_line", 0)),
                 expected_window_hash=str(args.get("expected_window_hash") or ""),
                 new_content=str(args.get("new_content") or ""),
-                window=int(args.get("window", 1)),
+                window=int(args.get("window", window)),
             )
         except (TypeError, ValueError) as exc:
             return f"error: invalid arguments: {exc}"
         try:
-            apply_edit(edit)
+            # Offload blocking write/hash work off the event loop.
+            await asyncio.to_thread(apply_edit, edit)
         except HashAnchorMismatch as exc:
+            logger.warning("file_edit hash mismatch for %s: %s", path, exc)
             return f"hash_mismatch: {exc}"
         except OSError as exc:
+            logger.warning("file_edit io error for %s: %s", path, exc)
             return f"io_error: {exc}"
+        logger.debug("file_edit ok: wrote %d chars to %s", len(edit.new_content), path)
         return f"ok: wrote {len(edit.new_content)} chars to {path}"
 
     schema = ToolSchema(

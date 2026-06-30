@@ -11,14 +11,29 @@ Implements a state machine architecture combining:
 Based on 2025 research in multi-agent systems, MCTS, and LangGraph architecture.
 """
 
+from __future__ import annotations
+
 import asyncio
 import operator
 import random
 from typing import Annotated, NotRequired, TypedDict
 
-from langchain_openai import OpenAIEmbeddings
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import END, StateGraph
+# Optional third-party deps. Guarded so the module (and its public
+# ``LangGraphMultiAgentFramework`` class) can be imported without the heavy
+# ``langchain``/``langgraph`` extras installed; they are only required when a
+# framework instance is actually constructed and run.
+try:
+    from langchain_openai import OpenAIEmbeddings
+except ImportError:  # pragma: no cover - exercised only without the optional dep
+    OpenAIEmbeddings = None  # type: ignore[assignment,misc]
+
+try:
+    from langgraph.checkpoint.memory import MemorySaver
+    from langgraph.graph import END, StateGraph
+except ImportError:  # pragma: no cover - exercised only without the optional dep
+    MemorySaver = None  # type: ignore[assignment,misc]
+    StateGraph = None  # type: ignore[assignment,misc]
+    END = None  # type: ignore[assignment]
 
 # Import core MCTS components
 from src.framework.mcts.core import MCTSNode, MCTSState
@@ -100,7 +115,27 @@ class LangGraphMultiAgentFramework:
         max_iterations: int = 3,
         consensus_threshold: float = 0.75,
     ):
-        """Initialize LangGraph multi-agent framework."""
+        """Initialize LangGraph multi-agent framework.
+
+        Raises:
+            ImportError: if the optional ``langchain``/``langgraph`` extras are
+                not installed. The module imports without them (so the class can
+                be referenced), but constructing a framework requires them.
+        """
+        _missing = [
+            name
+            for name, sym in (
+                ("langchain-openai", OpenAIEmbeddings),
+                ("langgraph", StateGraph),
+                ("langgraph", MemorySaver),
+            )
+            if sym is None
+        ]
+        if _missing:
+            raise ImportError(
+                "LangGraphMultiAgentFramework requires optional extras that are not installed: "
+                f"{', '.join(sorted(set(_missing)))}. Install them, e.g. `pip install langchain-openai langgraph`."
+            )
 
         self.model_adapter = model_adapter
         self.logger = logger

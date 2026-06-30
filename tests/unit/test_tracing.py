@@ -40,42 +40,61 @@ _otel_modules = {
     "psutil": MagicMock(),
 }
 
+# Snapshot original sys.modules entries so teardown can remove any stubs we add
+# without clobbering a real OpenTelemetry SDK that may already be installed.
+_original_sys_modules = {name: sys.modules.get(name) for name in _otel_modules}
+
 for mod_name, mod_mock in _otel_modules.items():
     sys.modules.setdefault(mod_name, mod_mock)
 
+# Record every in-place attribute override so ``teardown_module`` can undo them.
+# When the real SDK is installed these assignments mutate the *real* module
+# objects; without restoration the MagicMocks leak into other test modules that
+# share the process / xdist worker and create real spans, surfacing as spurious
+# AttributeErrors (e.g. ``BatchSpanProcessor`` becoming a MagicMock).
+_patched_attrs: list[tuple[object, str, bool, object]] = []
+
+
+def _patch_attr(module: object, name: str, value: object) -> None:
+    _patched_attrs.append((module, name, hasattr(module, name), getattr(module, name, None)))
+    setattr(module, name, value)
+
+
 # Now set up specific attribute mocks that the source module references at import time.
 _trace_mod = sys.modules["opentelemetry.trace"]
-_trace_mod.SpanKind = MagicMock()
-_trace_mod.SpanKind.INTERNAL = "INTERNAL"
-_trace_mod.SpanKind.CLIENT = "CLIENT"
-_trace_mod.Status = MagicMock()
-_trace_mod.StatusCode = MagicMock()
-_trace_mod.StatusCode.OK = "OK"
+_span_kind = MagicMock()
+_span_kind.INTERNAL = "INTERNAL"
+_span_kind.CLIENT = "CLIENT"
+_patch_attr(_trace_mod, "SpanKind", _span_kind)
+_patch_attr(_trace_mod, "Status", MagicMock())
+_status_code = MagicMock()
+_status_code.OK = "OK"
+_patch_attr(_trace_mod, "StatusCode", _status_code)
 
 _sdk_resources = sys.modules["opentelemetry.sdk.resources"]
-_sdk_resources.SERVICE_NAME = "service.name"
-_sdk_resources.Resource = MagicMock()
+_patch_attr(_sdk_resources, "SERVICE_NAME", "service.name")
+_patch_attr(_sdk_resources, "Resource", MagicMock())
 
 _sdk_trace = sys.modules["opentelemetry.sdk.trace"]
-_sdk_trace.TracerProvider = MagicMock
+_patch_attr(_sdk_trace, "TracerProvider", MagicMock)
 
 _export_mod = sys.modules["opentelemetry.sdk.trace.export"]
-_export_mod.BatchSpanProcessor = MagicMock
-_export_mod.ConsoleSpanExporter = MagicMock
-_export_mod.SimpleSpanProcessor = MagicMock
+_patch_attr(_export_mod, "BatchSpanProcessor", MagicMock)
+_patch_attr(_export_mod, "ConsoleSpanExporter", MagicMock)
+_patch_attr(_export_mod, "SimpleSpanProcessor", MagicMock)
 
 _otlp_exporter = sys.modules["opentelemetry.exporter.otlp.proto.grpc.trace_exporter"]
-_otlp_exporter.OTLPSpanExporter = MagicMock
+_patch_attr(_otlp_exporter, "OTLPSpanExporter", MagicMock)
 
 _httpx_instr = sys.modules["opentelemetry.instrumentation.httpx"]
-_httpx_instr.HTTPXClientInstrumentor = MagicMock
+_patch_attr(_httpx_instr, "HTTPXClientInstrumentor", MagicMock)
 
 _propagation = sys.modules["opentelemetry.trace.propagation.tracecontext"]
-_propagation.TraceContextTextMapPropagator = MagicMock
+_patch_attr(_propagation, "TraceContextTextMapPropagator", MagicMock)
 
 # Make trace module's functions behave properly
 _trace_top = sys.modules["opentelemetry"]
-_trace_top.trace = _trace_mod
+_patch_attr(_trace_top, "trace", _trace_mod)
 
 # Import the module under test (after stubs are in place)
 from src.observability.tracing import (
@@ -88,6 +107,34 @@ from src.observability.tracing import (
     trace_operation,
     trace_span,
 )
+
+
+def teardown_module(module: object) -> None:
+    """Undo the in-place OpenTelemetry SDK stubs applied at import time.
+
+    Restores every mutated attribute, drops only the stub modules this file
+    inserted, and reloads the module under test so its globals rebind to the
+    real SDK. Without this, the import-time MagicMocks leak into other test
+    modules that share the process / xdist worker and create real spans,
+    surfacing as spurious AttributeErrors.
+    """
+    import contextlib
+    import importlib
+
+    for mod, name, had, original in reversed(_patched_attrs):
+        if had:
+            setattr(mod, name, original)
+        else:
+            with contextlib.suppress(AttributeError):
+                delattr(mod, name)
+
+    for mod_name, original in _original_sys_modules.items():
+        if original is None:
+            sys.modules.pop(mod_name, None)
+
+    # Best-effort: rebind the module-under-test's globals to the restored SDK.
+    with contextlib.suppress(Exception):
+        importlib.reload(sys.modules["src.observability.tracing"])
 
 
 @pytest.fixture(autouse=True)

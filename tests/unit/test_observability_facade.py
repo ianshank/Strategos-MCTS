@@ -265,6 +265,49 @@ class TestObservabilityFacadeTracing:
             with obs.trace("failing"):
                 raise ValueError("boom")
 
+    def test_trace_degrades_when_span_start_raises(self):
+        """A broken tracing backend must not break the wrapped body."""
+        config = ObservabilityConfig(tracing_enabled=True, metrics_enabled=False)
+        obs = ObservabilityFacade(config)
+
+        mock_tracer = MagicMock()
+        # Simulate a misconfigured/unavailable exporter raising on span start
+        # (mirrors the real OTel BatchSpanProcessor failure mode).
+        mock_tracer.start_as_current_span.side_effect = AttributeError("broken exporter")
+        obs._tracer = mock_tracer
+
+        with obs.trace("degraded") as span:
+            # Tracing degraded to a no-op span; the block still executes.
+            assert span is None
+
+    def test_traced_decorator_survives_broken_backend(self):
+        """The @traced decorator returns the function result despite tracer errors."""
+        config = ObservabilityConfig(tracing_enabled=True, metrics_enabled=False)
+        obs = ObservabilityFacade(config)
+
+        mock_tracer = MagicMock()
+        mock_tracer.start_as_current_span.side_effect = RuntimeError("exporter down")
+        obs._tracer = mock_tracer
+
+        @obs.traced("wrapped")
+        def my_func():
+            return "result"
+
+        assert my_func() == "result"
+
+    @pytest.mark.asyncio
+    async def test_trace_async_degrades_when_span_start_raises(self):
+        """trace_async degrades gracefully when the backend raises on span start."""
+        config = ObservabilityConfig(tracing_enabled=True, metrics_enabled=False)
+        obs = ObservabilityFacade(config)
+
+        mock_tracer = MagicMock()
+        mock_tracer.start_as_current_span.side_effect = AttributeError("broken exporter")
+        obs._tracer = mock_tracer
+
+        async with obs.trace_async("degraded") as span:
+            assert span is None
+
     @pytest.mark.asyncio
     async def test_trace_async_disabled(self):
         """trace_async should yield None when tracing is disabled."""
