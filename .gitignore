@@ -50,8 +50,12 @@ htmlcov/
 nosetests.xml
 coverage.xml
 coverage.json
+junit.xml
 test_results.txt
 *.cover
+
+# Secret-rotation tracking (see docs/SECRETS_MANAGEMENT.md) — never commit
+.key_rotation_dates.json
 *.py,cover
 .hypothesis/
 

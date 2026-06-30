@@ -346,6 +346,18 @@ graph TB
     style APIApp fill:#2ECC71,stroke:#1E8449,stroke-width:2px,color:#fff
 ```
 
+### Authentication & Secrets
+
+- **API authentication** is configuration-selected via `AUTH_MODE` (`src/config/settings.py`):
+  `api_key` (default — `X-API-Key` validated by `APIKeyAuthenticator`) or `jwt` (validated by
+  `JWTAuthenticator` from `JWT_SECRET`/`JWT_ALGORITHM`/`JWT_EXPIRY_HOURS`). The selection lives in
+  `rest_server.verify_api_key`; the API-key path is unchanged by default and `JWT_SECRET` is required
+  at startup when `AUTH_MODE=jwt`.
+- **Secrets** are never stored in the repo or image. In Kubernetes the External Secrets Operator
+  materializes the `llm-secrets` Secret from an external store at runtime (`kubernetes/deployment.yaml`
+  `ExternalSecret`); locally they resolve via env → Pydantic `SecretStr`. See
+  `docs/SECRETS_MANAGEMENT.md`. A CI `spec-validate` job also greps for committed key material.
+
 ---
 
 ## Summary

@@ -62,6 +62,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   back-compat re-export invariant + `half_open_max_calls` enforcement) and
   `tests/unit/test_config_constants_centralization.py` (guards the constant centralization).
 
+### Added (2026-H2 implementation: Phases 0–3, close M3/M4)
+- **Spec-driven development**: `specs/phase_0_baseline..phase_3_production.SPEC.md` parsed by the
+  harness (`harness validate-spec`), plus a CI `spec-validate` job and a hardcoded-secret scan
+  (`sk-[A-Za-z0-9]{20,}` over `src/`+`kubernetes/`).
+- **Project skills** under `.claude/skills/`: `quality-gate`, `validate-specs`, `coverage-baseline`.
+- **Authentication — settings-driven JWT path (additive, backward compatible).** New `AUTH_MODE`
+  (`api_key` default), `JWT_SECRET`/`JWT_ALGORITHM`/`JWT_EXPIRY_HOURS` settings with an `AUTH_MODE`
+  validator and a **startup guard** (`JWT_SECRET` required when `AUTH_MODE=jwt`). New
+  `get_jwt_authenticator`/`set_jwt_authenticator` factories build the existing `JWTAuthenticator`
+  from settings (expiry now threaded through `create_token`); `get_authenticator()`'s API-key
+  contract is unchanged and selected by default. `PyJWT` added to the `[api]` extra.
+- **Evidence-backed status**: `docs/STATUS.md` (reproducible baseline — 7785+ tests, ~89% branch
+  coverage, mypy clean) supersedes stale figures in older roadmap docs.
+- **Regression tests**: DABStep unknown-split fallback (`tests/unit/data/test_dataset_loader.py`),
+  Google ADK `data_science` agent → 100% (`tests/unit/test_google_adk_agents.py`), JWT factory +
+  `AUTH_MODE` validator + startup guard (`tests/unit/test_api_auth.py`), and the revived example
+  LLM agents (`tests/unit/test_example_llm_agents.py`).
+
+### Security (2026-H2)
+- **No plaintext secrets in VCS**: `kubernetes/deployment.yaml` now uses an External Secrets
+  Operator `ExternalSecret` (producing the same `llm-secrets`/keys) instead of an inline plaintext
+  `Secret`; rotation runbook in `docs/SECRETS_MANAGEMENT.md`.
+
+### Fixed (2026-H2)
+- **Revived the `examples/langgraph_multi_agent_mcts.py` reference framework**, which was
+  incompatible with the current neural `src/agents` (it called a non-existent `.process()` on the
+  `nn.Module` agents). Replaced with self-contained LLM-backed HRM/TRM agents; fixed a latent
+  non-termination bug (shared checkpointer `thread_id` replayed accumulated state → now a per-call
+  uuid). This un-skips the chaos (`tests/chaos/test_resilience.py`) and load
+  (`tests/performance/test_load.py`) suites, which were silently skipped on a guard importing
+  non-existent `improved_hrm_agent`/`improved_trm_agent` modules.
+- **Hardening**: named constants for all example tunables (no inline magic numbers); guarded the
+  synthesis fallback against an empty `agent_outputs`; explicit `sub`-claim check in JWT
+  verification.
+
 ## [0.2.0] - Production Training Pipeline Release
 
 ### Added
