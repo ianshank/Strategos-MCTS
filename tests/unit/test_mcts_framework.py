@@ -1053,7 +1053,7 @@ class TestMCTSIntegration:
         """Test that biased rollout policy influences action selection."""
 
         class BiasedPolicy(RolloutPolicy):
-            async def evaluate(self, state, rng, max_depth=10):
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 # Favor "good" action
                 if "good" in state.state_id:
                     return 0.9

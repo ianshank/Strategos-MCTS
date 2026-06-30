@@ -20,6 +20,7 @@ from tenacity import (
 )
 
 from src.config.constants import (
+    DEFAULT_ANTHROPIC_API_VERSION,
     DEFAULT_ANTHROPIC_BASE_URL,
     DEFAULT_ANTHROPIC_MODEL,
     DEFAULT_ANTHROPIC_TIMEOUT,
@@ -80,7 +81,7 @@ class AnthropicClient(BaseLLMClient):
     PROVIDER_NAME = "anthropic"
     DEFAULT_BASE_URL = DEFAULT_ANTHROPIC_BASE_URL
     DEFAULT_MODEL = DEFAULT_ANTHROPIC_MODEL
-    API_VERSION = "2023-06-01"
+    API_VERSION = DEFAULT_ANTHROPIC_API_VERSION
 
     def __init__(
         self,

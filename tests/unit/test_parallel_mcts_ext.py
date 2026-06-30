@@ -552,7 +552,7 @@ class TestLeafParallelMCTSEngine:
         call_count = 0
 
         class VaryingPolicy:
-            async def evaluate(self, state, rng, max_depth=10):
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
                 nonlocal call_count
                 call_count += 1
                 return 0.2 * call_count  # 0.2, 0.4, 0.6, 0.8

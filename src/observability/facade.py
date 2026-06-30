@@ -295,7 +295,13 @@ class ObservabilityFacade:
     # =========================================================================
 
     def _ensure_tracer(self) -> None:
-        """Lazy-load tracing module."""
+        """Lazy-load the tracing module, degrading gracefully on failure.
+
+        The tracer is optional: a missing module, or a misconfigured/unavailable
+        backend that raises during initialization, must never break the operation
+        being traced. On any failure ``self._tracer`` stays ``None`` and callers
+        run without a span.
+        """
         if self._tracer is None and self.config.tracing_enabled:
             try:
                 from src.observability.tracing import get_tracer
@@ -303,6 +309,70 @@ class ObservabilityFacade:
                 self._tracer = get_tracer(self.config.service_name)
             except ImportError:
                 logger.debug("Tracing module not available")
+            except Exception as exc:
+                logger.warning(
+                    "Tracer initialization failed; continuing without tracing: %s",
+                    exc,
+                )
+                self._tracer = None
+
+    def _start_span_safely(
+        self,
+        name: str,
+        attributes: dict[str, Any] | None,
+    ) -> tuple[Any, Any]:
+        """Begin a tracing span, degrading to a no-op on backend failure.
+
+        Returns a ``(span_context_manager, span)`` tuple. When tracing is
+        disabled, or the tracing backend raises (e.g. a misconfigured or
+        unavailable exporter), both elements are ``None`` and the caller runs
+        the wrapped operation without a span rather than failing.
+
+        Args:
+            name: Span name.
+            attributes: Optional span attributes.
+
+        Returns:
+            Tuple of the entered span context manager (or ``None``) and the
+            active span object (or ``None``).
+        """
+        if self._tracer is None:
+            return None, None
+
+        span_cm = None
+        try:
+            span_cm = self._tracer.start_as_current_span(name)
+            span = span_cm.__enter__()
+            if attributes:
+                for key, value in attributes.items():
+                    span.set_attribute(key, str(value))
+            return span_cm, span
+        except Exception as exc:
+            logger.warning(
+                "Tracing backend error starting span %r; continuing without tracing: %s",
+                name,
+                exc,
+            )
+            if span_cm is not None:
+                self._safe_exit_span(span_cm, exc)
+            return None, None
+
+    @staticmethod
+    def _safe_exit_span(span_cm: Any, exc: BaseException | None) -> None:
+        """Exit a span context manager, swallowing tracing-layer errors.
+
+        Args:
+            span_cm: The span context manager previously entered.
+            exc: The exception propagating through the body, or ``None`` on the
+                success path.
+        """
+        try:
+            if exc is None:
+                span_cm.__exit__(None, None, None)
+            else:
+                span_cm.__exit__(type(exc), exc, exc.__traceback__)
+        except Exception as exit_exc:
+            logger.warning("Failed to close trace span cleanly: %s", exit_exc)
 
     @contextmanager
     def trace(
@@ -330,20 +400,24 @@ class ObservabilityFacade:
         error_occurred = False
         error_message = None
 
+        # Start a span, but degrade gracefully when the tracing backend is
+        # unavailable or misconfigured: observability must never break the
+        # operation it wraps. Only exceptions raised by the wrapped body
+        # (the ``yield``) propagate to the caller.
+        span_cm, span = self._start_span_safely(name, attributes)
+
         try:
-            if self._tracer:
-                with self._tracer.start_as_current_span(name) as span:
-                    if attributes:
-                        for key, value in attributes.items():
-                            span.set_attribute(key, str(value))
-                    yield span
-            else:
-                yield None
+            yield span
         except Exception as e:
             error_occurred = True
             error_message = str(e)
+            if span_cm is not None:
+                self._safe_exit_span(span_cm, e)
+                span_cm = None
             raise
         finally:
+            if span_cm is not None:
+                self._safe_exit_span(span_cm, None)
             duration_ms = (time.time() - start_time) * 1000
             self.log_debug(
                 f"Span {name} completed",
@@ -383,19 +457,21 @@ class ObservabilityFacade:
         start_time = time.time()
         error_message = None
 
+        # Same graceful-degradation contract as the sync ``trace``: a broken
+        # tracing backend must not break the awaited body.
+        span_cm, span = self._start_span_safely(name, attributes)
+
         try:
-            if self._tracer:
-                with self._tracer.start_as_current_span(name) as span:
-                    if attributes:
-                        for key, value in attributes.items():
-                            span.set_attribute(key, str(value))
-                    yield span
-            else:
-                yield None
+            yield span
         except Exception as e:
             error_message = str(e)
+            if span_cm is not None:
+                self._safe_exit_span(span_cm, e)
+                span_cm = None
             raise
         finally:
+            if span_cm is not None:
+                self._safe_exit_span(span_cm, None)
             duration_ms = (time.time() - start_time) * 1000
             self.log_debug(
                 f"Async span {name} completed",
