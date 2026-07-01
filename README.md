@@ -162,6 +162,10 @@ helper skills live in `.claude/skills/` (`quality-gate`, `validate-specs`, `cove
 - **[Secrets Management](docs/SECRETS_MANAGEMENT.md)**: External Secrets Operator setup & rotation.
 - **[Training Guide](docs/LOCAL_TRAINING_GUIDE.md)**: How to train models locally or in the cloud.
 - **[Synthetic Data](training/SYNTHETIC_DATA_GENERATION_GUIDE.md)**: Guide to generating training data.
+- **Reference archives**: implementation summaries, analysis reports, historical roadmaps, and quickstarts
+  are organized under [`docs/summaries/`](docs/summaries/), [`docs/reports/`](docs/reports/),
+  [`docs/plans/`](docs/plans/), and [`docs/quickstart/`](docs/quickstart/) (see
+  [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md)).
 
 ## 🤝 Contributing
 
