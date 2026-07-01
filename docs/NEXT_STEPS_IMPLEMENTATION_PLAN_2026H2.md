@@ -22,13 +22,15 @@
 > `demo_src`/`demos` → `examples/`), and disambiguate `config/` vs `src/config/`.
 
 > **Version:** 2.0.0 · **Date:** 2026-06-30 · **Status:** Active
-> **Supersedes:** `plans/NEXT_STEPS_PLAN.md` (v1.0), the status sections of `reports/GAP_ANALYSIS_REPORT.md`,
-> and `docs/NEXT_STEPS_INVESTIGATION.md` where they conflict with the **Verified Status** table below.
-> (Archival roadmap docs were relocated under `docs/plans/` and `docs/reports/` in Phase 8a.)
+> **Supersedes:** `docs/plans/NEXT_STEPS_PLAN.md` (v1.0), the status sections of
+> `docs/reports/GAP_ANALYSIS_REPORT.md`, and `docs/NEXT_STEPS_INVESTIGATION.md` where they conflict with
+> the **Verified Status** table below. (Archival roadmap docs were relocated under `docs/plans/` and
+> `docs/reports/` in Phase 8a.)
 >
 > This plan was produced by reconciling every roadmap/milestone/next-steps document
-> (`plans/IMPLEMENTATION_ROADMAP.md`, `plans/MVP_ROADMAP.md`, `plans/IMPLEMENTATION_PLAN_PRIORITY_TASKS.md`,
-> `reports/GAP_ANALYSIS_REPORT.md`, `docs/NEXT_STEPS_INVESTIGATION.md`, `plans/PHASE_4_TEMPLATE_PLAN.md`,
+> (`docs/plans/IMPLEMENTATION_ROADMAP.md`, `docs/plans/MVP_ROADMAP.md`,
+> `docs/plans/IMPLEMENTATION_PLAN_PRIORITY_TASKS.md`, `docs/reports/GAP_ANALYSIS_REPORT.md`,
+> `docs/NEXT_STEPS_INVESTIGATION.md`, `docs/plans/PHASE_4_TEMPLATE_PLAN.md`,
 > `planning/milestones.yaml`, `planning/epics/*.yaml`) **against the source tree**. Where a
 > document's claim disagreed with the code, the code wins and the evidence is cited inline.
 
