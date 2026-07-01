@@ -105,6 +105,9 @@ class HybridMetaController(AbstractMetaController):
         self._current_query: str | None = None
         self._current_assembly_features: AssemblyFeatures | None = None
 
+        # Most recent prediction, retained so explain_decision() can report it.
+        self._last_prediction: HybridPrediction | None = None
+
         # Statistics
         self._stats = {
             "total_predictions": 0,
@@ -186,17 +189,21 @@ class HybridMetaController(AbstractMetaController):
         # Combine predictions
         if neural_pred is None and assembly_decision is None:
             # Fallback: no information available
-            return self._fallback_prediction()
+            result = self._fallback_prediction()
         elif neural_pred is None:
             # Only assembly available
             assert assembly_decision is not None
-            return self._assembly_only_prediction(assembly_decision)
+            result = self._assembly_only_prediction(assembly_decision)
         elif assembly_decision is None:
             # Only neural available
-            return self._neural_only_prediction(neural_pred)
+            result = self._neural_only_prediction(neural_pred)
         else:
             # Both available - weighted ensemble
-            return self._ensemble_prediction(neural_pred, assembly_decision)
+            result = self._ensemble_prediction(neural_pred, assembly_decision)
+
+        # Retain for explain_decision().
+        self._last_prediction = result
+        return result
 
     def _ensemble_prediction(
         self,
