@@ -368,8 +368,10 @@ jobs:
           push: false
           load: true
           tags: langgraph-mcts:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Isolated cache scope + ignore-error to avoid cross-workflow manifest
+          # collisions that surface as transient "BlobNotFound" 404s.
+          cache-from: type=gha,scope=ci-production
+          cache-to: type=gha,mode=max,scope=ci-production,ignore-error=true
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 
@@ -458,8 +460,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=ci-production
+          cache-to: type=gha,mode=max,scope=ci-production,ignore-error=true
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 
