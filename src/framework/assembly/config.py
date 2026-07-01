@@ -38,6 +38,21 @@ class AssemblyConfig:
     routing_simple_threshold: int = 3
     routing_medium_threshold: int = 7
 
+    # Routing rule confidences (confidence attached to each rule-based decision)
+    routing_confidence_very_high: float = 0.9
+    routing_confidence_high: float = 0.85
+    routing_confidence_moderate: float = 0.8
+    routing_confidence_default: float = 0.6
+
+    # Routing feature thresholds (assembly-feature cutoffs used by the rules)
+    routing_copy_number_high: float = 5.0
+    routing_copy_number_very_high: float = 10.0
+    routing_decomposability_high: float = 0.7
+    routing_decomposability_moderate: float = 0.4
+    routing_decomposability_low: float = 0.3
+    routing_technical_complexity_high: float = 0.5
+    routing_graph_depth_structured: int = 3
+
     # TRM settings
     trm_complexity_penalty: float = 0.1
     trm_convergence_threshold: float = 0.01
@@ -91,6 +106,21 @@ class AssemblyConfig:
         routing = assembly_config.get("routing", {})
         config_dict["routing_simple_threshold"] = routing.get("simple_threshold", cls.routing_simple_threshold)
         config_dict["routing_medium_threshold"] = routing.get("medium_threshold", cls.routing_medium_threshold)
+        # Routing rule confidences + feature thresholds (all optional in YAML).
+        for _key in (
+            "routing_confidence_very_high",
+            "routing_confidence_high",
+            "routing_confidence_moderate",
+            "routing_confidence_default",
+            "routing_copy_number_high",
+            "routing_copy_number_very_high",
+            "routing_decomposability_high",
+            "routing_decomposability_moderate",
+            "routing_decomposability_low",
+            "routing_technical_complexity_high",
+            "routing_graph_depth_structured",
+        ):
+            config_dict[_key] = routing.get(_key.removeprefix("routing_"), getattr(cls, _key))
 
         # TRM
         trm = assembly_config.get("trm", {})

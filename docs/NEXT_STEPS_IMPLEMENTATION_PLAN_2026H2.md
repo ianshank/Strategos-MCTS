@@ -20,7 +20,7 @@
 > archival root docs into `docs/{reports,summaries,plans,quickstart}`. **Remaining (Phase 8b–e):** untrack
 > committed model binaries (`models/*.pt`), consolidate the demo trees (`demo.py`/`chess_demo.py`/
 > `demo_src`/`demos` → `examples/`), and disambiguate `config/` vs `src/config/`.
-
+>
 > **Version:** 2.0.0 · **Date:** 2026-06-30 · **Status:** Active
 > **Supersedes:** `docs/plans/NEXT_STEPS_PLAN.md` (v1.0), the status sections of
 > `docs/reports/GAP_ANALYSIS_REPORT.md`, and `docs/NEXT_STEPS_INVESTIGATION.md` where they conflict with

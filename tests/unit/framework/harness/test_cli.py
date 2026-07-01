@@ -104,7 +104,11 @@ def test_resolve_intent_requires_spec_or_goal() -> None:
 
 def test_apply_settings_overrides_promotes_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """CLI flags are promoted into HARNESS_* env vars before settings load."""
+    # _apply_settings_overrides writes directly to os.environ; pre-clear every key
+    # it sets via monkeypatch so they are restored after the test (no env leak).
     monkeypatch.delenv("HARNESS_MAX_ITERATIONS", raising=False)
+    monkeypatch.delenv("HARNESS_MEMORY_ROOT", raising=False)
+    monkeypatch.delenv("HARNESS_OUTPUT_DIR", raising=False)
     args = argparse.Namespace(
         max_iterations=7,
         memory_root=tmp_path / "mem",

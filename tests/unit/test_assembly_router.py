@@ -370,33 +370,26 @@ class TestExplainRouting:
 
 @pytest.mark.unit
 class TestRoutingConstants:
-    """The routing rules source their confidences/thresholds from named constants."""
+    """The routing rules source their confidences/thresholds from AssemblyConfig."""
 
-    def test_confidence_constants_defined(self):
-        """Named confidence constants exist with the documented values."""
-        from src.agents.meta_controller import assembly_router as ar
-
-        assert ar.CONFIDENCE_VERY_HIGH == 0.9
-        assert ar.CONFIDENCE_HIGH == 0.85
-        assert ar.CONFIDENCE_MODERATE == 0.8
-        assert ar.CONFIDENCE_DEFAULT == 0.6
-
-    def test_threshold_constants_defined(self):
-        """Named assembly-feature thresholds exist."""
-        from src.agents.meta_controller import assembly_router as ar
-
-        assert ar.COPY_NUMBER_HIGH == 5.0
-        assert ar.COPY_NUMBER_VERY_HIGH == 10.0
-        assert ar.DECOMPOSABILITY_HIGH == 0.7
-        assert ar.DECOMPOSABILITY_MODERATE == 0.4
-        assert ar.DECOMPOSABILITY_LOW == 0.3
-        assert ar.TECHNICAL_COMPLEXITY_HIGH == 0.5
-        assert ar.GRAPH_DEPTH_STRUCTURED == 3
+    def test_config_defaults(self):
+        """AssemblyConfig carries the documented routing confidence/threshold defaults."""
+        config = AssemblyConfig()
+        assert config.routing_confidence_very_high == 0.9
+        assert config.routing_confidence_high == 0.85
+        assert config.routing_confidence_moderate == 0.8
+        assert config.routing_confidence_default == 0.6
+        assert config.routing_copy_number_high == 5.0
+        assert config.routing_copy_number_very_high == 10.0
+        assert config.routing_decomposability_high == 0.7
+        assert config.routing_decomposability_moderate == 0.4
+        assert config.routing_decomposability_low == 0.3
+        assert config.routing_technical_complexity_high == 0.5
+        assert config.routing_graph_depth_structured == 3
 
     @patch("src.agents.meta_controller.assembly_router.AssemblyFeatureExtractor")
-    def test_rules_use_confidence_constants(self, mock_extractor_cls):
-        """A high-complexity route reports exactly CONFIDENCE_VERY_HIGH."""
-        from src.agents.meta_controller import assembly_router as ar
+    def test_rules_use_config_confidence(self, mock_extractor_cls):
+        """A high-complexity route reports the config's very-high confidence."""
         from src.agents.meta_controller.assembly_router import AssemblyRouter
 
         router = AssemblyRouter()
@@ -405,4 +398,17 @@ class TestRoutingConstants:
         decision = router.route("complex", features=features)
 
         assert decision.agent == "mcts"
-        assert decision.confidence == ar.CONFIDENCE_VERY_HIGH
+        assert decision.confidence == router.config.routing_confidence_very_high
+
+    @patch("src.agents.meta_controller.assembly_router.AssemblyFeatureExtractor")
+    def test_config_override_propagates_to_decision(self, mock_extractor_cls):
+        """Overriding a confidence in AssemblyConfig propagates to the routing decision."""
+        from src.agents.meta_controller.assembly_router import AssemblyRouter
+
+        config = AssemblyConfig(routing_confidence_very_high=0.42)
+        router = AssemblyRouter(config=config)
+        features = _make_features(assembly_index=20.0, copy_number=1.0, decomposability_score=0.5)
+        decision = router.route("complex", features=features)
+
+        assert decision.agent == "mcts"
+        assert decision.confidence == 0.42
