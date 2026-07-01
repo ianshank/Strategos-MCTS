@@ -19,6 +19,29 @@ from .base import MetaControllerPrediction
 
 logger = get_logger(__name__)
 
+# ---------------------------------------------------------------------------
+# Routing heuristic constants (no inline magic numbers)
+#
+# Confidence levels attached to each rule-based routing decision, and the
+# assembly-feature thresholds that trigger them. Assembly-index thresholds
+# themselves remain configurable via ``AssemblyConfig`` (see ``__init__``).
+# ---------------------------------------------------------------------------
+
+# Confidence levels for rule matches
+CONFIDENCE_VERY_HIGH: float = 0.9
+CONFIDENCE_HIGH: float = 0.85
+CONFIDENCE_MODERATE: float = 0.8
+CONFIDENCE_DEFAULT: float = 0.6
+
+# Assembly-feature thresholds
+COPY_NUMBER_HIGH: float = 5.0  # "high reusability"
+COPY_NUMBER_VERY_HIGH: float = 10.0  # "very high reusability"
+DECOMPOSABILITY_HIGH: float = 0.7
+DECOMPOSABILITY_MODERATE: float = 0.4
+DECOMPOSABILITY_LOW: float = 0.3
+TECHNICAL_COMPLEXITY_HIGH: float = 0.5
+GRAPH_DEPTH_STRUCTURED: int = 3
+
 
 @dataclass
 class RoutingDecision:
@@ -149,54 +172,62 @@ class AssemblyRouter:
         tech_comp = features.technical_complexity
 
         # Rule 1: Very simple queries with high reusability → TRM
-        if assembly_idx < self.simple_threshold and copy_num > 5:
+        if assembly_idx < self.simple_threshold and copy_num > COPY_NUMBER_HIGH:
             return (
                 "trm",
-                0.9,
+                CONFIDENCE_VERY_HIGH,
                 f"Simple query (assembly index: {assembly_idx:.1f}) with high reusability (copy number: {copy_num:.1f}) → TRM for pattern-based reasoning",
             )
 
         # Rule 2: Very high reusability (lots of known patterns) → TRM
-        if copy_num > 10:
+        if copy_num > COPY_NUMBER_VERY_HIGH:
             return (
                 "trm",
-                0.85,
+                CONFIDENCE_HIGH,
                 f"Very high pattern reusability (copy number: {copy_num:.1f}) → TRM can leverage existing patterns",
             )
 
         # Rule 3: Simple query → TRM
         if assembly_idx < self.simple_threshold:
-            return ("trm", 0.8, f"Simple query (assembly index: {assembly_idx:.1f}) → TRM for direct reasoning")
+            return (
+                "trm",
+                CONFIDENCE_MODERATE,
+                f"Simple query (assembly index: {assembly_idx:.1f}) → TRM for direct reasoning",
+            )
 
         # Rule 4: Highly decomposable → HRM
-        if decomp > 0.7:
+        if decomp > DECOMPOSABILITY_HIGH:
             return (
                 "hrm",
-                0.9,
+                CONFIDENCE_VERY_HIGH,
                 f"Highly decomposable query (score: {decomp:.2f}) with {features.graph_depth} dependency layers → HRM for hierarchical breakdown",
             )
 
         # Rule 5: Medium complexity with good decomposability → HRM
-        if assembly_idx < self.medium_threshold and decomp > 0.4:
+        if assembly_idx < self.medium_threshold and decomp > DECOMPOSABILITY_MODERATE:
             return (
                 "hrm",
-                0.85,
+                CONFIDENCE_HIGH,
                 f"Medium complexity (assembly index: {assembly_idx:.1f}) with moderate decomposability ({decomp:.2f}) → HRM",
             )
 
         # Rule 6: High technical complexity with structured dependencies → HRM
-        if tech_comp > 0.5 and assembly_idx < self.medium_threshold and features.graph_depth > 3:
+        if (
+            tech_comp > TECHNICAL_COMPLEXITY_HIGH
+            and assembly_idx < self.medium_threshold
+            and features.graph_depth > GRAPH_DEPTH_STRUCTURED
+        ):
             return (
                 "hrm",
-                0.8,
+                CONFIDENCE_MODERATE,
                 f"Technical query (complexity: {tech_comp:.2f}) with structured {features.graph_depth}-layer hierarchy → HRM",
             )
 
         # Rule 7: Very low decomposability (hard to break down) → MCTS
-        if decomp < 0.3:
+        if decomp < DECOMPOSABILITY_LOW:
             return (
                 "mcts",
-                0.85,
+                CONFIDENCE_HIGH,
                 f"Low decomposability ({decomp:.2f}) - complex interconnected structure → MCTS for exploratory search",
             )
 
@@ -204,14 +235,14 @@ class AssemblyRouter:
         if assembly_idx >= self.medium_threshold:
             return (
                 "mcts",
-                0.9,
+                CONFIDENCE_VERY_HIGH,
                 f"High complexity (assembly index: {assembly_idx:.1f}) → MCTS for systematic exploration",
             )
 
         # Default: Medium complexity → HRM (safe default for structured reasoning)
         return (
             "hrm",
-            0.6,
+            CONFIDENCE_DEFAULT,
             f"Medium complexity (assembly index: {assembly_idx:.1f}) → HRM (default for structured queries)",
         )
 

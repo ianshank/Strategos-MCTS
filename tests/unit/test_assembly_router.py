@@ -366,3 +366,43 @@ class TestExplainRouting:
         assert "Routing Decision:" in explanation
         assert "Selected Agent:" in explanation
         assert "Confidence:" in explanation
+
+
+@pytest.mark.unit
+class TestRoutingConstants:
+    """The routing rules source their confidences/thresholds from named constants."""
+
+    def test_confidence_constants_defined(self):
+        """Named confidence constants exist with the documented values."""
+        from src.agents.meta_controller import assembly_router as ar
+
+        assert ar.CONFIDENCE_VERY_HIGH == 0.9
+        assert ar.CONFIDENCE_HIGH == 0.85
+        assert ar.CONFIDENCE_MODERATE == 0.8
+        assert ar.CONFIDENCE_DEFAULT == 0.6
+
+    def test_threshold_constants_defined(self):
+        """Named assembly-feature thresholds exist."""
+        from src.agents.meta_controller import assembly_router as ar
+
+        assert ar.COPY_NUMBER_HIGH == 5.0
+        assert ar.COPY_NUMBER_VERY_HIGH == 10.0
+        assert ar.DECOMPOSABILITY_HIGH == 0.7
+        assert ar.DECOMPOSABILITY_MODERATE == 0.4
+        assert ar.DECOMPOSABILITY_LOW == 0.3
+        assert ar.TECHNICAL_COMPLEXITY_HIGH == 0.5
+        assert ar.GRAPH_DEPTH_STRUCTURED == 3
+
+    @patch("src.agents.meta_controller.assembly_router.AssemblyFeatureExtractor")
+    def test_rules_use_confidence_constants(self, mock_extractor_cls):
+        """A high-complexity route reports exactly CONFIDENCE_VERY_HIGH."""
+        from src.agents.meta_controller import assembly_router as ar
+        from src.agents.meta_controller.assembly_router import AssemblyRouter
+
+        router = AssemblyRouter()
+        # assembly_index >= medium_threshold (Rule 8) → MCTS at very-high confidence.
+        features = _make_features(assembly_index=20.0, copy_number=1.0, decomposability_score=0.5)
+        decision = router.route("complex", features=features)
+
+        assert decision.agent == "mcts"
+        assert decision.confidence == ar.CONFIDENCE_VERY_HIGH
