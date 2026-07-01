@@ -145,7 +145,7 @@ results = evaluate(
 
 - **Script**: `scripts/create_rag_eval_datasets.py`
 - **Full Documentation**: `docs/RAG_EVAL_DATASET_SUMMARY.md`
-- **Quick Start**: `docs/RAG_EVAL_QUICK_START.md` (this file)
+- **Quick Start**: `docs/RAG_EVAL_DATASET_QUICKSTART.md` (this file)
 
 ## Next Steps
 

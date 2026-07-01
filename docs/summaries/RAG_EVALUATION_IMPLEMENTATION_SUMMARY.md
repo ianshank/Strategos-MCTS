@@ -147,7 +147,7 @@ env:
 9. Additional Resources
 
 #### Quick Start Guide
-**File**: `docs/RAG_EVALUATION_QUICKSTART.md` (2KB)
+**File**: consolidated into `docs/RAG_EVALUATION.md` (Quick Start section)
 
 **Contents**:
 - One-time setup (3 steps)
@@ -195,13 +195,12 @@ python scripts/test_rag_evaluation.py
 
 ## Files Created/Modified
 
-### New Files (6)
-1. ✅ `docs/RAG_EVALUATION.md` - Comprehensive guide
-2. ✅ `docs/RAG_EVALUATION_QUICKSTART.md` - Quick reference
-3. ✅ `examples/rag_evaluation_example_output.md` - Example outputs
-4. ✅ `monitoring/grafana/dashboards/rag-evaluation.json` - Grafana dashboard
-5. ✅ `monitoring/prometheus_alerts_rag.yml` - Prometheus alerts
-6. ✅ `scripts/test_rag_evaluation.py` - Validation script
+### New Files (5)
+1. ✅ `docs/RAG_EVALUATION.md` - Comprehensive guide (incl. Quick Start section)
+2. ✅ `examples/rag_evaluation_example_output.md` - Example outputs
+3. ✅ `monitoring/grafana/dashboards/rag-evaluation.json` - Grafana dashboard
+4. ✅ `monitoring/prometheus_alerts_rag.yml` - Prometheus alerts
+5. ✅ `scripts/test_rag_evaluation.py` - Validation script
 
 ### Modified Files (3)
 1. ✅ `scripts/evaluate_rag.py` - Enhanced with real RAG pipeline
@@ -539,8 +538,7 @@ python scripts/evaluate_rag.py \
 ## Resources
 
 ### Documentation
-- [RAG Evaluation Guide](./docs/RAG_EVALUATION.md) - Full documentation
-- [Quick Start Guide](./docs/RAG_EVALUATION_QUICKSTART.md) - Quick reference
+- [RAG Evaluation Guide](./docs/RAG_EVALUATION.md) - Full documentation (incl. Quick Start section)
 - [Example Outputs](./examples/rag_evaluation_example_output.md) - Sample results
 
 ### External Links

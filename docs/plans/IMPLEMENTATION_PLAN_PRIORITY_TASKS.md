@@ -1,5 +1,10 @@
 # Implementation Plan: Priority Tasks
 
+> **⚠️ Superseded / historical (Jan 2026).** Current test/coverage status lives in
+> [`docs/STATUS.md`](../STATUS.md); the active roadmap is
+> [`docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`](../NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md).
+> Retained for provenance; the status below reflects early 2026 and is stale.
+
 > **Status**: Active Implementation Plan
 > **Created**: 2026-01-28
 > **Branch**: `claude/scan-plan-next-steps-n2ZdG`

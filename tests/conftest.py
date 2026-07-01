@@ -8,7 +8,7 @@ across all test modules. Following best practices from 2026:
 - Async fixtures with proper cleanup
 - No hardcoded values - all configurable via environment
 
-Based on: CLAUDE_CODE_IMPLEMENTATION_TEMPLATE.md
+Based on: MULTI_AGENT_MCTS_TEMPLATE.md
 """
 
 from __future__ import annotations
