@@ -538,8 +538,8 @@ python scripts/evaluate_rag.py \
 ## Resources
 
 ### Documentation
-- [RAG Evaluation Guide](./docs/RAG_EVALUATION.md) - Full documentation (incl. Quick Start section)
-- [Example Outputs](./examples/rag_evaluation_example_output.md) - Sample results
+- [RAG Evaluation Guide](../RAG_EVALUATION.md) - Full documentation (incl. Quick Start section)
+- [Example Outputs](../../examples/rag_evaluation_example_output.md) - Sample results
 
 ### External Links
 - [RAGAS Documentation](https://docs.ragas.io/)
