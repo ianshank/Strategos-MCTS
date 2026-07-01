@@ -7,11 +7,20 @@ scripted LLM.
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.framework.harness.cli import main
+from src.framework.harness.cli import (
+    _apply_settings_overrides,
+    _resolve_intent,
+    main,
+)
+from src.framework.harness.loop.runner import RunResult
+from src.framework.harness.outcomes import Terminal
 
 pytestmark = pytest.mark.unit
 
@@ -51,3 +60,142 @@ def test_dry_run_prints_plan(tmp_path: Path, capsys: pytest.CaptureFixture) -> N
     assert rc == 0
     assert "plan_steps" in captured.out
     assert "Do a thing" in captured.out
+
+
+def test_validate_spec_warns_on_missing_goal(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+    """A spec with no goal section still exits 0 but prints a warning to stderr."""
+    spec = tmp_path / "nogoal.md"
+    spec.write_text("# Constraints\n- safe\n", encoding="utf-8")
+    rc = main(["validate-spec", str(spec)])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "no goal section" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# _resolve_intent / _apply_settings_overrides units
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_intent_from_spec(tmp_path: Path) -> None:
+    """A --spec path yields a normalized intent dict with criteria/constraints."""
+    spec = _spec(tmp_path)
+    args = argparse.Namespace(spec=spec, goal=None)
+    intent = _resolve_intent(args)
+    assert isinstance(intent, dict)
+    assert intent["goal"] == "Do a thing."
+    assert [c["description"] for c in intent["acceptance_criteria"]] == ["one", "two"]
+    assert intent["constraints"] == ["safe"]
+    assert intent["metadata"]["spec_path"] == str(spec)
+
+
+def test_resolve_intent_from_goal() -> None:
+    """An inline --goal (no spec) is returned verbatim as a string."""
+    args = argparse.Namespace(spec=None, goal="just do it")
+    assert _resolve_intent(args) == "just do it"
+
+
+def test_resolve_intent_requires_spec_or_goal() -> None:
+    """Neither --spec nor --goal is a hard error."""
+    args = argparse.Namespace(spec=None, goal=None)
+    with pytest.raises(SystemExit):
+        _resolve_intent(args)
+
+
+def test_apply_settings_overrides_promotes_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """CLI flags are promoted into HARNESS_* env vars before settings load."""
+    monkeypatch.delenv("HARNESS_MAX_ITERATIONS", raising=False)
+    args = argparse.Namespace(
+        max_iterations=7,
+        memory_root=tmp_path / "mem",
+        output_dir=tmp_path / "out",
+    )
+    settings = _apply_settings_overrides(args)
+    import os
+
+    assert os.environ["HARNESS_MAX_ITERATIONS"] == "7"
+    assert os.environ["HARNESS_MEMORY_ROOT"] == str(tmp_path / "mem")
+    assert os.environ["HARNESS_OUTPUT_DIR"] == str(tmp_path / "out")
+    assert settings is not None
+
+
+# ---------------------------------------------------------------------------
+# run / replay paths (factory mocked — no real LLM)
+# ---------------------------------------------------------------------------
+
+
+def _patch_factory(monkeypatch: pytest.MonkeyPatch, runner: object) -> MagicMock:
+    """Patch cli.HarnessFactory so create_runner returns ``runner``."""
+    factory = MagicMock()
+    factory.create_runner.return_value = runner
+    factory_cls = MagicMock(return_value=factory)
+    monkeypatch.setattr("src.framework.harness.cli.HarnessFactory", factory_cls)
+    return factory
+
+
+def test_run_accepted_json(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
+    """An accepted terminal outcome exits 0 and emits JSON when --json is set."""
+    runner = MagicMock()
+    runner.run = AsyncMock(
+        return_value=RunResult(
+            outcome=Terminal(accepted=True),
+            state=MagicMock(),
+            iterations=2,
+            duration_ms=12.345,
+            confidence=0.9,
+            metadata={"k": "v"},
+        )
+    )
+    _patch_factory(monkeypatch, runner)
+    rc = main(["run", "--goal", "do a thing", "--json"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert '"accepted": true' in out
+    assert '"outcome": "terminal"' in out
+
+
+def test_run_rejected_plain_output(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
+    """A non-accepted outcome exits 2 and prints key=value lines."""
+    runner = MagicMock()
+    runner.run = AsyncMock(
+        return_value=RunResult(outcome=Terminal(accepted=False), state=MagicMock(), iterations=1, confidence=0.1)
+    )
+    _patch_factory(monkeypatch, runner)
+    rc = main(["run", "--goal", "do a thing"])
+    out = capsys.readouterr().out
+    assert rc == 2
+    assert "outcome=terminal" in out
+    assert "accepted=False" in out
+
+
+def test_run_ralph_path(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
+    """The --ralph flag drives the Ralph loop and reports its status."""
+    runner = MagicMock()
+    last_run = SimpleNamespace(outcome=SimpleNamespace(kind="terminal"), confidence=0.8)
+    ralph_result = SimpleNamespace(status="accepted", rounds=3, stuck_kind=None, last_run=last_run)
+    ralph_loop = MagicMock()
+    ralph_loop.run = AsyncMock(return_value=ralph_result)
+    factory = _patch_factory(monkeypatch, runner)
+    factory.create_ralph.return_value = ralph_loop
+
+    rc = main(["run", "--goal", "do a thing", "--ralph", "--json"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert '"status": "accepted"' in out
+    assert '"rounds": 3' in out
+
+
+def test_replay_sets_env_and_runs(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture, tmp_path: Path
+) -> None:
+    """``harness replay`` promotes the cassette dir into the env and runs."""
+    runner = MagicMock()
+    runner.run = AsyncMock(return_value=RunResult(outcome=Terminal(accepted=True), state=MagicMock(), iterations=1))
+    _patch_factory(monkeypatch, runner)
+    cassette = tmp_path / "cass"
+    cassette.mkdir()
+    rc = main(["replay", "--cassette-dir", str(cassette), "--goal", "do a thing"])
+    import os
+
+    assert rc == 0
+    assert os.environ["HARNESS_REPLAY_DIR"] == str(cassette)
