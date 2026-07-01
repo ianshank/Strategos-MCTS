@@ -20,7 +20,7 @@ This framework implements a multi-agent system combining hierarchical reasoning 
   logic and certain training loops ship as overridable defaults, not finished implementations.
 - See **[`docs/STATUS.md`](docs/STATUS.md)** for the current, reproducible test/coverage status
   (the source of truth) and **[`docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`](docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md)**
-  for the active roadmap. (`GAP_ANALYSIS_REPORT.md` is retained for history but superseded.)
+  for the active roadmap. (`docs/reports/GAP_ANALYSIS_REPORT.md` is retained for history but superseded.)
 
 ## 🚀 Key Features
 

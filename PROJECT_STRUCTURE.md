@@ -39,9 +39,13 @@ langgraph-multi-agent-mcts/
 │   ├── API_QUICK_REFERENCE.md          # API quick reference
 │   ├── MCP_SERVER_GUIDE.md             # MCP server setup
 │   ├── DEPLOYMENT_REPORT.md            # Deployment status report
-│   ├── SCALABILITY_ANALYSIS.md         # Performance analysis
 │   ├── NEURAL_TRAINING_SUMMARY.md      # Neural network training
 │   ├── INTEGRATION_STATUS.md           # Integration status
+│   ├── STATUS.md                # Reproducible test/coverage baseline (source of truth)
+│   ├── reports/                 # Analyses & completion reports (e.g. SCALABILITY_ANALYSIS.md)
+│   ├── summaries/               # Feature/module implementation summaries
+│   ├── plans/                   # Roadmaps, implementation plans, PR descriptions
+│   ├── quickstart/              # Quickstart guides (Docker, synthetic generation)
 │   ├── img/                     # Documentation images
 │   ├── mermaid/                 # Architecture diagrams
 │   ├── runbooks/                # Operational runbooks
