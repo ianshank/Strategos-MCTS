@@ -1,5 +1,5 @@
 ---
-goal: Raise core-module coverage toward 95% and lift the enforced gate to 90%
+goal: Gap-analysis coverage lift for under-tested core modules; hold the >=85% gate
 phase: "7"
 milestone: M5
 status: active
@@ -7,9 +7,11 @@ status: active
 
 # Goal
 
-Close the genuinely testable coverage gaps in the core (`src/framework/harness/` and
-`src/framework/mcts/llm_guided/` are the largest untested surfaces), target ~95% branch coverage on those
-core modules, and raise the global CI gate from 85% to 90% once coverage clears it with margin.
+Run a gap analysis over the branch and raise the genuinely testable core modules that sit below the 85%
+branch-coverage gate up to at least 85%, keeping the enforced global gate at 85% (currently satisfied at
+~89.6%). Prioritize pure-logic modules (harness CLI/factories, `mcts/llm_guided` RAG, meta-controller,
+benchmark adapters); modules whose remaining lines require optional dependencies (google-adk, chess) are
+out of scope, like the coverage `omit` list.
 
 # Acceptance Criteria
 
