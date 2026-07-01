@@ -91,11 +91,14 @@ def _resolve_intent(args: argparse.Namespace) -> str | dict[str, object]:
 async def _cmd_run(args: argparse.Namespace) -> int:
     hs = _apply_settings_overrides(args)
     factory = HarnessFactory(harness_settings=hs)
-    runner = factory.create_runner(shell_allowlist=args.shell_allow or None)
+    # ``replay`` reuses this path but its subparser omits the run-only flags,
+    # so read them defensively rather than assuming they exist on the namespace.
+    shell_allow = getattr(args, "shell_allow", None)
+    runner = factory.create_runner(shell_allowlist=shell_allow or None)
     intent = _resolve_intent(args)
 
     payload: dict[str, object]
-    if args.ralph:
+    if getattr(args, "ralph", False):
         loop = factory.create_ralph(runner, spec_path=args.spec)
         result = await loop.run()
         ralph_accepted = result.status in {"accepted", "done"}
@@ -119,7 +122,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
             "metadata": run_result.metadata,
         }
 
-    if args.json:
+    if getattr(args, "json", False):
         sys.stdout.write(json.dumps(payload, indent=2, default=str) + "\n")
     else:
         sys.stdout.write(f"outcome={payload['outcome']}\n")

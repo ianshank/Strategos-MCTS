@@ -319,6 +319,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write  # required for github/codeql-action/upload-sarif (Trivy results)
     steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@v1.3.1
@@ -367,8 +368,10 @@ jobs:
           push: false
           load: true
           tags: langgraph-mcts:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Isolated cache scope + ignore-error to avoid cross-workflow manifest
+          # collisions that surface as transient "BlobNotFound" 404s.
+          cache-from: type=gha,scope=ci-production
+          cache-to: type=gha,mode=max,scope=ci-production,ignore-error=true
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 
@@ -439,6 +442,10 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         # Only upload when Trivy actually produced the SARIF (avoids
         # "Path does not exist: trivy-results.sarif" failing the job on a Trivy flake).
+        # Advisory: don't fail the build if code scanning is unavailable on the repo
+        # (e.g. GHAS disabled) — the job-level security-events: write permission is the
+        # primary fix; continue-on-error is the fallback.
+        continue-on-error: true
         if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
@@ -453,8 +460,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=ci-production
+          cache-to: type=gha,mode=max,scope=ci-production,ignore-error=true
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 

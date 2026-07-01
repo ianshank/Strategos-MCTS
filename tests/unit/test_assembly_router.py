@@ -366,3 +366,49 @@ class TestExplainRouting:
         assert "Routing Decision:" in explanation
         assert "Selected Agent:" in explanation
         assert "Confidence:" in explanation
+
+
+@pytest.mark.unit
+class TestRoutingConstants:
+    """The routing rules source their confidences/thresholds from AssemblyConfig."""
+
+    def test_config_defaults(self):
+        """AssemblyConfig carries the documented routing confidence/threshold defaults."""
+        config = AssemblyConfig()
+        assert config.routing_confidence_very_high == 0.9
+        assert config.routing_confidence_high == 0.85
+        assert config.routing_confidence_moderate == 0.8
+        assert config.routing_confidence_default == 0.6
+        assert config.routing_copy_number_high == 5.0
+        assert config.routing_copy_number_very_high == 10.0
+        assert config.routing_decomposability_high == 0.7
+        assert config.routing_decomposability_moderate == 0.4
+        assert config.routing_decomposability_low == 0.3
+        assert config.routing_technical_complexity_high == 0.5
+        assert config.routing_graph_depth_structured == 3
+
+    @patch("src.agents.meta_controller.assembly_router.AssemblyFeatureExtractor")
+    def test_rules_use_config_confidence(self, mock_extractor_cls):
+        """A high-complexity route reports the config's very-high confidence."""
+        from src.agents.meta_controller.assembly_router import AssemblyRouter
+
+        router = AssemblyRouter()
+        # assembly_index >= medium_threshold (Rule 8) → MCTS at very-high confidence.
+        features = _make_features(assembly_index=20.0, copy_number=1.0, decomposability_score=0.5)
+        decision = router.route("complex", features=features)
+
+        assert decision.agent == "mcts"
+        assert decision.confidence == router.config.routing_confidence_very_high
+
+    @patch("src.agents.meta_controller.assembly_router.AssemblyFeatureExtractor")
+    def test_config_override_propagates_to_decision(self, mock_extractor_cls):
+        """Overriding a confidence in AssemblyConfig propagates to the routing decision."""
+        from src.agents.meta_controller.assembly_router import AssemblyRouter
+
+        config = AssemblyConfig(routing_confidence_very_high=0.42)
+        router = AssemblyRouter(config=config)
+        features = _make_features(assembly_index=20.0, copy_number=1.0, decomposability_score=0.5)
+        decision = router.route("complex", features=features)
+
+        assert decision.agent == "mcts"
+        assert decision.confidence == 0.42

@@ -365,9 +365,9 @@ class TestADKAgentFactory:
         )
 
         class FactoryTestAgent(ADKAgentAdapter):
-            def __init__(self, config):
-                # Call parent with agent_name since factory doesn't pass it
-                super().__init__(config=config, agent_name="factory_test_agent")
+            def __init__(self, config, agent_name="factory_test_agent"):
+                # Factory supplies agent_name (the registered type); accept it here.
+                super().__init__(config=config, agent_name=agent_name)
 
             async def _agent_initialize(self):
                 pass

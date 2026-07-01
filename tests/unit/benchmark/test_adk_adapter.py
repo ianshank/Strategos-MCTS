@@ -186,6 +186,31 @@ class TestADKBenchmarkAdapterExecution:
         assert "Runner build failed" in result.raw_response
         assert result.total_latency_ms > 0
 
+    @pytest.mark.asyncio
+    async def test_execute_processes_stream_events(self) -> None:
+        """The happy path extracts text, counts tool calls, and records timing."""
+        adapter = ADKBenchmarkAdapter(settings=self.settings, coordinator_agent=MagicMock())
+        adapter._runner = MagicMock()
+
+        async def fake_stream(runner: object, task: object):
+            yield {"author": "code_reviewer", "content": {"parts": [{"text": "hello"}]}}
+            yield {
+                "author": "risk_assessor",
+                "content": {"parts": [{"text": "world"}, {"function_call": {"name": "x"}}]},
+            }
+
+        # Bypass _stream_execution's google.genai import by injecting a stub stream.
+        adapter._stream_execution = fake_stream  # type: ignore[method-assign]
+
+        result = await adapter.execute(_make_task())
+
+        assert not result.has_error
+        assert result.raw_response == "hello\nworld"
+        assert result.num_tool_calls == 1
+        assert result.num_agent_calls == 2
+        assert result.time_to_first_token_ms is not None
+        assert result.total_latency_ms > 0
+
 
 @pytest.mark.unit
 class TestADKBenchmarkAdapterHealthCheck:

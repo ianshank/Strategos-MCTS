@@ -11,13 +11,26 @@
 > `spec-validate`) complete. Deploy-time only: Phase **3.3 staging soak** (runbook in
 > `docs/SECRETS_MANAGEMENT.md`); M5 lift target is to be run to convergence on a chosen domain.
 
+> **Tech-debt cleanup (branch `claude/tech-debt-cicd-cleanup-5i2eec`, specs `phase_5..8`):**
+> Phase **5** — green CI (ADK factory test + Trivy SARIF `security-events` permission). Phase **6** —
+> config centralization (assembly-router constants, LMStudio model dedup; the codebase was already
+> largely centralized). Phase **7** — coverage gap-analysis lifts holding the ≥85% gate (~89.6%):
+> `harness/cli.py`, `harness/factories.py`, `adk_adapter`, `rag/prompts`, `HybridMetaController`; also
+> fixed the inert `explain_decision` and the broken `harness replay` path. Phase **8a** — consolidated 36
+> archival root docs into `docs/{reports,summaries,plans,quickstart}`. **Remaining (Phase 8b–e):** untrack
+> committed model binaries (`models/*.pt`), consolidate the demo trees (`demo.py`/`chess_demo.py`/
+> `demo_src`/`demos` → `examples/`), and disambiguate `config/` vs `src/config/`.
+>
 > **Version:** 2.0.0 · **Date:** 2026-06-30 · **Status:** Active
-> **Supersedes:** `NEXT_STEPS_PLAN.md` (v1.0), the status sections of `GAP_ANALYSIS_REPORT.md`,
-> and `docs/NEXT_STEPS_INVESTIGATION.md` where they conflict with the **Verified Status** table below.
+> **Supersedes:** `docs/plans/NEXT_STEPS_PLAN.md` (v1.0), the status sections of
+> `docs/reports/GAP_ANALYSIS_REPORT.md`, and `docs/NEXT_STEPS_INVESTIGATION.md` where they conflict with
+> the **Verified Status** table below. (Archival roadmap docs were relocated under `docs/plans/` and
+> `docs/reports/` in Phase 8a.)
 >
 > This plan was produced by reconciling every roadmap/milestone/next-steps document
-> (`IMPLEMENTATION_ROADMAP.md`, `MVP_ROADMAP.md`, `IMPLEMENTATION_PLAN_PRIORITY_TASKS.md`,
-> `GAP_ANALYSIS_REPORT.md`, `docs/NEXT_STEPS_INVESTIGATION.md`, `PHASE_4_TEMPLATE_PLAN.md`,
+> (`docs/plans/IMPLEMENTATION_ROADMAP.md`, `docs/plans/MVP_ROADMAP.md`,
+> `docs/plans/IMPLEMENTATION_PLAN_PRIORITY_TASKS.md`, `docs/reports/GAP_ANALYSIS_REPORT.md`,
+> `docs/NEXT_STEPS_INVESTIGATION.md`, `docs/plans/PHASE_4_TEMPLATE_PLAN.md`,
 > `planning/milestones.yaml`, `planning/epics/*.yaml`) **against the source tree**. Where a
 > document's claim disagreed with the code, the code wins and the evidence is cited inline.
 

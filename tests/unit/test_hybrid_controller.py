@@ -157,3 +157,57 @@ class TestHybridMetaController:
         assert "assembly_dominant" in stats
         assert "neural_override" in stats
         assert "assembly_override" in stats
+
+    def test_get_statistics_computes_rates(self):
+        """get_statistics derives agreement/win rates once predictions exist."""
+        mock_neural = MagicMock()
+        mock_neural.predict.return_value = _make_neural_prediction("hrm", 0.9)
+        controller = HybridMetaController(neural_controller=mock_neural)
+        controller.predict(_make_features(), query="optimize the best algorithm")
+        stats = controller.get_statistics()
+        assert stats["total_predictions"] == 1
+        assert "agreement_rate" in stats
+        assert "neural_win_rate" in stats
+        assert "assembly_win_rate" in stats
+        assert "assembly_router" in stats
+
+    def test_ensemble_tracks_disagreement_override(self):
+        """A neural/assembly disagreement records an override statistic."""
+        mock_neural = MagicMock()
+        # Neural strongly prefers trm; assembly (simple query) tends to trm/hrm — force divergence
+        mock_neural.predict.return_value = _make_neural_prediction("trm", 0.95)
+        controller = HybridMetaController(neural_controller=mock_neural, neural_weight=0.9, assembly_weight=0.1)
+        controller.predict(_make_features(), query="design a highly decomposable multi-step system")
+        overrides = controller._stats["neural_override"] + controller._stats["assembly_override"]
+        dominants = controller._stats["neural_dominant"] + controller._stats["assembly_dominant"]
+        assert overrides + dominants == 1  # exactly one ensemble decision was classified
+
+    def test_adjust_weights_renormalizes(self):
+        controller = HybridMetaController()
+        controller.adjust_weights(neural_weight=3.0, assembly_weight=1.0)
+        assert controller.neural_weight == pytest.approx(0.75)
+        assert controller.assembly_weight == pytest.approx(0.25)
+
+    def test_load_and_save_model_delegate_to_neural(self):
+        """load/save delegate to the neural controller when present."""
+        mock_neural = MagicMock()
+        controller = HybridMetaController(neural_controller=mock_neural)
+        controller.load_model("/tmp/model.pt")
+        controller.save_model("/tmp/model.pt")
+        mock_neural.load_model.assert_called_once_with("/tmp/model.pt")
+        mock_neural.save_model.assert_called_once_with("/tmp/model.pt")
+
+    def test_load_and_save_model_noop_without_neural(self):
+        """Without a neural controller, load/save are safe no-ops."""
+        controller = HybridMetaController()
+        controller.load_model("/tmp/model.pt")  # must not raise
+        controller.save_model("/tmp/model.pt")
+
+    def test_explain_decision_before_and_after_predict(self):
+        """explain_decision reports the most recent prediction (verbose too)."""
+        controller = HybridMetaController()
+        assert controller.explain_decision() == "No predictions made yet"
+        controller.predict(_make_features(), query="optimize the best algorithm")
+        text = controller.explain_decision(verbose=True)
+        assert text != "No predictions made yet"
+        assert "Assembly" in text

@@ -11,7 +11,11 @@ from typing import Any
 
 import httpx
 
-from src.config.constants import DEFAULT_LMSTUDIO_TIMEOUT, DEFAULT_LMSTUDIO_URL
+from src.config.constants import (
+    DEFAULT_LMSTUDIO_MODEL,
+    DEFAULT_LMSTUDIO_TIMEOUT,
+    DEFAULT_LMSTUDIO_URL,
+)
 from src.observability.logging import get_logger
 
 from .base import BaseLLMClient, LLMResponse
@@ -41,7 +45,7 @@ class LMStudioClient(BaseLLMClient):
 
     PROVIDER_NAME = "lmstudio"
     DEFAULT_BASE_URL = DEFAULT_LMSTUDIO_URL
-    DEFAULT_MODEL = "local-model"  # LM Studio uses the loaded model
+    DEFAULT_MODEL = DEFAULT_LMSTUDIO_MODEL  # LM Studio uses the loaded model
 
     def __init__(
         self,

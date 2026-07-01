@@ -421,3 +421,14 @@ This updated C4 architecture reflects the **current state** of the application, 
 > **Cross-cutting:** LLM client resilience (circuit breaker + exponential-backoff retries)
 > lives in `src/adapters/llm/resilience.py` and is shared by all provider clients, rather
 > than duplicated per provider.
+
+### CI/CD & Quality Gates
+
+The `.github/workflows/ci.yml` pipeline enforces the same gate as the local `quality-gate` skill:
+`black --check` → `ruff` → `mypy src/ --strict` → `pytest` with branch coverage (`--cov-fail-under=85`) →
+a hardcoded-secret grep, plus `bandit` (HIGH-severity gate), `pip-audit` (CRITICAL gate), spec validation
+(`harness validate-spec`), and a Docker build with a Trivy image scan whose SARIF results upload to GitHub
+code scanning (the `docker-build` job carries `security-events: write`; the upload is advisory and
+non-blocking). Configuration is centralized in `src/config/constants.py` + `src/config/settings.py`
+(Pydantic Settings) with domain-specific constant modules; there are no hardcoded secrets or magic numbers
+in the routing/adapter layers.

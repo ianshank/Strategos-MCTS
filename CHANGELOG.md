@@ -127,6 +127,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   decision collection + reproducible supervised train/validate reporting accuracy vs a majority
   baseline; guide in `docs/META_CONTROLLER_TRAINING.md`.
 
+### CI/CD (tech-debt cleanup, spec-driven `specs/phase_5..8`)
+- **Green CI pipeline.** Fixed the two jobs that were failing on `main` while lint/mypy/tests passed:
+  the `docker-build` job now declares `security-events: write` (plus a `continue-on-error` fallback) so
+  the Trivy SARIF upload no longer fails the run; the same advisory/guarded pattern was applied to
+  `docker-deployment.yml`.
+
+### Fixed
+- **`harness replay` crash.** `_cmd_replay` delegates to `_cmd_run`, but the `replay` subparser omits the
+  run-only flags (`--shell-allow`/`--ralph`/`--json`); `_cmd_run` now reads them via `getattr` so replay
+  no longer raises `AttributeError`.
+- **`HybridMetaController.explain_decision` was inert.** `predict()` never stored `_last_prediction`, so
+  the method always returned "No predictions made yet"; `predict()` now retains its result.
+- **ADK factory integration test** updated to accept the factory-supplied `agent_name` (the source
+  contract was already correct).
+
+### Changed (config centralization)
+- Assembly-router routing confidences and feature thresholds are now named constants in
+  `assembly_router.py` (behaviour unchanged; assembly-index thresholds remain `AssemblyConfig`-driven).
+- `LMStudioClient.DEFAULT_MODEL` now references `constants.DEFAULT_LMSTUDIO_MODEL` instead of duplicating
+  the literal.
+
+### Tests
+- Coverage gap-analysis lifts (branch coverage held at ≥85%, now ~89.6%): `harness/cli.py` 53.7%→97.8%,
+  `harness/factories.py` 72.3%→94.6%, `benchmark/adapters/adk_adapter.py` 63%→83.4%,
+  `mcts/llm_guided/rag/prompts.py` 71.3%→96.9%, plus new `HybridMetaController` method coverage.
+
+### Documentation
+- Consolidated 36 archival root markdown files into `docs/{reports,summaries,plans,quickstart}` (root cut
+  from 45 to 9 markdown files); updated `PROJECT_STRUCTURE.md`, `README.md`, and `docs/STATUS.md` references.
+
 ## [0.2.0] - Production Training Pipeline Release
 
 ### Added
