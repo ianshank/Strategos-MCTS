@@ -31,20 +31,27 @@ def _stub_llm_factory(monkeypatch: pytest.MonkeyPatch, inner: object) -> None:
 
 
 def test_create_llm_replay_mode(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """With REPLAY_DIR set, create_llm returns a replay client (no inner needed)."""
+    """With REPLAY_DIR set, create_llm returns a replay-mode client (no inner)."""
+    # create_llm prioritizes replay when both dirs are set; clear the opposite so
+    # this test unambiguously exercises the replay branch.
+    monkeypatch.delenv("HARNESS_RECORD_DIR", raising=False)
     monkeypatch.setenv("HARNESS_REPLAY_DIR", str(tmp_path / "cass"))
     factory = HarnessFactory(harness_settings=HarnessSettings())
     client = factory.create_llm()
-    assert client is not None
+    assert client.mode == "replay"
+    assert client.inner is None
 
 
 def test_create_llm_record_mode(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """With RECORD_DIR set, create_llm wraps the inner client in a recorder."""
+    """With RECORD_DIR set (and no REPLAY_DIR), create_llm wraps the inner client."""
+    monkeypatch.delenv("HARNESS_REPLAY_DIR", raising=False)
     monkeypatch.setenv("HARNESS_RECORD_DIR", str(tmp_path / "rec"))
-    _stub_llm_factory(monkeypatch, MagicMock())
+    inner = MagicMock(name="inner-llm")
+    _stub_llm_factory(monkeypatch, inner)
     factory = HarnessFactory(harness_settings=HarnessSettings())
     client = factory.create_llm()
-    assert client is not None
+    assert client.mode == "record"
+    assert client.inner is inner
 
 
 def test_create_llm_plain(monkeypatch: pytest.MonkeyPatch, harness_settings: HarnessSettings) -> None:

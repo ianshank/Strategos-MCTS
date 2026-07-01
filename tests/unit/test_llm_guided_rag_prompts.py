@@ -48,8 +48,9 @@ def test_generator_prompt_includes_all_sections() -> None:
     assert "## Feedback from Previous Attempts" in prompt
     # iteration > 0 branch in the instructions
     assert "iteration 1" in prompt
-    # API doc content is truncated at 500 chars + ellipsis
-    assert "..." in prompt
+    # API doc content (600 chars) is truncated to exactly 500 chars + ellipsis.
+    assert ("x" * 500 + "...") in prompt
+    assert ("x" * 501) not in prompt
 
 
 def test_generator_prompt_without_context_or_code() -> None:
