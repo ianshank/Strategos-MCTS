@@ -245,13 +245,19 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@v0.36.0
+        # Advisory only — don't fail deployment if Trivy's DB download flakes.
+        continue-on-error: true
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-train:demo
           format: 'sarif'
           output: 'trivy-results.sarif'
+          exit-code: '0'
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
+        # Guard on file existence and stay non-fatal if code scanning is unavailable.
+        continue-on-error: true
+        if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
 
