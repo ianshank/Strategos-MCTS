@@ -131,18 +131,41 @@ langgraph-multi-agent-mcts/
 
 | Directory | Purpose |
 |-----------|---------|
-| `src/` | Core application code - the main package |
-| `config/` | Configuration files for deployment |
+| `src/` | Core application code - the main importable package |
+| `config/` | **Runtime** config data for deployment (YAML/JSON: alerting rules, assembly config, MCP config) |
 | `docs/` | All documentation and guides |
-| `examples/` | Working examples and demos |
+| `examples/` | Working library-usage examples |
 | `scripts/` | Automation, verification, and utility scripts |
 | `tests/` | Comprehensive test suite |
 | `tools/` | Development and debugging tools |
 | `huggingface_space/` | HuggingFace Spaces POC deployment |
 | `kubernetes/` | Container orchestration manifests |
 | `monitoring/` | Observability stack configuration |
-| `training/` | Advanced ML training pipeline |
+| `training/` | Advanced ML training pipeline (docs, examples, and its own `training/tests/`) |
 | `artifacts/` | Generated files (models, logs) - not in git |
+
+### Layout & naming disambiguation
+
+Several names look similar but serve distinct roles; they are intentionally **not** merged because doing so
+would break import contracts, Docker build context, or fresh-clone tests:
+
+- **`config/` (runtime data) vs `src/config/` (code).** `config/` holds deployment YAML/JSON that is
+  `COPY`-ed into the image (`Dockerfile`); `src/config/` is the Pydantic Settings + constants **code**
+  (`settings.py`, `constants.py`). Keep secrets out of both — see `docs/SECRETS_MANAGEMENT.md`.
+- **`training/` (root) vs `src/training/` (code).** `src/training/` is the importable trainer package;
+  root `training/` carries the pipeline's docs, runnable `training/examples/`, and a self-contained
+  `training/tests/` suite with its own `conftest.py` (it is excluded from the default `testpaths=["tests"]`).
+- **Demo / example entry points.** These are deliberately separate:
+  - `examples/` — library-usage scripts; kept **without** a root `__init__.py` so the chaos/perf suites can
+    `import langgraph_multi_agent_mcts` as a bare module (`COPY`-ed by `Dockerfile`/`Dockerfile.test`).
+  - `demo_src/` — an importable support package (`from demo_src.agents_demo import ...`) consumed by
+    `huggingface_space/app_mock.py` and `scripts/run_e2e_workflow.py`; it must stay top-level.
+  - `demo.py` / `chess_demo.py` — root CLI entry points (`python demo.py`); `demo.py` is import-tested by
+    `tests/unit/test_llm_mcts.py` and its A/B logic lives in `src/api/comparison_service.py`.
+  - `demos/` — standalone demonstration scripts (e.g. `neural_meta_controller_demo.py`).
+- **`models/` (tracked).** Small reference artifacts (~0.4 MB: LoRA adapter + `production/*.pt`) consumed by
+  `tests/integration/test_deployed_models.py`; tracked deliberately so fresh clones/CI can run those tests.
+  Large or generated weights belong in `artifacts/` (git-ignored).
 
 ## Quick Navigation
 

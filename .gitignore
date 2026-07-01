@@ -206,6 +206,10 @@ service_account.json
 google_credentials.json
 
 # Model artifacts (large files)
+# NOTE: `*.pt` / `rnn_meta_controller.pt` are intentionally left tracked (commented out):
+# the small (~0.4 MB) reference weights under models/ are consumed by
+# tests/integration/test_deployed_models.py and must exist on fresh clones/CI.
+# Large or generated weights belong under artifacts/ (ignored below).
 # *.pt
 *.pth
 *.h5

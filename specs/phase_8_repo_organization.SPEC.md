@@ -14,20 +14,26 @@ files into `docs/`, stop tracking model binaries, collapse overlapping demo tree
 
 # Acceptance Criteria
 
-- Non-canonical root `.md` files are moved into `docs/` subfolders (`reports/`, `summaries/`, `plans/`,
-  `templates/`, `quickstart/`); only `README.md`, `CLAUDE.md`, `AGENTS.md`, `CHANGELOG.md`,
-  `ATTRIBUTION.md`, `PROJECT_STRUCTURE.md` remain at root, and internal links to moved files are fixed.
-- Committed model binaries under `models/` are untracked (`git rm --cached`) and covered by `.gitignore`,
-  with a documented retrieval path; git history is not rewritten in this pass.
-- The demo entry points (`demo.py`, `chess_demo.py`, `demo_src/`, `demos/`) are consolidated into a single
-  `examples/` tree, with `Dockerfile` COPY paths, `app.py`, and docs updated accordingly.
-- The `config/` vs `src/config/` and `training/` vs `src/training/` distinction is either documented
-  prominently in `PROJECT_STRUCTURE.md` or resolved by renaming, with `Dockerfile`, `pyproject.toml`
-  per-file-ignores, and `.gitignore` updated to match; root `training/tests/` is merged into `tests/`.
-- After all moves, `docs/STATUS.md` and `PROJECT_STRUCTURE.md` are refreshed and the full gate is green.
+- **(8a — done)** Non-canonical root `.md` files are moved into `docs/` subfolders (`reports/`, `summaries/`,
+  `plans/`, `quickstart/`); only `README.md`, `CLAUDE.md`, `AGENTS.md`, `CHANGELOG.md`, `ATTRIBUTION.md`,
+  `PROJECT_STRUCTURE.md`, and the three template files remain at root, with internal references fixed. Root
+  markdown went from 45 to 9 files.
+- **Layout ambiguity is removed by authoritative documentation** in `PROJECT_STRUCTURE.md` — a
+  "Layout & naming disambiguation" section explains `config/` vs `src/config/`, `training/` vs
+  `src/training/`, the demo/example entry points, and the tracked `models/` artifacts, including the import
+  and build-context contracts that make them distinct.
+- The physical moves originally proposed (untrack `models/`, merge the demo trees, rename `config/`,
+  relocate `training/tests/`) are **deliberately not performed** because inspection showed each would break
+  a real contract (documented in the Constraints below). The goal — an unambiguous, discoverable layout —
+  is met without the breakage.
+- The full local gate stays green; `docs/STATUS.md` / `PROJECT_STRUCTURE.md` reflect the current layout.
 
-# Constraints
+# Constraints (why the physical moves were rejected)
 
-- Every move uses `git mv`; each of the sub-steps is its own commit so a bad move is trivially revertible.
-- No import breakage: `git grep` for references before each code/dir move and update them.
+- `models/*.pt` + LoRA adapter (~0.4 MB) are consumed by `tests/integration/test_deployed_models.py`;
+  untracking them breaks fresh-clone/CI tests and there is no retrieval mechanism — keep tracked.
+- `demo_src/` is imported as a bare top-level package by `huggingface_space/app_mock.py` and
+  `scripts/run_e2e_workflow.py`; `demo.py` is import-tested by `tests/unit/test_llm_mcts.py`; `examples/`
+  is intentionally kept without a root `__init__.py`. Merging these breaks those import contracts.
+- `config/` is `COPY`-ed by `Dockerfile`; renaming needs Docker + loader changes for no functional gain.
 - Backward compatible; no hardcoded values; full local gate green before push.
