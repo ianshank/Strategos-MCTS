@@ -40,6 +40,11 @@ def _warnings(issues: list) -> set[str]:
     return {i.code for i in issues if i.severity == "warning"}
 
 
+def _paths_issues(paths: list[Path]) -> list:
+    """Issues from a multi-path validation (report form)."""
+    return SpecValidator().validate_paths(paths).issues
+
+
 def test_valid_v2_spec_has_no_issues(tmp_path: Path) -> None:
     issues = SpecValidator().validate_file(_write(tmp_path))
     assert issues == []
@@ -175,13 +180,38 @@ def test_all_positional_ids_warn(tmp_path: Path) -> None:
     assert "positional-criterion-ids" in _warnings(issues)
 
 
+def test_validate_paths_report_carries_parsed_specs(tmp_path: Path) -> None:
+    """The report exposes parsed specs so callers (the CLI) don't re-load files."""
+    spec = _write(tmp_path)
+    report = SpecValidator().validate_paths([spec])
+    assert report.errors() == []
+    assert report.specs[str(spec)].id == "demo_spec"
+    assert report.specs[str(spec)].status == "approved"
+
+
+def test_spec_loader_is_constructor_injected(tmp_path: Path) -> None:
+    """A substitute loader passed via __init__ is actually used (DI guideline)."""
+    from src.framework.harness.intent import SpecLoader
+
+    class CountingLoader(SpecLoader):
+        calls = 0
+
+        def load(self, path: Path):  # type: ignore[override]
+            CountingLoader.calls += 1
+            return super().load(path)
+
+    spec = _write(tmp_path)
+    SpecValidator(spec_loader=CountingLoader()).validate_file(spec)
+    assert CountingLoader.calls == 1
+
+
 def test_duplicate_id_across_files_errors(tmp_path: Path) -> None:
     """Same spec id in two files (necessarily different directories, per the filename rule)."""
     a_dir = tmp_path / "a"
     b_dir = tmp_path / "b"
     a_dir.mkdir()
     b_dir.mkdir()
-    issues = SpecValidator().validate_paths([_write(a_dir), _write(b_dir)])
+    issues = _paths_issues([_write(a_dir), _write(b_dir)])
     assert "duplicate-id" in _errors(issues)
 
 
@@ -191,12 +221,12 @@ def test_duplicate_ac1_across_files_is_clean(tmp_path: Path) -> None:
     b_dir = tmp_path / "b"
     a_dir.mkdir()
     b_dir.mkdir()
-    issues = SpecValidator().validate_paths([_write(a_dir, "spec_a"), _write(b_dir, "spec_b")])
+    issues = _paths_issues([_write(a_dir, "spec_a"), _write(b_dir, "spec_b")])
     assert _errors(issues) == set()
 
 
 def test_missing_file_yields_error_issue(tmp_path: Path) -> None:
-    issues = SpecValidator().validate_paths([tmp_path / "absent.SPEC.md"])
+    issues = _paths_issues([tmp_path / "absent.SPEC.md"])
     assert "parse-error" in _errors(issues)
 
 
@@ -212,7 +242,7 @@ def test_same_file_via_two_spellings_is_not_duplicate(tmp_path: Path, monkeypatc
     """Paths are resolved before duplicate-id comparison, so one file ≠ two declarations."""
     spec = _write(tmp_path)
     monkeypatch.chdir(tmp_path)
-    issues = SpecValidator().validate_paths([Path(spec.name), Path(".") / spec.name])
+    issues = _paths_issues([Path(spec.name), Path(".") / spec.name])
     assert "duplicate-id" not in _errors(issues)
 
 
@@ -227,7 +257,7 @@ def test_directory_yields_error_not_traceback(tmp_path: Path) -> None:
     """A directory (e.g. from a shell glob) becomes an error issue, never an exception."""
     target = tmp_path / "somedir"
     target.mkdir()
-    issues = SpecValidator().validate_paths([target])
+    issues = _paths_issues([target])
     assert "unreadable" in _errors(issues)
 
 
@@ -248,5 +278,5 @@ def test_repo_specs_all_validate_clean() -> None:
         pytest.skip("specs/ not present in this checkout")
     paths = sorted(specs_dir.glob("*.SPEC.md"))
     assert paths, "expected specs/*.SPEC.md to exist"
-    issues = SpecValidator().validate_paths(paths)
+    issues = _paths_issues(paths)
     assert _errors(issues) == set(), [i.render() for i in issues]

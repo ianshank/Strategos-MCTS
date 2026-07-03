@@ -55,11 +55,24 @@ class ValidationIssue:
         return f"{self.severity}: {prefix}{self.code}: {self.message}"
 
 
+@dataclass(frozen=True)
+class ValidationReport:
+    """Result of validating a set of paths: all issues plus the parsed specs
+    (keyed by ``str(path)``) so callers don't have to re-load files."""
+
+    issues: list[ValidationIssue]
+    specs: dict[str, Spec]
+
+    def errors(self) -> list[ValidationIssue]:
+        return [issue for issue in self.issues if issue.severity == "error"]
+
+
 class SpecValidator:
     """Validate spec files against schema v2; returns issues, never raises."""
 
-    def __init__(self, logger: logging.Logger | None = None) -> None:
+    def __init__(self, logger: logging.Logger | None = None, spec_loader: SpecLoader | None = None) -> None:
         self._logger = logger or get_logger(__name__)
+        self._spec_loader = spec_loader or SpecLoader()
 
     _ALIAS_GROUPS: Final[tuple[tuple[str, ...], ...]] = (
         SpecLoader._GOAL_HEADERS,
@@ -69,14 +82,16 @@ class SpecValidator:
         SpecLoader._OUT_OF_SCOPE_HEADERS,
     )
 
-    def validate_paths(self, paths: Sequence[Path]) -> list[ValidationIssue]:
+    def validate_paths(self, paths: Sequence[Path]) -> ValidationReport:
         """Validate every path, then cross-file rules over the whole set."""
         issues: list[ValidationIssue] = []
+        specs: dict[str, Spec] = {}
         ids_seen: dict[str, Path] = {}
         for path in paths:
             spec = self._load(path, issues)
             if spec is None:
                 continue
+            specs[str(path)] = spec
             file_issues = self.validate_spec(spec, path)
             issues.extend(file_issues)
             self._logger.debug(
@@ -104,7 +119,7 @@ class SpecValidator:
         self._logger.debug(
             "spec validation complete paths=%d errors=%d warnings=%d", len(paths), errors, len(issues) - errors
         )
-        return issues
+        return ValidationReport(issues=issues, specs=specs)
 
     def validate_file(self, path: Path) -> list[ValidationIssue]:
         """Validate a single file (no cross-file rules)."""
@@ -148,7 +163,7 @@ class SpecValidator:
     def _load(self, path: Path, issues: list[ValidationIssue]) -> Spec | None:
         """Load a spec, converting parse/IO failures into error issues."""
         try:
-            return SpecLoader().load(path)
+            return self._spec_loader.load(path)
         except SpecParseError as exc:
             issues.append(ValidationIssue(severity="error", code="parse-error", message=str(exc), path=str(path)))
         except (OSError, UnicodeDecodeError) as exc:
@@ -223,4 +238,4 @@ def _is_positional(criterion_id: str) -> bool:
     return criterion_id.startswith("c") and criterion_id[1:].isdigit()
 
 
-__all__ = ["SPEC_STATUSES", "DONE_MARKER_RE", "SpecValidator", "ValidationIssue"]
+__all__ = ["SPEC_STATUSES", "DONE_MARKER_RE", "SpecValidator", "ValidationIssue", "ValidationReport"]

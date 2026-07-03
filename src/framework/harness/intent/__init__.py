@@ -2,7 +2,12 @@
 
 from src.framework.harness.intent.normalizer import DefaultIntentNormalizer
 from src.framework.harness.intent.spec_loader import SpecCriterion, SpecLoader, SpecParseError
-from src.framework.harness.intent.spec_validator import SPEC_STATUSES, SpecValidator, ValidationIssue
+from src.framework.harness.intent.spec_validator import (
+    SPEC_STATUSES,
+    SpecValidator,
+    ValidationIssue,
+    ValidationReport,
+)
 
 __all__ = [
     "DefaultIntentNormalizer",
@@ -12,4 +17,5 @@ __all__ = [
     "SpecParseError",
     "SpecValidator",
     "ValidationIssue",
+    "ValidationReport",
 ]

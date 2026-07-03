@@ -174,19 +174,18 @@ async def _cmd_replay(args: argparse.Namespace) -> int:
 
 def _cmd_validate_spec(args: argparse.Namespace) -> int:
     """Validate every given path; report all issues, exit 1 if any error."""
-    issues = SpecValidator().validate_paths(args.paths)
-    for issue in issues:
+    report = SpecValidator().validate_paths(args.paths)
+    for issue in report.issues:
         sys.stderr.write(issue.render() + "\n")
-    failing = {issue.path for issue in issues if issue.severity == "error"}
+    failing = {issue.path for issue in report.errors()}
     warn_counts: dict[str, int] = {}
-    for issue in issues:
+    for issue in report.issues:
         if issue.severity == "warning":
             warn_counts[issue.path] = warn_counts.get(issue.path, 0) + 1
-    loader = SpecLoader()
     for path in args.paths:
-        if str(path) in failing:
+        spec = report.specs.get(str(path))
+        if str(path) in failing or spec is None:
             continue
-        spec = loader.load(path)
         # Surface per-file warning counts on stdout so "ok with warnings" is
         # visible in the summary, not only on stderr (exit code stays 0).
         warn_note = f" warnings={warn_counts[str(path)]}" if str(path) in warn_counts else ""

@@ -205,6 +205,19 @@ def test_spec_loader_unterminated_frontmatter_is_body() -> None:
     assert spec.body == spec.raw
 
 
+def test_spec_loader_sections_are_fence_aware() -> None:
+    """A ``#`` comment inside a ``` fence is section content, not a new header."""
+    text = (
+        "# Goal\nDo it.\n"
+        "# Acceptance Criteria\n- AC-1: works\n"
+        "```bash\n# not a header\necho hi\n```\n"
+        "- AC-2: still in the same section\n"
+    )
+    spec = SpecLoader().parse(text)
+    assert [c.id for c in spec.criteria] == ["AC-1", "AC-2"]
+    assert "# not a header" in spec.sections["acceptance criteria"]
+
+
 def test_spec_loader_body_excludes_frontmatter() -> None:
     """``Spec.body`` is the frontmatter-stripped text (header walks must use it)."""
     text = "---\n# a frontmatter comment\nid: x\n---\n# Goal\nDo it.\n"

@@ -149,12 +149,21 @@ class SpecLoader:
 
     @staticmethod
     def _split_sections(body: str) -> dict[str, str]:
-        """Split a markdown body into ``{title: content}`` keyed by ATX header."""
+        """Split a markdown body into ``{title: content}`` keyed by ATX header.
+
+        Fence-aware: a ``#`` shell/python comment inside a ``` code block is
+        section content, not a header (mirrored by the validator's header walk).
+        """
         sections: dict[str, str] = {}
         current_title: str | None = None
         current_lines: list[str] = []
+        in_fence = False
         for line in body.splitlines():
-            if line.startswith("#"):
+            if line.strip().startswith("```"):
+                in_fence = not in_fence
+                current_lines.append(line)
+                continue
+            if not in_fence and line.startswith("#"):
                 if current_title is not None:
                     sections[current_title] = "\n".join(current_lines).strip()
                 title = line.lstrip("#").strip().lower()
