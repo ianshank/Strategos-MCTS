@@ -8,7 +8,14 @@ allowed-tools: Bash(cd "${CLAUDE_PROJECT_DIR}" && python3 -m src.framework.harne
 Scaffold result (deterministic — the CLI refuses malformed ids, existing files, and module
 overlap with any open draft/approved spec):
 
-!`cd "${CLAUDE_PROJECT_DIR}" && python3 -m src.framework.harness.cli spec-new --id "$id" --module "$module"`
+<!-- Args are substituted as literal text before the shell parses this line. Single quotes
+     stop $(...)/backtick expansion inside the quotes (double quotes would not); an argument
+     containing a single quote can still break out — accepted residual risk: slash-command
+     args are typed by the local operator into their own session (no privilege boundary),
+     and the CLI additionally rejects any id/module that survives to it malformed. The
+     complete fix (no arg interpolation in !-lines) is deferred to Phase 3 packaging. -->
+
+!`cd "${CLAUDE_PROJECT_DIR}" && python3 -m src.framework.harness.cli spec-new --id '$id' --module '$module'`
 
 If the command above printed an `error:` line, report that refusal to the user **verbatim** and
 stop — do not create or edit any file.

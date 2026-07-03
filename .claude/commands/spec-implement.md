@@ -2,13 +2,20 @@
 description: Enter implementation for an approved spec on its spec/<id> branch (refuses anything else)
 argument-hint: <id>
 arguments: [id]
-allowed-tools: Bash(cd "${CLAUDE_PROJECT_DIR}" && python3 -m src.framework.harness.cli spec-status*), Read
+allowed-tools: Bash(cd "${CLAUDE_PROJECT_DIR}" && python3 -m src.framework.harness.cli spec-status*), Bash(git fetch:*), Bash(git cat-file:*), Bash(git show-ref:*), Bash(git switch:*), Read
 ---
 
 Gate result (single &&-gated chain: nothing mutates unless the spec is `approved`, merged to
 `origin/main`, and the branch switch is unambiguous):
 
-!`cd "${CLAUDE_PROJECT_DIR}" && python3 -m src.framework.harness.cli spec-status "$id" --require approved && git fetch origin main && git cat-file -e "origin/main:specs/$id.SPEC.md" && { git show-ref --verify --quiet "refs/heads/spec/$id" && git switch "spec/$id" || git switch -c "spec/$id" origin/main; }`
+<!-- Args are substituted as literal text before the shell parses this line. Single quotes
+     stop $(...)/backtick expansion inside the quotes (double quotes would not); an argument
+     containing a single quote can still break out — accepted residual risk: slash-command
+     args are typed by the local operator into their own session (no privilege boundary),
+     and spec-status rejects any id that survives to it malformed. The complete fix (no arg
+     interpolation in !-lines) is deferred to Phase 3 packaging. -->
+
+!`cd "${CLAUDE_PROJECT_DIR}" && python3 -m src.framework.harness.cli spec-status '$id' --require approved && git fetch origin main && git cat-file -e 'origin/main:specs/$id.SPEC.md' && { git show-ref --verify --quiet 'refs/heads/spec/$id' && git switch 'spec/$id' || git switch -c 'spec/$id' origin/main; }`
 
 If the chain above failed, refuse with this exact framing and make no changes:
 

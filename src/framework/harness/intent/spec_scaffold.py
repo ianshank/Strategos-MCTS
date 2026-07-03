@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 from typing import Final
 
-from src.framework.harness.intent.spec_loader import SpecLoader
+from src.framework.harness.intent.spec_loader import SpecLoader, SpecParseError
 from src.framework.harness.intent.spec_validator import SpecValidator
 
 # One id grammar, three consumers: /spec-new refusal (fullmatch, here), the
@@ -66,6 +66,20 @@ class SpecScaffoldError(ValueError):
     """Raised when a new spec must be refused (reason in the message)."""
 
 
+def _refuse_frontmatter_injection(field: str, value: str) -> None:
+    """Refuse values that could rewrite the rendered frontmatter block.
+
+    ``goal``/``module`` are interpolated verbatim into the template; a newline
+    lets a value smuggle extra ``key: value`` lines (e.g. ``status: approved``,
+    skipping the human draft->approved flip), and ``---`` can close the block
+    early with the same effect (first-``\\n---\\n``-wins in the loader).
+    """
+    if "\n" in value or "\r" in value:
+        raise SpecScaffoldError(f"{field} must be a single line (newline would inject frontmatter)")
+    if "---" in value:
+        raise SpecScaffoldError(f"{field} must not contain '---' (frontmatter delimiter)")
+
+
 def normalize_module(module: str) -> str:
     """Normalize a module path prefix for overlap comparison (trailing slash)."""
     cleaned = module.strip()
@@ -91,13 +105,25 @@ def scaffold_spec(specs_dir: Path, spec_id: str, module: str, goal: str = "") ->
         raise SpecScaffoldError(f"invalid spec id '{spec_id}': must match {SPEC_ID_PATTERN} (lowercase, digits, _)")
     if not module.strip():
         raise SpecScaffoldError("module must be a non-empty repo-relative path prefix (e.g. src/api/)")
+    _refuse_frontmatter_injection("module", module)
+    _refuse_frontmatter_injection("goal", goal)
+    cleaned_module = module.strip()
+    if cleaned_module.startswith("/") or ".." in cleaned_module.split("/"):
+        raise SpecScaffoldError(f"module '{module}' must be repo-relative without '..' segments (e.g. src/api/)")
     path = specs_dir / f"{spec_id}.SPEC.md"
     if path.exists():
         raise SpecScaffoldError(f"spec already exists: {path}")
 
     loader = SpecLoader()
     for existing in sorted(specs_dir.glob("*.SPEC.md")):
-        spec = loader.load(existing)
+        try:
+            spec = loader.load(existing)
+        except (SpecParseError, OSError, UnicodeDecodeError) as exc:
+            # Fail closed: an unreadable candidate could be an open spec whose
+            # module genuinely collides — refuse rather than silently skip.
+            raise SpecScaffoldError(
+                f"cannot check module overlap: {existing} is unreadable ({exc}); fix or remove it"
+            ) from exc
         if spec.status in OPEN_STATUSES and spec.module and modules_overlap(spec.module, module):
             raise SpecScaffoldError(
                 f"module '{module}' overlaps open spec '{spec.id or existing.name}' "

@@ -50,6 +50,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # spec-trace diffs against the PR base branch
+          persist-credentials: false  # job only needs local git after this fetch
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -81,11 +82,16 @@ jobs:
         # spec-id + AC-n mappings under tests/. Push events have no base
         # ref, hence the guard. See docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md §3.
         if: github.event_name == 'pull_request'
+        env:
+          # Branch names are attacker-controlled on fork PRs; env-var
+          # indirection keeps them out of the shell-parsed script text.
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           harness spec-trace \
-            --base-ref "origin/${{ github.base_ref }}" \
+            --base-ref "origin/$BASE_REF" \
             --head-ref HEAD \
-            --branch "${{ github.head_ref }}"
+            --branch "$HEAD_BRANCH"
 
       - name: Scan for hardcoded secrets
         # No plaintext API-key material may be committed to source or manifests.

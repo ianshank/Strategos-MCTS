@@ -9,7 +9,7 @@ import pytest
 
 from src.framework.harness.intent.spec_trace import TraceResult, VerifiedFlip, evaluate_trace, run_trace
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.harness]
 
 
 # ---------------------------------------------------------------------------
@@ -201,3 +201,17 @@ def test_run_trace_word_bounds_ac_tokens(tmp_path: Path) -> None:
     )
     _git(repo, "commit", "-qam", "flip\n\nNo-Spec: flip")
     assert not run_trace(repo, "main", "HEAD", "feature/verify").ok
+
+
+def test_run_trace_word_bounds_spec_id(tmp_path: Path) -> None:
+    """A mapping line naming demo_trace_spec_extra must not satisfy demo_trace_spec."""
+    repo = _make_repo(tmp_path, spec_status="implemented")
+    _git(repo, "switch", "-q", "-c", "feature/verify")
+    (repo / "specs" / "demo_trace_spec.SPEC.md").write_text(_spec_text("demo_trace_spec", "verified"))
+    (repo / "tests" / "test_x.py").write_text(
+        '"""Covers demo_trace_spec_extra AC-1."""\n\n\ndef test_x():\n    assert True\n'
+    )
+    _git(repo, "commit", "-qam", "flip\n\nNo-Spec: flip")
+    result = run_trace(repo, "main", "HEAD", "feature/verify")
+    assert not result.ok
+    assert any("AC-1" in m for m in result.messages)

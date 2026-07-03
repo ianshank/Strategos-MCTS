@@ -197,6 +197,12 @@ class SpecLoader:
             head, sep, rest = stripped.partition(" ")
             if rest and (head.endswith(".") or head.endswith(")")) and head[:-1].isdigit():
                 out.append(rest.strip())
+                continue
+            # Soft-wrapped continuation: an indented, non-blank line following a
+            # bullet joins it — dropping it would silently truncate the bullet
+            # to its first physical line. Flush-left prose is not a bullet.
+            if out and stripped and line[:1].isspace():
+                out[-1] = f"{out[-1]} {stripped}"
         return out
 
 

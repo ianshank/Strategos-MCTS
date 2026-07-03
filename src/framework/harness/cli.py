@@ -23,6 +23,7 @@ import asyncio
 import json
 import logging
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -248,13 +249,20 @@ def _cmd_spec_status(args: argparse.Namespace) -> int:
 
 
 def _cmd_spec_trace(args: argparse.Namespace) -> int:
-    result = run_trace(
-        Path.cwd(),
-        base_ref=args.base_ref,
-        head_ref=args.head_ref,
-        branch=args.branch,
-        allow_unmapped_verified=args.allow_unmapped_verified,
-    )
+    try:
+        result = run_trace(
+            Path.cwd(),
+            base_ref=args.base_ref,
+            head_ref=args.head_ref,
+            branch=args.branch,
+            allow_unmapped_verified=args.allow_unmapped_verified,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
+        # Operational failure (bad ref, not a repo, hung/missing git) — report
+        # like the other subcommands instead of a traceback; exit 1 fails CI.
+        detail = (getattr(exc, "stderr", None) or "").strip()
+        sys.stderr.write(f"error: spec-trace: {exc}{f' ({detail})' if detail else ''}\n")
+        return 1
     for message in result.messages:
         stream = sys.stdout if result.ok else sys.stderr
         stream.write(f"spec-trace: {message}\n")

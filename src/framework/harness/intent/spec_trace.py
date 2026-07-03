@@ -48,6 +48,10 @@ _REMEDIATION: Final[str] = (
     "See docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md §3."
 )
 
+# A hung git subprocess must fail this check, not stall the CI job until its
+# outer timeout; 30s is far above any healthy local git operation.
+_GIT_TIMEOUT_SECONDS: Final[int] = 30
+
 
 @dataclass(frozen=True)
 class VerifiedFlip:
@@ -160,6 +164,7 @@ def _git(repo_root: Path, *args: str) -> str:
         capture_output=True,
         text=True,
         check=True,
+        timeout=_GIT_TIMEOUT_SECONDS,
     )
     return result.stdout
 
@@ -200,12 +205,16 @@ def _verified_flips(repo_root: Path, base_ref: str, changed_files: Sequence[str]
 
 
 def _unmapped_criteria(repo_root: Path, spec_id: str, criterion_ids: Sequence[str]) -> tuple[str, ...]:
-    """Criteria lacking a same-line spec-id + word-bounded AC-token line under tests/.
+    """Criteria lacking a same-line spec-id + AC-token line under tests/.
 
-    Single pass over ``tests/**/*.py`` for the whole criterion set (not one
-    walk per criterion): each file is read at most once, per flip. No caching
-    across calls — the worktree may change between invocations in one process.
+    Both tokens are word-bounded (``_`` is a word character, so spec id
+    ``foo`` is not satisfied by a ``foo_bar AC-1`` line, and ``AC-1`` is not
+    satisfied by ``AC-10``). Single pass over ``tests/**/*.py`` for the whole
+    criterion set (not one walk per criterion): each file is read at most
+    once, per flip. No caching across calls — the worktree may change between
+    invocations in one process.
     """
+    spec_id_token = re.compile(rf"\b{re.escape(spec_id)}\b")
     remaining = {cid: re.compile(rf"\b{re.escape(cid)}\b") for cid in criterion_ids}
     tests_dir = repo_root / "tests"
     if not tests_dir.is_dir() or not remaining:
@@ -216,7 +225,7 @@ def _unmapped_criteria(repo_root: Path, spec_id: str, criterion_ids: Sequence[st
         except (OSError, UnicodeDecodeError):  # pragma: no cover - defensive
             continue
         for line in text.splitlines():
-            if spec_id not in line:
+            if not spec_id_token.search(line):
                 continue
             for cid in [c for c, token in remaining.items() if token.search(line)]:
                 del remaining[cid]

@@ -214,6 +214,26 @@ def test_spec_trace_cli_end_to_end(
     assert rc == 0
     assert "OK" in captured.out
 
+    # Operational failure (bogus base ref): error line + exit 1, no traceback.
+    rc = main(["spec-trace", "--base-ref", "no_such_ref", "--branch", "feature/foo"])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "error: spec-trace:" in captured.err
+
+
+def test_spec_trace_cli_outside_a_repo_reports_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    outside = tmp_path / "not_a_repo"
+    outside.mkdir()
+    monkeypatch.chdir(outside)
+    rc = main(["spec-trace", "--base-ref", "main", "--branch", "feature/foo"])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "error: spec-trace:" in captured.err
+
 
 # ---------------------------------------------------------------------------
 # _resolve_intent / _apply_settings_overrides units

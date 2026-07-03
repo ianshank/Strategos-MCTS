@@ -15,7 +15,7 @@ from src.framework.harness.intent.spec_scaffold import (
     scaffold_spec,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.harness]
 
 
 def _write_existing(specs_dir: Path, spec_id: str, module: str, status: str) -> Path:
@@ -56,6 +56,45 @@ def test_invalid_id_refused(tmp_path: Path, bad_id: str) -> None:
 def test_empty_module_refused(tmp_path: Path) -> None:
     with pytest.raises(SpecScaffoldError, match="module"):
         scaffold_spec(tmp_path / "specs", "my_spec", "   ")
+
+
+@pytest.mark.parametrize("bad_module", ["/etc/passwd", "../evil/", "src/../../etc/"])
+def test_traversal_module_refused(tmp_path: Path, bad_module: str) -> None:
+    with pytest.raises(SpecScaffoldError, match="repo-relative"):
+        scaffold_spec(tmp_path / "specs", "my_spec", bad_module)
+
+
+def test_frontmatter_injection_via_module_refused(tmp_path: Path) -> None:
+    """A module smuggling 'status: approved' must never scaffold a pre-approved spec."""
+    with pytest.raises(SpecScaffoldError, match="single line"):
+        scaffold_spec(tmp_path / "specs", "my_spec", "fake/\nstatus: approved\n---\n\nX")
+    assert not (tmp_path / "specs" / "my_spec.SPEC.md").exists()
+
+
+def test_frontmatter_delimiter_in_module_refused(tmp_path: Path) -> None:
+    with pytest.raises(SpecScaffoldError, match="'---'"):
+        scaffold_spec(tmp_path / "specs", "my_spec", "src/---x/")
+
+
+def test_frontmatter_injection_via_goal_refused(tmp_path: Path) -> None:
+    with pytest.raises(SpecScaffoldError, match="single line"):
+        scaffold_spec(tmp_path / "specs", "my_spec", "src/", goal="g\nstatus: approved")
+
+
+def test_unreadable_existing_spec_refuses_not_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fail closed: an unparseable candidate could hide a genuine module collision."""
+    from src.framework.harness.intent import spec_loader
+
+    specs = tmp_path / "specs"
+    _write_existing(specs, "broken_spec", "docs/", "draft")
+
+    def _boom(self: spec_loader.SpecLoader, path: Path) -> spec_loader.Spec:
+        raise spec_loader.SpecParseError(f"unreadable: {path}")
+
+    monkeypatch.setattr(spec_loader.SpecLoader, "load", _boom)
+    with pytest.raises(SpecScaffoldError, match="cannot check module overlap"):
+        scaffold_spec(specs, "my_spec", "src/")
+    assert not (specs / "my_spec.SPEC.md").exists()
 
 
 def test_existing_file_refused(tmp_path: Path) -> None:
