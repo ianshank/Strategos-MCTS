@@ -22,7 +22,7 @@ from src.framework.harness.cli import (
 from src.framework.harness.loop.runner import RunResult
 from src.framework.harness.outcomes import Terminal
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.harness]
 
 
 def _spec(tmp_path: Path) -> Path:
