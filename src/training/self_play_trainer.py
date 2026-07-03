@@ -20,6 +20,7 @@ value targets) are bypassed. Defaults to ``False`` (two-player zero-sum, unchang
 from __future__ import annotations
 
 import collections
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -184,12 +185,20 @@ class SelfPlayTrainer:
         )
         return metrics
 
-    def save_checkpoint(self, path: str | Path) -> None:
-        """Save the network weights in the torch-safe (``state_dict``) format."""
+    def save_checkpoint(self, path: str | Path, *, metadata: dict[str, Any] | None = None) -> None:
+        """Save the network weights in the torch-safe (``state_dict``) format.
+
+        When ``metadata`` is provided (e.g. a network-architecture spec), it is written
+        to a ``<path>.meta.json`` sidecar so tools like the ``policy-lift`` CLI can
+        reconstruct the network without guessing the architecture.
+        """
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(self.network.state_dict(), path)
-        logger.info("Checkpoint saved", extra={"path": str(path)})
+        if metadata is not None:
+            sidecar = path.with_name(path.name + ".meta.json")
+            sidecar.write_text(json.dumps({"schema_version": 1, **metadata}, indent=2, sort_keys=True) + "\n")
+        logger.info("Checkpoint saved", extra={"path": str(path), "sidecar": metadata is not None})
 
     def load_checkpoint(self, path: str | Path) -> None:
         """Load network weights saved by :meth:`save_checkpoint` (``weights_only=True``)."""

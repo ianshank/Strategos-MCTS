@@ -258,6 +258,45 @@ jobs:
           name: test-results
           path: junit.xml
 
+  chess-tests:
+    name: Chess Domain Tests (optional extra)
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies (with chess extra)
+        run: pip install -e ".[dev,neural,chess]"
+
+      # No coverage flags: the 85% gate is owned by the main test job (which runs
+      # without python-chess); this job proves the chess domain registers and works.
+      # tests/games/chess/unit/ is excluded: it targets a pre-refactor API
+      # (encoder.encode/decode, state.legal_moves) and needs a repair pass before it
+      # can gate anything — see docs/STATUS.md "Chess domain" notes.
+      - name: Run chess domain + policy-lift tests
+        run: |
+          pytest tests/games/chess/test_state.py \
+            tests/games/chess/test_action_space.py \
+            tests/games/chess/test_config.py \
+            tests/unit/framework/test_domain_registry.py \
+            tests/unit/framework/test_domain_registry_chess.py \
+            tests/unit/benchmark/test_policy_comparison.py \
+            tests/unit/benchmark/test_policy_lift_cli.py \
+            -m "not slow" -q
+        env:
+          WANDB_MODE: disabled
+          LANGCHAIN_TRACING_V2: "false"
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+          OPENAI_API_KEY: "sk-test-key-not-real"
+
   integration-test:
     name: Integration Tests
     runs-on: ubuntu-latest

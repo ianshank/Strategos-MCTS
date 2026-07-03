@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - M5 Gate Wiring & Measurement Validity
+
+### Added
+- **`policy-lift` CLI** (`python -m src.benchmark.policy_lift` / `policy-lift` console
+  script): runs the M5 baseline-vs-trained comparison from the command line, emits a JSON
+  artifact, and uses its exit code as the gate (0 = CI lower bound clears the target,
+  1 = not met, 2 = error). Reconstructs networks from `--network-config`, a
+  `<checkpoint>.meta.json` sidecar (now optionally written by
+  `SelfPlayTrainer.save_checkpoint(..., metadata=...)`), or MLP state_dict shape inference.
+- **Shared stats utility** `src/utils/stats.py` (Wilson score interval, mean/difference
+  normal-approximation CIs, z-score table) — extracted from `EvaluationService`, which now
+  delegates to it.
+- **Chess domain registration** (`src/games/chess/registration.py`): `DomainRegistry.get("chess")`
+  lazily registers the adversarial chess domain when the new `chess` extra
+  (`python-chess>=1.10.0`) is installed; a no-op otherwise. New `chess-tests` CI job runs the
+  chess test subset with the extra installed (no coverage gate).
+
+### Changed (behavior — review before upgrading)
+- **`PolicyComparisonResult.meets_target` is now the CI-lower-bound gate, fail-closed.** It
+  requires `lift_ci_lower_pct >= target_lift_pct`; a result without a CI never meets the
+  target. The old point-estimate semantics moved to `point_meets_target`. Runs that showed
+  "≥20% lift" at n=20 will now correctly gate red until the sample supports the claim.
+- `compare_policies` gains `confidence`, `min_baseline`, `target_lift_pct` kwargs;
+  `num_games` now defaults per metric (win-rate: 100, mean-reward: 30) and warns below the
+  recommended minimum. Relative lift falls back to absolute points when the baseline is
+  below `min_baseline` (default 0.05) instead of dividing by a near-zero denominator.
+  The adversarial branch now forwards `MCTSConfig.num_simulations` to the arena evaluator
+  (previously it silently used `EvaluationConfig.mcts_iterations`'s default of 100).
+- Reasoning/planning are documented as **smoke-test domains** (synthetic, gameable rewards);
+  the M5 acceptance claim must come from an adversarial domain (see `docs/STATUS.md`).
+
 ## [Unreleased] - Security & Reliability Hardening
 
 ### Security
