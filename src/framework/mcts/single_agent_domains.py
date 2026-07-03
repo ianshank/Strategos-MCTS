@@ -13,6 +13,13 @@ action (preferring common id keys, falling back to a canonical repr) and remembe
 mapping back to the original action dict, so ``apply_action``/``action_to_index`` keep
 working regardless of the underlying action schema (``ReasoningState`` uses ``"type"``,
 ``PlanningState`` uses ``"name"``).
+
+**Smoke-test domains.** The reasoning/planning rewards are hand-crafted and trivially
+exploitable (e.g. ``PlanningState.get_reward`` pays 0.8 for ending on "finish" plus an
+efficiency bonus over a tiny fixed action vocabulary). They exist to exercise the
+self-play/benchmark plumbing; decision-quality claims (the M5 ≥20% lift gate) must come
+from an adversarial domain with an external notion of success — see
+:mod:`src.benchmark.policy_comparison`.
 """
 
 from __future__ import annotations

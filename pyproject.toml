@@ -114,13 +114,19 @@ ui = [
     # break the Blocks/launch API the app relies on; bump deliberately after revalidating.
     "gradio>=4.0.0,<6.0.0",
 ]
+chess = [
+    # Chess adversarial domain (src/games/chess). Registers lazily in DomainRegistry;
+    # without this extra the chess domain and its tests are skipped.
+    "python-chess>=1.10.0",
+]
 all = [
-    "langgraph-multi-agent-mcts[dev,prometheus,api,neural,experiment,vectordb,google-adk,benchmark,ui]",
+    "langgraph-multi-agent-mcts[dev,prometheus,api,neural,experiment,vectordb,google-adk,benchmark,ui,chess]",
 ]
 
 [project.scripts]
 benchmark = "src.benchmark.cli:main"
 harness = "src.framework.harness.cli:main"
+policy-lift = "src.benchmark.policy_lift:main"
 
 [project.urls]
 Homepage = "https://github.com/ianshank/langgraph_multi_agent_mcts"

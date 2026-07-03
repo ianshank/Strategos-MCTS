@@ -71,6 +71,32 @@ Google ADK agents other than `data_science` are already ≥85% (academic_researc
 85.4, ml_engineering 86.3, data_engineering 89.4, base 87.0) — **no greenfield ADK test fan-out
 needed**, contrary to older plans.
 
+## M5 measurement (policy-lift gate)
+
+The M5 "≥20% decision-quality lift" harness is now runnable from the command line:
+
+```bash
+python -m src.benchmark.policy_lift --domain chess --checkpoint <trained.pt> \
+  --num-games 100 --output lift.json    # exit 0 = gate met, 1 = not met, 2 = error
+```
+
+- **Gate semantics:** `meets_target` is the **confidence-interval lower bound** (95% default)
+  clearing the target — not the point estimate. Fail-closed: no CI ⇒ gate not met. Win-rate
+  domains use a Wilson interval on real win/draw counts; mean-reward domains use a
+  difference-of-means interval over per-game rewards, with a baseline floor (default 0.05)
+  below which lift is reported in absolute points instead of a divide-by-tiny-baseline ratio.
+- **Sample sizes:** defaults are 100 games (win-rate) / 30 (mean-reward). At n=100, the Wilson
+  lower bound needs a true win-rate around 0.70 to credibly clear +20% — that is intentional.
+- **Domains:** reasoning/planning are **synthetic smoke-test domains** (gameable rewards);
+  lifts on them validate plumbing only. Chess is the real (adversarial) domain, registered
+  lazily behind the `chess` extra (`pip install -e ".[chess]"`) with its own CI job.
+- **No ≥20% claim exists yet.** Training-to-convergence on chess plus the recorded lift
+  artifact is the next milestone; this section will be updated when that artifact lands.
+- **Known issue (chess test bit-rot):** `tests/games/chess/unit/` targets a pre-refactor API
+  (`encoder.encode/decode`, `state.legal_moves`, `get_result`) and fails ~20 tests once
+  python-chess is actually installed — it had never run in CI. The `chess-tests` CI job
+  excludes that directory until a repair pass lands.
+
 ## Implications for the plan
 
 - **Phase 2 is largely satisfied at the gate level** (88.98% ≥ 85%). Remaining work is opportunistic,

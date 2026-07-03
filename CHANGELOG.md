@@ -5,13 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - Security & Reliability Hardening
+## [Unreleased]
 
-### Security
+### M5 Gate Wiring & Measurement Validity
+
+#### Added
+- **`policy-lift` CLI** (`python -m src.benchmark.policy_lift` / `policy-lift` console
+  script): runs the M5 baseline-vs-trained comparison from the command line, emits a JSON
+  artifact, and uses its exit code as the gate (0 = CI lower bound clears the target,
+  1 = not met, 2 = error). Reconstructs networks from `--network-config`, a
+  `<checkpoint>.meta.json` sidecar (now optionally written by
+  `SelfPlayTrainer.save_checkpoint(..., metadata=...)`), or MLP state_dict shape inference.
+- **Shared stats utility** `src/utils/stats.py` (Wilson score interval, mean/difference
+  normal-approximation CIs, z-score table) — extracted from `EvaluationService`, which now
+  delegates to it.
+- **Chess domain registration** (`src/games/chess/registration.py`): `DomainRegistry.get("chess")`
+  lazily registers the adversarial chess domain when the new `chess` extra
+  (`python-chess>=1.10.0`) is installed; a no-op otherwise. New `chess-tests` CI job runs the
+  chess test subset with the extra installed (no coverage gate).
+
+#### Changed (behavior — review before upgrading)
+- **`PolicyComparisonResult.meets_target` is now the CI-lower-bound gate, fail-closed.** It
+  requires `lift_ci_lower_pct >= target_lift_pct`; a result without a CI never meets the
+  target. The old point-estimate semantics moved to `point_meets_target`. Runs that showed
+  "≥20% lift" at n=20 will now correctly gate red until the sample supports the claim.
+- `compare_policies` gains `confidence`, `min_baseline`, `target_lift_pct` kwargs;
+  `num_games` now defaults per metric (win-rate: 100, mean-reward: 30) and warns below the
+  recommended minimum. Relative lift falls back to absolute points when the baseline is
+  below `min_baseline` (default 0.05) instead of dividing by a near-zero denominator.
+  The adversarial branch now forwards `MCTSConfig.num_simulations` to the arena evaluator
+  (previously it silently used `EvaluationConfig.mcts_iterations`'s default of 100).
+- Reasoning/planning are documented as **smoke-test domains** (synthetic, gameable rewards);
+  the M5 acceptance claim must come from an adversarial domain (see `docs/STATUS.md`).
+
+### Security & Reliability Hardening
+
+#### Security
 - Removed both unsafe `pickle.load` deserialization sites. The substructure library now
   persists as versioned JSON; the experience buffer via `torch.save` + `torch.load(weights_only=True)`.
 
-### Changed (behavior — review before upgrading)
+#### Changed (behavior — review before upgrading)
 - **Fail-loud fallbacks (default behavior change).** The framework service no longer silently
   serves mock LLM output when the real LLM client can't initialize; it raises instead. Set
   `ALLOW_MOCK_LLM_FALLBACK=true` to restore the mock fallback (tests/dev). The
@@ -21,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `TRAINING_STRICT_ERRORS=true`; the default still returns zeros but emits a
   `training_step_degraded` warning.
 
-### Migration
+#### Migration
 - **Legacy persisted artifacts.** Existing `.pkl` substructure libraries and experience
   buffers are **not** read by default. To migrate them once to the safe format, set
   `ASSEMBLY_TRUST_LEGACY_PICKLE=true` / `TRAINING_TRUST_LEGACY_PICKLE=true`; the file is
@@ -30,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Packaging.** `pydantic-settings` is now a core dependency and a new `api` extra
   (`fastapi`, `uvicorn`) was added; the production Docker image installs `.[api,prometheus]`.
 
-### Fixed (CI determinism)
+#### Fixed (CI determinism)
 - **Green, deterministic CI.** The pytest job no longer fails collection on a missing
   `pydantic_settings` import (now a core dependency). `ruff` and `mypy` are pinned in the
   `[dev]` extra and the lint job installs `.[dev]` so CI uses the same tool versions
@@ -42,7 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pinned GitHub Action refs**: `aquasecurity/trivy-action@v0.36.0` and
   `jlumbroso/free-disk-space@v1.3.1` (were `@master` / `@main`).
 
-### Changed (internal refactor — no public API change)
+#### Changed (internal refactor — no public API change)
 - **`CircuitBreaker` extracted** from `adapters/llm/openai_client.py` into a new
   provider-agnostic `adapters/llm/resilience.py`, re-exported from `openai_client` for
   backward compatibility and imported by both the OpenAI and Anthropic clients. Fixed a
@@ -54,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Google ADK config, Kroki diagram rendering, and chess routing now reference these instead
   of inline literals (the factory's stale Anthropic default is corrected to the constant).
 
-### Added
+#### Added
 - **Fallback logging** where failures were previously silent: HTTPX tracing-instrumentation
   unavailability (`observability/tracing.py`) and settings-unavailable fallback when
   resolving the legacy-pickle flag (`training/data_collector.py`).
@@ -62,7 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   back-compat re-export invariant + `half_open_max_calls` enforcement) and
   `tests/unit/test_config_constants_centralization.py` (guards the constant centralization).
 
-### Added (2026-H2 implementation: Phases 0–3, close M3/M4)
+#### Added (2026-H2 implementation: Phases 0–3, close M3/M4)
 - **Spec-driven development**: `specs/phase_0_baseline..phase_3_production.SPEC.md` parsed by the
   harness (`harness validate-spec`), plus a CI `spec-validate` job and a hardcoded-secret scan
   (`sk-[A-Za-z0-9]{20,}` over `src/`+`kubernetes/`).
@@ -80,12 +113,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `AUTH_MODE` validator + startup guard (`tests/unit/test_api_auth.py`), and the revived example
   LLM agents (`tests/unit/test_example_llm_agents.py`).
 
-### Security (2026-H2)
+#### Security (2026-H2)
 - **No plaintext secrets in VCS**: `kubernetes/deployment.yaml` now uses an External Secrets
   Operator `ExternalSecret` (producing the same `llm-secrets`/keys) instead of an inline plaintext
   `Secret`; rotation runbook in `docs/SECRETS_MANAGEMENT.md`.
 
-### Fixed (2026-H2)
+#### Fixed (2026-H2)
 - **Revived the `examples/langgraph_multi_agent_mcts.py` reference framework**, which was
   incompatible with the current neural `src/agents` (it called a non-existent `.process()` on the
   `nn.Module` agents). Replaced with self-contained LLM-backed HRM/TRM agents; fixed a latent
@@ -97,7 +130,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   synthesis fallback against an empty `agent_outputs`; explicit `sub`-claim check in JWT
   verification.
 
-### Added (2026-H2 implementation: Phase 4 — streaming / visualization / comparison)
+#### Added (2026-H2 implementation: Phase 4 — streaming / visualization / comparison)
 - **MCTS early termination wired through the graph** behind `MCTSConfig.enable_early_termination`
   (default off = historical behavior); thresholds remain a single source of truth on `MCTSConfig`.
 - **Coverage-bearing service layer** exposing existing framework capabilities, with thin REST
@@ -111,7 +144,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `POST /graph/render`, `POST /compare` (flag-gated). **Gradio UI** (`app.py`) extended with
   comparison / streaming / graph views via those services; new `[ui]` extra (`gradio`).
 
-### Added (2026-H2 implementation: Phase 5 — M5 neural self-play)
+#### Added (2026-H2 implementation: Phase 5 — M5 neural self-play)
 - **Generalized `SelfPlayTrainer`** (`src/training/self_play_trainer.py`) with an opt-in
   **single-agent** path: `NeuralMCTS`/`SelfPlayCollector` skip negamax value negation, player
   alternation, and sign-flipped targets when `single_agent=True` (two-player behavior unchanged by
@@ -127,13 +160,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   decision collection + reproducible supervised train/validate reporting accuracy vs a majority
   baseline; guide in `docs/META_CONTROLLER_TRAINING.md`.
 
-### CI/CD (tech-debt cleanup, spec-driven `specs/phase_5..8`)
+#### CI/CD (tech-debt cleanup, spec-driven `specs/phase_5..8`)
 - **Green CI pipeline.** Fixed the two jobs that were failing on `main` while lint/mypy/tests passed:
   the `docker-build` job now declares `security-events: write` (plus a `continue-on-error` fallback) so
   the Trivy SARIF upload no longer fails the run; the same advisory/guarded pattern was applied to
   `docker-deployment.yml`.
 
-### Fixed
+#### Fixed
 - **`harness replay` crash.** `_cmd_replay` delegates to `_cmd_run`, but the `replay` subparser omits the
   run-only flags (`--shell-allow`/`--ralph`/`--json`); `_cmd_run` now reads them via `getattr` so replay
   no longer raises `AttributeError`.
@@ -142,55 +175,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ADK factory integration test** updated to accept the factory-supplied `agent_name` (the source
   contract was already correct).
 
-### Changed (config centralization)
+#### Changed (config centralization)
 - Assembly-router routing confidences and feature thresholds are now named constants in
   `assembly_router.py` (behaviour unchanged; assembly-index thresholds remain `AssemblyConfig`-driven).
 - `LMStudioClient.DEFAULT_MODEL` now references `constants.DEFAULT_LMSTUDIO_MODEL` instead of duplicating
   the literal.
 
-### Tests
+#### Tests
 - Coverage gap-analysis lifts (branch coverage held at ≥85%, now ~89.6%): `harness/cli.py` 53.7%→97.8%,
   `harness/factories.py` 72.3%→94.6%, `benchmark/adapters/adk_adapter.py` 63%→83.4%,
   `mcts/llm_guided/rag/prompts.py` 71.3%→96.9%, plus new `HybridMetaController` method coverage.
 
-### Documentation
+#### Documentation
 - Consolidated 36 archival root markdown files into `docs/{reports,summaries,plans,quickstart}` (root cut
   from 45 to 9 markdown files); updated `PROJECT_STRUCTURE.md`, `README.md`, and `docs/STATUS.md` references.
 
-## [0.2.0] - Production Training Pipeline Release
+### Benchmark Framework (Phase 4)
 
-### Added
+#### Added
 
-#### Production Training Pipeline
-- **Dockerized Workflow**: End-to-end training orchestration with `scripts/run_production_training.sh` and `Dockerfile.train`.
-- **Synthetic Data Generation**: LLM-powered generator creating high-quality Q&A pairs, automatically merged with DABStep dataset.
-- **Research Corpus Integration**: Automated arXiv paper fetching and indexing for RAG knowledge base.
-- **Model Integration**: CLI tool `training.cli integrate` to export optimized production models.
-
-#### Neural Architecture Updates
-- **HRM/TRM Enhancements**: Updated model dimensions to 768 (DeBERTa-v3-base) and added LoRA support.
-- **Robust Loading**: Implemented safe PyTorch loading with `weights_only=True` and numpy type allowlisting.
-- **Production Config**: Generated optimized configuration `training/configs/production_config.yaml`.
-
-#### Testing & Verification
-- **Integration Tests**: Added `tests/integration/test_deployed_models.py` verifying model loading, inference, and configuration.
-- **Demo Pipeline**: Validated full training cycle with mock data achieving 100% accuracy on test set.
-
-### Fixed
-- **TRM Dimension Mismatch (Fix #20)**: Resolved tensor shape alignment issues in Task Refinement Model.
-- **HRM Config Passing**: Fixed configuration propagation in HRM trainer initialization.
-- **W&B Integration**: Added graceful handling of missing API keys in production scripts.
-- **Data Pipeline**: Fixed `TaskSample` object handling in evaluation CLI.
-
-### Documentation
-- **Architecture Guide**: Updated `docs/C4_ARCHITECTURE.md` with comprehensive C4 diagrams (Context, Container, Component, Code).
-- **README Overhaul**: Rewrote `README.md` to feature production capabilities and usage instructions.
-
-## [Unreleased]
-
-### Added
-
-#### Phase 4: Benchmark Framework (LangGraph MCTS vs Google ADK)
+##### Phase 4: Benchmark Framework (LangGraph MCTS vs Google ADK)
 - **Benchmark Module** (`src/benchmark/`): Complete framework for comparing multi-agent systems
   - `BenchmarkFactory`: Master factory wiring adapters, scorer, cost calculator, harness, and report generator
   - `EvaluationHarness`: Orchestrates benchmark runs with timeout, retry, health checks, and multi-iteration support
@@ -210,13 +214,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **207 benchmark tests** (202 unit + 5 integration) covering all modules
 - **Design Document**: `PHASE_4_TEMPLATE_PLAN.md` with 11-section architecture following Agentic Coding template
 
-### Changed
+#### Changed
 - Updated `pyproject.toml` with `[benchmark]` extras group and `benchmark` console entry point
 - Updated `.env.example` with 20+ benchmark environment variables
 - Updated `CLAUDE.md` with benchmark commands, file locations, and build instructions
 - Updated `.gitignore` with benchmark output artifact patterns
 
-#### Comprehensive Test Suite
+##### Comprehensive Test Suite
 - **563 new unit tests** bringing total to 734 passing tests
 - **Test coverage improved from 22.49% to 49.65%** (more than doubled)
 
@@ -274,34 +278,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | `observability/tracing.py` | 6.06% | 68.18% | +62% |
 | `storage/s3_client.py` | 27.55% | 63.78% | +36% |
 
-#### Enhanced Architecture Documentation
+##### Enhanced Architecture Documentation
 - **REST API Endpoints Section** - Complete documentation of `/health`, `/ready`, `/query`, `/stats`, `/metrics` endpoints with request/response schemas
 - **Data Models Section** - AgentState TypedDict, MCTSNode structures, Vector storage schema (10D features for Pinecone), API models
 - **Configuration Architecture** - Environment variable hierarchy, Settings.py integration, optional dependency flags
 - **Component Interactions** - REST API to Framework flow diagram, Neural meta-controller routing decision flow with Mermaid diagrams
 - **Authentication Flow** - Sequence diagram showing API key validation with SHA-256 hashing
 
-### Fixed
+#### Fixed
 
-#### Test Failures Resolved
+##### Test Failures Resolved
 1. **`test_llm_invalid_response_handling`** - Fixed mock to properly trigger exception handler and fallback path
 2. **`test_large_context_handling`** - Corrected assertion to use `>= 100000` instead of `> 100000`
 3. **`test_maximum_throughput`** - Adjusted threshold from 10 req/s to 1 req/s for realistic test environment expectations
 
-#### Bug Fixes
+##### Bug Fixes
 - Fixed `HTTPXClientInstrumentation` to `HTTPXClientInstrumentor` in tracing module (correct OpenTelemetry class name)
 
-### Changed
+#### Changed
 
 - Test assertions now reflect realistic performance expectations for test environments
 - Improved error handling in chaos and performance tests to be more robust
 
-### Security
+#### Security
 
 - All new tests include security validation (no sensitive data exposure)
 - XSS and injection prevention tests added
 - API key hashing verification tests
 - Secret masking validation in logging tests
+
+## [0.2.0] - Production Training Pipeline Release
+
+### Added
+
+#### Production Training Pipeline
+- **Dockerized Workflow**: End-to-end training orchestration with `scripts/run_production_training.sh` and `Dockerfile.train`.
+- **Synthetic Data Generation**: LLM-powered generator creating high-quality Q&A pairs, automatically merged with DABStep dataset.
+- **Research Corpus Integration**: Automated arXiv paper fetching and indexing for RAG knowledge base.
+- **Model Integration**: CLI tool `training.cli integrate` to export optimized production models.
+
+#### Neural Architecture Updates
+- **HRM/TRM Enhancements**: Updated model dimensions to 768 (DeBERTa-v3-base) and added LoRA support.
+- **Robust Loading**: Implemented safe PyTorch loading with `weights_only=True` and numpy type allowlisting.
+- **Production Config**: Generated optimized configuration `training/configs/production_config.yaml`.
+
+#### Testing & Verification
+- **Integration Tests**: Added `tests/integration/test_deployed_models.py` verifying model loading, inference, and configuration.
+- **Demo Pipeline**: Validated full training cycle with mock data achieving 100% accuracy on test set.
+
+### Fixed
+- **TRM Dimension Mismatch (Fix #20)**: Resolved tensor shape alignment issues in Task Refinement Model.
+- **HRM Config Passing**: Fixed configuration propagation in HRM trainer initialization.
+- **W&B Integration**: Added graceful handling of missing API keys in production scripts.
+- **Data Pipeline**: Fixed `TaskSample` object handling in evaluation CLI.
+
+### Documentation
+- **Architecture Guide**: Updated `docs/C4_ARCHITECTURE.md` with comprehensive C4 diagrams (Context, Container, Component, Code).
+- **README Overhaul**: Rewrote `README.md` to feature production capabilities and usage instructions.
 
 ## [0.1.0] - Initial Release
 

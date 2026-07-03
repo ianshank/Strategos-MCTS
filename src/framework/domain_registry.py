@@ -9,12 +9,18 @@ quality metric used to measure decision-quality lift:
 - ``"mean_reward"`` for single-agent domains (reasoning/planning), whose non-negative
   reward makes arena win-rate meaningless.
 
-The reasoning and planning single-agent domains are registered out of the box; other
-domains (e.g. chess) can register themselves via :func:`register_domain`.
+The built-in reasoning and planning domains are registered out of the box. **They are
+synthetic smoke-test domains**: their rewards are hand-crafted and trivially exploitable
+(see :meth:`~src.framework.mcts.game_states.PlanningState.get_reward`), so lifts measured
+on them validate plumbing, not decision quality. Domains with optional dependencies
+(chess) are registered lazily on first :meth:`DomainRegistry.get` via
+``_LAZY_LOADERS`` — a no-op when the extra isn't installed. Any other domain can
+register itself via :func:`register_domain`.
 """
 
 from __future__ import annotations
 
+import importlib
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -33,6 +39,13 @@ logger = get_logger(__name__)
 METRIC_WIN_RATE = "win_rate"
 METRIC_MEAN_REWARD = "mean_reward"
 _VALID_METRICS = frozenset({METRIC_WIN_RATE, METRIC_MEAN_REWARD})
+
+# Domains with optional dependencies register lazily on first lookup. Values are
+# "module.path:function" strings (imported at call time) so this module never imports
+# optional-dependency packages — the loader itself no-ops when its extra is missing.
+_LAZY_LOADERS: dict[str, str] = {
+    "chess": "src.games.chess.registration:register_chess_domain",
+}
 
 
 @dataclass(frozen=True)
@@ -62,8 +75,16 @@ class DomainRegistry:
 
     @classmethod
     def get(cls, name: str) -> DomainSpec:
+        if name not in cls._registry and name in _LAZY_LOADERS:
+            module_path, function_name = _LAZY_LOADERS[name].split(":")
+            loader: Callable[[], bool] = getattr(importlib.import_module(module_path), function_name)
+            loader()  # no-op (returns False) when the domain's optional deps are missing
         if name not in cls._registry:
-            raise KeyError(f"Unknown domain '{name}'. Registered: {sorted(cls._registry)}")
+            optional = sorted(set(_LAZY_LOADERS) - set(cls._registry))
+            raise KeyError(
+                f"Unknown domain '{name}'. Registered: {sorted(cls._registry)}"
+                + (f" (optional, need extras installed: {optional})" if optional else "")
+            )
         return cls._registry[name]
 
     @classmethod
@@ -84,6 +105,7 @@ class DomainRegistry:
 
     @classmethod
     def list_domains(cls) -> list[str]:
+        """Currently registered domains (lazy domains appear only after a successful ``get``)."""
         return sorted(cls._registry)
 
 

@@ -207,8 +207,13 @@ google_credentials.json
 
 # Model artifacts (large files)
 # NOTE: `*.pt` / `rnn_meta_controller.pt` are intentionally left tracked (commented out):
-# the small (~0.4 MB) reference weights under models/ are consumed by
+# the reference weights under models/ are consumed by
 # tests/integration/test_deployed_models.py and must exist on fresh clones/CI.
+# They are stored via Git LFS (.gitattributes routes *.pt/*.safetensors through LFS).
+# Sizes recorded by the LFS pointers: hrm_production.pt ~742 MB, trm_production.pt
+# ~744 MB, mcts_production.pt ~0.9 MB, meta_production.pt ~0.18 MB,
+# rnn_meta_controller.pt ~0.06 MB — the two large ones are a Phase 8b decision
+# (untrack vs slim); do not assume they are all small.
 # Large or generated weights belong under artifacts/ (ignored below).
 # *.pt
 *.pth
@@ -254,4 +259,9 @@ benchmark_output/
 benchmark_results/
 benchmark_report.md
 benchmark_results.json
+# M5 policy-lift gate artifact (policy-lift --output default name in docs/examples)
+lift.json
+# Checkpoint architecture sidecars written by SelfPlayTrainer.save_checkpoint(metadata=...)
+# (scoped to *.pt sidecars; tracked config *.json files are unaffected)
+*.pt.meta.json
 .claude/worktrees/

@@ -210,9 +210,13 @@ tooling — see §5), **Size**, and **Acceptance Criteria (AC)**. ACs inherit §
 
 - **5.1 AlphaZero-style self-play training loop** generalized beyond chess: a `SelfPlayTrainer`
   base class + replay buffer + value/policy update loop wired to the existing neural MCTS.
-  - **AC:** Demonstrated ≥20% decision-quality improvement on a defined benchmark vs the
-    untrained policy (the M5 epic target); chess remains a passing instance; checkpoints
-    versioned in the safe (non-pickle) format.
+  - **AC:** Demonstrated ≥20% decision-quality improvement vs the untrained policy (the M5 epic
+    target), measured as the **95% confidence-interval lower bound** of the lift on an
+    **adversarial domain (chess win-rate)** over **≥100 games**, produced by
+    `python -m src.benchmark.policy_lift` (JSON artifact + exit-code gate). Lifts on the
+    built-in reasoning/planning domains are smoke tests only (synthetic, gameable rewards) and
+    do not satisfy this AC. Checkpoints versioned in the safe (non-pickle) format, with the
+    optional `.meta.json` architecture sidecar for reproducible reloads.
 - **5.2 Domain adapters** — `DomainAdapter` protocol + **≥2 non-chess** adapters (reasoning,
   planning) selected via factory/config. **AC:** Both adapters pass a shared adapter contract
   test; registered dynamically (no hardcoded dispatch).
