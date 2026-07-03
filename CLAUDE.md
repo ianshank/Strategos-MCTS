@@ -289,7 +289,7 @@ grep -r "api_key.*=.*['\"]sk-" src/ && echo "FAIL: Hardcoded keys!" || echo "OK"
 CLI quick reference:
 
 ```bash
-harness validate-spec spec.md      # parse-only schema check
+harness validate-spec specs/*.SPEC.md  # schema v2 validation; errors exit 1
 harness dry-run --spec spec.md     # plan only, no LLM calls
 harness run --spec spec.md         # full deterministic loop
 harness run --spec spec.md --ralph # outer Ralph loop
@@ -311,11 +311,13 @@ harness run --spec spec.md --ralph # outer Ralph loop
 
 ## Spec-Driven Development
 
-Phase work is specified as Markdown specs under `specs/*.SPEC.md` (Goal / Acceptance Criteria /
-Constraints), parsed by `src/framework/harness/intent/spec_loader.py`:
+Phase work is specified as Markdown specs under `specs/<id>.SPEC.md` (schema v2: frontmatter
+`id`/`goal`/`module`/`status` lifecycle + Goal / Acceptance Criteria with `AC-n:` IDs /
+Constraints), parsed by `src/framework/harness/intent/spec_loader.py` and enforced by
+`src/framework/harness/intent/spec_validator.py`:
 
 ```bash
-harness validate-spec specs/phase_0_baseline.SPEC.md   # schema check
+harness validate-spec specs/*.SPEC.md   # schema v2 validation (errors exit 1)
 harness dry-run --spec specs/phase_1_correctness.SPEC.md  # plan only, no LLM
 ```
 

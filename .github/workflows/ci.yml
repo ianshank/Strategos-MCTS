@@ -59,7 +59,9 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Validate spec-driven specs
-        # Each specs/*.SPEC.md must parse under the harness spec schema.
+        # Each specs/*.SPEC.md must satisfy spec schema v2 (id/status lifecycle,
+        # AC-n criterion IDs, no inline done-markers); one multi-path invocation
+        # so cross-file rules (duplicate spec ids) can fire.
         run: |
           shopt -s nullglob
           specs=(specs/*.SPEC.md)
@@ -67,12 +69,7 @@ jobs:
             echo "No specs found under specs/ — skipping."
             exit 0
           fi
-          rc=0
-          for f in "${specs[@]}"; do
-            echo "== $f =="
-            harness validate-spec "$f" || rc=1
-          done
-          exit $rc
+          harness validate-spec "${specs[@]}"
 
       - name: Scan for hardcoded secrets
         # No plaintext API-key material may be committed to source or manifests.

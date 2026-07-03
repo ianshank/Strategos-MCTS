@@ -1,8 +1,10 @@
 ---
+id: phase_6_config_centralization
 goal: Centralize every hardcoded configuration value into the shared config infrastructure
+module: src/config/
 phase: "6"
 milestone: M5
-status: active
+status: implemented
 ---
 
 # Goal
@@ -14,18 +16,18 @@ preserved so the change is backward compatible.
 
 # Acceptance Criteria
 
-- Scattered LLM temperature defaults are defined once in `constants.py` and referenced by
+- AC-1: Scattered LLM temperature defaults are defined once in `constants.py` and referenced by
   `src/framework/mcts/llm_mcts.py`, `src/framework/agents/llm_hrm.py`, `src/framework/agents/llm_trm.py`,
   and `src/games/chess/llm_chess_engine.py`.
-- Import-time `os.getenv()` reads in `src/framework/mcts/llm_guided/constants.py` are replaced by lazy
+- AC-2: Import-time `os.getenv()` reads in `src/framework/mcts/llm_guided/constants.py` are replaced by lazy
   Settings lookups (new fields `MCTS_GENERATOR_MODEL`, `MCTS_REFLECTOR_MODEL`, `MCTS_EXECUTION_TIMEOUT`,
   `MCTS_MAX_MEMORY_MB` in `settings.py`); every existing import site keeps working.
-- Chess routing weights / phase thresholds / Elo default, assembly-router confidence scores, Google ADK
+- AC-3: Chess routing weights / phase thresholds / Elo default, assembly-router confidence scores, Google ADK
   defaults, and the re-hardcoded LMStudio URL (`src/adapters/llm/__init__.py`) all resolve from
   constants/settings rather than inline literals.
-- Each centralized value has a unit test asserting the module reads the constant and that a settings
+- AC-4: Each centralized value has a unit test asserting the module reads the constant and that a settings
   override propagates.
-- Intentional backward-compat code (gated pickle migration, model aliases, the CircuitBreaker re-export)
+- AC-5: Intentional backward-compat code (gated pickle migration, model aliases, the CircuitBreaker re-export)
   is retained and annotated as intentional so future scans do not re-flag it.
 
 # Constraints

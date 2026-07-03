@@ -26,6 +26,7 @@ pytestmark = pytest.mark.unit
 
 
 def _spec(tmp_path: Path) -> Path:
+    """Legacy/ad-hoc spec: run/dry-run stay permissive on these (no v2 frontmatter)."""
     spec = tmp_path / "spec.md"
     spec.write_text(
         "# Goal\nDo a thing.\n\n# Acceptance Criteria\n- one\n- two\n\n# Constraints\n- safe\n",
@@ -34,13 +35,26 @@ def _spec(tmp_path: Path) -> Path:
     return spec
 
 
+def _valid_spec(tmp_path: Path, spec_id: str = "demo_spec") -> Path:
+    """Schema-v2 spec: full frontmatter, AC-n: criterion IDs, filename matches id."""
+    spec = tmp_path / f"{spec_id}.SPEC.md"
+    spec.write_text(
+        f"---\nid: {spec_id}\ngoal: Do a thing\nmodule: src/\nstatus: approved\n---\n\n"
+        "# Goal\nDo a thing.\n\n# Acceptance Criteria\n- AC-1: one\n- AC-2: two\n\n# Constraints\n- safe\n",
+        encoding="utf-8",
+    )
+    return spec
+
+
 def test_validate_spec_ok(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
-    """``harness validate-spec`` accepts a well-formed spec and exits 0."""
-    spec = _spec(tmp_path)
+    """``harness validate-spec`` accepts a schema-v2 spec and exits 0."""
+    spec = _valid_spec(tmp_path)
     rc = main(["validate-spec", str(spec)])
     captured = capsys.readouterr()
     assert rc == 0
     assert "ok:" in captured.out
+    assert "id='demo_spec'" in captured.out
+    assert "status=approved" in captured.out
     assert "criteria=2" in captured.out
 
 
@@ -62,14 +76,51 @@ def test_dry_run_prints_plan(tmp_path: Path, capsys: pytest.CaptureFixture) -> N
     assert "Do a thing" in captured.out
 
 
-def test_validate_spec_warns_on_missing_goal(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
-    """A spec with no goal section still exits 0 but prints a warning to stderr."""
-    spec = tmp_path / "nogoal.md"
-    spec.write_text("# Constraints\n- safe\n", encoding="utf-8")
-    rc = main(["validate-spec", str(spec)])
+def test_dry_run_strips_authored_id_prefixes(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+    """dry-run criteria descriptions carry no ``AC-n:`` prefix (verifier matches on them)."""
+    spec = _valid_spec(tmp_path)
+    rc = main(["dry-run", "--spec", str(spec)])
     captured = capsys.readouterr()
     assert rc == 0
-    assert "no goal section" in captured.err
+    assert '"one"' in captured.out
+    assert "AC-1:" not in captured.out
+
+
+def test_validate_spec_errors_on_missing_goal(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+    """A spec with no goal is now an error (exit 1), reported with its code."""
+    spec = tmp_path / "nogoal.SPEC.md"
+    spec.write_text(
+        "---\nid: nogoal\nmodule: src/\nstatus: draft\n---\n\n# Acceptance Criteria\n- AC-1: safe\n",
+        encoding="utf-8",
+    )
+    rc = main(["validate-spec", str(spec)])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "missing-goal" in captured.err
+
+
+def test_validate_spec_rejects_legacy_format(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+    """A pre-v2 spec (no frontmatter) fails schema validation with clear codes."""
+    spec = _spec(tmp_path)
+    rc = main(["validate-spec", str(spec)])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "missing-id" in captured.err
+    assert "missing-status" in captured.err
+
+
+def test_validate_spec_multiple_paths_duplicate_id(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+    """The multi-path form detects the same spec id declared by two files."""
+    a_dir = tmp_path / "a"
+    b_dir = tmp_path / "b"
+    a_dir.mkdir()
+    b_dir.mkdir()
+    first = _valid_spec(a_dir)
+    second = _valid_spec(b_dir)
+    rc = main(["validate-spec", str(first), str(second)])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "duplicate-id" in captured.err
 
 
 # ---------------------------------------------------------------------------
@@ -87,6 +138,16 @@ def test_resolve_intent_from_spec(tmp_path: Path) -> None:
     assert [c["description"] for c in intent["acceptance_criteria"]] == ["one", "two"]
     assert intent["constraints"] == ["safe"]
     assert intent["metadata"]["spec_path"] == str(spec)
+
+
+def test_resolve_intent_uses_authored_ids(tmp_path: Path) -> None:
+    """Authored AC-n criterion IDs flow into the intent; descriptions are prefix-free."""
+    spec = _valid_spec(tmp_path)
+    args = argparse.Namespace(spec=spec, goal=None)
+    intent = _resolve_intent(args)
+    assert isinstance(intent, dict)
+    assert [c["id"] for c in intent["acceptance_criteria"]] == ["AC-1", "AC-2"]
+    assert [c["description"] for c in intent["acceptance_criteria"]] == ["one", "two"]
 
 
 def test_resolve_intent_from_goal() -> None:

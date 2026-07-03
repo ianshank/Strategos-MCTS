@@ -447,15 +447,16 @@ same pinned tool versions (the lint job installs the `[dev]` extra; the type-che
 `[tool.mypy]` in `pyproject.toml`, not a `--strict` flag; CI adds `--no-error-summary`) → `pytest` with
 branch coverage (`--cov-fail-under=85`) → a hardcoded-secret grep. On top of that gate, CI-only jobs add
 `bandit` (HIGH-severity gate), `pip-audit` (CRITICAL gate), spec validation (`harness validate-spec` —
-currently minimal and warn-only: the only failure it explicitly handles is `SpecParseError`, in
-practice a missing or unreadable file, while the forgiving parser accepts most malformed content and
-returns success, and a missing goal only warns), and a Docker build with a
+error-level against spec schema v2 via `src/framework/harness/intent/spec_validator.py`: required
+`id`/`goal`/`status` frontmatter with a closed status lifecycle, authored `AC-n` criterion IDs,
+filename↔id and duplicate-id checks across `specs/`, and a no-changelog rule rejecting inline
+done-markers; one multi-path invocation so cross-file rules fire), and a Docker build with a
 Trivy image scan whose SARIF results upload to GitHub code scanning (the `docker-build` job carries
 `security-events: write`; the upload is advisory and non-blocking). Configuration is centralized in `src/config/constants.py` + `src/config/settings.py`
 (Pydantic Settings) with domain-specific constant modules; there are no hardcoded secrets or magic numbers
 in the routing/adapter layers.
 
-> **Planned (not yet built):** the spec-validation gate is scheduled to become error-level with a
-> versioned spec schema (`id`/`module`/status lifecycle, authored `AC-n` criterion IDs) plus
-> repo-native `.claude/` enforcement (slash commands, spec-review subagent, PreToolUse gate) and
-> CI spec-traceability rules — see `docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md` for the phased plan.
+> **Planned (not yet built):** repo-native `.claude/` enforcement (slash commands, spec-review
+> subagent, PreToolUse gate) and CI spec-traceability rules — Phase 1 of
+> `docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md`. (The Phase 0 schema + error-level validator described
+> above is built.)

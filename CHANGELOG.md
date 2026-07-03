@@ -7,13 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Spec-Driven Development Hardening — Phase 0 (spec contract v2)
+
+#### Added
+- **Spec schema v2** (`docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md` §2): frontmatter `id` (must
+  match the `<id>.SPEC.md` filename, unique across `specs/`), `module`, `status` lifecycle
+  `draft → approved → implemented → verified` (+ `superseded`), optional `supersedes`; authored
+  acceptance-criterion IDs as `- AC-n:` bullet prefixes; optional `# Invariants` /
+  `# Out of Scope` sections. Parser support in `spec_loader.py` (`SpecCriterion`,
+  `Spec.criteria`, `Spec.body`, `criteria_payload()`).
+- **`spec_validator.py`** — importable `SpecValidator` returning typed `ValidationIssue`s;
+  `harness validate-spec` now accepts multiple paths and **errors (exit 1)** on: missing
+  id/goal/status/criteria, unknown status, filename↔id mismatch, duplicate or alias-colliding
+  section headers, inline done-markers (no-changelog rule), mixed/duplicate `AC-n` IDs, and
+  duplicate spec ids across files. Warnings: missing `module`, all-positional criterion IDs.
+
+#### Changed (behavior — review before upgrading)
+- **`harness validate-spec` semantics: warn-only → error-level**, and the positional argument
+  now takes one or more paths. The CI `spec-validate` job calls it once over `specs/*.SPEC.md`
+  so cross-file checks fire. `harness run`/`dry-run`/Ralph remain permissive on legacy specs.
+- **Criterion IDs are authored, not positional**: the three `f"c{i}"` synthesis sites
+  (`cli.py` ×2, `ralph/loop.py`) now use `Spec.criteria_payload()` — authored `AC-n` IDs flow
+  through to `AcceptanceCriterion.id`; unprefixed bullets keep the positional fallback.
+
+#### Migration
+- All nine `specs/*.SPEC.md` migrated to schema v2: `id`/`module` added, `status: active` →
+  `implemented` (work landed for every phase, including phase 8, whose remaining moves were
+  deliberately resolved via documentation — the 2026H2 plan banner is updated accordingly),
+  acceptance bullets prefixed `AC-1:`…`AC-n:`, and the one inline `**(8a — done)**` marker
+  removed. `active` is no longer a valid status.
+
 ### Spec-Driven Development Hardening (planning)
 
 #### Added
 - **`docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md`** — peer-reviewed plan (v2.0.0) to harden the
   existing SDD toolchain and extract it as a reusable Claude Code plugin: spec schema v2
   (`id`/`module`/status lifecycle, authored `AC-n` criterion IDs replacing positional `c{i}`
-  synthesis), an error-level `validate-spec` (today parse-level and warn-only), repo-native
+  synthesis), an error-level `validate-spec` (implemented below), repo-native
   `.claude/` enforcement (slash commands, spec-review subagent, stateless PreToolUse gate),
   CI spec-traceability rules without bot commits, an M5 policy-lift pilot, and Phase-3
   extraction into `claude-code-foundry`. Documentation only — no behavior changes yet.

@@ -70,9 +70,7 @@ class RalphLoop:
                 spec_intent = {
                     "id": f"ralph-{round_index}",
                     "goal": spec.goal or "Make the spec pass.",
-                    "acceptance_criteria": [
-                        {"id": f"c{i}", "description": c} for i, c in enumerate(spec.acceptance_criteria)
-                    ],
+                    "acceptance_criteria": spec.criteria_payload(),
                     "constraints": list(spec.constraints),
                     "metadata": {"round": round_index, "spec_path": str(self.spec_path)},
                 }

@@ -28,7 +28,7 @@ parity — bump deliberately and re-validate. Coverage gate: 85% (`--cov-fail-un
 ## Harness CLI
 
 ```bash
-harness validate-spec path/to/spec.md
+harness validate-spec specs/*.SPEC.md   # schema v2; errors exit 1
 harness dry-run --spec path/to/spec.md
 harness run --spec path/to/spec.md
 harness run --goal "describe the goal" --max-iterations 5
@@ -108,7 +108,7 @@ Fixtures: `tests/fixtures/harness_fixtures.py` (helpers), `tests/integration/har
 
 - Active roadmap: `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`
 - Current test/coverage status (source of truth): `docs/STATUS.md`
-- Spec-driven specs: `specs/*.SPEC.md` (validate with `harness validate-spec`)
+- Spec-driven specs: `specs/<id>.SPEC.md`, schema v2 (validate with `harness validate-spec specs/*.SPEC.md`)
 - Project skills: `.claude/skills/{quality-gate,validate-specs,coverage-baseline}`
 - Implementation template: `MULTI_AGENT_MCTS_TEMPLATE.md`
 - Architecture: `docs/C4_ARCHITECTURE.md`
