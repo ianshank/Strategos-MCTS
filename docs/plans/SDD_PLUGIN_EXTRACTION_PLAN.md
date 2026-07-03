@@ -45,8 +45,9 @@ real specs and live CI — and extracts to the plugin only once they demonstrabl
    `goal`/`phase`/`milestone`/`status`; all nine specs are `status: active`; criterion IDs are
    synthesized positionally (`f"c{i}"`, `src/framework/harness/cli.py`) — reordering bullets
    silently remaps them. Phase 0 is a schema redesign plus a nine-spec migration.
-2. **Existing validation is warn-only.** `harness validate-spec` fails only on `SpecParseError`;
-   a missing goal warns and returns 0; malformed frontmatter passes silently
+2. **Existing validation is warn-only.** The only failure path `harness validate-spec` explicitly
+   handles is `SpecParseError` — in practice a missing or unreadable file; most malformed content
+   still parses and returns 0, a missing goal warns, and malformed frontmatter passes silently
    (`src/framework/harness/intent/spec_loader.py`). "Port the existing `spec-validate` job" would
    port a toothless check — hardening is new work.
 3. **Zero Claude Code plugin infrastructure exists.** No `.claude-plugin/`, no `plugin.json`, no
