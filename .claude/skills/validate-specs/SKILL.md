@@ -34,6 +34,9 @@ harness dry-run --spec specs/phase_1_correctness.SPEC.md
 ```
 
 Notes:
+- New specs are scaffolded with `/spec-new <id> <module>` (deterministic overlap/id refusal via
+  `harness spec-new`); implementation starts with `/spec-implement <id>` (requires `approved`);
+  the `spec-review` subagent gates draft→approved. See "Spec-driven workflow" in `CLAUDE.md`.
 - `validate-spec` **errors (exit 1)** on schema violations: missing id/goal/status/criteria,
   unknown status, filename↔id mismatch, duplicate or alias-colliding section headers, inline
   done-markers, mixed or duplicate `AC-n` IDs, and duplicate spec ids across files.

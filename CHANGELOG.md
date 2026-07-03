@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Spec-Driven Development Hardening — Phase 1 (enforcement layer)
+
+#### Added
+- **Slash commands** `.claude/commands/spec-new.md` / `spec-implement.md`: `/spec-new <id>
+  <module>` scaffolds a draft via the deterministic `harness spec-new` (refuses malformed ids,
+  existing files, and module overlap with open draft/approved specs); `/spec-implement <id>`
+  requires `approved` via `harness spec-status`, then switches to a `spec/<id>` branch cut from
+  `origin/main` in one `&&`-gated chain (refusal changes nothing).
+- **`spec-review` subagent** (`.claude/agents/spec-review.md`, read-only tools): reviews draft
+  specs before a human flips draft→approved — AC falsifiability, intended test paths,
+  no-changelog prose, module/frontmatter sanity; outputs `VERDICT: APPROVE|REVISE`.
+- **PreToolUse spec gate** (`.claude/hooks/spec_gate.py` + committed `.claude/settings.json`):
+  Edit/Write/MultiEdit/NotebookEdit under `src/**` warn unless the branch is `spec/<id>` with an
+  `approved`/`implemented` spec. Self-contained (no `src/` import — parity tests pin its
+  frontmatter reader and id grammar to the harness), stateless (one git call, worktree-correct),
+  fail-open on any internal error. **Warn mode** for the pilot; block is a one-line
+  `_DEFAULT_MODE` flip. Bypass: `SPEC_GATE_BYPASS=1`.
+- **CI traceability** — new `harness spec-trace` (pure rule engine
+  `src/framework/harness/intent/spec_trace.py` + git layer), run by the `spec-validate` job on
+  PRs (`fetch-depth: 0`): `src/**` diffs need a `spec/<id>` branch whose spec is `approved` on
+  the base branch or a `No-Spec: <reason>` commit trailer; flips to `verified` require same-line
+  spec-id+`AC-n` mappings under `tests/**/*.py` — evaluated unconditionally (an exemption
+  trailer does not bypass it); `--allow-unmapped-verified` softens to a warning. Rename-proof
+  (`--no-renames`), word-bounded AC tokens.
+- New harness subcommands `spec-new`, `spec-status`, `spec-trace`; `SPEC_ID_PATTERN` shared id
+  grammar; ~70 new unit tests incl. hermetic tmp-git-repo suites and hook subprocess tests.
+
+#### Changed (behavior — review before upgrading)
+- **`spec-validate` now gates the CI `summary` aggregate** (previously it could fail without
+  failing the pipeline); like all summary inputs, the check is failure-only.
+- **Week-one reality:** all nine specs are `implemented` and none `approved`, so until the first
+  approved spec merges, every `src/**` PR is expected to carry a `No-Spec: <reason>` trailer —
+  the CI trace check blocks from the merge moment (including open PRs on their next sync), while
+  the session gate stays warn-only during the pilot.
+
+#### Known limitations
+- Bash-based writes (`sed -i`, `tee`) are not gated; `src/**` diffs are not scoped against the
+  spec's `module`; verified-mapping is a presence check only; native Windows without a `python3`
+  launcher degrades the gate to non-blocking per-edit errors.
+
 ### Spec-Driven Development Hardening — Phase 0 (spec contract v2)
 
 #### Added

@@ -450,13 +450,18 @@ branch coverage (`--cov-fail-under=85`) → a hardcoded-secret grep. On top of t
 error-level against spec schema v2 via `src/framework/harness/intent/spec_validator.py`: required
 `id`/`goal`/`status` frontmatter with a closed status lifecycle, authored `AC-n` criterion IDs,
 filename↔id and duplicate-id checks across `specs/`, and a no-changelog rule rejecting inline
-done-markers; one multi-path invocation so cross-file rules fire), and a Docker build with a
+done-markers; one multi-path invocation so cross-file rules fire — plus, on PRs, `harness
+spec-trace` traceability: `src/**` diffs need a `spec/<id>` branch approved on the base branch or
+a `No-Spec: <reason>` commit trailer, and `verified` flips need same-line spec-id+`AC-n` mappings
+under `tests/`; the `spec-validate` job now gates the CI `summary` aggregate on failure), and a
+Docker build with a
 Trivy image scan whose SARIF results upload to GitHub code scanning (the `docker-build` job carries
 `security-events: write`; the upload is advisory and non-blocking). Configuration is centralized in `src/config/constants.py` + `src/config/settings.py`
 (Pydantic Settings) with domain-specific constant modules; there are no hardcoded secrets or magic numbers
 in the routing/adapter layers.
 
-> **Planned (not yet built):** repo-native `.claude/` enforcement (slash commands, spec-review
-> subagent, PreToolUse gate) and CI spec-traceability rules — Phase 1 of
-> `docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md`. (The Phase 0 schema + error-level validator described
-> above is built.)
+> **Planned (not yet built):** the Phase 2 pilot (first spec driven through the full lifecycle;
+> gate flips warn→block on exit) and Phase 3 plugin packaging/extraction into
+> `claude-code-foundry` — see `docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md`. (Phases 0–1 — schema,
+> error-level validator, `.claude/` enforcement surfaces, and CI traceability — are built; the
+> session gate runs in warn mode during the pilot.)

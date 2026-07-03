@@ -48,6 +48,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # spec-trace diffs against the PR base branch
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -70,6 +72,20 @@ jobs:
             exit 0
           fi
           harness validate-spec "${specs[@]}"
+
+      - name: Spec traceability (PRs only)
+        # A PR touching src/** must run on a spec/<id> branch whose spec is
+        # 'approved' on the base branch (the completing PR may flip it to
+        # 'implemented' in its own diff), OR carry a 'No-Spec: <reason>'
+        # commit trailer. Any flip to 'verified' requires same-line
+        # spec-id + AC-n mappings under tests/. Push events have no base
+        # ref, hence the guard. See docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md §3.
+        if: github.event_name == 'pull_request'
+        run: |
+          harness spec-trace \
+            --base-ref "origin/${{ github.base_ref }}" \
+            --head-ref HEAD \
+            --branch "${{ github.head_ref }}"
 
       - name: Scan for hardcoded secrets
         # No plaintext API-key material may be committed to source or manifests.
@@ -512,13 +528,14 @@ jobs:
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [lint, type-check, security-scan, dependency-audit, test, build-check, docker-build]
+    needs: [lint, spec-validate, type-check, security-scan, dependency-audit, test, build-check, docker-build]
     if: always()
     steps:
       - name: Check all job results
         run: |
           echo "=== CI Pipeline Summary ==="
           echo "Lint & Format:     ${{ needs.lint.result }}"
+          echo "Spec Validate:     ${{ needs.spec-validate.result }}"
           echo "Type Check:        ${{ needs.type-check.result }}"
           echo "Security Scan:     ${{ needs.security-scan.result }}"
           echo "Dependency Audit:  ${{ needs.dependency-audit.result }}"
@@ -528,6 +545,7 @@ jobs:
 
           # Fail if any critical job failed
           if [[ "${{ needs.lint.result }}" == "failure" ]] || \
+             [[ "${{ needs.spec-validate.result }}" == "failure" ]] || \
              [[ "${{ needs.type-check.result }}" == "failure" ]] || \
              [[ "${{ needs.test.result }}" == "failure" ]] || \
              [[ "${{ needs.build-check.result }}" == "failure" ]] || \

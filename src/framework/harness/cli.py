@@ -27,7 +27,9 @@ import sys
 from pathlib import Path
 
 from src.framework.harness.factories import HarnessFactory
-from src.framework.harness.intent import SpecLoader, SpecValidator
+from src.framework.harness.intent import SpecLoader, SpecParseError, SpecValidator
+from src.framework.harness.intent.spec_scaffold import SpecScaffoldError, scaffold_spec
+from src.framework.harness.intent.spec_trace import run_trace
 from src.framework.harness.outcomes import Terminal
 from src.framework.harness.planner import HeuristicPlanner
 from src.framework.harness.settings import HarnessSettings
@@ -67,6 +69,30 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Validate SPEC.md files against the spec schema v2; any error exits 1.",
     )
     val.add_argument("paths", type=Path, nargs="+", metavar="path")
+
+    new = sub.add_parser("spec-new", help="Scaffold a schema-v2 spec; refuses on module overlap with open specs.")
+    new.add_argument("--id", required=True, dest="spec_id", help="Spec id (lowercase/digits/_; becomes <id>.SPEC.md).")
+    new.add_argument("--module", required=True, help="Repo-relative path prefix the spec governs (e.g. src/api/).")
+    new.add_argument("--goal", default="", help="One-line goal (a TODO placeholder is written when omitted).")
+    new.add_argument("--specs-dir", type=Path, default=Path("specs"))
+
+    status = sub.add_parser("spec-status", help="Print a spec's lifecycle status; --require exits 1 on mismatch.")
+    status.add_argument("spec_id", metavar="id")
+    status.add_argument("--require", default=None, help="Exit 1 unless the status equals this value.")
+    status.add_argument("--specs-dir", type=Path, default=Path("specs"))
+
+    trace = sub.add_parser(
+        "spec-trace",
+        help="CI spec-traceability: PR diffs touching src/ need an approved spec/<id> branch or a No-Spec trailer.",
+    )
+    trace.add_argument("--base-ref", required=True, help="Base ref to diff against (e.g. origin/main).")
+    trace.add_argument("--head-ref", default="HEAD")
+    trace.add_argument("--branch", required=True, help="Head branch name (github.head_ref; PR checkouts are detached).")
+    trace.add_argument(
+        "--allow-unmapped-verified",
+        action="store_true",
+        help="Soften the verified-flip AC/test mapping rule to a warning.",
+    )
 
     return parser
 
@@ -196,6 +222,46 @@ def _cmd_validate_spec(args: argparse.Namespace) -> int:
     return 1 if failing else 0
 
 
+def _cmd_spec_new(args: argparse.Namespace) -> int:
+    try:
+        path = scaffold_spec(args.specs_dir, args.spec_id, args.module, args.goal)
+    except SpecScaffoldError as exc:
+        sys.stderr.write(f"error: spec-new: {exc}\n")
+        return 1
+    sys.stdout.write(f"created: {path} (status=draft) — fill Goal/ACs, then spec-review gates draft->approved\n")
+    return 0
+
+
+def _cmd_spec_status(args: argparse.Namespace) -> int:
+    path = args.specs_dir / f"{args.spec_id}.SPEC.md"
+    try:
+        spec = SpecLoader().load(path)
+    except SpecParseError as exc:
+        sys.stderr.write(f"error: spec-status: {exc}\n")
+        return 1
+    status = spec.status or "<none>"
+    sys.stdout.write(f"id={args.spec_id} status={status}\n")
+    if args.require and spec.status != args.require:
+        sys.stderr.write(f"error: spec-status: spec '{args.spec_id}' is '{status}', required '{args.require}'\n")
+        return 1
+    return 0
+
+
+def _cmd_spec_trace(args: argparse.Namespace) -> int:
+    result = run_trace(
+        Path.cwd(),
+        base_ref=args.base_ref,
+        head_ref=args.head_ref,
+        branch=args.branch,
+        allow_unmapped_verified=args.allow_unmapped_verified,
+    )
+    for message in result.messages:
+        stream = sys.stdout if result.ok else sys.stderr
+        stream.write(f"spec-trace: {message}\n")
+    sys.stdout.write(f"spec-trace: {'OK' if result.ok else 'FAILED'}\n")
+    return 0 if result.ok else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point invoked by the ``harness`` console script."""
     parser = _build_parser()
@@ -209,6 +275,12 @@ def main(argv: list[str] | None = None) -> int:
         return asyncio.run(_cmd_replay(args))
     if args.command == "validate-spec":
         return _cmd_validate_spec(args)
+    if args.command == "spec-new":
+        return _cmd_spec_new(args)
+    if args.command == "spec-status":
+        return _cmd_spec_status(args)
+    if args.command == "spec-trace":
+        return _cmd_spec_trace(args)
     parser.error(f"unknown command: {args.command}")
     return 2
 
