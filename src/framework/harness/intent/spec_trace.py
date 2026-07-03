@@ -193,26 +193,36 @@ def _verified_flips(repo_root: Path, base_ref: str, changed_files: Sequence[str]
         head_spec = loader.load(path)
         if head_spec.status != "verified" or _status_at_ref(repo_root, base_ref, spec_id) == "verified":
             continue
-        unmapped = [c.id for c in head_spec.criteria if not _has_test_mapping(repo_root, spec_id, c.id)]
-        flips.append(VerifiedFlip(spec_id=spec_id, unmapped_criteria=tuple(unmapped)))
+        criterion_ids = [c.id for c in head_spec.criteria]
+        unmapped = _unmapped_criteria(repo_root, spec_id, criterion_ids)
+        flips.append(VerifiedFlip(spec_id=spec_id, unmapped_criteria=unmapped))
     return flips
 
 
-def _has_test_mapping(repo_root: Path, spec_id: str, criterion_id: str) -> bool:
-    """Same-line co-occurrence of the spec id and the word-bounded AC token under tests/."""
-    token = re.compile(rf"\b{re.escape(criterion_id)}\b")
+def _unmapped_criteria(repo_root: Path, spec_id: str, criterion_ids: Sequence[str]) -> tuple[str, ...]:
+    """Criteria lacking a same-line spec-id + word-bounded AC-token line under tests/.
+
+    Single pass over ``tests/**/*.py`` for the whole criterion set (not one
+    walk per criterion): each file is read at most once, per flip. No caching
+    across calls — the worktree may change between invocations in one process.
+    """
+    remaining = {cid: re.compile(rf"\b{re.escape(cid)}\b") for cid in criterion_ids}
     tests_dir = repo_root / "tests"
-    if not tests_dir.is_dir():
-        return False
+    if not tests_dir.is_dir() or not remaining:
+        return tuple(criterion_ids)
     for test_file in tests_dir.rglob("*.py"):
         try:
             text = test_file.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):  # pragma: no cover - defensive
             continue
         for line in text.splitlines():
-            if spec_id in line and token.search(line):
-                return True
-    return False
+            if spec_id not in line:
+                continue
+            for cid in [c for c, token in remaining.items() if token.search(line)]:
+                del remaining[cid]
+            if not remaining:
+                return ()
+    return tuple(cid for cid in criterion_ids if cid in remaining)
 
 
 __all__ = [
