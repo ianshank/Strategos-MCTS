@@ -77,8 +77,9 @@ Define the machine-readable spec format and migrate the existing specs to it, in
 **Schema.** YAML-style frontmatter + markdown body, extending the current format:
 
 - New frontmatter fields: `id` (stable, unique across `specs/`), `status` with lifecycle
-  `draft → approved → implemented → verified`, plus `superseded`; optional `supersedes: <id>`.
-  Existing `goal`/`phase`/`milestone` stay.
+  `draft → approved → implemented → verified`, plus `superseded`; `module` (the repo-relative
+  path prefix the spec governs, e.g. `src/framework/harness/` — the overlap key for `/spec-new`,
+  §3); optional `supersedes: <id>`. Existing `goal`/`phase`/`milestone` stay.
 - Authored acceptance-criterion IDs live in the **body bullets**, not nested YAML:
   `- AC-1: <criterion>`. Rationale: the parser is deliberately dependency-free and its line-based
   frontmatter reader does not support nesting — a YAML list under `acceptance_criteria:` would be
@@ -131,13 +132,15 @@ mechanism.
 **Components:**
 
 1. **`/spec-new`** — scaffolds a spec from the v2 schema; refuses to create one if an open
-   (`draft`/`approved`) spec already covers the same module.
+   (`draft`/`approved`) spec already covers the same module, determined by comparing the new
+   spec's `module` frontmatter path prefix against every open spec's.
 2. **`/spec-implement <id>`** — requires `status: approved`; creates or switches to branch
    `spec/<id>`; loads the spec into context.
 3. **PreToolUse gate, stateless.** On Edit/Write/MultiEdit/NotebookEdit targeting `src/**`, the
    hook passes iff the current git branch matches `spec/<id>` **and** that spec's frontmatter is
-   `approved`. No marker file: the check survives session resume and works in subagents and
-   worktrees. Env-var bypass for hotfixes. **Ships in warn mode**; flipped to block after the
+   `approved` or `implemented` — the latter so that the completing PR, which flips the status in
+   its own branch (see CI rules below), can still take review-feedback edits afterwards. No
+   marker file: the check survives session resume and works in subagents and worktrees. Env-var bypass for hotfixes. **Ships in warn mode**; flipped to block after the
    pilot. Known, stated v0 hole: Bash-based writes (`sed -i`, `tee`, heredocs) are not gated —
    warn-mode telemetry decides whether closing it is worth the complexity.
 4. **`spec-review` subagent** — before a human flips `draft → approved`, checks each AC is
@@ -145,9 +148,10 @@ mechanism.
    and passing are enforced at the `verified` gate, not here.) Also the enforcement point for the
    no-changelog rule.
 5. **CI** — extends the existing `spec-validate` job; diff steps check out with `fetch-depth: 0`:
-   - A PR touching `src/**` must reference an `approved` spec ID via its `spec/<id>` branch name,
-     **or** carry a documented `No-Spec: <reason>` exemption (label or commit trailer) — the
-     hotfix/refactor channel.
+   - A PR touching `src/**` must reference a spec ID via its `spec/<id>` branch name whose
+     status is `approved` **on the base branch** (so the completing PR's own
+     `approved → implemented` flip doesn't fail this check), **or** carry a documented
+     `No-Spec: <reason>` exemption (label or commit trailer) — the hotfix/refactor channel.
    - Multi-PR specs: only the PR that completes the spec flips `approved → implemented`, declared
      by containing the frontmatter flip in its diff; earlier PRs just reference the ID.
    - `implemented → verified` is flipped by a human/agent PR once the AC-named tests exist and
