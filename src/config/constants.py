@@ -253,3 +253,31 @@ CHESS_ROUTING_CONFIDENCE_BOOST: Final[float] = 0.3
 # Text returned by the in-process mock LLM client. Centralized so it is greppable
 # and can never be mistaken for a real model response.
 MOCK_LLM_RESPONSE_TEXT: Final[str] = "This is a mock response for testing purposes."
+
+# ============================================================================
+# M5 Policy-Lift Benchmark (decision-quality gate)
+# ============================================================================
+
+# Lift (%) the confidence-interval lower bound must clear to pass the M5 gate.
+M5_TARGET_LIFT_PCT: Final[float] = 20.0
+
+# Relative lift is meaningless against a near-zero baseline; below this floor the
+# benchmark reports an absolute-points delta instead of a ratio.
+M5_MIN_BASELINE: Final[float] = 0.05
+
+# Per-metric game counts: enough that the CI lower bound can clear the target when
+# the effect is real (Wilson at n=100 resolves ~±0.10 on win-rate).
+M5_DEFAULT_GAMES_WIN_RATE: Final[int] = 100
+M5_DEFAULT_GAMES_MEAN_REWARD: Final[int] = 30
+
+# Confidence level for the lift interval (must be a key of the z-table in
+# src/utils/stats.py: 0.90 / 0.95 / 0.99).
+M5_DEFAULT_CONFIDENCE: Final[float] = 0.95
+
+# Default MLP hidden layout mirrored from MLPPolicyValueNetwork's constructor default,
+# used when reconstructing a network for a checkpoint without an architecture spec.
+M5_DEFAULT_MLP_HIDDEN_DIMS: Final[tuple[int, ...]] = (512, 256)
+
+# Board size assumed when deriving a default conv architecture for adversarial
+# board domains (chess).
+M5_DEFAULT_ADVERSARIAL_BOARD_SIZE: Final[int] = 8

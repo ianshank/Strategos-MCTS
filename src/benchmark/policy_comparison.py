@@ -30,6 +30,13 @@ from dataclasses import dataclass
 
 from torch import nn
 
+from src.config.constants import (
+    M5_DEFAULT_CONFIDENCE,
+    M5_DEFAULT_GAMES_MEAN_REWARD,
+    M5_DEFAULT_GAMES_WIN_RATE,
+    M5_MIN_BASELINE,
+    M5_TARGET_LIFT_PCT,
+)
 from src.framework.domain_registry import METRIC_MEAN_REWARD, METRIC_WIN_RATE, DomainRegistry
 from src.framework.mcts.neural_mcts import NeuralMCTS
 from src.observability.logging import get_logger
@@ -38,15 +45,12 @@ from src.utils.stats import difference_confidence_interval, wilson_score_interva
 
 logger = get_logger(__name__)
 
-# Default target from the M5 acceptance criterion.
-DEFAULT_TARGET_LIFT_PCT = 20.0
-# Relative lift is meaningless against a near-zero baseline; below this floor the
-# benchmark reports an absolute-points delta instead (see _relative_lift).
-DEFAULT_MIN_BASELINE = 0.05
-# Per-metric game counts: enough that the CI lower bound can clear the target when the
-# effect is real (Wilson at n=100 resolves ~±0.10 on win-rate).
-DEFAULT_GAMES_WIN_RATE = 100
-DEFAULT_GAMES_MEAN_REWARD = 30
+# Backward-compatible module aliases; the canonical values live in
+# src/config/constants.py (see the "M5 Policy-Lift Benchmark" section there).
+DEFAULT_TARGET_LIFT_PCT = M5_TARGET_LIFT_PCT
+DEFAULT_MIN_BASELINE = M5_MIN_BASELINE
+DEFAULT_GAMES_WIN_RATE = M5_DEFAULT_GAMES_WIN_RATE
+DEFAULT_GAMES_MEAN_REWARD = M5_DEFAULT_GAMES_MEAN_REWARD
 MIN_RECOMMENDED_GAMES = {
     METRIC_WIN_RATE: DEFAULT_GAMES_WIN_RATE,
     METRIC_MEAN_REWARD: DEFAULT_GAMES_MEAN_REWARD,
@@ -66,7 +70,7 @@ class PolicyComparisonResult:
     # Measurement-validity fields (defaulted for backward compatibility).
     lift_ci_lower_pct: float | None = None
     lift_ci_upper_pct: float | None = None
-    confidence: float = 0.95
+    confidence: float = M5_DEFAULT_CONFIDENCE
     absolute_delta: float = 0.0
     lift_is_absolute_fallback: bool = False
     target_lift_pct: float = DEFAULT_TARGET_LIFT_PCT
@@ -122,7 +126,7 @@ async def compare_policies(
     mcts_config: MCTSConfig | None = None,
     max_moves: int = 50,
     device: str = "cpu",
-    confidence: float = 0.95,
+    confidence: float = M5_DEFAULT_CONFIDENCE,
     min_baseline: float = DEFAULT_MIN_BASELINE,
     target_lift_pct: float = DEFAULT_TARGET_LIFT_PCT,
 ) -> PolicyComparisonResult:
@@ -141,6 +145,8 @@ async def compare_policies(
     spec = DomainRegistry.get(domain)
     mcts_config = mcts_config or MCTSConfig()
 
+    if num_games is not None and num_games <= 0:
+        raise ValueError(f"num_games must be greater than 0, got {num_games}")
     if num_games is None:
         num_games = MIN_RECOMMENDED_GAMES.get(spec.metric, DEFAULT_GAMES_MEAN_REWARD)
     elif num_games < MIN_RECOMMENDED_GAMES.get(spec.metric, 0):
@@ -188,8 +194,18 @@ async def compare_policies(
         )
         metrics = await evaluator.evaluate(trained_network, baseline_network)
         win_rate = float(metrics.get("win_rate", 0.0))
-        # SelfPlayEvaluator reports "eval_games"; tolerate variants and empty runs.
-        games_played = int(metrics.get("eval_games") or metrics.get("games_played") or num_games)
+        # SelfPlayEvaluator reports "eval_games"; tolerate variants that use
+        # "games_played" or report only the rate. Explicit None checks so a reported
+        # zero-game run raises instead of being silently replaced by num_games.
+        games_played_value = metrics.get("eval_games")
+        if games_played_value is None:
+            games_played_value = metrics.get("games_played")
+        games_played = int(games_played_value) if games_played_value is not None else num_games
+        if games_played <= 0:
+            raise ValueError(
+                f"Evaluation on domain '{domain}' played no games (games_played={games_played}); "
+                "the lift cannot be measured — check the evaluator logs for per-game failures."
+            )
         if "wins" in metrics:
             successes = float(metrics["wins"]) + 0.5 * float(metrics.get("draws", 0))
         else:  # evaluator variants that only report the rate

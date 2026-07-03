@@ -250,3 +250,164 @@ class TestCheckpointSidecarWriter:
         checkpoint = tmp_path / "ckpt.pt"
         trainer.save_checkpoint(checkpoint)
         assert not (tmp_path / "ckpt.pt.meta.json").exists()
+
+
+class TestValidationAndErrorPaths:
+    def test_hidden_dims_without_input_dim_exits_2(self, capsys):
+        args = pl.build_parser().parse_args(
+            ["--domain", "reasoning", "--checkpoint", "x.pt", "--hidden-dims", "32", "16"]
+        )
+        assert asyncio.run(pl.run(args)) == pl.EXIT_ERROR
+        assert "--hidden-dims requires --input-dim" in capsys.readouterr().err
+
+    def test_num_games_zero_exits_2(self, tmp_path, capsys):
+        network = _reasoning_mlp()
+        checkpoint = tmp_path / "net.pt"
+        torch.save(network.state_dict(), checkpoint)
+        args = pl.build_parser().parse_args(
+            ["--domain", "reasoning", "--checkpoint", str(checkpoint), "--num-games", "0"]
+        )
+        assert asyncio.run(pl.run(args)) == pl.EXIT_ERROR
+        assert "num_games must be greater than 0" in capsys.readouterr().err
+
+    def test_unwritable_output_exits_2(self, tmp_path, capsys):
+        network = _reasoning_mlp()
+        checkpoint = tmp_path / "net.pt"
+        torch.save(network.state_dict(), checkpoint)
+        blocked = tmp_path / "blocked"
+        blocked.mkdir()  # output path is a directory -> OSError on write_text
+        args = pl.build_parser().parse_args(
+            [
+                "--domain",
+                "reasoning",
+                "--checkpoint",
+                str(checkpoint),
+                "--num-games",
+                "1",
+                "--num-simulations",
+                "2",
+                "--max-moves",
+                "3",
+                "--output",
+                str(blocked),
+            ]
+        )
+        assert asyncio.run(pl.run(args)) == pl.EXIT_ERROR
+        captured = capsys.readouterr()
+        assert "could not write artifact" in captured.err
+        assert '"lift_pct"' in captured.out  # the result is still printed to stdout
+
+    def test_network_config_must_be_a_json_object(self, tmp_path):
+        config_path = tmp_path / "arch.json"
+        config_path.write_text(json.dumps(["mlp", 7]))
+        args = pl.build_parser().parse_args(
+            ["--domain", "reasoning", "--checkpoint", "x.pt", "--network-config", str(config_path)]
+        )
+        spec = DomainRegistry.get("reasoning")
+        with pytest.raises(pl.ArchitectureError, match="JSON object"):
+            pl.load_architecture(tmp_path / "x.pt", args, spec, {})
+
+    def test_main_exits_with_error_code(self, monkeypatch, capsys):
+        monkeypatch.setattr("sys.argv", ["policy-lift", "--domain", "nonexistent_domain", "--checkpoint", "x.pt"])
+        with pytest.raises(SystemExit) as excinfo:
+            pl.main()
+        assert excinfo.value.code == pl.EXIT_ERROR
+
+
+class TestArchitectureResolutionFallbacks:
+    def test_input_dim_cli_args_build_mlp_arch(self, tmp_path):
+        args = pl.build_parser().parse_args(
+            ["--domain", "reasoning", "--checkpoint", "x.pt", "--input-dim", "12", "--hidden-dims", "8", "4"]
+        )
+        spec = DomainRegistry.get("reasoning")
+        arch = pl.load_architecture(tmp_path / "x.pt", args, spec, {})
+        assert arch == {
+            "type": "mlp",
+            "state_dim": 12,
+            "hidden_dims": [8, 4],
+            "action_size": spec.action_space_size,
+        }
+
+    def test_sidecar_without_network_key_falls_back_to_inference(self, tmp_path):
+        network = _reasoning_mlp()
+        checkpoint = tmp_path / "net.pt"
+        torch.save(network.state_dict(), checkpoint)
+        (tmp_path / "net.pt.meta.json").write_text(json.dumps({"schema_version": 1, "domain": "reasoning"}))
+        args = pl.build_parser().parse_args(["--domain", "reasoning", "--checkpoint", str(checkpoint)])
+        spec = DomainRegistry.get("reasoning")
+        arch = pl.load_architecture(checkpoint, args, spec, network.state_dict())
+        assert arch["type"] == "mlp"  # inferred from the state_dict, not the sidecar
+        assert arch["state_dim"] == network.state_dim
+
+    def test_win_rate_domain_falls_back_to_conv_defaults(self):
+        from src.framework.domain_registry import DomainSpec
+
+        spec = DomainSpec(
+            name="fake_board_domain",
+            initial_state_fn=make_reasoning_state,
+            action_space_size=4672,
+            single_agent=False,
+            metric="win_rate",
+        )
+        arch = pl._chess_default_architecture(spec)
+        assert arch["type"] == "resnet"
+        assert arch["action_size"] == 4672
+        assert arch["input_channels"] > 0
+        assert arch["board_size"] == 8
+
+    def test_load_architecture_uses_conv_defaults_for_win_rate_non_mlp_checkpoint(self, tmp_path):
+        from src.framework.domain_registry import DomainSpec
+
+        spec = DomainSpec(
+            name="fake_board_domain",
+            initial_state_fn=make_reasoning_state,
+            action_space_size=4672,
+            single_agent=False,
+            metric="win_rate",
+        )
+        args = pl.build_parser().parse_args(["--domain", "fake_board_domain", "--checkpoint", "x.pt"])
+        non_mlp_state = {"conv_input.0.weight": torch.zeros(8, 22, 3, 3)}
+        arch = pl.load_architecture(tmp_path / "x.pt", args, spec, non_mlp_state)
+        assert arch["type"] == "resnet"
+
+    def test_build_network_resnet_round_trip(self):
+        from src.framework.domain_registry import DomainSpec
+
+        spec = DomainSpec(
+            name="fake_board_domain",
+            initial_state_fn=make_reasoning_state,
+            action_space_size=16,
+            single_agent=False,
+            metric="win_rate",
+        )
+        arch = {"type": "resnet", "num_res_blocks": 1, "num_channels": 4, "input_channels": 3, "board_size": 4}
+        network = pl.build_network(arch, spec, "cpu")
+        policy, value = network(torch.zeros(1, 3, 4, 4))
+        assert policy.shape == (1, 16)  # action_size defaulted from the spec
+        assert value.shape == (1, 1)
+
+
+class TestDropoutLayoutResolution:
+    def test_retry_resolves_dropout_free_checkpoints(self):
+        """Candidates are tried in order until the state_dict key set matches."""
+        state_dim = make_reasoning_state().to_tensor().shape[0]
+        network = MLPPolicyValueNetwork(state_dim=state_dim, action_size=9, hidden_dims=[8, 8], dropout=0.0)
+        state_dict = network.state_dict()
+        arch = {"type": "mlp", "state_dim": state_dim, "hidden_dims": [8, 8], "action_size": 9}
+        spec = DomainRegistry.get("reasoning")
+        rebuilt = pl.build_network(arch, spec, "cpu", state_dict=state_dict)
+        rebuilt.load_state_dict(state_dict)  # raises on any layout mismatch
+
+    def test_explicit_wrong_dropout_is_an_error(self):
+        state_dim = make_reasoning_state().to_tensor().shape[0]
+        network = MLPPolicyValueNetwork(state_dim=state_dim, action_size=9, hidden_dims=[8, 8], dropout=0.0)
+        arch = {
+            "type": "mlp",
+            "state_dim": state_dim,
+            "hidden_dims": [8, 8],
+            "action_size": 9,
+            "dropout": 0.1,  # wrong: shifts the Sequential indices vs the checkpoint
+        }
+        spec = DomainRegistry.get("reasoning")
+        with pytest.raises(pl.ArchitectureError, match="layout mismatch"):
+            pl.build_network(arch, spec, "cpu", state_dict=network.state_dict())

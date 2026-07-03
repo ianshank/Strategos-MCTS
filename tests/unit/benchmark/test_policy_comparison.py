@@ -224,3 +224,49 @@ def test_end_to_end_single_agent_runs():
     assert isinstance(result.lift_ci_lower_pct, float)
     assert isinstance(result.lift_ci_upper_pct, float)
     assert result.lift_ci_lower_pct <= result.lift_ci_upper_pct
+
+
+def test_num_games_zero_or_negative_raises():
+    """A non-positive num_games is a caller error, not a silent degenerate run."""
+    with pytest.raises(ValueError, match="num_games must be greater than 0"):
+        asyncio.run(pc.compare_policies("reasoning", _TinyNet(1, 1), _TinyNet(1, 1), num_games=0))
+    with pytest.raises(ValueError, match="num_games must be greater than 0"):
+        asyncio.run(pc.compare_policies("reasoning", _TinyNet(1, 1), _TinyNet(1, 1), num_games=-3))
+
+
+def test_adversarial_zero_game_run_raises(monkeypatch):
+    """An evaluator reporting zero played games must raise, not fabricate a CI."""
+    register_domain(
+        "fake_adversarial_empty",
+        make_reasoning_state,
+        action_space_size=8,
+        single_agent=False,
+        metric=METRIC_WIN_RATE,
+    )
+
+    class _EmptyEvaluator:
+        def __init__(self, *_a, **_k): ...
+
+        async def evaluate(self, *_a, **_k):
+            # Mirrors SelfPlayEvaluator's early return when every game errored out.
+            return {"win_rate": 0.0, "eval_games": 0, "wins": 0, "losses": 0, "draws": 0}
+
+    monkeypatch.setattr("src.training.agent_trainer.SelfPlayEvaluator", _EmptyEvaluator)
+
+    with pytest.raises(ValueError, match="played no games"):
+        asyncio.run(pc.compare_policies("fake_adversarial_empty", _TinyNet(1, 1), _TinyNet(1, 1), num_games=4))
+
+
+def test_default_constants_are_backward_compatible_aliases():
+    """The module-level DEFAULT_* names must track src/config/constants.py."""
+    from src.config.constants import (
+        M5_DEFAULT_GAMES_MEAN_REWARD,
+        M5_DEFAULT_GAMES_WIN_RATE,
+        M5_MIN_BASELINE,
+        M5_TARGET_LIFT_PCT,
+    )
+
+    assert pc.DEFAULT_TARGET_LIFT_PCT == M5_TARGET_LIFT_PCT
+    assert pc.DEFAULT_MIN_BASELINE == M5_MIN_BASELINE
+    assert pc.DEFAULT_GAMES_WIN_RATE == M5_DEFAULT_GAMES_WIN_RATE
+    assert pc.DEFAULT_GAMES_MEAN_REWARD == M5_DEFAULT_GAMES_MEAN_REWARD

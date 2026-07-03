@@ -81,3 +81,25 @@ class TestWithPythonChess:
         assert len(actions) == 20  # 16 pawn moves + 4 knight moves
         assert all(isinstance(action, str) for action in actions)  # UCI strings are hashable
         assert state.is_terminal() is False
+
+
+class TestRegistrationPathWithMockedAvailability:
+    """Covers the registration success path without requiring python-chess.
+
+    src/games/chess/{config,state}.py import cleanly without python-chess (the chess
+    import happens lazily in ChessGameState.__post_init__), so with availability
+    mocked the full register_chess_domain body runs in the main CI environment.
+    """
+
+    def test_registration_success_path(self, unregistered_chess, monkeypatch):
+        from src.games.chess import registration
+
+        monkeypatch.setattr(registration, "chess_available", lambda: True)
+        assert registration.register_chess_domain() is True
+        spec = DomainRegistry.get(CHESS_DOMAIN)
+        assert spec.action_space_size == 4672
+        assert spec.metric == METRIC_WIN_RATE
+        assert spec.single_agent is False
+        # Idempotent under the mock as well.
+        assert registration.register_chess_domain() is True
+        assert DomainRegistry.list_domains().count(CHESS_DOMAIN) == 1

@@ -41,6 +41,11 @@ from src.benchmark.policy_comparison import (
     PolicyComparisonResult,
     compare_policies,
 )
+from src.config.constants import (
+    M5_DEFAULT_ADVERSARIAL_BOARD_SIZE,
+    M5_DEFAULT_CONFIDENCE,
+    M5_DEFAULT_MLP_HIDDEN_DIMS,
+)
 from src.framework.domain_registry import DomainRegistry, DomainSpec
 from src.models.policy_value_net import MLPPolicyValueNetwork, create_policy_value_network
 from src.observability.logging import get_logger
@@ -99,9 +104,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--confidence",
         type=float,
-        default=0.95,
+        default=M5_DEFAULT_CONFIDENCE,
         choices=[0.90, 0.95, 0.99],
-        help="Confidence level for the lift interval (default: 0.95)",
+        help=f"Confidence level for the lift interval (default: {M5_DEFAULT_CONFIDENCE})",
     )
     parser.add_argument(
         "--target-lift",
@@ -179,7 +184,7 @@ def _build_mlp(arch: dict[str, Any], state_dict: dict[str, torch.Tensor] | None)
         network = MLPPolicyValueNetwork(
             state_dim=int(arch["state_dim"]),
             action_size=int(arch["action_size"]),
-            hidden_dims=[int(dim) for dim in arch.get("hidden_dims") or [512, 256]],
+            hidden_dims=[int(dim) for dim in arch.get("hidden_dims") or M5_DEFAULT_MLP_HIDDEN_DIMS],
             use_batch_norm=bool(arch.get("use_batch_norm", True)),
             dropout=dropout,
         )
@@ -205,13 +210,16 @@ def build_network(
         merged.setdefault("action_size", spec.action_space_size)
         network = _build_mlp(merged, state_dict)
     elif arch_type == "resnet":
+        # Unspecified fields fall back to NeuralNetworkConfig's own dataclass defaults
+        # rather than re-hardcoding them here.
         config = NeuralNetworkConfig(
-            num_res_blocks=int(arch.get("num_res_blocks", 19)),
-            num_channels=int(arch.get("num_channels", 256)),
+            num_res_blocks=int(arch.get("num_res_blocks", NeuralNetworkConfig.num_res_blocks)),
+            num_channels=int(arch.get("num_channels", NeuralNetworkConfig.num_channels)),
             input_channels=int(arch["input_channels"]),
             action_size=int(arch.get("action_size", spec.action_space_size)),
         )
-        network = create_policy_value_network(config, board_size=int(arch.get("board_size", 8)), device=device)
+        board_size = int(arch.get("board_size", M5_DEFAULT_ADVERSARIAL_BOARD_SIZE))
+        network = create_policy_value_network(config, board_size=board_size, device=device)
     else:
         raise ArchitectureError(f"Unknown network architecture type '{arch_type}' (expected 'mlp' or 'resnet')")
     return network.to(device)
@@ -231,7 +239,7 @@ def _chess_default_architecture(spec: DomainSpec) -> dict[str, Any]:
         "type": "resnet",
         "input_channels": input_channels,
         "action_size": spec.action_space_size,
-        "board_size": 8,
+        "board_size": M5_DEFAULT_ADVERSARIAL_BOARD_SIZE,
     }
 
 
@@ -251,7 +259,7 @@ def load_architecture(
         return {
             "type": "mlp",
             "state_dim": args.input_dim,
-            "hidden_dims": args.hidden_dims or [512, 256],
+            "hidden_dims": args.hidden_dims or list(M5_DEFAULT_MLP_HIDDEN_DIMS),
             "action_size": spec.action_space_size,
         }
     sidecar = checkpoint.with_name(checkpoint.name + SIDECAR_SUFFIX)
@@ -296,18 +304,35 @@ def result_to_dict(result: PolicyComparisonResult, run_info: dict[str, Any]) -> 
 
 async def run(args: argparse.Namespace) -> int:
     """Execute the comparison; returns the process exit code."""
+    if args.hidden_dims is not None and args.input_dim is None and args.network_config is None:
+        print("error: --hidden-dims requires --input-dim (or use --network-config)", file=sys.stderr)
+        return EXIT_ERROR
+
     try:
         spec = DomainRegistry.get(args.domain)
     except KeyError as exc:
         print(f"error: {exc.args[0]}", file=sys.stderr)
         return EXIT_ERROR
 
+    logger.info(
+        "Policy-lift run starting",
+        extra={
+            "domain": args.domain,
+            "metric": spec.metric,
+            "checkpoint": str(args.checkpoint),
+            "baseline_checkpoint": str(args.baseline_checkpoint) if args.baseline_checkpoint else None,
+            "num_games": args.num_games,
+            "seed": args.seed,
+            "device": args.device,
+        },
+    )
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
     try:
         trained_state = _load_state_dict(args.checkpoint, args.device)
         arch = load_architecture(args.checkpoint, args, spec, trained_state)
+        logger.debug("Network architecture resolved", extra={"architecture": arch})
         trained_network = build_network(arch, spec, args.device, state_dict=trained_state)
         trained_network.load_state_dict(trained_state)
         trained_network.eval()
@@ -329,18 +354,22 @@ async def run(args: argparse.Namespace) -> int:
     if args.num_simulations is not None:
         mcts_config.num_simulations = args.num_simulations
 
-    result = await compare_policies(
-        args.domain,
-        baseline_network,
-        trained_network,
-        num_games=args.num_games,
-        mcts_config=mcts_config,
-        max_moves=args.max_moves,
-        device=args.device,
-        confidence=args.confidence,
-        min_baseline=args.min_baseline,
-        target_lift_pct=args.target_lift,
-    )
+    try:
+        result = await compare_policies(
+            args.domain,
+            baseline_network,
+            trained_network,
+            num_games=args.num_games,
+            mcts_config=mcts_config,
+            max_moves=args.max_moves,
+            device=args.device,
+            confidence=args.confidence,
+            min_baseline=args.min_baseline,
+            target_lift_pct=args.target_lift,
+        )
+    except ValueError as exc:  # invalid num_games, zero-game evaluation runs, ...
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_ERROR
 
     artifact = result_to_dict(
         result,
@@ -356,11 +385,25 @@ async def run(args: argparse.Namespace) -> int:
     )
     rendered = json.dumps(artifact, indent=2, sort_keys=True)
     if args.output is not None:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(rendered + "\n")
+        try:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(rendered + "\n")
+        except OSError as exc:  # permission denied, path is a directory, disk full, ...
+            print(rendered)
+            print(f"error: could not write artifact to {args.output}: {exc}", file=sys.stderr)
+            return EXIT_ERROR
         logger.info("Lift artifact written", extra={"path": str(args.output)})
     print(rendered)
 
+    logger.info(
+        "Policy-lift run complete",
+        extra={
+            "domain": result.domain,
+            "lift_pct": result.lift_pct,
+            "lift_ci_lower_pct": result.lift_ci_lower_pct,
+            "meets_target": result.meets_target,
+        },
+    )
     return EXIT_GATE_MET if result.meets_target else EXIT_GATE_NOT_MET
 
 
