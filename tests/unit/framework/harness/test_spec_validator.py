@@ -200,6 +200,29 @@ def test_missing_file_yields_error_issue(tmp_path: Path) -> None:
     assert "parse-error" in _errors(issues)
 
 
+def test_binary_file_yields_error_not_traceback(tmp_path: Path) -> None:
+    """Non-UTF-8 bytes become an 'unreadable' issue (UnicodeDecodeError is a ValueError)."""
+    path = tmp_path / "binary.SPEC.md"
+    path.write_bytes(b"\xff\xfe\x00\x01 not utf-8")
+    issues = SpecValidator().validate_file(path)
+    assert "unreadable" in _errors(issues)
+
+
+def test_same_file_via_two_spellings_is_not_duplicate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Paths are resolved before duplicate-id comparison, so one file ≠ two declarations."""
+    spec = _write(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    issues = SpecValidator().validate_paths([Path(spec.name), Path(".") / spec.name])
+    assert "duplicate-id" not in _errors(issues)
+
+
+def test_fenced_code_comments_are_not_headers(tmp_path: Path) -> None:
+    """``#`` comments inside ``` fences must not trip duplicate-section checks."""
+    body = _VALID_BODY + "\n```bash\n# Goal\n# Goal\n```\n"
+    issues = SpecValidator().validate_file(_write(tmp_path, body=body))
+    assert "duplicate-section" not in _errors(issues)
+
+
 def test_directory_yields_error_not_traceback(tmp_path: Path) -> None:
     """A directory (e.g. from a shell glob) becomes an error issue, never an exception."""
     target = tmp_path / "somedir"

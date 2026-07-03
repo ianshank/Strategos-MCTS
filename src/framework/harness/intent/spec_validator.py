@@ -74,8 +74,11 @@ class SpecValidator:
                 continue
             issues.extend(self.validate_spec(spec, path))
             if spec.id:
-                first = ids_seen.setdefault(spec.id, path)
-                if first != path:
+                # Resolve so the same file passed under two spellings
+                # (specs/x.SPEC.md vs ./specs/x.SPEC.md) is not a duplicate.
+                resolved = path.resolve()
+                first = ids_seen.setdefault(spec.id, resolved)
+                if first != resolved:
                     issues.append(
                         ValidationIssue(
                             severity="error",
@@ -131,7 +134,9 @@ class SpecValidator:
             return SpecLoader().load(path)
         except SpecParseError as exc:
             issues.append(ValidationIssue(severity="error", code="parse-error", message=str(exc), path=str(path)))
-        except OSError as exc:  # e.g. a directory passed via a shell glob, unreadable file
+        except (OSError, UnicodeDecodeError) as exc:
+            # A directory from a shell glob, an unreadable file, or a binary /
+            # non-UTF-8 file (UnicodeDecodeError is a ValueError, not an OSError).
             issues.append(ValidationIssue(severity="error", code="unreadable", message=str(exc), path=str(path)))
         return None
 
@@ -139,13 +144,22 @@ class SpecValidator:
         """Reject duplicate headers and alias collisions the parser would silently pick between.
 
         Walks ``spec.body`` (never ``spec.raw``: frontmatter supports ``#``
-        comment lines that are not headers). Alias hits are counted per alias
-        *group* — e.g. one ``# Constraints (…)`` header prefix-matches both
-        ``constraints`` and ``constraint`` and must not self-collide.
+        comment lines that are not headers), skipping fenced code blocks so a
+        ``#`` shell/python comment inside ``` fences is not a false positive.
+        Beyond the fence-skip the walk mirrors ``_split_sections`` semantics
+        (any ``#``-prefixed line, no space required) so every header the parser
+        would act on stays visible to the collision checks. Alias hits are
+        counted per alias *group* — e.g. one ``# Constraints (…)`` header
+        prefix-matches both ``constraints`` and ``constraint`` and must not
+        self-collide.
         """
         titles: list[str] = []
+        in_fence = False
         for line in spec.body.splitlines():
-            if line.startswith("#"):
+            if line.strip().startswith("```"):
+                in_fence = not in_fence
+                continue
+            if not in_fence and line.startswith("#"):
                 titles.append(line.lstrip("#").strip().lower())
         seen: set[str] = set()
         for title in titles:
