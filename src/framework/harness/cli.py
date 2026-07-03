@@ -5,7 +5,11 @@ Subcommands:
 * ``harness run`` — full loop against a spec or inline goal.
 * ``harness dry-run`` — parse spec, build plan, exit without LLM calls.
 * ``harness replay`` — replay a recorded cassette through the runner.
-* ``harness validate-spec`` — schema-check a SPEC.md / AGENTS.md.
+* ``harness validate-spec`` — validate one or more SPEC.md files against the
+  spec schema v2 (frontmatter ``id``/``status`` lifecycle, ``AC-n:`` criterion
+  IDs, no inline done-markers); errors exit 1. Ad-hoc AGENTS.md-style files do
+  not carry the v2 frontmatter and will not validate — ``run``/``dry-run``
+  still accept them.
 
 The CLI uses ``argparse`` to avoid pulling in optional dependencies (no
 ``click``/``typer`` at runtime). All defaults come from
@@ -23,10 +27,13 @@ import sys
 from pathlib import Path
 
 from src.framework.harness.factories import HarnessFactory
-from src.framework.harness.intent import SpecLoader, SpecParseError
+from src.framework.harness.intent import SpecLoader, SpecValidator
 from src.framework.harness.outcomes import Terminal
 from src.framework.harness.planner import HeuristicPlanner
 from src.framework.harness.settings import HarnessSettings
+
+# Length of the goal excerpt shown on validate-spec success lines.
+_GOAL_PREVIEW_CHARS = 80
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -55,8 +62,11 @@ def _build_parser() -> argparse.ArgumentParser:
     replay.add_argument("--spec", type=Path)
     replay.add_argument("--goal")
 
-    val = sub.add_parser("validate-spec", help="Validate that a SPEC.md is parseable and well-formed.")
-    val.add_argument("path", type=Path)
+    val = sub.add_parser(
+        "validate-spec",
+        help="Validate SPEC.md files against the spec schema v2; any error exits 1.",
+    )
+    val.add_argument("paths", type=Path, nargs="+", metavar="path")
 
     return parser
 
@@ -78,7 +88,7 @@ def _resolve_intent(args: argparse.Namespace) -> str | dict[str, object]:
         return {
             "id": f"cli-{args.spec.stem}",
             "goal": spec.goal or f"Execute spec at {args.spec}",
-            "acceptance_criteria": [{"id": f"c{i}", "description": c} for i, c in enumerate(spec.acceptance_criteria)],
+            "acceptance_criteria": spec.criteria_payload(),
             "constraints": list(spec.constraints),
             "metadata": {"spec_path": str(args.spec)},
         }
@@ -139,7 +149,7 @@ async def _cmd_dry_run(args: argparse.Namespace) -> int:
     intent = {
         "id": "dry-run",
         "goal": spec.goal,
-        "acceptance_criteria": [{"id": f"c{i}", "description": c} for i, c in enumerate(spec.acceptance_criteria)],
+        "acceptance_criteria": spec.criteria_payload(),
         "constraints": list(spec.constraints),
     }
     from src.framework.harness.intent import DefaultIntentNormalizer
@@ -163,15 +173,27 @@ async def _cmd_replay(args: argparse.Namespace) -> int:
 
 
 def _cmd_validate_spec(args: argparse.Namespace) -> int:
-    try:
-        spec = SpecLoader().load(args.path)
-    except SpecParseError as exc:
-        sys.stderr.write(f"spec parse error: {exc}\n")
-        return 1
-    if not spec.goal:
-        sys.stderr.write("warning: spec has no goal section\n")
-    sys.stdout.write(f"ok: goal='{spec.goal[:80]}' criteria={len(spec.acceptance_criteria)}\n")
-    return 0
+    """Validate every given path; report all issues, exit 1 if any error."""
+    report = SpecValidator().validate_paths(args.paths)
+    for issue in report.issues:
+        sys.stderr.write(issue.render() + "\n")
+    failing = {issue.path for issue in report.errors()}
+    warn_counts: dict[str, int] = {}
+    for issue in report.issues:
+        if issue.severity == "warning":
+            warn_counts[issue.path] = warn_counts.get(issue.path, 0) + 1
+    for path in args.paths:
+        spec = report.specs.get(str(path))
+        if str(path) in failing or spec is None:
+            continue
+        # Surface per-file warning counts on stdout so "ok with warnings" is
+        # visible in the summary, not only on stderr (exit code stays 0).
+        warn_note = f" warnings={warn_counts[str(path)]}" if str(path) in warn_counts else ""
+        sys.stdout.write(
+            f"ok: {path}: id='{spec.id}' status={spec.status} "
+            f"goal='{spec.goal[:_GOAL_PREVIEW_CHARS]}' criteria={len(spec.acceptance_criteria)}{warn_note}\n"
+        )
+    return 1 if failing else 0
 
 
 def main(argv: list[str] | None = None) -> int:

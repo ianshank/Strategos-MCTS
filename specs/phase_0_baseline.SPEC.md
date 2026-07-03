@@ -1,8 +1,10 @@
 ---
+id: phase_0_baseline
 goal: Establish an evidence-backed test/coverage baseline and reconcile all status docs to the code
+module: docs/
 phase: "0"
 milestone: M3
-status: active
+status: implemented
 ---
 
 # Goal
@@ -13,14 +15,14 @@ every roadmap/milestone doc that disagrees with the current source tree.
 
 # Acceptance Criteria
 
-- A committed `docs/STATUS.md` records the real pass-rate and per-module branch coverage, reproducible via
+- AC-1: A committed `docs/STATUS.md` records the real pass-rate and per-module branch coverage, reproducible via
   `pytest tests/ --cov=src --cov-report=term-missing`.
-- The per-module coverage table in `docs/STATUS.md` is explicit enough to select Phase 2 targets.
-- `planning/milestones.yaml` `quality_metrics` reflect the measured numbers (no stale `88.4` literal).
-- No doc asserts a status contradicted by the source tree without a "superseded" or corrected pointer,
+- AC-2: The per-module coverage table in `docs/STATUS.md` is explicit enough to select Phase 2 targets.
+- AC-3: `planning/milestones.yaml` `quality_metrics` reflect the measured numbers (no stale `88.4` literal).
+- AC-4: No doc asserts a status contradicted by the source tree without a "superseded" or corrected pointer,
   including the stale rows in `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md` §1.1 (examples-import,
   JWT-placeholder, ADK-untested).
-- `CLAUDE.md` and `AGENTS.md` are refreshed to verified reality and point at `docs/STATUS.md`.
+- AC-5: `CLAUDE.md` and `AGENTS.md` are refreshed to verified reality and point at `docs/STATUS.md`.
 
 # Constraints
 

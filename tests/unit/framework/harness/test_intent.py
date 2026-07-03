@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from src.framework.harness import HarnessSettings
-from src.framework.harness.intent import DefaultIntentNormalizer, SpecLoader, SpecParseError
+from src.framework.harness.intent import DefaultIntentNormalizer, SpecCriterion, SpecLoader, SpecParseError
 
 pytestmark = pytest.mark.unit
 
@@ -113,3 +113,133 @@ def test_spec_loader_mixes_bullets_and_numbers() -> None:
     text = "# Constraints\n" "- bulleted\n" "12. twelve\n" "* asterisk\n" "13) thirteen\n"
     spec = SpecLoader().parse(text)
     assert spec.constraints == ["bulleted", "twelve", "asterisk", "thirteen"]
+
+
+# ---------------------------------------------------------------------------
+# Schema v2: frontmatter fields, authored criterion IDs, new sections
+# ---------------------------------------------------------------------------
+
+
+def test_spec_loader_parses_v2_frontmatter_fields() -> None:
+    """id/module/status/supersedes populate from frontmatter, non-destructively."""
+    text = (
+        "---\n"
+        "id: my_spec\n"
+        "goal: Do it\n"
+        "module: src/api/\n"
+        "status: approved\n"
+        "supersedes: old_spec\n"
+        "---\n"
+        "# Acceptance Criteria\n- AC-1: works\n"
+    )
+    spec = SpecLoader().parse(text)
+    assert spec.id == "my_spec"
+    assert spec.module == "src/api/"
+    assert spec.status == "approved"
+    assert spec.supersedes == "old_spec"
+    # Frontmatter reads are non-destructive: the dict keeps every key.
+    assert spec.frontmatter["id"] == "my_spec"
+    assert spec.frontmatter["status"] == "approved"
+
+
+def test_spec_loader_v2_fields_default_empty() -> None:
+    """Legacy specs without v2 frontmatter read empty strings, not errors."""
+    spec = SpecLoader().parse("# Goal\nDo stuff.\n# Acceptance Criteria\n- a\n")
+    assert spec.id == ""
+    assert spec.module == ""
+    assert spec.status == ""
+    assert spec.supersedes == ""
+
+
+def test_spec_loader_extracts_authored_criterion_ids() -> None:
+    """``- AC-n: ...`` bullets yield authored IDs and prefix-stripped descriptions."""
+    spec = SpecLoader().parse("# Acceptance Criteria\n- AC-1: ruff clean\n- AC-2: tests pass\n")
+    assert spec.criteria == [
+        SpecCriterion(id="AC-1", description="ruff clean"),
+        SpecCriterion(id="AC-2", description="tests pass"),
+    ]
+    assert spec.acceptance_criteria == ["ruff clean", "tests pass"]
+    assert spec.criteria_payload() == [
+        {"id": "AC-1", "description": "ruff clean"},
+        {"id": "AC-2", "description": "tests pass"},
+    ]
+
+
+def test_spec_loader_positional_fallback_ids() -> None:
+    """Unprefixed bullets keep the historical positional IDs in order."""
+    spec = SpecLoader().parse("# Acceptance Criteria\n- one\n- two\n")
+    assert [c.id for c in spec.criteria] == ["c0", "c1"]
+    assert spec.acceptance_criteria == ["one", "two"]
+
+
+def test_spec_loader_mixed_bullets_keep_authored_and_fallback() -> None:
+    """The parser is tolerant of mixed prefixes; the validator is the gate."""
+    spec = SpecLoader().parse("# Acceptance Criteria\n- AC-1: one\n- two\n")
+    assert [c.id for c in spec.criteria] == ["AC-1", "c1"]
+
+
+def test_spec_loader_constraints_keep_ac_looking_prefixes() -> None:
+    """AC-ID stripping applies to acceptance bullets only — constraints stay verbatim."""
+    spec = SpecLoader().parse("# Acceptance Criteria\n- AC-1: one\n# Constraints\n- AC-1: not a criterion\n")
+    assert spec.constraints == ["AC-1: not a criterion"]
+
+
+def test_spec_loader_parses_invariants_and_out_of_scope() -> None:
+    """The optional v2 sections extract as bullet lists."""
+    text = (
+        "# Goal\nDo it.\n"
+        "# Acceptance Criteria\n- AC-1: works\n"
+        "# Invariants\n- coverage never drops\n"
+        "# Out of Scope\n- hooks\n- slash commands\n"
+    )
+    spec = SpecLoader().parse(text)
+    assert spec.invariants == ["coverage never drops"]
+    assert spec.out_of_scope == ["hooks", "slash commands"]
+
+
+def test_spec_loader_unterminated_frontmatter_is_body() -> None:
+    """A ``---`` opener with no closing delimiter is treated as plain body."""
+    spec = SpecLoader().parse("---\nid: x\n# Goal\nDo it.\n")
+    assert spec.frontmatter == {}
+    assert spec.id == ""
+    assert spec.body == spec.raw
+
+
+def test_spec_loader_sections_are_fence_aware() -> None:
+    """A ``#`` comment inside a ``` fence is section content, not a new header."""
+    text = (
+        "# Goal\nDo it.\n"
+        "# Acceptance Criteria\n- AC-1: works\n"
+        "```bash\n# not a header\necho hi\n```\n"
+        "- AC-2: still in the same section\n"
+    )
+    spec = SpecLoader().parse(text)
+    assert [c.id for c in spec.criteria] == ["AC-1", "AC-2"]
+    assert "# not a header" in spec.sections["acceptance criteria"]
+
+
+def test_spec_loader_body_excludes_frontmatter() -> None:
+    """``Spec.body`` is the frontmatter-stripped text (header walks must use it)."""
+    text = "---\n# a frontmatter comment\nid: x\n---\n# Goal\nDo it.\n"
+    spec = SpecLoader().parse(text)
+    assert "# a frontmatter comment" not in spec.body
+    assert spec.body.startswith("# Goal")
+
+
+@pytest.mark.asyncio
+async def test_migrated_criterion_still_verifies() -> None:
+    """Prefix stripping is load-bearing: the verifier uses descriptions as match
+    needles when ``check`` is empty, so a migrated ``AC-n:`` criterion must match
+    an observation containing only the description text."""
+    from src.framework.harness.state import Observation
+    from src.framework.harness.verifier import AcceptanceCriteriaVerifier
+
+    spec = SpecLoader().parse("# Goal\nDo it.\n# Acceptance Criteria\n- AC-1: lints clean\n")
+    task = await DefaultIntentNormalizer().normalize(
+        {"id": "T", "goal": spec.goal, "acceptance_criteria": spec.criteria_payload()},
+        HarnessSettings(),
+    )
+    assert task.acceptance_criteria[0].id == "AC-1"
+    obs = (Observation(invocation_id="i", tool_name="t", success=True, payload="output: lints clean"),)
+    result = await AcceptanceCriteriaVerifier().verify(obs, task, None)
+    assert result.passed is True

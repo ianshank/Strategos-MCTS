@@ -56,6 +56,27 @@ async def test_ralph_halts_on_acceptance(make_runner, tool_registry, tmp_path: P
 
 
 @pytest.mark.asyncio
+async def test_ralph_stuck_on_unloadable_spec(tmp_path: Path) -> None:
+    """A spec that fails to load halts immediately with ``stuck``/``spec_error``
+    (the runner is never invoked)."""
+    from unittest.mock import MagicMock
+
+    from src.framework.harness import HarnessSettings
+
+    settings = HarnessSettings(
+        MEMORY_ROOT=tmp_path / "mem",
+        OUTPUT_DIR=tmp_path / "runs",
+        TOOL_OUTPUT_SPILLOVER_DIR=tmp_path / "spill",
+    )
+    runner = MagicMock()
+    loop = RalphLoop(runner=runner, settings=settings, spec_path=tmp_path / "absent.SPEC.md")
+    result = await loop.run()
+    assert result.status == "stuck"
+    assert result.stuck_kind == "spec_error"
+    runner.run.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_ralph_declares_stuck_on_repeated_outcome(
     make_runner, tool_registry, tmp_path: Path, monkeypatch
 ) -> None:

@@ -1,8 +1,10 @@
 ---
+id: phase_1_correctness
 goal: Clear the small, genuine residue of correctness and packaging issues
+module: tests/
 phase: "1"
 milestone: M3
-status: active
+status: implemented
 ---
 
 # Goal
@@ -12,12 +14,12 @@ a permanently-skipped chaos suite gated on non-existent modules, and one uncover
 
 # Acceptance Criteria
 
-- `mypy src/` is clean; the MCTS rollout-policy test subclasses match the source protocol via a shared
+- AC-1: `mypy src/` is clean; the MCTS rollout-policy test subclasses match the source protocol via a shared
   `BaseRolloutPolicy` test helper, and the early-termination / framework / parallel-mcts / e2e suites pass.
-- `tests/chaos/test_resilience.py` no longer skips silently on a non-existent `improved_hrm_agent` /
+- AC-2: `tests/chaos/test_resilience.py` no longer skips silently on a non-existent `improved_hrm_agent` /
   `improved_trm_agent` guard: the resilience tests either execute real assertions against the real agent
   modules or are removed with documented rationale.
-- A regression test asserts the dataset loader defaults to the `train` split and that an unknown split
+- AC-3: A regression test asserts the dataset loader defaults to the `train` split and that an unknown split
   falls back to an available split with a warning.
 
 # Constraints

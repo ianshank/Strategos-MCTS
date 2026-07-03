@@ -1,8 +1,10 @@
 ---
+id: phase_3_production
 goal: Make the staging deployment ship-safe (secret hygiene, JWT auth selection, soak)
+module: src/api/
 phase: "3"
 milestone: M4
-status: active
+status: implemented
 ---
 
 # Goal
@@ -12,13 +14,13 @@ runtime-selectable without breaking existing clients, and validate a staging dep
 
 # Acceptance Criteria
 
-- `git grep` finds no plaintext key material in `kubernetes/`; manifests reference an external secret
+- AC-1: `git grep` finds no plaintext key material in `kubernetes/`; manifests reference an external secret
   store (External Secrets Operator by default); `docs/SECRETS_MANAGEMENT.md` documents rotation.
-- A settings-driven `AUTH_MODE` selects the already-implemented `JWTAuthenticator` or the existing
+- AC-2: A settings-driven `AUTH_MODE` selects the already-implemented `JWTAuthenticator` or the existing
   `APIKeyAuthenticator`; JWT issue/verify is covered by tests; API-key clients keep working with no config
   change under the default mode; `get_authenticator()`'s public return contract is unchanged.
-- JWT algorithm, expiry, and secret are sourced from settings; PyJWT is an optional extra.
-- Staging health checks stay green for 24h; the smoke suite passes in staging; rollback is documented.
+- AC-3: JWT algorithm, expiry, and secret are sourced from settings; PyJWT is an optional extra.
+- AC-4: Staging health checks stay green for 24h; the smoke suite passes in staging; rollback is documented.
 
 # Constraints
 

@@ -39,6 +39,11 @@ real specs and live CI — and extracts to the plugin only once they demonstrabl
 
 ### 1.2 v1 claims corrected here
 
+> *Dated snapshot:* §§1.1–1.2 describe the repo as reviewed on 2026-07-03, **before** Phase 0
+> landed. Phase 0 has since implemented the schema/validator and migrated the nine specs
+> (see `CHANGELOG.md` "Phase 0 (spec contract v2)") — the present-tense claims below (e.g.
+> "all nine specs are `status: active`") are intentionally preserved as review evidence.
+
 1. **"Extraction" overstates what exists.** None of the v1 schema fields exist: no `id`, no
    authored per-criterion IDs, no `invariants`, no `out_of_scope`, no `supersedes`, no
    draft→approved→implemented→verified lifecycle. Actual frontmatter is

@@ -1,8 +1,10 @@
 ---
+id: phase_8_repo_organization
 goal: Reorganize the repository into an enterprise-standard file/directory layout
+module: docs/
 phase: "8"
 milestone: M5
-status: active
+status: implemented
 ---
 
 # Goal
@@ -14,19 +16,19 @@ files into `docs/`, stop tracking model binaries, collapse overlapping demo tree
 
 # Acceptance Criteria
 
-- **(8a — done)** Non-canonical root `.md` files are moved into `docs/` subfolders (`reports/`, `summaries/`,
+- AC-1: Non-canonical root `.md` files are moved into `docs/` subfolders (`reports/`, `summaries/`,
   `plans/`, `quickstart/`); only `README.md`, `CLAUDE.md`, `AGENTS.md`, `CHANGELOG.md`, `ATTRIBUTION.md`,
   `PROJECT_STRUCTURE.md`, and the three template files remain at root, with internal references fixed. Root
   markdown went from 45 to 9 files.
-- **Layout ambiguity is removed by authoritative documentation** in `PROJECT_STRUCTURE.md` — a
+- AC-2: **Layout ambiguity is removed by authoritative documentation** in `PROJECT_STRUCTURE.md` — a
   "Layout & naming disambiguation" section explains `config/` vs `src/config/`, `training/` vs
   `src/training/`, the demo/example entry points, and the tracked `models/` artifacts, including the import
   and build-context contracts that make them distinct.
-- The physical moves originally proposed (untrack `models/`, merge the demo trees, rename `config/`,
+- AC-3: The physical moves originally proposed (untrack `models/`, merge the demo trees, rename `config/`,
   relocate `training/tests/`) are **deliberately not performed** because inspection showed each would break
   a real contract (documented in the Constraints below). The goal — an unambiguous, discoverable layout —
   is met without the breakage.
-- The full local gate stays green; `docs/STATUS.md` / `PROJECT_STRUCTURE.md` reflect the current layout.
+- AC-4: The full local gate stays green; `docs/STATUS.md` / `PROJECT_STRUCTURE.md` reflect the current layout.
 
 # Constraints (why the physical moves were rejected)
 
