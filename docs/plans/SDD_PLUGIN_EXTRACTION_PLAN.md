@@ -87,9 +87,11 @@ Define the machine-readable spec format and migrate the existing specs to it, in
   bullet-extraction path.
 - New optional sections: `# Invariants`, `# Out of Scope`.
 - **No-changelog rule:** status lives only in frontmatter; specs state future contracts, not
-  completed work. Enforcement is split: CI carries a *warning* on a narrow regex (inline
-  done-marker patterns like `**(… — done)**` only — a broad prose heuristic would false-positive
-  on legitimate text); the `spec-review` subagent (§4) is the real enforcement point.
+  completed work. Enforcement is split by precision: the validator (and therefore CI) **errors**
+  on a narrow regex — inline done-marker patterns like `**(… — done)**` only — so the hard gate
+  holds for direct edits and non-Claude automation, not just Claude sessions; anything broader
+  stays out of the regex (a broad prose heuristic would false-positive on legitimate text) and is
+  judged by the `spec-review` subagent (§4) at review time.
 
 **Parser and CLI** (`src/framework/harness/intent/spec_loader.py`, `src/framework/harness/cli.py`):
 
@@ -107,9 +109,11 @@ matching section headers (the parser's `startswith` header aliasing would otherw
 arbitrarily).
 
 **Migration.** Migrate all nine specs in the **same PR** as the validator hardening — otherwise CI
-and the Ralph loop hard-fail mid-transition. Semantics: legacy specs migrate to at most
-`implemented`, never `verified` — no legacy spec has AC-mapped tests, and mass-assigning
-`verified` would debase the status on day one.
+and the Ralph loop hard-fail mid-transition. Explicit mapping for the legacy value: `active` is
+removed from the status vocabulary; each `status: active` spec becomes `implemented` where its
+work has landed (per the 2026H2 plan's progress banner) or `approved` where work remains open —
+and never `verified`, since no legacy spec has AC-mapped tests and mass-assigning `verified`
+would debase the status on day one.
 
 ---
 
