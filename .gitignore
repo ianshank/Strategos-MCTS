@@ -265,3 +265,7 @@ lift.json
 # (scoped to *.pt sidecars; tracked config *.json files are unaffected)
 *.pt.meta.json
 .claude/worktrees/
+# Per-developer Claude Code permissions/settings — personal state, never committed.
+# Shared project skills (.claude/skills/) and a future committed .claude/settings.json
+# (see docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md) stay tracked.
+.claude/settings.local.json

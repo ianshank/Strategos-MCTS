@@ -441,11 +441,21 @@ This updated C4 architecture reflects the **current state** of the application, 
 
 ### CI/CD & Quality Gates
 
-The `.github/workflows/ci.yml` pipeline enforces the same gate as the local `quality-gate` skill:
-`black --check` → `ruff` → `mypy src/ --strict` → `pytest` with branch coverage (`--cov-fail-under=85`) →
-a hardcoded-secret grep, plus `bandit` (HIGH-severity gate), `pip-audit` (CRITICAL gate), spec validation
-(`harness validate-spec`), and a Docker build with a Trivy image scan whose SARIF results upload to GitHub
-code scanning (the `docker-build` job carries `security-events: write`; the upload is advisory and
-non-blocking). Configuration is centralized in `src/config/constants.py` + `src/config/settings.py`
+The `.github/workflows/ci.yml` pipeline includes the local `quality-gate` skill's checks, run with the
+same pinned tool versions (the lint job installs the `[dev]` extra; the type-check job installs
+`[dev,neural]`, which includes it): `black --check` → `ruff check` → `mypy src/` (strictness comes from
+`[tool.mypy]` in `pyproject.toml`, not a `--strict` flag; CI adds `--no-error-summary`) → `pytest` with
+branch coverage (`--cov-fail-under=85`) → a hardcoded-secret grep. On top of that gate, CI-only jobs add
+`bandit` (HIGH-severity gate), `pip-audit` (CRITICAL gate), spec validation (`harness validate-spec` —
+currently minimal and warn-only: the only failure it explicitly handles is `SpecParseError`, in
+practice a missing or unreadable file, while the forgiving parser accepts most malformed content and
+returns success, and a missing goal only warns), and a Docker build with a
+Trivy image scan whose SARIF results upload to GitHub code scanning (the `docker-build` job carries
+`security-events: write`; the upload is advisory and non-blocking). Configuration is centralized in `src/config/constants.py` + `src/config/settings.py`
 (Pydantic Settings) with domain-specific constant modules; there are no hardcoded secrets or magic numbers
 in the routing/adapter layers.
+
+> **Planned (not yet built):** the spec-validation gate is scheduled to become error-level with a
+> versioned spec schema (`id`/`module`/status lifecycle, authored `AC-n` criterion IDs) plus
+> repo-native `.claude/` enforcement (slash commands, spec-review subagent, PreToolUse gate) and
+> CI spec-traceability rules — see `docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md` for the phased plan.
