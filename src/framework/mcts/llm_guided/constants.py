@@ -10,15 +10,19 @@ Environment variables can override these defaults where noted.
 from __future__ import annotations
 
 import os
-from typing import Final
+from typing import TYPE_CHECKING, Final
+
+if TYPE_CHECKING:
+    from src.config.settings import Settings
 
 # ============================================================================
 # Model Configuration
 # ============================================================================
 
-# Default model names - can be overridden via environment
-DEFAULT_GENERATOR_MODEL: Final[str] = os.getenv("MCTS_GENERATOR_MODEL", "gpt-4o")
-DEFAULT_REFLECTOR_MODEL: Final[str] = os.getenv("MCTS_REFLECTOR_MODEL", "gpt-4o")
+# Default model names. Runtime overrides flow through Settings via the
+# get_generator_model()/get_reflector_model() accessors below — not import-time env.
+DEFAULT_GENERATOR_MODEL: Final[str] = "gpt-4o"
+DEFAULT_REFLECTOR_MODEL: Final[str] = "gpt-4o"
 DEFAULT_TOKENIZER_NAME: Final[str] = os.getenv("MCTS_TOKENIZER_NAME", "gpt2")
 
 # Fast preset models (lighter weight for quick iterations)
@@ -94,8 +98,9 @@ LOG_PROGRESS_EVERY_N_ITERATIONS: Final[int] = 10
 # Execution Configuration
 # ============================================================================
 
-# Timeouts (can be overridden via environment)
-DEFAULT_EXECUTION_TIMEOUT: Final[float] = float(os.getenv("MCTS_EXECUTION_TIMEOUT", "5.0"))
+# Timeouts. DEFAULT_EXECUTION_TIMEOUT override flows through Settings via
+# get_execution_timeout(); BENCHMARK_TIMEOUT_PER_PROBLEM remains env-driven (not in Phase 6 scope).
+DEFAULT_EXECUTION_TIMEOUT: Final[float] = 5.0
 BENCHMARK_TIMEOUT_PER_PROBLEM: Final[float] = float(os.getenv("BENCHMARK_TIMEOUT_PER_PROBLEM", "60.0"))
 TIMEOUT_SIGNAL_PADDING: Final[int] = 1
 
@@ -103,8 +108,8 @@ TIMEOUT_SIGNAL_PADDING: Final[int] = 1
 EXECUTION_TIMEOUT_MIN: Final[float] = 0.1
 EXECUTION_TIMEOUT_MAX: Final[float] = 60.0
 
-# Memory limits (can be overridden via environment)
-DEFAULT_MAX_MEMORY_MB: Final[int] = int(os.getenv("MCTS_MAX_MEMORY_MB", "256"))
+# Memory limits. Override flows through Settings via get_max_memory_mb().
+DEFAULT_MAX_MEMORY_MB: Final[int] = 256
 
 # Memory validation bounds
 MAX_MEMORY_MIN_MB: Final[int] = 32
@@ -270,3 +275,61 @@ DEFAULT_SEED: Final[int] = 42
 # Transform reflector value [0,1] to reward [-1,1]: reward = value * 2 - 1
 REWARD_SCALING_FACTOR: Final[float] = 2.0
 REWARD_OFFSET: Final[float] = 1.0
+
+
+# ============================================================================
+# Lazy Settings accessors
+# ============================================================================
+# Runtime overrides for the model/resource defaults above. These replace the
+# former import-time os.getenv() reads: values now resolve from Settings on
+# demand (mirrors the pattern in src/games/chess/constants.py), so a settings
+# override propagates without re-importing this module. If Settings cannot be
+# loaded, each accessor falls back to the module-level default constant.
+
+
+def get_generator_model(settings: Settings | None = None) -> str:
+    """Get the generator model from settings, falling back to the module default."""
+    if settings is None:
+        try:
+            from src.config.settings import get_settings
+
+            settings = get_settings()
+        except Exception:
+            return DEFAULT_GENERATOR_MODEL
+    return getattr(settings, "MCTS_GENERATOR_MODEL", DEFAULT_GENERATOR_MODEL)
+
+
+def get_reflector_model(settings: Settings | None = None) -> str:
+    """Get the reflector model from settings, falling back to the module default."""
+    if settings is None:
+        try:
+            from src.config.settings import get_settings
+
+            settings = get_settings()
+        except Exception:
+            return DEFAULT_REFLECTOR_MODEL
+    return getattr(settings, "MCTS_REFLECTOR_MODEL", DEFAULT_REFLECTOR_MODEL)
+
+
+def get_execution_timeout(settings: Settings | None = None) -> float:
+    """Get the sandbox execution timeout (seconds) from settings, falling back to the default."""
+    if settings is None:
+        try:
+            from src.config.settings import get_settings
+
+            settings = get_settings()
+        except Exception:
+            return DEFAULT_EXECUTION_TIMEOUT
+    return getattr(settings, "MCTS_EXECUTION_TIMEOUT", DEFAULT_EXECUTION_TIMEOUT)
+
+
+def get_max_memory_mb(settings: Settings | None = None) -> int:
+    """Get the sandbox memory limit (MB) from settings, falling back to the default."""
+    if settings is None:
+        try:
+            from src.config.settings import get_settings
+
+            settings = get_settings()
+        except Exception:
+            return DEFAULT_MAX_MEMORY_MB
+    return getattr(settings, "MCTS_MAX_MEMORY_MB", DEFAULT_MAX_MEMORY_MB)

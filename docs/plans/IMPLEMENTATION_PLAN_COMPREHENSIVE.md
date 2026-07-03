@@ -1,5 +1,10 @@
 # Comprehensive Implementation Plan - LangGraph Multi-Agent MCTS
 
+> **⚠️ Superseded / historical (Jan 2026).** Current test/coverage status lives in
+> [`docs/STATUS.md`](../STATUS.md); the active roadmap is
+> [`docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`](../NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md).
+> Retained for provenance; figures below reflect early 2026 and are stale.
+
 > **Design Principle:** This plan treats implementation as constraint-satisfaction, not checklist completion. Define success criteria, blockers, and verification commands—then systematically resolve.
 
 **Version:** 3.0

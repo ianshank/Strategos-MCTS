@@ -37,8 +37,8 @@ class GeneratorConfig:
     """Configuration for the Generator agent."""
 
     # Model settings
-    model: str = C.DEFAULT_GENERATOR_MODEL
-    """LLM model to use for generation."""
+    model: str = field(default_factory=lambda: C.get_generator_model())
+    """LLM model to use for generation (resolves from Settings.MCTS_GENERATOR_MODEL)."""
 
     temperature: float = C.DEFAULT_GENERATOR_TEMPERATURE
     """Temperature for generation (higher = more diverse)."""
@@ -91,8 +91,8 @@ class ReflectorConfig:
     """Configuration for the Reflector agent."""
 
     # Model settings
-    model: str = C.DEFAULT_REFLECTOR_MODEL
-    """LLM model to use for reflection."""
+    model: str = field(default_factory=lambda: C.get_reflector_model())
+    """LLM model to use for reflection (resolves from Settings.MCTS_REFLECTOR_MODEL)."""
 
     temperature: float = C.DEFAULT_REFLECTOR_TEMPERATURE
     """Temperature for reflection (lower = more deterministic)."""
@@ -183,11 +183,11 @@ class LLMGuidedMCTSConfig:
     """Save MCTS visit distribution as improved policy target."""
 
     # Code Execution
-    execution_timeout_seconds: float = C.DEFAULT_EXECUTION_TIMEOUT
-    """Timeout for code execution in seconds."""
+    execution_timeout_seconds: float = field(default_factory=lambda: C.get_execution_timeout())
+    """Timeout for code execution in seconds (resolves from Settings.MCTS_EXECUTION_TIMEOUT)."""
 
-    max_memory_mb: int = C.DEFAULT_MAX_MEMORY_MB
-    """Maximum memory for code execution in MB."""
+    max_memory_mb: int = field(default_factory=lambda: C.get_max_memory_mb())
+    """Maximum memory for code execution in MB (resolves from Settings.MCTS_MAX_MEMORY_MB)."""
 
     allow_network: bool = False
     """Allow network access in code execution sandbox."""
@@ -360,12 +360,12 @@ def create_llm_mcts_preset(preset: LLMGuidedMCTSPreset) -> LLMGuidedMCTSConfig:
             max_children=C.DEFAULT_MAX_CHILDREN,
             exploration_weight=C.UCB1_EXPLORATION_CONSTANT,
             generator_config=GeneratorConfig(
-                model=C.DEFAULT_GENERATOR_MODEL,
+                model=C.get_generator_model(),
                 temperature=C.DEFAULT_GENERATOR_TEMPERATURE,
                 num_variants=C.DEFAULT_NUM_VARIANTS,
             ),
             reflector_config=ReflectorConfig(
-                model=C.DEFAULT_REFLECTOR_MODEL,
+                model=C.get_reflector_model(),
                 temperature=C.DEFAULT_REFLECTOR_TEMPERATURE,
             ),
             collect_training_data=True,
@@ -381,14 +381,14 @@ def create_llm_mcts_preset(preset: LLMGuidedMCTSPreset) -> LLMGuidedMCTSConfig:
             max_children=C.DEFAULT_MAX_CHILDREN,
             exploration_weight=2.0,
             generator_config=GeneratorConfig(
-                model=C.DEFAULT_GENERATOR_MODEL,
+                model=C.get_generator_model(),
                 temperature=0.8,
                 num_variants=4,
                 include_previous_attempts=True,
                 max_previous_attempts=5,
             ),
             reflector_config=ReflectorConfig(
-                model=C.DEFAULT_REFLECTOR_MODEL,
+                model=C.get_reflector_model(),
                 temperature=0.2,
             ),
             collect_training_data=True,
@@ -406,13 +406,13 @@ def create_llm_mcts_preset(preset: LLMGuidedMCTSPreset) -> LLMGuidedMCTSConfig:
             exploration_weight=1.5,
             early_termination_on_solution=False,  # Keep exploring for more data
             generator_config=GeneratorConfig(
-                model=C.DEFAULT_GENERATOR_MODEL,
+                model=C.get_generator_model(),
                 temperature=C.DEFAULT_GENERATOR_TEMPERATURE,
                 num_variants=C.DEFAULT_NUM_VARIANTS,
                 include_previous_attempts=True,
             ),
             reflector_config=ReflectorConfig(
-                model=C.DEFAULT_REFLECTOR_MODEL,
+                model=C.get_reflector_model(),
                 temperature=C.DEFAULT_REFLECTOR_TEMPERATURE,
             ),
             collect_training_data=True,
@@ -430,12 +430,12 @@ def create_llm_mcts_preset(preset: LLMGuidedMCTSPreset) -> LLMGuidedMCTSConfig:
             exploration_weight=C.UCB1_EXPLORATION_CONSTANT,
             execution_timeout_seconds=10.0,
             generator_config=GeneratorConfig(
-                model=C.DEFAULT_GENERATOR_MODEL,
+                model=C.get_generator_model(),
                 temperature=C.DEFAULT_GENERATOR_TEMPERATURE,
                 num_variants=C.DEFAULT_NUM_VARIANTS,
             ),
             reflector_config=ReflectorConfig(
-                model=C.DEFAULT_REFLECTOR_MODEL,
+                model=C.get_reflector_model(),
                 temperature=C.DEFAULT_REFLECTOR_TEMPERATURE,
             ),
             collect_training_data=True,

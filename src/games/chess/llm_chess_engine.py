@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from src.adapters.llm.base import LLMClient
-from src.config.constants import CHESS_ROUTING_CONFIDENCE_BOOST
+from src.config.constants import CHESS_ROUTING_CONFIDENCE_BOOST, DEFAULT_CHESS_LLM_TEMPERATURE
 from src.framework.agents.base import (
     AgentContext,
     AgentResult,
@@ -46,7 +46,7 @@ except ImportError:
 # Configurable constants (no hardcoded magic numbers)
 # ---------------------------------------------------------------------------
 
-DEFAULT_CHESS_TEMPERATURE = 0.3
+DEFAULT_CHESS_TEMPERATURE = DEFAULT_CHESS_LLM_TEMPERATURE
 DEFAULT_CHESS_MAX_TOKENS = 1000
 DEFAULT_MCTS_DEPTH = 8
 DEFAULT_TOP_MOVES = 5

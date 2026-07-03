@@ -1,9 +1,8 @@
 # CLAUDE.md - Project Context for AI Assistants
 
 > Quick reference for Claude Code and other AI assistants working on this codebase.
-> For implementation templates, see:
+> For the implementation template, see:
 > - `MULTI_AGENT_MCTS_TEMPLATE.md` - Comprehensive template with C4 architecture (v2.0)
-> - `CLAUDE_CODE_IMPLEMENTATION_TEMPLATE.md` - Original implementation patterns
 
 ---
 
@@ -304,7 +303,6 @@ harness run --spec spec.md --ralph # outer Ralph loop
   - Dynamic component patterns and factories
   - Complete test suite patterns
   - Logging and observability patterns
-- **Original Template**: See `CLAUDE_CODE_IMPLEMENTATION_TEMPLATE.md` for detailed patterns
 - **Architecture**: See `docs/C4_ARCHITECTURE.md` for system diagrams
 - **Training**: See `docs/LOCAL_TRAINING_GUIDE.md` for ML pipeline
 - **Deployment**: See `docs/DEPLOYMENT_REPORT.md` for deployment status

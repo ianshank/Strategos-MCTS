@@ -1,5 +1,10 @@
 # Implementation Roadmap - LangGraph Multi-Agent MCTS
 
+> **⚠️ Superseded / historical (Jan 2026).** Current test/coverage status lives in
+> [`docs/STATUS.md`](../STATUS.md); the active roadmap is
+> [`docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`](../NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md).
+> Retained for provenance; figures below reflect early 2026 and are stale.
+
 > Comprehensive guide for completing production-ready features.
 > **Last Updated:** 2026-01-24
 > **Current Status:** 90% Feature Complete

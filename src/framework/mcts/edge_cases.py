@@ -8,7 +8,7 @@ Handles:
 - Budget exhaustion
 - Tree corruption detection
 
-Based on: CLAUDE_CODE_IMPLEMENTATION_TEMPLATE.md Section 7
+Based on: MULTI_AGENT_MCTS_TEMPLATE.md
 """
 
 from __future__ import annotations
