@@ -86,6 +86,20 @@ def test_dry_run_strips_authored_id_prefixes(tmp_path: Path, capsys: pytest.Capt
     assert "AC-1:" not in captured.out
 
 
+def test_validate_spec_ok_line_carries_warning_count(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+    """'ok with warnings' is visible on stdout, not only stderr; exit stays 0."""
+    spec = tmp_path / "warned.SPEC.md"
+    spec.write_text(
+        "---\nid: warned\ngoal: g\nstatus: draft\n---\n\n# Goal\ng\n\n# Acceptance Criteria\n- AC-1: x\n",
+        encoding="utf-8",
+    )
+    rc = main(["validate-spec", str(spec)])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "warnings=1" in captured.out  # missing-module
+    assert "missing-module" in captured.err
+
+
 def test_validate_spec_errors_on_missing_goal(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
     """A spec with no goal is now an error (exit 1), reported with its code."""
     spec = tmp_path / "nogoal.SPEC.md"

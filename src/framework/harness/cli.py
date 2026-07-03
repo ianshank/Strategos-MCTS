@@ -178,14 +178,21 @@ def _cmd_validate_spec(args: argparse.Namespace) -> int:
     for issue in issues:
         sys.stderr.write(issue.render() + "\n")
     failing = {issue.path for issue in issues if issue.severity == "error"}
+    warn_counts: dict[str, int] = {}
+    for issue in issues:
+        if issue.severity == "warning":
+            warn_counts[issue.path] = warn_counts.get(issue.path, 0) + 1
     loader = SpecLoader()
     for path in args.paths:
         if str(path) in failing:
             continue
         spec = loader.load(path)
+        # Surface per-file warning counts on stdout so "ok with warnings" is
+        # visible in the summary, not only on stderr (exit code stays 0).
+        warn_note = f" warnings={warn_counts[str(path)]}" if str(path) in warn_counts else ""
         sys.stdout.write(
             f"ok: {path}: id='{spec.id}' status={spec.status} "
-            f"goal='{spec.goal[:_GOAL_PREVIEW_CHARS]}' criteria={len(spec.acceptance_criteria)}\n"
+            f"goal='{spec.goal[:_GOAL_PREVIEW_CHARS]}' criteria={len(spec.acceptance_criteria)}{warn_note}\n"
         )
     return 1 if failing else 0
 
