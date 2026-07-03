@@ -84,6 +84,13 @@ DEFAULT_LLM_TEMPERATURE: Final[float] = 0.7
 MIN_LLM_TEMPERATURE: Final[float] = 0.0
 MAX_LLM_TEMPERATURE: Final[float] = 2.0
 
+# Per-role LLM temperature defaults (intentionally distinct: reasoning agents are
+# more deterministic than open-ended generation; chess move selection lower still).
+# Centralized here so the individual agent modules reference a single source.
+DEFAULT_HRM_TEMPERATURE: Final[float] = 0.5
+DEFAULT_TRM_TEMPERATURE: Final[float] = 0.5
+DEFAULT_CHESS_LLM_TEMPERATURE: Final[float] = 0.3
+
 # Confidence thresholds
 DEFAULT_CONFIDENCE_WITH_RAG: Final[float] = 0.8
 DEFAULT_CONFIDENCE_WITHOUT_RAG: Final[float] = 0.7

@@ -13,13 +13,14 @@ from __future__ import annotations
 from typing import Any
 
 from src.adapters.llm.base import LLMClient
+from src.config.constants import DEFAULT_HRM_TEMPERATURE as _DEFAULT_HRM_TEMPERATURE
 from src.framework.agents.base import AgentContext, AgentResult, AsyncAgentBase
 from src.observability.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Configurable defaults (no hardcoded magic numbers)
-DEFAULT_HRM_TEMPERATURE = 0.5
+# Configurable defaults (no hardcoded magic numbers) — sourced from src.config.constants
+DEFAULT_HRM_TEMPERATURE = _DEFAULT_HRM_TEMPERATURE
 DEFAULT_HRM_MAX_TOKENS = 1500
 QUALITY_BASELINE = 0.5
 QUALITY_SUBPROBLEM_BONUS = 0.2

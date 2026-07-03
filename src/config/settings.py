@@ -327,6 +327,24 @@ class Settings(BaseSettings):
 
     MCTS_MAX_ROLLOUT_DEPTH: int = Field(default=50, ge=1, le=500, description="Maximum MCTS rollout depth")
 
+    # LLM-guided MCTS model/resource defaults — source of truth for the lazy
+    # accessors in src/framework/mcts/llm_guided/constants.py (replaces import-time os.getenv).
+    MCTS_GENERATOR_MODEL: str = Field(
+        default="gpt-4o", description="Default LLM model for the LLM-guided MCTS generator agent"
+    )
+
+    MCTS_REFLECTOR_MODEL: str = Field(
+        default="gpt-4o", description="Default LLM model for the LLM-guided MCTS reflector agent"
+    )
+
+    MCTS_EXECUTION_TIMEOUT: float = Field(
+        default=5.0, ge=0.1, le=60.0, description="Timeout (seconds) for sandboxed code execution in LLM-guided MCTS"
+    )
+
+    MCTS_MAX_MEMORY_MB: int = Field(
+        default=256, ge=32, le=2048, description="Memory limit (MB) for sandboxed code execution in LLM-guided MCTS"
+    )
+
     # ========================================
     # Safety / Fallback Gating
     # ========================================
