@@ -32,6 +32,9 @@ from src.framework.harness.outcomes import Terminal
 from src.framework.harness.planner import HeuristicPlanner
 from src.framework.harness.settings import HarnessSettings
 
+# Length of the goal excerpt shown on validate-spec success lines.
+_GOAL_PREVIEW_CHARS = 80
+
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -182,7 +185,7 @@ def _cmd_validate_spec(args: argparse.Namespace) -> int:
         spec = loader.load(path)
         sys.stdout.write(
             f"ok: {path}: id='{spec.id}' status={spec.status} "
-            f"goal='{spec.goal[:80]}' criteria={len(spec.acceptance_criteria)}\n"
+            f"goal='{spec.goal[:_GOAL_PREVIEW_CHARS]}' criteria={len(spec.acceptance_criteria)}\n"
         )
     return 1 if failing else 0
 

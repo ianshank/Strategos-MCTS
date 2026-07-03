@@ -13,6 +13,7 @@ files become error issues rather than exceptions.
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ from pathlib import Path
 from typing import Final, Literal
 
 from src.framework.harness.intent.spec_loader import Spec, SpecLoader, SpecParseError
+from src.observability.logging import get_logger
 
 # The complete status lifecycle. Schema vocabulary, not tunable configuration —
 # kept harness-local (like ``RalphStatus``) so the harness stays extractable.
@@ -56,6 +58,9 @@ class ValidationIssue:
 class SpecValidator:
     """Validate spec files against schema v2; returns issues, never raises."""
 
+    def __init__(self, logger: logging.Logger | None = None) -> None:
+        self._logger = logger or get_logger(__name__)
+
     _ALIAS_GROUPS: Final[tuple[tuple[str, ...], ...]] = (
         SpecLoader._GOAL_HEADERS,
         SpecLoader._ACCEPTANCE_HEADERS,
@@ -72,7 +77,15 @@ class SpecValidator:
             spec = self._load(path, issues)
             if spec is None:
                 continue
-            issues.extend(self.validate_spec(spec, path))
+            file_issues = self.validate_spec(spec, path)
+            issues.extend(file_issues)
+            self._logger.debug(
+                "spec validated path=%s id=%s status=%s issues=%d",
+                path,
+                spec.id or "<none>",
+                spec.status or "<none>",
+                len(file_issues),
+            )
             if spec.id:
                 # Resolve so the same file passed under two spellings
                 # (specs/x.SPEC.md vs ./specs/x.SPEC.md) is not a duplicate.
@@ -87,6 +100,10 @@ class SpecValidator:
                             path=str(path),
                         )
                     )
+        errors = sum(1 for issue in issues if issue.severity == "error")
+        self._logger.debug(
+            "spec validation complete paths=%d errors=%d warnings=%d", len(paths), errors, len(issues) - errors
+        )
         return issues
 
     def validate_file(self, path: Path) -> list[ValidationIssue]:

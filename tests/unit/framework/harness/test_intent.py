@@ -197,6 +197,14 @@ def test_spec_loader_parses_invariants_and_out_of_scope() -> None:
     assert spec.out_of_scope == ["hooks", "slash commands"]
 
 
+def test_spec_loader_unterminated_frontmatter_is_body() -> None:
+    """A ``---`` opener with no closing delimiter is treated as plain body."""
+    spec = SpecLoader().parse("---\nid: x\n# Goal\nDo it.\n")
+    assert spec.frontmatter == {}
+    assert spec.id == ""
+    assert spec.body == spec.raw
+
+
 def test_spec_loader_body_excludes_frontmatter() -> None:
     """``Spec.body`` is the frontmatter-stripped text (header walks must use it)."""
     text = "---\n# a frontmatter comment\nid: x\n---\n# Goal\nDo it.\n"
