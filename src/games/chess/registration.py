@@ -31,7 +31,8 @@ def chess_available() -> bool:
 def register_chess_domain() -> bool:
     """Register the chess domain; returns False (no-op) when optional deps are missing.
 
-    Idempotent: re-registration overwrites the entry with an identical spec.
+    Idempotent: when the domain is already registered this is a no-op (the existing
+    entry is kept and no duplicate registration log is emitted) and True is returned.
     """
     if not chess_available():
         logger.debug("Chess domain not registered (python-chess/torch unavailable)")
