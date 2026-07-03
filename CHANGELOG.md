@@ -21,7 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Changed
 - `.gitignore` now excludes `.claude/settings.local.json` (per-developer Claude Code
   permissions; local settings are personal state, unlike the shared, committed skills under
-  `.claude/skills/`), and the previously committed copy is untracked.
+  `.claude/skills/`), and the previously committed copy is removed from the repository —
+  existing local working copies are unaffected and now ignored.
 
 ### M5 Gate Wiring & Measurement Validity
 
