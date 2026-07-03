@@ -374,24 +374,41 @@ service modules (so `rest_server.py`, which is omitted from coverage, stays logi
 
 ```mermaid
 graph LR
-    Registry[DomainRegistry<br/>reasoning / planning / chess] --> Trainer[SelfPlayTrainer<br/>single_agent flag]
+    Registry[DomainRegistry<br/>reasoning / planning smoke tests<br/>chess via lazy loader] --> Trainer[SelfPlayTrainer<br/>single_agent flag]
+    ChessReg[chess registration<br/>optional 'chess' extra] -.-> Registry
     Trainer --> NMCTS[NeuralMCTS<br/>+ SelfPlayCollector]
     NMCTS --> Buffer[ExperienceBuffer<br/>torch-safe]
     Buffer --> Loss[AlphaZeroLoss]
     Loss --> Net[PolicyValueNetwork]
     Net --> NMCTS
-    Trainer --> Bench[policy_comparison<br/>lift metric]
+    Trainer --> Bench[policy_comparison<br/>lift + CI]
+    Stats[utils/stats<br/>Wilson / diff CIs] --> Bench
+    Stats --> Eval[EvaluationService]
+    Bench --> CLI[policy_lift CLI<br/>exit-code gate + JSON artifact]
     MCtrl[MetaControllerDataCollector] --> MCtrlTrain[train_and_validate]
     style Trainer fill:#8E44AD,stroke:#5B2C6F,stroke-width:2px,color:#fff
     style Bench fill:#2ECC71,stroke:#1E8449,stroke-width:2px,color:#fff
+    style CLI fill:#2ECC71,stroke:#1E8449,stroke-width:2px,color:#fff
 ```
 
 - `SelfPlayTrainer` (`src/training/self_play_trainer.py`) composes `NeuralMCTS` + `ExperienceBuffer` +
   `AlphaZeroLoss`; `single_agent=True` bypasses the two-player negamax assumptions for non-adversarial
   domains. Domains are selected via `DomainRegistry` (`src/framework/domain_registry.py`); dict-action
   states are made hashable by `single_agent_domains.StringActionGameState`.
+  `save_checkpoint(..., metadata=...)` optionally writes a `<checkpoint>.meta.json` architecture
+  sidecar so tools can rebuild the network without guessing.
+- The built-in **reasoning/planning domains are synthetic smoke tests** (gameable rewards — they
+  validate plumbing, not decision quality). **Chess is the adversarial M5 domain**, registered lazily
+  on first `DomainRegistry.get("chess")` via `src/games/chess/registration.py` behind the optional
+  `chess` extra (a clean no-op without `python-chess`); a dedicated `chess-tests` CI job installs the
+  extra and runs the chess subset without touching the coverage gate.
 - Decision-quality lift is measured by `src/benchmark/policy_comparison.py` (mean-reward for
-  single-agent, win-rate for adversarial). The meta-controller learning loop lives in
+  single-agent, win-rate for adversarial) with confidence intervals from the shared scipy-free
+  `src/utils/stats.py` (Wilson score for win-rate; difference-of-means for rewards — also used by
+  `EvaluationService`). The M5 gate is **fail-closed on the CI lower bound** (`meets_target`; the
+  point estimate is reporting-only via `point_meets_target`) and is runnable end-to-end with
+  `python -m src.benchmark.policy_lift` (`policy-lift` console script): JSON artifact + exit code
+  0 (gate met) / 1 (not met) / 2 (error). The meta-controller learning loop lives in
   `src/training/meta_controller_data_collector.py` (`docs/META_CONTROLLER_TRAINING.md`).
 
 ---

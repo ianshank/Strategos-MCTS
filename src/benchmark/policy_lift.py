@@ -265,7 +265,7 @@ def load_architecture(
     sidecar = checkpoint.with_name(checkpoint.name + SIDECAR_SUFFIX)
     if sidecar.exists():
         meta = json.loads(sidecar.read_text())
-        network_meta = meta.get("network")
+        network_meta = meta.get("network") if isinstance(meta, dict) else None
         if isinstance(network_meta, dict):
             logger.info("Architecture loaded from sidecar", extra={"sidecar": str(sidecar)})
             return network_meta
@@ -288,8 +288,10 @@ def _load_state_dict(path: Path, device: str) -> dict[str, torch.Tensor]:
     if not path.is_file():
         raise FileNotFoundError(f"Checkpoint not found: {path}")
     state = torch.load(path, map_location=device, weights_only=True)
-    if not isinstance(state, dict):
-        raise ArchitectureError(f"Checkpoint {path} is not a state_dict (torch-safe format required)")
+    if not isinstance(state, dict) or not all(isinstance(value, torch.Tensor) for value in state.values()):
+        raise ArchitectureError(
+            f"Checkpoint {path} is not a state_dict of tensors (torch-safe state_dict format required)"
+        )
     return state
 
 
@@ -339,12 +341,19 @@ async def run(args: argparse.Namespace) -> int:
 
         # Baseline: explicit checkpoint, or a fresh (seeded) untrained instance of the
         # same architecture — the "untrained policy" of the M5 acceptance criterion.
-        baseline_state = None
+        # The baseline network is ALWAYS built from the trained checkpoint's resolved
+        # architecture: an explicit baseline checkpoint with a different layout must
+        # fail fast (load_state_dict raises), not silently compare mismatched nets.
+        baseline_network = build_network(arch, spec, args.device, state_dict=trained_state)
         if args.baseline_checkpoint is not None:
             baseline_state = _load_state_dict(args.baseline_checkpoint, args.device)
-        baseline_network = build_network(arch, spec, args.device, state_dict=baseline_state or trained_state)
-        if baseline_state is not None:
-            baseline_network.load_state_dict(baseline_state)
+            try:
+                baseline_network.load_state_dict(baseline_state)
+            except RuntimeError as exc:
+                raise ArchitectureError(
+                    f"Baseline checkpoint {args.baseline_checkpoint} does not match the trained "
+                    f"checkpoint's architecture: {exc}"
+                ) from exc
         baseline_network.eval()
     except (ArchitectureError, FileNotFoundError, RuntimeError, json.JSONDecodeError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)

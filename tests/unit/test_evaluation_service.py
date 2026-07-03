@@ -1173,13 +1173,15 @@ class TestStatisticalMethods:
         assert abs(effect1 - effect2) < 0.001
 
     @pytest.mark.unit
-    def test_get_z_score(self, evaluation_service):
-        """Test z-score retrieval for confidence levels."""
-        assert evaluation_service._get_z_score(0.90) == 1.645
-        assert evaluation_service._get_z_score(0.95) == 1.96
-        assert evaluation_service._get_z_score(0.99) == 2.576
+    def test_get_z_score(self):
+        """Test z-score retrieval for confidence levels (shared stats utility)."""
+        from src.utils.stats import z_score
+
+        assert z_score(0.90) == 1.645
+        assert z_score(0.95) == 1.96
+        assert z_score(0.99) == 2.576
         # Unknown confidence level should default to 1.96
-        assert evaluation_service._get_z_score(0.85) == 1.96
+        assert z_score(0.85) == 1.96
 
     @pytest.mark.unit
     def test_standard_normal_cdf(self, evaluation_service):

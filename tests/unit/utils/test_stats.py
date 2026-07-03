@@ -143,7 +143,3 @@ class TestEvaluationServiceDelegation:
         assert service._wilson_score_interval(65, 100) == wilson_score_interval(65, 100)
         assert service._wilson_score_interval(0, 0) == wilson_score_interval(0, 0)
         assert service._wilson_score_interval(3, 7, confidence=0.99) == wilson_score_interval(3, 7, confidence=0.99)
-
-    def test_z_score_delegation(self, service):
-        for confidence in (0.90, 0.95, 0.99, 0.5):
-            assert service._get_z_score(confidence) == z_score(confidence)

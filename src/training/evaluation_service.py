@@ -29,7 +29,7 @@ import torch
 import torch.nn as nn
 
 from ..observability.logging import get_correlation_id, get_structured_logger
-from ..utils.stats import wilson_score_interval, z_score
+from ..utils.stats import wilson_score_interval
 
 if TYPE_CHECKING:
     from ..config.settings import Settings
@@ -614,10 +614,6 @@ class EvaluationService:
         """
         # Delegates to the shared scipy-free implementation in src.utils.stats.
         return wilson_score_interval(successes, total, confidence)
-
-    def _get_z_score(self, confidence: float) -> float:
-        """Get z-score for given confidence level."""
-        return z_score(confidence)
 
     def _test_significance(
         self,

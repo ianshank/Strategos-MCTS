@@ -411,3 +411,68 @@ class TestDropoutLayoutResolution:
         spec = DomainRegistry.get("reasoning")
         with pytest.raises(pl.ArchitectureError, match="layout mismatch"):
             pl.build_network(arch, spec, "cpu", state_dict=network.state_dict())
+
+
+class TestReviewHardening:
+    """Regression tests for review findings: sidecar shape, state_dict validation,
+    schema_version protection, and baseline architecture mismatch."""
+
+    def test_non_object_sidecar_json_falls_back_cleanly(self, tmp_path):
+        """A sidecar whose JSON is a list must fall back to inference, not crash."""
+        network = _reasoning_mlp()
+        checkpoint = tmp_path / "net.pt"
+        torch.save(network.state_dict(), checkpoint)
+        (tmp_path / "net.pt.meta.json").write_text(json.dumps(["not", "an", "object"]))
+        args = pl.build_parser().parse_args(["--domain", "reasoning", "--checkpoint", str(checkpoint)])
+        spec = DomainRegistry.get("reasoning")
+        arch = pl.load_architecture(checkpoint, args, spec, network.state_dict())
+        assert arch["type"] == "mlp"  # inferred, no AttributeError
+
+    def test_non_tensor_state_dict_values_exit_2(self, tmp_path, capsys):
+        checkpoint = tmp_path / "bogus.pt"
+        torch.save({"weights": [1, 2, 3], "config": "not a tensor"}, checkpoint)
+        args = pl.build_parser().parse_args(["--domain", "reasoning", "--checkpoint", str(checkpoint)])
+        assert asyncio.run(pl.run(args)) == pl.EXIT_ERROR
+        assert "state_dict of tensors" in capsys.readouterr().err
+
+    def test_baseline_architecture_mismatch_exits_2(self, tmp_path, capsys):
+        """A baseline checkpoint with a different layout must fail fast, not silently
+        compare mismatched networks."""
+        trained = _reasoning_mlp(hidden_dims=[16])
+        mismatched = _reasoning_mlp(hidden_dims=[32, 16])
+        trained_path = tmp_path / "trained.pt"
+        baseline_path = tmp_path / "baseline.pt"
+        torch.save(trained.state_dict(), trained_path)
+        torch.save(mismatched.state_dict(), baseline_path)
+        args = pl.build_parser().parse_args(
+            [
+                "--domain",
+                "reasoning",
+                "--checkpoint",
+                str(trained_path),
+                "--baseline-checkpoint",
+                str(baseline_path),
+                "--num-games",
+                "1",
+                "--num-simulations",
+                "2",
+            ]
+        )
+        assert asyncio.run(pl.run(args)) == pl.EXIT_ERROR
+        assert "does not match the trained" in capsys.readouterr().err
+
+    def test_sidecar_schema_version_cannot_be_overridden(self, tmp_path):
+        from src.training.self_play_trainer import SelfPlayTrainer
+
+        trainer = SelfPlayTrainer(
+            _reasoning_mlp(),
+            make_reasoning_state,
+            DomainRegistry.action_space_size("reasoning"),
+            single_agent=True,
+            seed=0,
+        )
+        checkpoint = tmp_path / "ckpt.pt"
+        trainer.save_checkpoint(checkpoint, metadata={"schema_version": 999, "domain": "reasoning"})
+        meta = json.loads((tmp_path / "ckpt.pt.meta.json").read_text())
+        assert meta["schema_version"] == 1  # fixed key wins over caller metadata
+        assert meta["domain"] == "reasoning"

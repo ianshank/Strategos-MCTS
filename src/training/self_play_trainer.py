@@ -197,7 +197,8 @@ class SelfPlayTrainer:
         torch.save(self.network.state_dict(), path)
         if metadata is not None:
             sidecar = path.with_name(path.name + ".meta.json")
-            sidecar.write_text(json.dumps({"schema_version": 1, **metadata}, indent=2, sort_keys=True) + "\n")
+            # schema_version is stamped last so caller metadata can never override it.
+            sidecar.write_text(json.dumps({**metadata, "schema_version": 1}, indent=2, sort_keys=True) + "\n")
         logger.info("Checkpoint saved", extra={"path": str(path), "sidecar": metadata is not None})
 
     def load_checkpoint(self, path: str | Path) -> None:
