@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Spec-Driven Development Hardening (planning)
+
+#### Added
+- **`docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md`** — peer-reviewed plan (v2.0.0) to harden the
+  existing SDD toolchain and extract it as a reusable Claude Code plugin: spec schema v2
+  (`id`/`module`/status lifecycle, authored `AC-n` criterion IDs replacing positional `c{i}`
+  synthesis), an error-level `validate-spec` (today parse-level and warn-only), repo-native
+  `.claude/` enforcement (slash commands, spec-review subagent, stateless PreToolUse gate),
+  CI spec-traceability rules without bot commits, an M5 policy-lift pilot, and Phase-3
+  extraction into `claude-code-foundry`. Documentation only — no behavior changes yet.
+
+#### Changed
+- `.gitignore` now excludes `.claude/settings.local.json` (per-developer Claude Code
+  permissions; local settings are personal state, unlike the shared, committed skills under
+  `.claude/skills/`), and the previously committed copy is untracked.
+
 ### M5 Gate Wiring & Measurement Validity
 
 #### Added

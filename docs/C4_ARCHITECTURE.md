@@ -444,8 +444,14 @@ This updated C4 architecture reflects the **current state** of the application, 
 The `.github/workflows/ci.yml` pipeline enforces the same gate as the local `quality-gate` skill:
 `black --check` → `ruff` → `mypy src/ --strict` → `pytest` with branch coverage (`--cov-fail-under=85`) →
 a hardcoded-secret grep, plus `bandit` (HIGH-severity gate), `pip-audit` (CRITICAL gate), spec validation
-(`harness validate-spec`), and a Docker build with a Trivy image scan whose SARIF results upload to GitHub
-code scanning (the `docker-build` job carries `security-events: write`; the upload is advisory and
+(`harness validate-spec` — currently parse-level and warn-only: it fails a spec that cannot be parsed but
+only warns on a missing goal), and a Docker build with a Trivy image scan whose SARIF results upload to
+GitHub code scanning (the `docker-build` job carries `security-events: write`; the upload is advisory and
 non-blocking). Configuration is centralized in `src/config/constants.py` + `src/config/settings.py`
 (Pydantic Settings) with domain-specific constant modules; there are no hardcoded secrets or magic numbers
 in the routing/adapter layers.
+
+> **Planned (not yet built):** the spec-validation gate is scheduled to become error-level with a
+> versioned spec schema (`id`/`module`/status lifecycle, authored `AC-n` criterion IDs) plus
+> repo-native `.claude/` enforcement (slash commands, spec-review subagent, PreToolUse gate) and
+> CI spec-traceability rules — see `docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md` for the phased plan.
