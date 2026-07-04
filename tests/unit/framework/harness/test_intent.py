@@ -115,6 +115,29 @@ def test_spec_loader_mixes_bullets_and_numbers() -> None:
     assert spec.constraints == ["bulleted", "twelve", "asterisk", "thirteen"]
 
 
+def test_spec_loader_joins_soft_wrapped_bullet_continuations() -> None:
+    """An indented continuation line belongs to its bullet — dropping it would
+    silently truncate the criterion to its first physical line."""
+    text = (
+        "# Acceptance Criteria\n"
+        "- AC-1: the driver runs end-to-end\n"
+        "  and writes a checkpoint. Intended test: tests/unit/test_x.py\n"
+        "- AC-2: single line\n"
+    )
+    spec = SpecLoader().parse(text)
+    assert spec.acceptance_criteria == [
+        "the driver runs end-to-end and writes a checkpoint. Intended test: tests/unit/test_x.py",
+        "single line",
+    ]
+
+
+def test_spec_loader_flush_left_prose_is_not_a_continuation() -> None:
+    """Unindented prose after a list is a paragraph, not part of the bullet."""
+    text = "# Constraints\n- only bullet\n\nA closing paragraph.\n"
+    spec = SpecLoader().parse(text)
+    assert spec.constraints == ["only bullet"]
+
+
 # ---------------------------------------------------------------------------
 # Schema v2: frontmatter fields, authored criterion IDs, new sections
 # ---------------------------------------------------------------------------

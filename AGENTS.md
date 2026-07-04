@@ -29,6 +29,9 @@ parity — bump deliberately and re-validate. Coverage gate: 85% (`--cov-fail-un
 
 ```bash
 harness validate-spec specs/*.SPEC.md   # schema v2; errors exit 1
+harness spec-new --id <id> --module <path> # scaffold a draft; refuses module overlap w/ open specs
+harness spec-status <id> --require approved  # lifecycle check; exit 1 on mismatch
+harness spec-trace --base-ref origin/main --branch <name>  # CI traceability rules (PR diffs)
 harness dry-run --spec path/to/spec.md
 harness run --spec path/to/spec.md
 harness run --goal "describe the goal" --max-iterations 5
@@ -110,6 +113,9 @@ Fixtures: `tests/fixtures/harness_fixtures.py` (helpers), `tests/integration/har
 - Current test/coverage status (source of truth): `docs/STATUS.md`
 - Spec-driven specs: `specs/<id>.SPEC.md`, schema v2 (validate with `harness validate-spec specs/*.SPEC.md`)
 - Project skills: `.claude/skills/{quality-gate,validate-specs,coverage-baseline}`
+- SDD enforcement: `/spec-new` + `/spec-implement` (`.claude/commands/`), `spec-review` subagent
+  (`.claude/agents/`), PreToolUse gate `.claude/hooks/spec_gate.py` (warn mode; `SPEC_GATE_BYPASS=1`
+  for hotfixes; src/** PRs need a `spec/<id>` branch with an approved spec or a `No-Spec: <reason>` trailer)
 - Implementation template: `MULTI_AGENT_MCTS_TEMPLATE.md`
 - Architecture: `docs/C4_ARCHITECTURE.md`
 - This file is a routing ledger, not an encyclopedia. Drill into a path above for detail.

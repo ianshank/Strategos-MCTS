@@ -22,7 +22,7 @@ from src.framework.harness.cli import (
 from src.framework.harness.loop.runner import RunResult
 from src.framework.harness.outcomes import Terminal
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.harness]
 
 
 def _spec(tmp_path: Path) -> Path:
@@ -135,6 +135,104 @@ def test_validate_spec_multiple_paths_duplicate_id(tmp_path: Path, capsys: pytes
     captured = capsys.readouterr()
     assert rc == 1
     assert "duplicate-id" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# spec-new / spec-status / spec-trace subcommands (SDD Phase 1)
+# ---------------------------------------------------------------------------
+
+
+def test_spec_new_creates_draft_and_refuses_duplicates(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+    specs = tmp_path / "specs"
+    rc = main(["spec-new", "--id", "demo_new", "--module", "src/api/", "--specs-dir", str(specs)])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "created:" in captured.out
+    assert (specs / "demo_new.SPEC.md").exists()
+
+    rc = main(["spec-new", "--id", "demo_new", "--module", "docs/", "--specs-dir", str(specs)])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "already exists" in captured.err
+
+    # The fresh draft is open: an overlapping module is refused deterministically.
+    rc = main(["spec-new", "--id", "demo_other", "--module", "src/", "--specs-dir", str(specs)])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "overlaps open spec" in captured.err
+
+
+def test_spec_status_reports_and_requires(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+    specs = tmp_path / "specs"
+    main(["spec-new", "--id", "demo_status", "--module", "src/api/", "--specs-dir", str(specs)])
+    capsys.readouterr()
+
+    rc = main(["spec-status", "demo_status", "--specs-dir", str(specs)])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "status=draft" in captured.out
+
+    rc = main(["spec-status", "demo_status", "--require", "approved", "--specs-dir", str(specs)])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "required 'approved'" in captured.err
+
+    rc = main(["spec-status", "absent_spec", "--specs-dir", str(specs)])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "error" in captured.err
+
+
+def test_spec_trace_cli_end_to_end(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    import subprocess
+
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    (repo / "src" / "x.py").write_text("X = 1\n")
+    subprocess.run(["git", "-C", str(repo), "init", "-q", "-b", "main"], check=True)
+    git = ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t"]
+    subprocess.run([*git, "add", "-A"], check=True)
+    subprocess.run([*git, "commit", "-qm", "initial"], check=True)
+    subprocess.run([*git, "switch", "-qc", "feature/foo"], check=True)
+    (repo / "src" / "x.py").write_text("X = 2\n")
+    subprocess.run([*git, "commit", "-qam", "change"], check=True)
+    monkeypatch.chdir(repo)
+
+    rc = main(["spec-trace", "--base-ref", "main", "--branch", "feature/foo"])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "FAILED" in captured.out
+    assert "No-Spec" in captured.err
+
+    subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", "x\n\nNo-Spec: test exemption"], check=True)
+    rc = main(["spec-trace", "--base-ref", "main", "--branch", "feature/foo"])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "OK" in captured.out
+
+    # Operational failure (bogus base ref): error line + exit 1, no traceback.
+    rc = main(["spec-trace", "--base-ref", "no_such_ref", "--branch", "feature/foo"])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "error: spec-trace:" in captured.err
+
+
+def test_spec_trace_cli_outside_a_repo_reports_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    outside = tmp_path / "not_a_repo"
+    outside.mkdir()
+    monkeypatch.chdir(outside)
+    rc = main(["spec-trace", "--base-ref", "main", "--branch", "feature/foo"])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "error: spec-trace:" in captured.err
 
 
 # ---------------------------------------------------------------------------

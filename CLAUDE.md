@@ -321,6 +321,23 @@ harness validate-spec specs/*.SPEC.md   # schema v2 validation (errors exit 1)
 harness dry-run --spec specs/phase_1_correctness.SPEC.md  # plan only, no LLM
 ```
 
+### Spec-driven workflow (SDD Phase 1 enforcement)
+
+- `/spec-new <id> <module>` scaffolds a `draft` spec (deterministic refusal on malformed ids and
+  module overlap with open specs); the `spec-review` subagent gates draft→approved (a human flips
+  the status); `/spec-implement <id>` requires `approved`, then creates/switches to the
+  `spec/<id>` branch cut from `origin/main`.
+- A **PreToolUse gate** (`.claude/hooks/spec_gate.py`, committed `.claude/settings.json`) warns on
+  Edit/Write/MultiEdit/NotebookEdit under `src/**` unless the branch is `spec/<id>` with an
+  approved/implemented spec. Warn mode during the pilot; `SPEC_GATE_BYPASS=1` is the hotfix
+  bypass. Known holes: Bash-based writes are not gated; native Windows without `python3` degrades
+  to non-blocking errors.
+- **CI traceability** (`harness spec-trace`, run by the `spec-validate` job on PRs): diffs
+  touching `src/**` need a `spec/<id>` branch whose spec is `approved` on the base branch, or a
+  `No-Spec: <reason>` commit trailer. Flips to `verified` require same-line `spec-id AC-n`
+  mappings under `tests/`. Until the first approved spec merges, the trailer is the expected
+  channel for all `src/**` work.
+
 Reusable project skills live in `.claude/skills/`: `quality-gate` (full local gate),
 `validate-specs` (validate all specs), `coverage-baseline` (refresh `docs/STATUS.md`).
 
