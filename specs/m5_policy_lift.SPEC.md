@@ -2,6 +2,7 @@
 id: m5_policy_lift
 goal: Ship a resumable chess self-play convergence driver and record the M5 policy-lift gate run against its trained checkpoint
 module: src/training/
+milestone: M5
 status: draft
 ---
 
@@ -12,8 +13,8 @@ resumable, seedable self-play convergence driver for the chess domain that produ
 torch-safe checkpoints with `.meta.json` architecture sidecars, and a recorded run of
 the existing `python -m src.benchmark.policy_lift` gate against the resulting
 checkpoint. The gate target is a >=20% decision-quality lift over the untrained
-policy, measured as the 95% confidence-interval lower bound on chess win-rate over
->=100 games.
+policy, measured as the 95% confidence-interval lower bound of the win-rate-derived
+lift (`lift_ci_lower_pct`) over >=100 chess games.
 
 # Acceptance Criteria
 
