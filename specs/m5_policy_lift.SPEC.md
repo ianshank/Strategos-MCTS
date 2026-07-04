@@ -3,7 +3,7 @@ id: m5_policy_lift
 goal: Ship a resumable chess self-play convergence driver and record the M5 policy-lift gate run against its trained checkpoint
 module: src/training/
 milestone: M5
-status: draft
+status: approved
 ---
 
 # Goal
