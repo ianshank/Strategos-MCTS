@@ -468,7 +468,9 @@ class DecisionState:
         if len(self.evaluated_options) >= 2:
             evaluated_ids = set(self.evaluated_options)
             already_compared = any(
-                entry.get("action") == "compare" and set(entry.get("options", [])) == evaluated_ids
+                entry.get("action") == "compare"
+                and len(entry.get("options") or []) == len(evaluated_ids)
+                and set(entry.get("options") or []) == evaluated_ids
                 for entry in self.decision_history
             )
             if not already_compared:

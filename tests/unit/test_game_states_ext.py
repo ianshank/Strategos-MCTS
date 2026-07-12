@@ -831,6 +831,19 @@ class TestDecisionStateGetLegalActions:
         action_types = [a["type"] for a in after_evaluate.get_legal_actions()]
         assert "compare" in action_types
 
+    def test_malformed_compare_history_entry_does_not_crash(self):
+        """A hand-crafted compare entry with options=None must not break legality checks."""
+        state = DecisionState(
+            context="Test",
+            options=[{"id": "a"}, {"id": "b"}],
+            evaluated_options={"a": 0.5, "b": 0.7},
+            decision_history=[{"action": "compare", "options": None}],
+            max_evaluations=10,
+        )
+        action_types = [a["type"] for a in state.get_legal_actions()]
+        # The malformed entry does not count as having compared the current set
+        assert "compare" in action_types
+
     def test_compare_preferring_policy_terminates(self):
         """Every rollout policy must reach a terminal state; compare-preferring is the worst case."""
         options = [{"id": f"opt_{i}"} for i in range(4)]
