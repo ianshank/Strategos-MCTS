@@ -462,9 +462,19 @@ class DecisionState:
             if option_id not in self.evaluated_options:
                 actions.append({"type": "evaluate", "option_id": option_id, "option": option})
 
-        # Compare if we have at least 2 evaluated options
+        # Compare if we have at least 2 evaluated options and this exact set has not
+        # been compared yet: a repeated compare adds no information, and offering it
+        # unconditionally lets rollouts loop without ever reaching a terminal state.
         if len(self.evaluated_options) >= 2:
-            actions.append({"type": "compare", "options": list(self.evaluated_options.keys())})
+            evaluated_ids = set(self.evaluated_options)
+            already_compared = any(
+                entry.get("action") == "compare"
+                and len(entry.get("options") or []) == len(evaluated_ids)
+                and set(entry.get("options") or []) == evaluated_ids
+                for entry in self.decision_history
+            )
+            if not already_compared:
+                actions.append({"type": "compare", "options": list(self.evaluated_options.keys())})
 
         # Decide if we have evaluated enough or reached limit
         if self.evaluated_options:
