@@ -332,12 +332,19 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        # neural extra included so the torch-gated integration files (agent
+        # orchestration, demo pipeline) execute instead of importorskip-ing silently.
+        run: pip install -e ".[dev,neural]"
 
       - name: Run integration tests
+        # test_deployed_models.py is excluded: it rebuilds the checkpoint's
+        # DeBERTa+LoRA architecture via AutoModel.from_pretrained, which needs a
+        # warm HuggingFace cache (tests/conftest.py forces HF_HUB_OFFLINE=1), so
+        # it can only run on machines that already hold the pretrained weights.
         run: |
           if [ -d tests/integration ]; then
-            pytest tests/integration/ -v --tb=short
+            pytest tests/integration/ -v --tb=short \
+              --ignore=tests/integration/test_deployed_models.py
           else
             echo "No integration tests found"
           fi

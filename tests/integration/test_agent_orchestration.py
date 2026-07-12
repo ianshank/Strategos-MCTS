@@ -201,7 +201,7 @@ class TestHRMTRMIntegration:
         from src.agents.hrm_agent import create_hrm_agent
         from src.agents.trm_agent import create_trm_agent
 
-        hrm_agent = create_hrm_agent(hrm_config, device="cpu", use_ponder_net=False)
+        hrm_agent = create_hrm_agent(hrm_config, device="cpu")
         trm_agent = create_trm_agent(trm_config, output_dim=64, device="cpu")
 
         # Create test input
@@ -226,7 +226,7 @@ class TestHRMTRMIntegration:
         from src.agents.hrm_agent import create_hrm_agent
         from src.agents.trm_agent import create_trm_agent
 
-        hrm_agent = create_hrm_agent(hrm_config, device="cpu", use_ponder_net=False)
+        hrm_agent = create_hrm_agent(hrm_config, device="cpu")
         trm_agent = create_trm_agent(trm_config, output_dim=64, device="cpu")
 
         # Enable training mode
@@ -256,7 +256,7 @@ class TestHRMTRMIntegration:
         """Test HRM produces meaningful decomposition."""
         from src.agents.hrm_agent import create_hrm_agent
 
-        hrm_agent = create_hrm_agent(hrm_config, device="cpu", use_ponder_net=False)
+        hrm_agent = create_hrm_agent(hrm_config, device="cpu")
         hrm_agent.eval()
 
         test_input = torch.randn(1, 10, hrm_config.h_dim)
@@ -768,7 +768,7 @@ class TestPerformanceIntegration:
         hrm_config = HRMConfig(h_dim=32, l_dim=16, num_h_layers=1, num_l_layers=1)
         trm_config = TRMConfig(latent_dim=32, hidden_dim=64, num_recursions=3)
 
-        hrm_agent = create_hrm_agent(hrm_config, device="cpu", use_ponder_net=False)
+        hrm_agent = create_hrm_agent(hrm_config, device="cpu")
         trm_agent = create_trm_agent(trm_config, output_dim=32, device="cpu")
 
         hrm_agent.eval()

@@ -228,10 +228,14 @@ async def test_verification_script_executes(demo_config, mock_external_services)
         config_path = Path(f.name)
 
     try:
-        # Mock HTTP calls
+        # Every verifier in VERIFIER_MAP must be patched here — an unpatched
+        # verifier makes a real network call and fails without live credentials.
         with (
             patch("scripts.verify_external_services.PineconeVerifier.verify") as mock_pinecone,
             patch("scripts.verify_external_services.WandBVerifier.verify") as mock_wandb,
+            patch("scripts.verify_external_services.GitHubVerifier.verify") as mock_github,
+            patch("scripts.verify_external_services.OpenAIVerifier.verify") as mock_openai,
+            patch("scripts.verify_external_services.Neo4jVerifier.verify") as mock_neo4j,
         ):
             from scripts.verify_external_services import (
                 ServiceStatus,
@@ -250,6 +254,27 @@ async def test_verification_script_executes(demo_config, mock_external_services)
                 status=ServiceStatus.SUCCESS,
                 message="Authenticated",
                 is_critical=True,
+            )
+
+            mock_github.return_value = VerificationResult(
+                service_name="github",
+                status=ServiceStatus.SUCCESS,
+                message="Authenticated",
+                is_critical=True,
+            )
+
+            mock_openai.return_value = VerificationResult(
+                service_name="openai",
+                status=ServiceStatus.SKIPPED,
+                message="Optional service - credentials not provided",
+                is_critical=False,
+            )
+
+            mock_neo4j.return_value = VerificationResult(
+                service_name="neo4j",
+                status=ServiceStatus.SKIPPED,
+                message="Optional service - credentials not provided",
+                is_critical=False,
             )
 
             results = await verify_all_services(config_path, logger, console)

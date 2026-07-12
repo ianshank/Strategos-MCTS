@@ -143,7 +143,7 @@ class TestLoadPerformance:
         hrm_config = HRMConfig(h_dim=32, l_dim=16, num_h_layers=1, num_l_layers=1)
         trm_config = TRMConfig(latent_dim=32, hidden_dim=64, num_recursions=3)
 
-        hrm_agent = create_hrm_agent(hrm_config, device="cpu", use_ponder_net=False)
+        hrm_agent = create_hrm_agent(hrm_config, device="cpu")
         trm_agent = create_trm_agent(trm_config, output_dim=32, device="cpu")
 
         hrm_agent.eval()
@@ -342,7 +342,7 @@ class TestMemoryStress:
         from src.training.system_config import HRMConfig
 
         hrm_config = HRMConfig(h_dim=64, l_dim=32, num_h_layers=2, num_l_layers=1)
-        hrm_agent = create_hrm_agent(hrm_config, device="cpu", use_ponder_net=False)
+        hrm_agent = create_hrm_agent(hrm_config, device="cpu")
         hrm_agent.eval()
 
         # Force garbage collection
