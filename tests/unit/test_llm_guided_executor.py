@@ -305,6 +305,7 @@ while i < 10**9:
 
         assert result.timed_out is True
         assert result.passed is False
+        assert any("timed out" in e for e in result.errors)
 
     def test_infinite_loop_timeout(self) -> None:
         """Infinite loops are stopped by timeout."""
