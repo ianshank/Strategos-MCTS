@@ -87,6 +87,10 @@ def test_hrm_model_loading_and_inference(production_models_dir, production_confi
         # Ensure model is on the correct device
         device = "cuda" if torch.cuda.is_available() else "cpu"
         trainer.model.to(device)
+        if device == "cpu":
+            # CPU has no Half matmul support; upcast in case any weights
+            # (fp16 hub snapshot or fp16-exported checkpoint) came in as Half
+            trainer.model.float()
     except Exception as e:
         pytest.fail(f"Failed to load HRM model: {e}")
 
@@ -124,6 +128,10 @@ def test_trm_model_loading_and_inference(production_models_dir, production_confi
         # Ensure model is on the correct device
         device = "cuda" if torch.cuda.is_available() else "cpu"
         trainer.model.to(device)
+        if device == "cpu":
+            # CPU has no Half matmul support; upcast in case any weights
+            # (fp16 hub snapshot or fp16-exported checkpoint) came in as Half
+            trainer.model.float()
     except Exception as e:
         pytest.fail(f"Failed to load TRM model: {e}")
 
