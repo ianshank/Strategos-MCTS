@@ -1188,7 +1188,7 @@ class TestHRMTRMSynergyJourney:
             dropout=0.1,
         )
 
-        hrm_agent = create_hrm_agent(hrm_config, device="cpu", use_ponder_net=False)
+        hrm_agent = create_hrm_agent(hrm_config, device="cpu")
         trm_agent = create_trm_agent(trm_config, output_dim=64, device="cpu")
 
         # Step 2: Create test input
