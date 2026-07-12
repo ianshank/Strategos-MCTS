@@ -33,8 +33,10 @@ try:
     )
 
     GAME_STATES_AVAILABLE = True
-except ImportError:
+    GAME_STATES_SKIP_REASON = ""
+except ImportError as exc:  # typically torch missing (neural extra not installed)
     GAME_STATES_AVAILABLE = False
+    GAME_STATES_SKIP_REASON = f"GameStates not available: {exc}"
 
 try:
     from src.observability.facade import (
@@ -77,7 +79,7 @@ pytestmark = pytest.mark.integration
 # =============================================================================
 
 
-@pytest.mark.skipif(not GAME_STATES_AVAILABLE, reason="GameStates not available")
+@pytest.mark.skipif(not GAME_STATES_AVAILABLE, reason=GAME_STATES_SKIP_REASON)
 class TestGameStateIntegration:
     """Integration tests for GameState implementations."""
 
@@ -153,9 +155,11 @@ class TestGameStateIntegration:
             max_evaluations=5,
         )
 
-        # Evaluate options
+        # Evaluate options; the step bound turns a termination regression into a
+        # fast failure instead of an infinite loop
         current_state = state
-        while not current_state.is_terminal():
+        steps_taken = 0
+        while not current_state.is_terminal() and steps_taken < 15:
             actions = current_state.get_legal_actions()
             if not actions:
                 break
@@ -168,6 +172,9 @@ class TestGameStateIntegration:
                 action = actions[0]
 
             current_state = current_state.apply_action(action)
+            steps_taken += 1
+
+        assert current_state.is_terminal(), f"workflow did not terminate within {steps_taken} steps"
 
         # Should have evaluated some options
         assert len(current_state.evaluated_options) > 0
