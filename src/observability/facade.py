@@ -16,6 +16,7 @@ Based on: MULTI_AGENT_MCTS_TEMPLATE.md Section 11
 
 from __future__ import annotations
 
+import asyncio
 import functools
 import logging
 import time
@@ -553,8 +554,6 @@ class ObservabilityFacade:
                 async with self.trace_async(span_name):
                     return await func(*args, **kwargs)
 
-            import asyncio
-
             if asyncio.iscoroutinefunction(func):
                 return async_wrapper  # type: ignore
             return sync_wrapper  # type: ignore
@@ -576,11 +575,22 @@ class ObservabilityFacade:
             profile_name = name or func.__name__
 
             @functools.wraps(func)
-            def wrapper(*args: Any, **kwargs: Any) -> Any:
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 with self.profile(profile_name):
                     return func(*args, **kwargs)
 
-            return wrapper  # type: ignore
+            @functools.wraps(func)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                # ``profile`` only measures time around the body, so the sync
+                # context manager is safe here: entering/exiting it inside the
+                # coroutine brackets the awaited execution, not the coroutine
+                # object's creation.
+                with self.profile(profile_name):
+                    return await func(*args, **kwargs)
+
+            if asyncio.iscoroutinefunction(func):
+                return async_wrapper  # type: ignore
+            return sync_wrapper  # type: ignore
 
         return decorator
 
@@ -607,9 +617,21 @@ class ObservabilityFacade:
         """
 
         def decorator(func: F) -> F:
+            def _record(success: bool, start_time: float) -> None:
+                duration = time.perf_counter() - start_time
+
+                # Record counter
+                call_labels = dict(labels or {})
+                call_labels["success"] = str(success)
+                self.record_counter(counter_name, labels=call_labels)
+
+                # Record histogram
+                if histogram_name:
+                    self.record_histogram(histogram_name, duration, labels=call_labels)
+
             @functools.wraps(func)
-            def wrapper(*args: Any, **kwargs: Any) -> Any:
-                start_time = time.time()
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+                start_time = time.perf_counter()
                 success = True
 
                 try:
@@ -618,18 +640,24 @@ class ObservabilityFacade:
                     success = False
                     raise
                 finally:
-                    duration = time.time() - start_time
+                    _record(success, start_time)
 
-                    # Record counter
-                    call_labels = dict(labels or {})
-                    call_labels["success"] = str(success)
-                    self.record_counter(counter_name, labels=call_labels)
+            @functools.wraps(func)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                start_time = time.perf_counter()
+                success = True
 
-                    # Record histogram
-                    if histogram_name:
-                        self.record_histogram(histogram_name, duration, labels=call_labels)
+                try:
+                    return await func(*args, **kwargs)
+                except Exception:
+                    success = False
+                    raise
+                finally:
+                    _record(success, start_time)
 
-            return wrapper  # type: ignore
+            if asyncio.iscoroutinefunction(func):
+                return async_wrapper  # type: ignore
+            return sync_wrapper  # type: ignore
 
         return decorator
 

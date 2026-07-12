@@ -540,6 +540,43 @@ class TestObservabilityFacadeDecorators:
         result = my_named_func()
         assert result == "done"
 
+    @pytest.mark.asyncio
+    async def test_profiled_decorator_async(self, facade: ObservabilityFacade) -> None:
+        """Test @profiled awaits async functions and times the awaited run."""
+        with patch.object(facade, "log_operation") as mock_log:
+
+            @facade.profiled("async_profile")
+            async def my_async_func(x: int) -> int:
+                await asyncio.sleep(0.05)
+                return x * 2
+
+            assert asyncio.iscoroutinefunction(my_async_func)
+            result = await my_async_func(5)
+
+        assert result == 10
+        mock_log.assert_called_once()
+        metrics = mock_log.call_args.args[0]
+        assert metrics.name == "async_profile"
+        assert metrics.success is True
+        assert metrics.duration_ms >= 40
+
+    @pytest.mark.asyncio
+    async def test_profiled_decorator_async_exception(self, facade: ObservabilityFacade) -> None:
+        """Test @profiled records failure when the awaited function raises."""
+        with patch.object(facade, "log_operation") as mock_log:
+
+            @facade.profiled("async_failing_profile")
+            async def failing_async_func() -> None:
+                raise ValueError("async test error")
+
+            with pytest.raises(ValueError, match="async test error"):
+                await failing_async_func()
+
+        mock_log.assert_called_once()
+        metrics = mock_log.call_args.args[0]
+        assert metrics.success is False
+        assert metrics.error == "async test error"
+
     def test_metered_decorator(self, facade: ObservabilityFacade) -> None:
         """Test @metered decorator."""
 
@@ -569,6 +606,44 @@ class TestObservabilityFacadeDecorators:
 
         with pytest.raises(ValueError):
             failing_func()
+
+    @pytest.mark.asyncio
+    async def test_metered_decorator_async(self, facade: ObservabilityFacade) -> None:
+        """Test @metered awaits async functions and meters the awaited run."""
+        with (
+            patch.object(facade, "record_counter") as mock_counter,
+            patch.object(facade, "record_histogram") as mock_histogram,
+        ):
+
+            @facade.metered("async_counter", histogram_name="async_duration")
+            async def my_async_func(x: int) -> int:
+                await asyncio.sleep(0.05)
+                return x * 2
+
+            assert asyncio.iscoroutinefunction(my_async_func)
+            result = await my_async_func(5)
+
+        assert result == 10
+        mock_counter.assert_called_once_with("async_counter", labels={"success": "True"})
+        mock_histogram.assert_called_once()
+        histogram_call = mock_histogram.call_args
+        assert histogram_call.args[0] == "async_duration"
+        assert histogram_call.args[1] >= 0.04
+        assert histogram_call.kwargs["labels"] == {"success": "True"}
+
+    @pytest.mark.asyncio
+    async def test_metered_decorator_async_exception(self, facade: ObservabilityFacade) -> None:
+        """Test @metered records failure when the awaited function raises."""
+        with patch.object(facade, "record_counter") as mock_counter:
+
+            @facade.metered("async_counter")
+            async def failing_async_func() -> None:
+                raise ValueError("async test error")
+
+            with pytest.raises(ValueError, match="async test error"):
+                await failing_async_func()
+
+        mock_counter.assert_called_once_with("async_counter", labels={"success": "False"})
 
 
 # ============================================================================
