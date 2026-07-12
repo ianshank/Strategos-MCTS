@@ -83,9 +83,15 @@ class CodeExecutionResult:
 
 
 class TimeoutException(Exception):
-    """Exception raised when code execution times out."""
+    """Exception raised when code execution times out.
 
-    pass
+    The default message matters: the watchdog injects this *class* via
+    PyThreadState_SetAsyncExc (instances are rejected with SystemError), so
+    the interpreter instantiates it with no arguments on delivery.
+    """
+
+    def __init__(self, message: str = "Code execution timed out") -> None:
+        super().__init__(message)
 
 
 # Grace period for an interrupted worker thread to unwind through its
@@ -551,19 +557,24 @@ class CodeExecutor:
                 _raise_timeout_in_thread(worker)
                 worker.join(_INTERRUPT_GRACE_SECONDS)
 
-        if flags["timed_out"] and not any("timed out" in error for error in errors):
+        # Snapshot state shared with the worker: an abandoned worker that
+        # later unblocks appends to the original lists, not into the
+        # returned result.
+        timed_out = flags["timed_out"]
+        syntax_error = flags["syntax_error"]
+        final_errors = list(errors)
+        final_test_results = list(test_results)
+
+        if timed_out and not any("timed out" in error for error in final_errors):
             # The worker could not record the timeout itself: it is either
             # stuck in a non-interruptible C call (and stays abandoned as a
             # daemon thread) or the interrupt landed outside its handlers.
-            errors.append("Code execution timed out")
-
-        timed_out = flags["timed_out"]
-        syntax_error = flags["syntax_error"]
+            final_errors.append("Code execution timed out")
 
         execution_time_ms = (time.perf_counter() - start_time) * 1000
-        num_tests_passed = sum(1 for r in test_results if r["passed"])
+        num_tests_passed = sum(1 for r in final_test_results if r["passed"])
         num_tests_total = len(test_cases) if test_cases else 0
-        passed = num_tests_passed == num_tests_total and num_tests_total > 0 and not errors
+        passed = num_tests_passed == num_tests_total and num_tests_total > 0 and not final_errors
 
         return CodeExecutionResult(
             passed=passed,
@@ -571,11 +582,11 @@ class CodeExecutor:
             num_tests_total=num_tests_total,
             stdout=stdout_capture.getvalue(),
             stderr=stderr_capture.getvalue(),
-            errors=errors,
+            errors=final_errors,
             execution_time_ms=execution_time_ms,
             timed_out=timed_out,
             syntax_error=syntax_error,
-            test_results=test_results,
+            test_results=final_test_results,
         )
 
     def _execute_in_subprocess(
