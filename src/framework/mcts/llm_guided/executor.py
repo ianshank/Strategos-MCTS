@@ -11,9 +11,10 @@ Provides safe execution of generated Python code with:
 from __future__ import annotations
 
 import ast
+import ctypes
 import io
 import multiprocessing
-import signal
+import threading
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
 from typing import Any
@@ -87,9 +88,36 @@ class TimeoutException(Exception):
     pass
 
 
-def _timeout_handler(signum: int, frame: Any) -> None:
-    """Signal handler for timeout."""
-    raise TimeoutException("Code execution timed out")
+# Grace period for an interrupted worker thread to unwind through its
+# exception handlers before it is abandoned.
+_INTERRUPT_GRACE_SECONDS = 1.0
+
+
+def _raise_timeout_in_thread(thread: threading.Thread) -> None:
+    """Raise TimeoutException inside *thread* via the CPython C API.
+
+    Best effort: the exception is delivered at the next bytecode boundary, so
+    a thread blocked inside a single C call is not interrupted. No-op on
+    non-CPython runtimes and on threads that have already finished.
+    """
+    ident = thread.ident
+    if ident is None:
+        return
+    try:
+        set_async_exc = ctypes.pythonapi.PyThreadState_SetAsyncExc
+    except AttributeError:
+        return
+    # Deliberately no argtypes: the undo call below relies on bare None
+    # marshaling as C NULL, which clears the pending exception. Under
+    # argtypes=[..., py_object], None would marshal as Py_None and be *set*
+    # as the pending exception instead (the thread then raises SystemError).
+    # c_ulong(ident) already matches the C signature `unsigned long id`, so
+    # the ident is never truncated, and the default restype is the actual
+    # return type (int).
+    modified = set_async_exc(ctypes.c_ulong(ident), ctypes.py_object(TimeoutException))
+    if modified > 1:
+        # More than one thread state was affected — undo, per CPython docs.
+        set_async_exc(ctypes.c_ulong(ident), None)
 
 
 def _create_safe_import(allowed_modules: set[str]):
@@ -419,7 +447,14 @@ class CodeExecutor:
         globals_dict: dict[str, Any] | None,
         start_time: float,
     ) -> CodeExecutionResult:
-        """Execute code in the current process with timeout."""
+        """Execute code in the current process with timeout.
+
+        User code runs on a watchdog-supervised daemon thread; on timeout a
+        TimeoutException is raised inside it via the CPython C API. Delivery
+        happens at bytecode boundaries, so code blocked in a single C call
+        cannot be interrupted — the worker is then abandoned and the result
+        still reports ``timed_out``.
+        """
         import time
 
         # Prepare execution environment with safe __import__
@@ -462,30 +497,20 @@ class CodeExecutor:
         errors: list[str] = []
         test_results: list[dict[str, Any]] = []
 
-        timed_out = False
-        syntax_error = False
+        # Shared with the worker thread; the join() below is the
+        # synchronization point that makes these safe to read afterwards.
+        flags = {"timed_out": False, "syntax_error": False}
 
-        # Set up timeout
-        old_handler = None
-        try:
-            # Only use signal-based timeout on Unix
-            if hasattr(signal, "SIGALRM"):
-                old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
-                signal.alarm(int(self.timeout_seconds + 1))
-        except (ValueError, OSError):
-            # Cannot use signals (e.g., not on main thread)
-            pass
-
-        try:
-            with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
+        def _run_user_code() -> None:
+            try:
                 # Execute the code
                 try:
                     exec(code, exec_globals)
                 except SyntaxError as e:
-                    syntax_error = True
+                    flags["syntax_error"] = True
                     errors.append(f"Syntax error: {e}")
                 except TimeoutException:
-                    timed_out = True
+                    flags["timed_out"] = True
                     errors.append("Code execution timed out")
                 except Exception as e:  # Intentionally broad: user code may raise any exception
                     errors.append(f"Runtime error: {type(e).__name__}: {e}")
@@ -501,7 +526,7 @@ class CodeExecutor:
                             test_result["error"] = f"AssertionError: {e}"
                             errors.append(f"Test {i + 1} failed: {e}")
                         except TimeoutException:
-                            timed_out = True
+                            flags["timed_out"] = True
                             test_result["error"] = "Timed out"
                             errors.append(f"Test {i + 1} timed out")
                             break
@@ -509,20 +534,31 @@ class CodeExecutor:
                             test_result["error"] = f"{type(e).__name__}: {e}"
                             errors.append(f"Test {i + 1} error: {type(e).__name__}: {e}")
                         test_results.append(test_result)
+            except TimeoutException:
+                flags["timed_out"] = True
+                errors.append("Code execution timed out")
+            except Exception as e:  # Intentionally broad: user code may raise any exception
+                errors.append(f"Unexpected error: {type(e).__name__}: {e}")
 
-        except TimeoutException:
-            timed_out = True
+        worker = threading.Thread(target=_run_user_code, name="llm-guided-code-executor", daemon=True)
+        # The redirect stays on this thread so stdout/stderr are always
+        # restored, even if the worker has to be abandoned.
+        with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
+            worker.start()
+            worker.join(self.timeout_seconds)
+            if worker.is_alive():
+                flags["timed_out"] = True
+                _raise_timeout_in_thread(worker)
+                worker.join(_INTERRUPT_GRACE_SECONDS)
+
+        if flags["timed_out"] and not any("timed out" in error for error in errors):
+            # The worker could not record the timeout itself: it is either
+            # stuck in a non-interruptible C call (and stays abandoned as a
+            # daemon thread) or the interrupt landed outside its handlers.
             errors.append("Code execution timed out")
-        except Exception as e:  # Intentionally broad: user code may raise any exception
-            errors.append(f"Unexpected error: {type(e).__name__}: {e}")
-        finally:
-            # Clear timeout
-            if old_handler is not None:
-                try:
-                    signal.alarm(0)
-                    signal.signal(signal.SIGALRM, old_handler)
-                except (ValueError, OSError):
-                    pass
+
+        timed_out = flags["timed_out"]
+        syntax_error = flags["syntax_error"]
 
         execution_time_ms = (time.perf_counter() - start_time) * 1000
         num_tests_passed = sum(1 for r in test_results if r["passed"])
