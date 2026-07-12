@@ -8,6 +8,7 @@ Based on: MULTI_AGENT_MCTS_TEMPLATE.md Section 10
 
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 
@@ -219,6 +220,28 @@ class TestFacadeDecorators:
             return "metered"
 
         assert my_func() == "metered"
+
+    @pytest.mark.asyncio
+    async def test_profiled_decorator_async(self):
+        """Test profiled decorator on async function."""
+
+        @profiled("test_async")
+        async def my_func():
+            return "profiled"
+
+        assert asyncio.iscoroutinefunction(my_func)
+        assert await my_func() == "profiled"
+
+    @pytest.mark.asyncio
+    async def test_metered_decorator_async(self):
+        """Test metered decorator on async function."""
+
+        @metered("test_async")
+        async def my_func():
+            return "metered"
+
+        assert asyncio.iscoroutinefunction(my_func)
+        assert await my_func() == "metered"
 
 
 @pytest.mark.skipif(not DECORATORS_AVAILABLE, reason="Decorators not available")
