@@ -406,7 +406,7 @@ class ObservabilityFacade:
 
         self._ensure_tracer()
 
-        start_time = time.time()
+        start_time = time.perf_counter()
         error_occurred = False
         error_message = None
 
@@ -428,7 +428,7 @@ class ObservabilityFacade:
         finally:
             if span_cm is not None:
                 self._safe_exit_span(span_cm, None)
-            duration_ms = (time.time() - start_time) * 1000
+            duration_ms = (time.perf_counter() - start_time) * 1000
             self.log_debug(
                 f"Span {name} completed",
                 duration_ms=duration_ms,
@@ -464,7 +464,7 @@ class ObservabilityFacade:
 
         self._ensure_tracer()
 
-        start_time = time.time()
+        start_time = time.perf_counter()
         error_message = None
 
         # Same graceful-degradation contract as the sync ``trace``: a broken
@@ -482,7 +482,7 @@ class ObservabilityFacade:
         finally:
             if span_cm is not None:
                 self._safe_exit_span(span_cm, None)
-            duration_ms = (time.time() - start_time) * 1000
+            duration_ms = (time.perf_counter() - start_time) * 1000
             self.log_debug(
                 f"Async span {name} completed",
                 duration_ms=duration_ms,
@@ -504,7 +504,7 @@ class ObservabilityFacade:
         Yields:
             OperationMetrics for the profiled block
         """
-        start_time = time.time()
+        start_time = time.perf_counter()
         metrics = OperationMetrics(name=name, duration_ms=0, success=True)
 
         try:
@@ -514,7 +514,7 @@ class ObservabilityFacade:
             metrics.error = str(e)
             raise
         finally:
-            metrics.duration_ms = (time.time() - start_time) * 1000
+            metrics.duration_ms = (time.perf_counter() - start_time) * 1000
 
             if self.config.profiling_enabled and metrics.duration_ms > self.config.profile_threshold_ms:
                 self.log_warning(
@@ -609,7 +609,7 @@ class ObservabilityFacade:
         def decorator(func: F) -> F:
             @functools.wraps(func)
             def wrapper(*args: Any, **kwargs: Any) -> Any:
-                start_time = time.time()
+                start_time = time.perf_counter()
                 success = True
 
                 try:
@@ -618,7 +618,7 @@ class ObservabilityFacade:
                     success = False
                     raise
                 finally:
-                    duration = time.time() - start_time
+                    duration = time.perf_counter() - start_time
 
                     # Record counter
                     call_labels = dict(labels or {})
