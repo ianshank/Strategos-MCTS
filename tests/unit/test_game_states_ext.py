@@ -851,7 +851,7 @@ class TestDecisionStateGetLegalActions:
 
         max_path_length = 2 * len(options) + 2
         steps = 0
-        while not state.is_terminal() and steps <= max_path_length:
+        while not state.is_terminal() and steps < max_path_length:
             actions = state.get_legal_actions()
             action = next(
                 (a for a in actions if a["type"] == "compare"),
