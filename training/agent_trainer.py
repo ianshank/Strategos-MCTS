@@ -260,12 +260,15 @@ class HRMTrainer(BaseAgentTrainer):
             logger.info(f"Applied LoRA with rank {self.hrm_config['lora_rank']}")
 
         # Add decomposition head
+        # Hub snapshots may store fp16 weights (e.g. deberta-v3-base safetensors) and
+        # transformers >= 5 keeps that dtype by default; force fp32 so the backbone
+        # matches the fp32 heads and CPU inference (no Half matmul support) works.
         self.model = HRMModel(
             base_model=base_model,
             hidden_size=self.hrm_config["hidden_size"],
             num_labels=self.hrm_config["num_labels"],
             max_depth=self.hrm_config["max_decomposition_depth"],
-        ).to(self.device)
+        ).to(device=self.device, dtype=torch.float32)
 
         return self.model
 
@@ -425,12 +428,14 @@ class TRMTrainer(BaseAgentTrainer):
             base_model = get_peft_model(base_model, lora_config)
 
         # Add refinement head
+        # Same fp32 normalization as HRM: fp16 hub snapshots must not leak Half
+        # params into a model that runs (and trains) in fp32, especially on CPU.
         self.model = TRMModel(
             base_model=base_model,
             hidden_size=self.trm_config["hidden_size"],
             max_iterations=self.trm_config["max_refinement_iterations"],
             convergence_threshold=self.trm_config["convergence_threshold"],
-        ).to(self.device)
+        ).to(device=self.device, dtype=torch.float32)
 
         return self.model
 
