@@ -577,6 +577,23 @@ class TestObservabilityFacadeDecorators:
         assert metrics.success is False
         assert metrics.error == "async test error"
 
+    @pytest.mark.asyncio
+    async def test_profiled_decorator_async_cancellation(self, facade: ObservabilityFacade) -> None:
+        """Test @profiled records failure when the awaited function is cancelled."""
+        with patch.object(facade, "log_operation") as mock_log:
+
+            @facade.profiled("async_cancelled_profile")
+            async def cancelled_async_func() -> None:
+                raise asyncio.CancelledError
+
+            with pytest.raises(asyncio.CancelledError):
+                await cancelled_async_func()
+
+        mock_log.assert_called_once()
+        metrics = mock_log.call_args.args[0]
+        assert metrics.success is False
+        assert metrics.error == "CancelledError"
+
     def test_metered_decorator(self, facade: ObservabilityFacade) -> None:
         """Test @metered decorator."""
 
@@ -642,6 +659,20 @@ class TestObservabilityFacadeDecorators:
 
             with pytest.raises(ValueError, match="async test error"):
                 await failing_async_func()
+
+        mock_counter.assert_called_once_with("async_counter", labels={"success": "False"})
+
+    @pytest.mark.asyncio
+    async def test_metered_decorator_async_cancellation(self, facade: ObservabilityFacade) -> None:
+        """Test @metered records failure when the awaited function is cancelled."""
+        with patch.object(facade, "record_counter") as mock_counter:
+
+            @facade.metered("async_counter")
+            async def cancelled_async_func() -> None:
+                raise asyncio.CancelledError
+
+            with pytest.raises(asyncio.CancelledError):
+                await cancelled_async_func()
 
         mock_counter.assert_called_once_with("async_counter", labels={"success": "False"})
 

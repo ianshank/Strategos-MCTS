@@ -585,8 +585,18 @@ class ObservabilityFacade:
                 # context manager is safe here: entering/exiting it inside the
                 # coroutine brackets the awaited execution, not the coroutine
                 # object's creation.
-                with self.profile(profile_name):
-                    return await func(*args, **kwargs)
+                with self.profile(profile_name) as metrics:
+                    try:
+                        return await func(*args, **kwargs)
+                    except BaseException as e:
+                        # ``profile`` marks failure only for ``Exception``, but a
+                        # cancelled coroutine raises ``asyncio.CancelledError``
+                        # (a ``BaseException``) and must not be logged as success.
+                        # For plain ``Exception``s, ``profile``'s own handler then
+                        # overwrites ``error`` with ``str(e)``, keeping its contract.
+                        metrics.success = False
+                        metrics.error = type(e).__name__
+                        raise
 
             if asyncio.iscoroutinefunction(func):
                 return async_wrapper  # type: ignore
@@ -649,7 +659,10 @@ class ObservabilityFacade:
 
                 try:
                     return await func(*args, **kwargs)
-                except Exception:
+                except BaseException:
+                    # BaseException, not Exception: a cancelled coroutine raises
+                    # asyncio.CancelledError (a BaseException) and must not be
+                    # counted as a success.
                     success = False
                     raise
                 finally:
