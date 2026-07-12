@@ -125,7 +125,12 @@ class TestHRMTrainerDtype:
     def test_fp16_checkpoint_state_dict_loads_as_fp32(self, dtype_config, fp16_backbone_env):
         """An fp16-saved checkpoint must not reintroduce Half params on load."""
         trainer = agent_trainer.HRMTrainer(dtype_config, device="cpu")
-        fp16_state = {key: value.half() for key, value in trainer.model.state_dict().items()}
+        # Mirror Module.half() semantics: real fp16 exports cast only floating-point
+        # tensors, leaving integer/bool buffers (e.g. position ids) untouched
+        fp16_state = {
+            key: value.half() if value.is_floating_point() else value
+            for key, value in trainer.model.state_dict().items()
+        }
 
         trainer.model.load_state_dict(fp16_state)
 
