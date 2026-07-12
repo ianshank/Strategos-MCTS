@@ -328,7 +328,7 @@ class ParallelMCTSEngine:
         Returns:
             Tuple of (best_action, statistics_dict)
         """
-        start_time = time.time()
+        start_time = time.perf_counter()
 
         # Reset statistics
         self.stats = ParallelMCTSStats()
@@ -360,7 +360,7 @@ class ParallelMCTSEngine:
         await asyncio.gather(*tasks)
 
         # Compute final statistics
-        duration = time.time() - start_time
+        duration = time.perf_counter() - start_time
         self.stats.total_duration = duration
         self.stats.total_simulations = num_simulations
         self.stats.effective_parallelism = num_simulations / (duration * 1000) if duration > 0 else 0.0
@@ -433,9 +433,9 @@ class ParallelMCTSEngine:
 
         # 1. SELECTION with virtual loss
         current = root
-        lock_start = time.time()
+        lock_start = time.perf_counter()
         async with self._tree_lock:
-            self.stats.lock_wait_time += time.time() - lock_start
+            self.stats.lock_wait_time += time.perf_counter() - lock_start
 
             while current.children and not current.terminal:
                 # Check for collision (another thread selected this node)
@@ -461,9 +461,9 @@ class ParallelMCTSEngine:
 
         # 2. EXPANSION (may need lock if creating new nodes)
         if not current.terminal and current.visits > 0:
-            lock_start = time.time()
+            lock_start = time.perf_counter()
             async with self._tree_lock:
-                self.stats.lock_wait_time += time.time() - lock_start
+                self.stats.lock_wait_time += time.perf_counter() - lock_start
 
                 # Double-check after acquiring lock
                 if not current.available_actions:
@@ -484,9 +484,9 @@ class ParallelMCTSEngine:
         )
 
         # 4. BACKPROPAGATION (requires lock)
-        lock_start = time.time()
+        lock_start = time.perf_counter()
         async with self._tree_lock:
-            self.stats.lock_wait_time += time.time() - lock_start
+            self.stats.lock_wait_time += time.perf_counter() - lock_start
 
             for node in reversed(path):
                 node.visits += 1
