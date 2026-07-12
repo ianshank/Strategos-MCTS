@@ -107,6 +107,13 @@ def _raise_timeout_in_thread(thread: threading.Thread) -> None:
         set_async_exc = ctypes.pythonapi.PyThreadState_SetAsyncExc
     except AttributeError:
         return
+    # Deliberately no argtypes: the undo call below relies on bare None
+    # marshaling as C NULL, which clears the pending exception. Under
+    # argtypes=[..., py_object], None would marshal as Py_None and be *set*
+    # as the pending exception instead (the thread then raises SystemError).
+    # c_ulong(ident) already matches the C signature `unsigned long id`, so
+    # the ident is never truncated, and the default restype is the actual
+    # return type (int).
     modified = set_async_exc(ctypes.c_ulong(ident), ctypes.py_object(TimeoutException))
     if modified > 1:
         # More than one thread state was affected — undo, per CPython docs.
