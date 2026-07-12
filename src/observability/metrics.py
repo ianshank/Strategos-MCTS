@@ -319,14 +319,16 @@ class MetricsCollector:
         """
         memory_info = _safe_probe(self._process.memory_info, None, "memory_info")
         cpu_percent = _safe_probe(self._process.cpu_percent, -1.0, "cpu_percent")
+        thread_count = _safe_probe(self._process.num_threads, -1, "num_threads")
+        open_files = _safe_probe(self._process.open_files, None, "open_files")
 
         sample = {
             "timestamp": datetime.utcnow().isoformat(),
             "memory_rss_mb": memory_info.rss / (1024 * 1024) if memory_info is not None else -1.0,
             "memory_vms_mb": memory_info.vms / (1024 * 1024) if memory_info is not None else -1.0,
             "cpu_percent": cpu_percent,
-            "thread_count": _safe_probe(self._process.num_threads, -1, "num_threads"),
-            "open_files": _safe_probe(lambda: len(self._process.open_files()), -1, "open_files"),
+            "thread_count": thread_count,
+            "open_files": len(open_files) if open_files is not None else -1,
         }
 
         self._memory_samples.append(sample)
