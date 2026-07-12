@@ -10,13 +10,17 @@ Provides:
 - Export to Prometheus format (optional)
 """
 
+import logging
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 
 import psutil
+
+logger = logging.getLogger(__name__)
 
 try:
     from prometheus_client import (
@@ -65,6 +69,25 @@ class AgentMetrics:
     memory_usage_mb: list[float] = field(default_factory=list)
 
 
+_ProbeT = TypeVar("_ProbeT")
+
+
+def _safe_probe(probe: Callable[[], _ProbeT], default: _ProbeT, name: str) -> _ProbeT:
+    """Run a psutil probe, returning ``default`` if the syscall fails.
+
+    psutil probes can fail intermittently — e.g. ``Process.open_files()`` on
+    Windows raises ``FileNotFoundError`` [WinError 161] from
+    NtQuerySystemInformation when the process has many handles open, and such
+    errors surface as plain ``OSError`` rather than ``psutil.Error``. A
+    metrics sampler must never propagate a syscall failure into the host app.
+    """
+    try:
+        return probe()
+    except (psutil.Error, OSError) as exc:
+        logger.debug("System metrics probe %r failed: %s", name, exc)
+        return default
+
+
 class MetricsCollector:
     """
     Central metrics collection and reporting for the MCTS framework.
@@ -86,7 +109,7 @@ class MetricsCollector:
         self._agent_metrics: dict[str, AgentMetrics] = {}
         self._node_timings: dict[str, list[float]] = defaultdict(list)
         self._request_latencies: list[float] = []
-        self._memory_samples: list[dict[str, float]] = []
+        self._memory_samples: list[dict[str, str | int | float]] = []
         self._start_time = datetime.utcnow()
         self._process = psutil.Process()
 
@@ -94,6 +117,8 @@ class MetricsCollector:
         self._prometheus_initialized = False
         if PROMETHEUS_AVAILABLE:
             self._init_prometheus_metrics()
+
+        logger.debug("MetricsCollector initialized")
 
     @classmethod
     def get_instance(cls) -> "MetricsCollector":
@@ -179,7 +204,10 @@ class MetricsCollector:
     def start_prometheus_server(self, port: int = 8000) -> None:
         """Start Prometheus metrics HTTP server."""
         if PROMETHEUS_AVAILABLE:
+            logger.info("Starting Prometheus metrics server on port %d", port)
             start_http_server(port)
+        else:
+            logger.warning("Prometheus client not available, cannot start metrics server")
 
     def record_mcts_iteration(
         self,
@@ -242,6 +270,13 @@ class MetricsCollector:
         success: bool = True,
     ) -> None:
         """Record agent execution metrics."""
+        logger.debug(
+            "Recording agent execution: agent=%s, time_ms=%.2f, confidence=%.4f, success=%s",
+            agent_name,
+            execution_time_ms,
+            confidence,
+            success,
+        )
         if agent_name not in self._agent_metrics:
             self._agent_metrics[agent_name] = AgentMetrics(name=agent_name)
 
@@ -276,18 +311,24 @@ class MetricsCollector:
         if self._prometheus_initialized:
             self._prom_request_latency.observe(latency_ms)
 
-    def sample_system_metrics(self) -> dict[str, float]:
-        """Sample current system metrics."""
-        memory_info = self._process.memory_info()
-        cpu_percent = self._process.cpu_percent()
+    def sample_system_metrics(self) -> dict[str, str | int | float]:
+        """Sample current system metrics.
+
+        Probes that fail degrade to a ``-1`` sentinel instead of raising, so a
+        transient syscall failure never breaks the caller.
+        """
+        memory_info = _safe_probe(self._process.memory_info, None, "memory_info")
+        cpu_percent = _safe_probe(self._process.cpu_percent, -1.0, "cpu_percent")
+        thread_count = _safe_probe(self._process.num_threads, -1, "num_threads")
+        open_files = _safe_probe(self._process.open_files, None, "open_files")
 
         sample = {
             "timestamp": datetime.utcnow().isoformat(),
-            "memory_rss_mb": memory_info.rss / (1024 * 1024),
-            "memory_vms_mb": memory_info.vms / (1024 * 1024),
+            "memory_rss_mb": memory_info.rss / (1024 * 1024) if memory_info is not None else -1.0,
+            "memory_vms_mb": memory_info.vms / (1024 * 1024) if memory_info is not None else -1.0,
             "cpu_percent": cpu_percent,
-            "thread_count": self._process.num_threads(),
-            "open_files": len(self._process.open_files()),
+            "thread_count": thread_count,
+            "open_files": len(open_files) if open_files is not None else -1,
         }
 
         self._memory_samples.append(sample)
@@ -402,12 +443,13 @@ class MetricsCollector:
     def export_prometheus_format(self) -> str:
         """Export metrics in Prometheus text format."""
         if PROMETHEUS_AVAILABLE:
-            return generate_latest(REGISTRY).decode("utf-8")
+            return str(generate_latest(REGISTRY).decode("utf-8"))
         else:
             return "# Prometheus client not available\n"
 
     def reset(self) -> None:
         """Reset all collected metrics."""
+        logger.info("Resetting all collected metrics")
         self._mcts_metrics.clear()
         self._agent_metrics.clear()
         self._node_timings.clear()
