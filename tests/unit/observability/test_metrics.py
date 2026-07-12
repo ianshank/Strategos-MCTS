@@ -284,6 +284,49 @@ class TestSystemMetrics:
         # CPU percent can vary; just check it's a number
         assert isinstance(system_metrics["cpu_percent"], (int, float))
 
+    def test_sample_system_metrics_survives_open_files_failure(self, metrics_collector):
+        """A failing open_files() probe degrades to -1 instead of raising.
+
+        On Windows, psutil's open_files() intermittently raises
+        FileNotFoundError [WinError 161] (NtQuerySystemInformation) when the
+        process has many handles open.
+        """
+        from unittest.mock import patch
+
+        with patch.object(
+            metrics_collector._process,
+            "open_files",
+            side_effect=FileNotFoundError("[WinError 161] The specified path is invalid"),
+        ):
+            system_metrics = metrics_collector.sample_system_metrics()
+
+        assert system_metrics["open_files"] == -1
+        # Healthy probes are unaffected by the failed one
+        assert system_metrics["memory_rss_mb"] >= 0
+        # The degraded sample is still recorded
+        assert len(metrics_collector._memory_samples) == 1
+
+    def test_sample_system_metrics_survives_total_probe_failure(self, metrics_collector):
+        """The sampler never propagates psutil/OS errors into the host app."""
+        from unittest.mock import patch
+
+        import psutil
+
+        with (
+            patch.object(metrics_collector._process, "memory_info", side_effect=psutil.AccessDenied()),
+            patch.object(metrics_collector._process, "cpu_percent", side_effect=OSError("syscall failed")),
+            patch.object(metrics_collector._process, "num_threads", side_effect=psutil.NoSuchProcess(pid=1)),
+            patch.object(metrics_collector._process, "open_files", side_effect=FileNotFoundError("[WinError 161]")),
+        ):
+            system_metrics = metrics_collector.sample_system_metrics()
+
+        assert "timestamp" in system_metrics
+        assert system_metrics["memory_rss_mb"] == -1
+        assert system_metrics["memory_vms_mb"] == -1
+        assert system_metrics["cpu_percent"] == -1
+        assert system_metrics["thread_count"] == -1
+        assert system_metrics["open_files"] == -1
+
 
 # =============================================================================
 # Full Report Tests
@@ -314,6 +357,19 @@ class TestFullReport:
         assert "agents" in report
         assert "node_timings" in report
         assert "system_metrics" in report
+
+    def test_get_full_report_survives_probe_failure(self, metrics_collector):
+        """get_full_report still produces a report when a psutil probe fails."""
+        from unittest.mock import patch
+
+        with patch.object(
+            metrics_collector._process,
+            "open_files",
+            side_effect=FileNotFoundError("[WinError 161] The specified path is invalid"),
+        ):
+            report = metrics_collector.get_full_report()
+
+        assert report["system_metrics"]["open_files"] == -1
 
 
 # =============================================================================
