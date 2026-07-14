@@ -449,6 +449,7 @@ class MockLLMClient:
         """
         self.provider = provider
         self.responses: list[MockLLMResponse] = []
+        self.prompt_responses: dict[str, MockLLMResponse] = {}
         self.call_history: list[dict[str, Any]] = []
         self._response_index = 0
         self._should_fail = False
@@ -470,6 +471,31 @@ class MockLLMClient:
             for resp in responses
         ]
         self._response_index = 0
+
+    def set_prompt_responses(self, responses: dict[str, str]):
+        """
+        Set responses routed by explicit prompt prefix (e.g. an agent tag).
+
+        Args:
+            responses: Mapping of prompt prefix to response string. A prompt is
+                matched with str.startswith and the longest matching prefix
+                wins, so the rest of the prompt wording can never reroute it.
+                Prompts matching no prefix fall back to the set_responses
+                queue, then to the generic default response.
+
+        Entries are stored longest-prefix-first so ``generate`` can honor the
+        longest-match rule by iterating in insertion order (dicts preserve it
+        on Python 3.7+), without re-sorting on every call.
+        """
+        sorted_responses = sorted(responses.items(), key=lambda item: len(item[0]), reverse=True)
+        self.prompt_responses = {
+            prefix: MockLLMResponse(
+                content=resp,
+                model=f"{self.provider}-mock",
+                usage={"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
+            )
+            for prefix, resp in sorted_responses
+        }
 
     def set_failure_mode(self, should_fail: bool, message: str = "Mock failure"):
         """
@@ -505,6 +531,10 @@ class MockLLMClient:
             self._should_fail = False
             raise RuntimeError(self._failure_message)
 
+        for prefix, response in self.prompt_responses.items():
+            if prompt.startswith(prefix):
+                return response
+
         if self.responses and self._response_index < len(self.responses):
             response = self.responses[self._response_index]
             self._response_index += 1
@@ -528,6 +558,7 @@ class MockLLMClient:
     def reset(self):
         """Reset mock to initial state."""
         self.responses = []
+        self.prompt_responses = {}
         self.call_history = []
         self._response_index = 0
         self._should_fail = False
