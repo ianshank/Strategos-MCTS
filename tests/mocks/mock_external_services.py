@@ -449,6 +449,7 @@ class MockLLMClient:
         """
         self.provider = provider
         self.responses: list[MockLLMResponse] = []
+        self.prompt_responses: dict[str, MockLLMResponse] = {}
         self.call_history: list[dict[str, Any]] = []
         self._response_index = 0
         self._should_fail = False
@@ -470,6 +471,26 @@ class MockLLMClient:
             for resp in responses
         ]
         self._response_index = 0
+
+    def set_prompt_responses(self, responses: dict[str, str]):
+        """
+        Set responses routed by explicit prompt prefix (e.g. an agent tag).
+
+        Args:
+            responses: Mapping of prompt prefix to response string. A prompt is
+                matched with str.startswith and the longest matching prefix
+                wins, so the rest of the prompt wording can never reroute it.
+                Prompts matching no prefix fall back to the set_responses
+                queue, then to the generic default response.
+        """
+        self.prompt_responses = {
+            prefix: MockLLMResponse(
+                content=resp,
+                model=f"{self.provider}-mock",
+                usage={"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
+            )
+            for prefix, resp in responses.items()
+        }
 
     def set_failure_mode(self, should_fail: bool, message: str = "Mock failure"):
         """
@@ -505,6 +526,10 @@ class MockLLMClient:
             self._should_fail = False
             raise RuntimeError(self._failure_message)
 
+        for prefix in sorted(self.prompt_responses, key=len, reverse=True):
+            if prompt.startswith(prefix):
+                return self.prompt_responses[prefix]
+
         if self.responses and self._response_index < len(self.responses):
             response = self.responses[self._response_index]
             self._response_index += 1
@@ -528,6 +553,7 @@ class MockLLMClient:
     def reset(self):
         """Reset mock to initial state."""
         self.responses = []
+        self.prompt_responses = {}
         self.call_history = []
         self._response_index = 0
         self._should_fail = False

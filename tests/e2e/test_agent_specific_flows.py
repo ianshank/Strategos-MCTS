@@ -23,12 +23,11 @@ from tests.utils.langsmith_tracing import (
 
 @pytest.fixture
 def mock_llm_client():
-    """Create mock LLM client for agent testing."""
+    """Create mock LLM client routing canned responses by agent prompt prefix."""
     client = create_mock_llm(provider="openai")
-    client.set_responses(
-        [
-            # HRM response
-            """Hierarchical Reasoning Model Analysis:
+    client.set_prompt_responses(
+        {
+            "HRM": """Hierarchical Reasoning Model Analysis:
         1. Primary objective: Secure northern sector
         2. Sub-task decomposition:
            - Establish defensive positions
@@ -36,14 +35,13 @@ def mock_llm_client():
            - Coordinate communications
         3. Risk assessment: Medium
         Confidence: 0.87""",
-            # TRM response
-            """Task Refinement Model Analysis:
+            "TRM": """Task Refinement Model Analysis:
         Iterative refinement cycle 1:
         - Position Alpha: Coverage 85%, Risk Medium
         - Position Beta: Coverage 72%, Risk Low
         Recommended: Alpha with Beta fallback
         Confidence: 0.83""",
-        ]
+        }
     )
     return client
 
