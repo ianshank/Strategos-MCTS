@@ -6,7 +6,11 @@ prefix (e.g. "TRM:") selects the matching canned response no matter what the
 rest of the prompt says, with fallback to the sequential response queue.
 """
 
+import pytest
+
 from tests.mocks.mock_external_services import create_mock_llm
+
+pytestmark = [pytest.mark.unit]
 
 
 class TestPromptPrefixRouting:
