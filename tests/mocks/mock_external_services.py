@@ -482,14 +482,19 @@ class MockLLMClient:
                 wins, so the rest of the prompt wording can never reroute it.
                 Prompts matching no prefix fall back to the set_responses
                 queue, then to the generic default response.
+
+        Entries are stored longest-prefix-first so ``generate`` can honor the
+        longest-match rule by iterating in insertion order (dicts preserve it
+        on Python 3.7+), without re-sorting on every call.
         """
+        sorted_responses = sorted(responses.items(), key=lambda item: len(item[0]), reverse=True)
         self.prompt_responses = {
             prefix: MockLLMResponse(
                 content=resp,
                 model=f"{self.provider}-mock",
                 usage={"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
             )
-            for prefix, resp in responses.items()
+            for prefix, resp in sorted_responses
         }
 
     def set_failure_mode(self, should_fail: bool, message: str = "Mock failure"):
@@ -526,9 +531,9 @@ class MockLLMClient:
             self._should_fail = False
             raise RuntimeError(self._failure_message)
 
-        for prefix in sorted(self.prompt_responses, key=len, reverse=True):
+        for prefix, response in self.prompt_responses.items():
             if prompt.startswith(prefix):
-                return self.prompt_responses[prefix]
+                return response
 
         if self.responses and self._response_index < len(self.responses):
             response = self.responses[self._response_index]
