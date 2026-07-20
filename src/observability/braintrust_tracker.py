@@ -17,7 +17,7 @@ try:
     BRAINTRUST_AVAILABLE = True
 except ImportError:
     BRAINTRUST_AVAILABLE = False
-    braintrust: Any = None  # type: ignore[no-redef]
+    braintrust: Any = None  # type: ignore[assignment, no-redef]
 
 logger = get_logger(__name__)
 

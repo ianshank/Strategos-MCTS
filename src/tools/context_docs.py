@@ -135,10 +135,34 @@ class ContextDocValidator:
     # -- filesystem helpers -------------------------------------------------------------------
 
     def exists(self, relpath: str) -> bool:
-        """True if ``relpath`` resolves under the repo. Globs (``*``/``**``/``?``/``[]``) match ≥1 path."""
+        """True if ``relpath`` resolves under the repo. Globs (``*``/``**``/``?``/``[]``) match ≥1 path.
+
+        Case-sensitive even on case-insensitive filesystems (Windows NTFS):
+        the token ``Src/config/settings.py`` must *not* match the real
+        ``src/config/settings.py``, so that case-drifted mentions are
+        flagged rather than silently accepted.
+        """
         if any(ch in relpath for ch in _GLOB_METACHARS):
+            # NOTE: glob.glob is case-insensitive on Windows NTFS; this may
+            # match case-drifted paths.  Acceptable: CI runs on Linux and
+            # the non-glob path below enforces case sensitivity.
             return bool(_glob.glob(str(self.repo / relpath), recursive=True))
-        return (self.repo / relpath).exists()
+        candidate = self.repo / relpath
+        if not candidate.exists():
+            return False
+        # On case-insensitive filesystems (Windows NTFS), Path.exists() returns
+        # True even for case-mismatched paths.  Enforce case-sensitivity by
+        # comparing the relpath parts against the actual on-disk path parts.
+        try:
+            resolved = candidate.resolve()
+            repo_resolved = self.repo.resolve()
+            # Strip any trailing slash and split into parts.
+            norm = relpath.rstrip("/\\").replace("\\", "/")
+            rel_parts = tuple(norm.split("/")) if norm else ()
+            resolved_rel = resolved.parts[len(repo_resolved.parts) :]
+            return rel_parts == resolved_rel
+        except OSError:
+            return True  # Cannot resolve — assume original check was correct.
 
     def read(self, relpath: str) -> str:
         return (self.repo / relpath).read_text(encoding="utf-8")
@@ -151,6 +175,13 @@ class ContextDocValidator:
             return None
 
     def rel(self, path: Path) -> str:
+        """Return a POSIX-style path relative to the repo root.
+
+        Always uses forward slashes regardless of platform so that
+        ``Failure`` strings are consistent across Windows and POSIX.
+        Falls back to the raw path string (with forward slashes) when
+        ``path`` is outside the repo.
+        """
         try:
             return path.resolve().relative_to(self.repo.resolve()).as_posix()
         except ValueError:

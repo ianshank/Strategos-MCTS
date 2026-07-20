@@ -570,6 +570,7 @@ class TestChessDemoCLI:
             [sys.executable, "chess_demo.py", "--help"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=30,
         )
         assert result.returncode == 0
@@ -597,6 +598,7 @@ class TestChessDemoCLI:
             [sys.executable, "chess_demo.py", "--json", "--analyze"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=30,
         )
         assert result.returncode == 0
@@ -609,6 +611,7 @@ class TestChessDemoCLI:
             [sys.executable, "chess_demo.py", "--mcp-tools"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=30,
         )
         assert result.returncode == 0

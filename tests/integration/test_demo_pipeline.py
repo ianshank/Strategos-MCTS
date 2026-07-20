@@ -13,12 +13,10 @@ Tests the complete demo pipeline end-to-end with mocked external services.
 """
 
 import os
-import shutil
-import sys
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -26,9 +24,8 @@ import pytest
 torch = pytest.importorskip("torch", reason="PyTorch required for demo pipeline tests")
 yaml = pytest.importorskip("yaml", reason="PyYAML required for config loading")
 
-# Add project root to path
+# Project root for locating config/fixture files
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
 
 
 # ============================================================================
@@ -38,19 +35,25 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 @pytest.fixture
 def demo_config():
-    """Load demo configuration."""
+    """Load demo configuration if available."""
     config_path = PROJECT_ROOT / "training" / "config_local_demo.yaml"
-
     if not config_path.exists():
-        pytest.skip("Demo config not found")
+        pytest.skip(f"Demo config not found at {config_path}")
 
     with open(config_path) as f:
-        return yaml.safe_load(f)
+        config = yaml.safe_load(f)
+
+    return config
 
 
 @pytest.fixture
 def temp_workspace(tmp_path):
-    """Create temporary workspace for testing."""
+    """Create a temporary workspace for tests.
+
+    Returns a dict mapping logical names to Path objects so tests can
+    reference ``workspace["checkpoints"]`` etc.  pytest's ``tmp_path``
+    handles cleanup automatically — no manual ``shutil.rmtree`` needed.
+    """
     workspace = {
         "root": tmp_path,
         "checkpoints": tmp_path / "checkpoints" / "demo",
@@ -59,54 +62,86 @@ def temp_workspace(tmp_path):
         "reports": tmp_path / "reports",
     }
 
-    # Create directories
     for path in workspace.values():
         if isinstance(path, Path):
             path.mkdir(parents=True, exist_ok=True)
 
     yield workspace
 
-    # Cleanup
-    shutil.rmtree(tmp_path, ignore_errors=True)
+
+@pytest.fixture
+def sample_training_config():
+    """Create a sample training configuration."""
+    return {
+        "training": {
+            "epochs": 2,
+            "batch_size": 4,
+            "learning_rate": 0.001,
+            "checkpoint_interval": 1,
+        },
+        "model": {
+            "hidden_size": 64,
+            "num_layers": 2,
+            "dropout": 0.1,
+        },
+        "mcts": {
+            "num_simulations": 10,
+            "c_puct": 1.0,
+            "temperature": 1.0,
+        },
+    }
 
 
 @pytest.fixture
 def mock_gpu():
-    """Mock CUDA GPU availability."""
+    """Mock CUDA GPU availability for tests that exercise GPU code paths."""
     with (
         patch("torch.cuda.is_available", return_value=True),
         patch("torch.cuda.get_device_name", return_value="NVIDIA GeForce RTX 4080"),
         patch("torch.cuda.get_device_properties") as mock_props,
     ):
-        # Mock device properties
-        mock_device = Mock()
+        mock_device = MagicMock()
         mock_device.total_memory = 16 * 1024 * 1024 * 1024  # 16GB
         mock_props.return_value = mock_device
-
         yield
 
 
 @pytest.fixture
 def mock_external_services(monkeypatch):
-    """Mock all external service API calls."""
+    """Mock all external service API calls.
+
+    Guards against missing optional dependencies (wandb, pinecone) so the
+    fixture itself does not crash when they are not installed.
+    """
     # Set environment variables
     monkeypatch.setenv("PINECONE_API_KEY", "test-pinecone-key")
     monkeypatch.setenv("WANDB_API_KEY", "test-wandb-key")
     monkeypatch.setenv("GITHUB_TOKEN", "test-github-token")
 
-    # Mock W&B
-    mock_wandb = MagicMock()
-    mock_wandb.init.return_value = MagicMock()
-    monkeypatch.setattr("wandb.init", mock_wandb.init)
-    monkeypatch.setattr("wandb.log", MagicMock())
-    monkeypatch.setattr("wandb.finish", MagicMock())
+    # Mock W&B (only if installed)
+    try:
+        import wandb  # noqa: F401
 
-    # Mock Pinecone
-    with patch("pinecone.Index") as mock_index:
+        mock_wandb = MagicMock()
+        mock_wandb.init.return_value = MagicMock()
+        monkeypatch.setattr("wandb.init", mock_wandb.init)
+        monkeypatch.setattr("wandb.log", MagicMock())
+        monkeypatch.setattr("wandb.finish", MagicMock())
+    except ImportError:
+        pass
+
+    # Mock Pinecone (only if installed)
+    try:
+        import pinecone  # noqa: F401
+
+        mock_index = MagicMock()
         mock_index.return_value.upsert = MagicMock()
         mock_index.return_value.query = MagicMock(return_value={"matches": []})
+        monkeypatch.setattr("pinecone.Index", mock_index)
+    except ImportError:
+        pass
 
-        yield
+    yield
 
 
 # ============================================================================
@@ -210,6 +245,8 @@ def test_cli_imports():
 @pytest.mark.asyncio
 async def test_verification_script_executes(demo_config, mock_external_services):
     """Test that verification script executes without errors."""
+    # wandb is not a CI extra — skip gracefully rather than error
+    wandb = pytest.importorskip("wandb", reason="wandb not installed in this environment")  # noqa: F841
     import logging
 
     from rich.console import Console
@@ -409,8 +446,8 @@ def test_config_loading_performance(demo_config):
             yaml.safe_load(f)
     duration = time.time() - start
 
-    # Should load 100 times in less than 2 seconds (relaxed for slow CI/local)
-    assert duration < 2.0, f"Config loading too slow: {duration:.3f}s"
+    # Should load 100 times in less than 5 seconds (generous for slow CI disk / full-suite I/O)
+    assert duration < 5.0, f"Config loading too slow: {duration:.3f}s"
 
 
 @pytest.mark.integration
@@ -445,6 +482,9 @@ def test_checkpoint_save_performance(temp_workspace):
 @pytest.mark.smoke
 def test_demo_imports_all_dependencies():
     """Smoke test: verify all demo dependencies can be imported."""
+    # wandb and sentence_transformers are optional (not in [dev,neural] CI extras);
+    # skip them rather than failing the smoke test when they're absent.
+    optional_deps = {"wandb", "sentence_transformers"}
     dependencies = [
         "torch",
         "yaml",
@@ -452,8 +492,6 @@ def test_demo_imports_all_dependencies():
         "httpx",
         "tenacity",
         "rich",
-        "wandb",
-        "sentence_transformers",
     ]
 
     failed_imports = []
@@ -462,6 +500,18 @@ def test_demo_imports_all_dependencies():
             __import__(dep)
         except ImportError:
             failed_imports.append(dep)
+
+    # Warn about missing optional deps but don't fail
+    missing_optional = []
+    for dep in optional_deps:
+        try:
+            __import__(dep)
+        except ImportError:
+            missing_optional.append(dep)
+    if missing_optional:
+        import warnings
+
+        warnings.warn(f"Optional deps not installed (CI expected): {', '.join(missing_optional)}", stacklevel=2)
 
     assert not failed_imports, f"Failed to import: {', '.join(failed_imports)}"
 

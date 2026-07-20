@@ -39,7 +39,7 @@ try:
 
     CHESS_AVAILABLE = True
 except ImportError:
-    _chess = None  # type: ignore[assignment]
+    _chess: Any = None  # type: ignore[assignment, no-redef]
     CHESS_AVAILABLE = False
 
 # ---------------------------------------------------------------------------

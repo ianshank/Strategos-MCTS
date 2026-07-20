@@ -46,9 +46,9 @@ def metrics_collector():
     import psutil
 
     collector._process = psutil.Process()
-    from datetime import datetime
+    from datetime import UTC, datetime
 
-    collector._start_time = datetime.utcnow()
+    collector._start_time = datetime.now(UTC)
 
     return collector
 

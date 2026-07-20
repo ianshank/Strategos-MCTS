@@ -28,7 +28,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.config.constants import DEFAULT_SERVER_HOST
 from src.config.settings import get_settings
@@ -36,6 +36,14 @@ from src.observability.logging import get_logger
 
 # Configure logging
 logger = get_logger(__name__)
+
+# Derive version from package metadata with a safe fallback.
+try:
+    from importlib.metadata import version as _pkg_version
+
+    _APP_VERSION: str = _pkg_version("langgraph-multi-agent-mcts")
+except Exception:  # PackageNotFoundError or any other metadata issue
+    _APP_VERSION = "0.0.0-dev"
 
 # Import framework components
 try:
@@ -72,22 +80,17 @@ except ImportError as e:
     logger.warning(f"Import error: {e}")
 
 # Prometheus metrics (optional)
+from src.monitoring.prometheus_metrics import (  # noqa: E402
+    ACTIVE_REQUESTS,
+    ERROR_COUNT,
+    REQUEST_COUNT,
+    REQUEST_LATENCY,
+)
+
 try:
     from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-    from src.monitoring.prometheus_metrics import Counter, Gauge, Histogram, _create_metric
-
     PROMETHEUS_AVAILABLE = True
-
-    # Define metrics
-    REQUEST_COUNT = _create_metric(
-        Counter, "mcts_requests_total", "Total number of requests", ["method", "endpoint", "status"]
-    )
-    REQUEST_LATENCY = _create_metric(
-        Histogram, "mcts_request_duration_seconds", "Request latency in seconds", ["method", "endpoint"]
-    )
-    ACTIVE_REQUESTS = _create_metric(Gauge, "mcts_active_requests", "Number of active requests")
-    ERROR_COUNT = _create_metric(Counter, "mcts_errors_total", "Total number of errors", ["error_type"])
 except ImportError:
     PROMETHEUS_AVAILABLE = False
 
@@ -113,8 +116,8 @@ class QueryRequest(BaseModel):
         description="Conversation thread ID for state persistence",
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "query": "Recommend defensive positions for night attack",
                 "use_mcts": True,
@@ -123,6 +126,7 @@ class QueryRequest(BaseModel):
                 "thread_id": "session_123",
             }
         }
+    )
 
 
 class QueryResponse(BaseModel):
@@ -157,7 +161,7 @@ class HealthResponse(BaseModel):
 
     status: str = Field(..., description="Service status")
     timestamp: str = Field(..., description="Current timestamp")
-    version: str = Field(default="1.0.0", description="API version")
+    version: str = Field(default=_APP_VERSION, description="API version")
     uptime_seconds: float = Field(..., description="Service uptime")
 
 
@@ -271,7 +275,7 @@ This API provides access to a sophisticated multi-agent reasoning framework that
 3. Send queries to `/query` endpoint
 4. Monitor health via `/health` endpoint
     """,
-    version="1.0.0",
+    version=_APP_VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_tags=[
@@ -404,7 +408,7 @@ async def health_check():
     return HealthResponse(
         status=status,
         timestamp=datetime.now(UTC).isoformat(),
-        version="1.0.0",
+        version=_APP_VERSION,
         uptime_seconds=time.time() - start_time,
     )
 

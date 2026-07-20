@@ -37,6 +37,13 @@ import os
 import sys
 import textwrap
 
+# Ensure stdout/stderr are UTF-8 on Windows (default is cp1252 which cannot
+# encode chess piece Unicode symbols used in the board visualiser).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # Add project root to path
 _PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _PROJECT_ROOT)

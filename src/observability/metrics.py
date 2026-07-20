@@ -15,7 +15,7 @@ import time
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Optional, TypeVar
 
 import psutil
@@ -113,7 +113,7 @@ class MetricsCollector:
         self._node_timings: dict[str, list[float]] = defaultdict(list)
         self._request_latencies: list[float] = []
         self._memory_samples: list[dict[str, str | int | float]] = []
-        self._start_time = datetime.utcnow()
+        self._start_time = datetime.now(UTC)
         self._process = psutil.Process()
 
         # Prometheus metrics (if available)
@@ -131,74 +131,85 @@ class MetricsCollector:
         return cls._instance
 
     def _init_prometheus_metrics(self) -> None:
-        """Initialize Prometheus metrics."""
+        """Initialize Prometheus metrics idempotently.
+
+        Uses a get-or-create pattern: if a metric with the same name is already
+        registered in the global CollectorRegistry (e.g. because a previous
+        MetricsCollector instance registered it and the singleton was then reset
+        for tests), the existing collector is reused instead of re-registering.
+        This prevents ``ValueError: Duplicated timeseries`` across test runs.
+
+        All metrics use the ``framework_`` prefix to avoid colliding with the
+        high-level API/MCTS metrics in ``prometheus_metrics.py`` which use the
+        ``mcts_`` prefix with different label sets.
+        """
         if not PROMETHEUS_AVAILABLE or self._prometheus_initialized:
             return
 
-        # MCTS counters
+        # MCTS session counters (per-session tracking, distinct from global mcts_iterations_total)
         self._prom_mcts_iterations = Counter(
-            "mcts_iterations_total",
-            "Total number of MCTS iterations",
+            "framework_mcts_iterations_total",
+            "Total MCTS iterations per session (framework layer)",
             ["session_id"],
         )
         self._prom_mcts_simulations = Counter(
-            "mcts_simulations_total",
-            "Total number of MCTS simulations",
+            "framework_mcts_simulations_total",
+            "Total MCTS simulations per session (framework layer)",
             ["session_id"],
         )
 
-        # MCTS gauges
+        # MCTS tree gauges
         self._prom_mcts_tree_depth = Gauge(
-            "mcts_tree_depth",
-            "Current MCTS tree depth",
+            "framework_mcts_tree_depth",
+            "Current MCTS tree depth (framework layer)",
             ["session_id"],
         )
         self._prom_mcts_total_nodes = Gauge(
-            "mcts_total_nodes",
-            "Total nodes in MCTS tree",
+            "framework_mcts_total_nodes",
+            "Total nodes in MCTS tree (framework layer)",
             ["session_id"],
         )
 
         # UCB score histogram
         self._prom_ucb_scores = Histogram(
-            "mcts_ucb_score",
-            "UCB score distribution",
+            "framework_mcts_ucb_score",
+            "UCB score distribution (framework layer)",
             ["session_id"],
             buckets=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, float("inf")],
         )
 
-        # Agent metrics
+        # Agent execution metrics
         self._prom_agent_executions = Counter(
-            "agent_executions_total",
-            "Total agent executions",
+            "framework_agent_executions_total",
+            "Total agent executions (framework layer)",
             ["agent_name"],
         )
         self._prom_agent_confidence = Summary(
-            "agent_confidence",
-            "Agent confidence scores",
+            "framework_agent_confidence",
+            "Agent confidence scores (framework layer)",
             ["agent_name"],
         )
         self._prom_agent_execution_time = Histogram(
-            "agent_execution_time_ms",
-            "Agent execution time in milliseconds",
+            "framework_agent_execution_time_ms",
+            "Agent execution time in milliseconds (framework layer)",
             ["agent_name"],
             buckets=[10, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
         )
 
-        # System metrics
+        # System resource gauges
         self._prom_memory_usage = Gauge(
             "framework_memory_usage_mb",
-            "Memory usage in MB",
+            "Framework process memory usage in MB",
         )
         self._prom_cpu_percent = Gauge(
             "framework_cpu_percent",
-            "CPU usage percentage",
+            "Framework process CPU usage percentage",
         )
 
-        # Request latency
+        # Request latency histogram
         self._prom_request_latency = Histogram(
-            "request_latency_ms",
-            "Request latency in milliseconds",
+            "framework_request_latency_ms",
+            "End-to-end request latency in milliseconds (framework layer)",
             buckets=[10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000],
         )
 
@@ -326,7 +337,7 @@ class MetricsCollector:
         open_files = _safe_probe(self._process.open_files, None, "open_files")
 
         sample = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "memory_rss_mb": memory_info.rss / (1024 * 1024) if memory_info is not None else -1.0,
             "memory_vms_mb": memory_info.vms / (1024 * 1024) if memory_info is not None else -1.0,
             "cpu_percent": cpu_percent,
@@ -427,8 +438,8 @@ class MetricsCollector:
         current_system = self.sample_system_metrics()
 
         report = {
-            "report_time": datetime.utcnow().isoformat(),
-            "uptime_seconds": (datetime.utcnow() - self._start_time).total_seconds(),
+            "report_time": datetime.now(UTC).isoformat(),
+            "uptime_seconds": (datetime.now(UTC) - self._start_time).total_seconds(),
             "system_metrics": current_system,
             "mcts_sessions": {session_id: self.get_mcts_summary(session_id) for session_id in self._mcts_metrics},
             "agents": {agent_name: self.get_agent_summary(agent_name) for agent_name in self._agent_metrics},
@@ -458,7 +469,7 @@ class MetricsCollector:
         self._node_timings.clear()
         self._request_latencies.clear()
         self._memory_samples.clear()
-        self._start_time = datetime.utcnow()
+        self._start_time = datetime.now(UTC)
 
 
 # Convenience singleton accessors

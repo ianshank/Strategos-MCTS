@@ -118,6 +118,7 @@ docker-compose*
 # Scripts not needed in container
 scripts/export_architecture_diagrams.py
 scripts/validate_context_docs.py
+scripts/*.ps1
 verify_*.py
 test_api_integrations.py
 

@@ -59,7 +59,7 @@ This framework implements a multi-agent system combining hierarchical reasoning 
 ## 📦 Installation
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.10+ (3.11+ recommended)
 - Docker & Docker Compose (for containerized workflow)
 - NVIDIA GPU (recommended for training)
 
@@ -82,6 +82,9 @@ This framework implements a multi-agent system combining hierarchical reasoning 
    # Run the demo pipeline (builds image, generates data, trains models)
    bash scripts/run_docker_training.sh
    ```
+
+4. **Run Locally (No Docker):**
+   See **[`docs/RUN_ALL_LOCALLY.md`](docs/RUN_ALL_LOCALLY.md)** for detailed instructions and PowerShell scripts (`scripts/run_all_local.ps1`) to run the entire framework directly on Windows or macOS.
 
 ## 🏗️ Training Workflow
 

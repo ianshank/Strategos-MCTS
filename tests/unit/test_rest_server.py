@@ -138,7 +138,13 @@ class TestHealthResponseRest:
             uptime_seconds=120.0,
         )
         assert resp.status == "healthy"
-        assert resp.version == "1.0.0"
+        # Version is read from package metadata at import time; assert it is
+        # a non-empty semver-like string rather than hardcoding a value that
+        # will break on every version bump.
+        from src.api.rest_server import _APP_VERSION
+
+        assert isinstance(resp.version, str) and resp.version
+        assert resp.version == _APP_VERSION
 
 
 @pytest.mark.unit
@@ -254,7 +260,12 @@ class TestHealthEndpoint:
             assert data["status"] == "healthy"
             assert "timestamp" in data
             assert "uptime_seconds" in data
-            assert data["version"] == "1.0.0"
+            # Assert version field is present and matches the packaged version;
+            # avoids hardcoding so the test survives version bumps.
+            from src.api.rest_server import _APP_VERSION
+
+            assert isinstance(data["version"], str) and data["version"]
+            assert data["version"] == _APP_VERSION
 
     def test_health_degraded_on_error_state(self):
         from src.api.framework_service import FrameworkState

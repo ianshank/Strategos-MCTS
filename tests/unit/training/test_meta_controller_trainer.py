@@ -42,6 +42,29 @@ skip_if_no_torch = pytest.mark.skipif(
     reason="PyTorch not installed",
 )
 
+# sentencepiece / tiktoken — required by the BERT tokenizer inside transformers.
+_HAS_SENTENCEPIECE = False
+try:
+    import sentencepiece  # noqa: F401
+
+    _HAS_SENTENCEPIECE = True
+except ImportError:
+    pass
+
+_HAS_TIKTOKEN = False
+try:
+    import tiktoken  # noqa: F401
+
+    _HAS_TIKTOKEN = True
+except ImportError:
+    pass
+
+_HAS_BERT_TOKENIZER_DEPS = _HAS_SENTENCEPIECE or _HAS_TIKTOKEN
+skip_if_no_bert_tokenizer = pytest.mark.skipif(
+    not _HAS_BERT_TOKENIZER_DEPS,
+    reason="sentencepiece or tiktoken required for BERT tokenizer initialisation",
+)
+
 
 # =============================================================================
 # Fixtures
@@ -266,8 +289,14 @@ class TestOrchestratorInitialization:
 class TestModelInitialization:
     """Tests for model initialization."""
 
+    @skip_if_no_bert_tokenizer
     def test_initialize_model_bert(self, training_config):
-        """Test BERT model initialization."""
+        """Test BERT model initialization.
+
+        Requires ``sentencepiece`` or ``tiktoken`` — skipped when neither is
+        installed because the trainer falls back to a simple nn.Sequential
+        classifier, which would not exercise the BERT code path.
+        """
         from src.training.meta_controller_trainer import MetaControllerTrainingOrchestrator
 
         training_config.model_type = "bert"
@@ -415,8 +444,9 @@ class TestEarlyStopping:
 
         metrics = orchestrator.train(mock_data_loader, mock_data_loader)
 
-        # Should stop before 10 epochs
-        assert len(metrics) < 10
+        # Should stop before 10 epochs but must have run at least 1
+        assert len(metrics) > 0, "Training returned no metrics — possible initialization bug"
+        assert len(metrics) < 10, f"Early stopping did not trigger within 10 epochs (got {len(metrics)})"
 
     def test_check_early_stopping_method(self, training_config):
         """Test early stopping check logic."""

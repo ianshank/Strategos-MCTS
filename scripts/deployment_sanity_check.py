@@ -127,7 +127,7 @@ class DeploymentSanityChecker:
         errors = []
         for py_file in python_files[:50]:  # Check first 50 files
             try:
-                with open(py_file) as f:
+                with open(py_file, encoding="utf-8") as f:
                     compile(f.read(), str(py_file), "exec")
             except SyntaxError as e:
                 errors.append(f"{py_file}: {e}")
