@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Repository Orientation Docs & Context-Doc Validation
+
+#### Added
+- **`strategos-primer` skill** (`.claude/skills/strategos-primer/SKILL.md`): an on-demand orientation
+  map of the codebase — layer model, per-subsystem entry points, the non-negotiable invariants, and a
+  doc index — complementing the always-on `CLAUDE.md`.
+- **`strategos-guide` agent** (`.claude/agents/strategos-guide.md`, read-only tools): the dispatchable
+  counterpart of the primer — locates a subsystem, explains the architecture, or sanity-checks a change
+  against the invariants, verifying every claim against the live tree.
+- **`validate-context` skill + `scripts/validate_context_docs.py`**: a deterministic (pure filesystem +
+  regex, no network/LLM) validator over every `.claude/skills/**/SKILL.md` and `.claude/agents/*.md` —
+  checks frontmatter schema, that every cited repo path resolves, and that pinned value claims (coverage
+  gate, console scripts, env flags, spec statuses) still match `pyproject.toml` / `src/config/settings.py`
+  / `src/framework/harness/intent/spec_validator.py`. Wired into the unit suite
+  (`tests/unit/docs/test_context_docs.py`) so context-doc drift fails CI.
+
 ### Spec-Driven Development Hardening — Phase 1 (enforcement layer)
 
 #### Added

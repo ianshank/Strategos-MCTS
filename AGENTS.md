@@ -20,6 +20,7 @@ pytest tests/unit -v
 pytest tests/integration -v
 pytest tests/ -m harness
 pytest tests/ -m "not slow" --cov=src --cov-report=term-missing
+python scripts/validate_context_docs.py  # deterministic check: .claude skills/agents vs the tree
 ```
 
 `ruff`/`mypy` are pinned in the `[dev]` extra (CI lint job installs `.[dev]`) for CI/local
@@ -112,7 +113,10 @@ Fixtures: `tests/fixtures/harness_fixtures.py` (helpers), `tests/integration/har
 - Active roadmap: `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`
 - Current test/coverage status (source of truth): `docs/STATUS.md`
 - Spec-driven specs: `specs/<id>.SPEC.md`, schema v2 (validate with `harness validate-spec specs/*.SPEC.md`)
-- Project skills: `.claude/skills/{quality-gate,validate-specs,coverage-baseline}`
+- Project skills: `.claude/skills/{quality-gate,validate-specs,coverage-baseline,strategos-primer,validate-context}`
+- Codebase orientation: `strategos-primer` skill + `strategos-guide` agent (`.claude/agents/`) map the
+  layers/subsystems/invariants; `validate-context` (`scripts/validate_context_docs.py`, in the unit suite)
+  deterministically checks those docs' paths and value-claims against the tree
 - SDD enforcement: `/spec-new` + `/spec-implement` (`.claude/commands/`), `spec-review` subagent
   (`.claude/agents/`), PreToolUse gate `.claude/hooks/spec_gate.py` (warn mode; `SPEC_GATE_BYPASS=1`
   for hotfixes; src/** PRs need a `spec/<id>` branch with an approved spec or a `No-Spec: <reason>` trailer)
