@@ -93,6 +93,20 @@ def sample_training_config():
 
 
 @pytest.fixture
+def mock_gpu():
+    """Mock CUDA GPU availability for tests that exercise GPU code paths."""
+    with (
+        patch("torch.cuda.is_available", return_value=True),
+        patch("torch.cuda.get_device_name", return_value="NVIDIA GeForce RTX 4080"),
+        patch("torch.cuda.get_device_properties") as mock_props,
+    ):
+        mock_device = MagicMock()
+        mock_device.total_memory = 16 * 1024 * 1024 * 1024  # 16GB
+        mock_props.return_value = mock_device
+        yield
+
+
+@pytest.fixture
 def mock_external_services(monkeypatch):
     """Mock all external service API calls.
 

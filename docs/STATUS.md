@@ -15,15 +15,15 @@
 
 | Metric | Value |
 |---|---|
-| Full test suite | **10 101 passed, 0 failed, 43 skipped** (excludes `slow` marker) |
-| Unit tests (`tests/unit/`) | **7 847+ passed, 0 failed** |
-| Overall branch coverage (`src/`) | **93.82%** (gate: `fail_under = 85.0`) ✅ |
+| Full test suite | **10,090 passed, 0 failed, 134 skipped** (excludes `slow` marker) |
+| Unit tests (`tests/unit/`) | **8,775+ passed, 0 failed** |
+| Overall branch coverage (`src/`) | **93.65%** (gate: `fail_under = 85.0`) ✅ |
 | `ruff check src/ tests/` | **clean** — 0 issues ✅ |
 | `black src/ tests/ --check --line-length 120` | **clean** ✅ |
 | `mypy src/` (strict pins) | **clean** — no issues in 305 source files ✅ |
-| Wall time (full non-slow suite) | ~291s (4m 51s) |
+| Wall time (full non-slow suite) | ~278s (4m 38s) |
 
-The gate-enforcing total (93.82%) is well above 85%. This reflects Phases 0–5 (through the M5
+The gate-enforcing total (93.65%) is well above 85%. This reflects Phases 0–5 (through the M5
 self-play stack) plus the July 2026 test hardening pass.
 
 
