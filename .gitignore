@@ -247,6 +247,12 @@ training/models/
 nul
 _ul
 
+# Dev scratch directory (local experiments, not for VCS)
+dev/
+
+# Test output text files
+unit_test_results.txt
+
 # Docker build logs
 docker_build.log
 docker_rebuild.log

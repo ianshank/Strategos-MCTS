@@ -163,6 +163,7 @@ class NeuralTrainer:
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
         # Setup wandb if requested
+        self.wandb: Any = None  # wandb module or None
         if config.use_wandb:
             try:
                 import wandb
@@ -171,11 +172,8 @@ class NeuralTrainer:
                 self.wandb = wandb
             except ImportError:
                 logger.warning("wandb not installed, disabling wandb logging")
-                self.wandb = None
-        else:
-            self.wandb = None
 
-    def _create_scheduler(self) -> optim.lr_scheduler._LRScheduler | None:
+    def _create_scheduler(self) -> Any | None:
         """Create learning rate scheduler."""
         if self.config.scheduler_type is None:
             return None

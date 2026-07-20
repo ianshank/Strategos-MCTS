@@ -26,6 +26,15 @@ def reset_metrics_singleton():
     """Reset the MetricsCollector singleton between tests."""
     from src.observability.metrics import MetricsCollector
 
+    try:
+        from prometheus_client import REGISTRY
+
+        collectors = list(REGISTRY._collector_to_names.keys())
+        for collector in collectors:
+            REGISTRY.unregister(collector)
+    except ImportError:
+        pass
+
     MetricsCollector._instance = None
     yield
     MetricsCollector._instance = None

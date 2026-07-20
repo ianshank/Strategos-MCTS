@@ -365,7 +365,7 @@ class WandBTracker:
         self.api_key = api_key or os.getenv("WANDB_API_KEY")
         self.project_name = project_name
         self.entity = entity
-        self._run = None
+        self._run: Any = None  # wandb Run object or None
         self._initialized = False
         self._offline_mode = os.getenv("WANDB_MODE") == "offline"
 

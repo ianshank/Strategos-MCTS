@@ -146,7 +146,7 @@ EN_PASSANT_EDGE_CASES: list[dict[str, Any]] = [
     },
     {
         "name": "En passant would expose king to check (illegal)",
-        "fen": "8/8/8/k2pP2R/8/8/8/K7 w - d6 0 1",
+        "fen": "8/8/8/K2pP2r/8/8/8/k7 w - d6 0 1",
         "move": "e5d6",
         "should_be_legal": False,
         "reason": "Would expose king to check",

@@ -185,8 +185,9 @@ class TRMAgent(nn.Module):
             latent = self.recursive_block(latent, iteration=i)
 
             # Generate intermediate prediction
-            if self.config.deep_supervision and i < len(self.supervision_heads):
-                pred = self.supervision_heads[i](latent)
+            if self.config.deep_supervision:
+                head_idx = min(i, len(self.supervision_heads) - 1)
+                pred = self.supervision_heads[head_idx](latent)
             else:
                 pred = self.output_head(latent)
 

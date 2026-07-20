@@ -936,38 +936,53 @@ class TestDemoCLI:
 
     def test_demo_stream_flag_runs(self):
         """demo.py --stream should work."""
+        import os
         import subprocess
+
+        env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
         result = subprocess.run(
             [sys.executable, "demo.py", "--stream", "--iterations", "3"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=30,
+            env=env,
         )
         assert result.returncode == 0, f"stderr: {result.stderr}"
 
     def test_demo_tree_flag_runs(self):
         """demo.py --tree should render a tree."""
+        import os
         import subprocess
+
+        env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
         result = subprocess.run(
             [sys.executable, "demo.py", "--tree", "--iterations", "3"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=30,
+            env=env,
         )
         assert result.returncode == 0, f"stderr: {result.stderr}"
         assert "visits" in result.stdout
 
     def test_demo_compare_flag_runs(self):
         """demo.py --compare should work."""
+        import os
         import subprocess
+
+        env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
         result = subprocess.run(
             [sys.executable, "demo.py", "--compare", "--iterations", "3"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=30,
+            env=env,
         )
         assert result.returncode == 0, f"stderr: {result.stderr}"
         assert "Comparison" in result.stdout or "comparison" in result.stdout.lower()

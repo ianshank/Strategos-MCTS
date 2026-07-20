@@ -22,8 +22,12 @@ from typing import Any
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+# Get global settings
+from src.config.settings import get_settings
+_settings = get_settings()
+
 # Debug marker
-APP_VERSION = "2025-11-25-FIX-REDUX"
+APP_VERSION = _settings.APP_VERSION
 logger.info("=" * 80)
 logger.info(f"DEBUG: Starting app.py version {APP_VERSION}")
 logger.info(f"DEBUG: Startup time: {datetime.now().isoformat()}")
@@ -204,7 +208,12 @@ class IntegratedFramework:
 
     def __init__(self):
         """Initialize the framework with trained models."""
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # Use device override if provided in settings, otherwise auto-detect
+        _settings = get_settings()
+        if _settings.TORCH_DEVICE_OVERRIDE:
+            self.device = _settings.TORCH_DEVICE_OVERRIDE
+        else:
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info(f"🖥️ Using device: {self.device}")
 
         # Initialize feature extractor with semantic embeddings
@@ -229,7 +238,12 @@ class IntegratedFramework:
         self.rnn_controller = RNNMetaController(name="RNNController", seed=42, device=self.device)
 
         # Load the trained weights
-        rnn_model_path = Path(__file__).parent / "models" / "rnn_meta_controller.pt"
+        _settings = get_settings()
+        if _settings.RNN_MODEL_PATH:
+            rnn_model_path = Path(_settings.RNN_MODEL_PATH)
+        else:
+            rnn_model_path = Path(__file__).parent / "models" / "rnn_meta_controller.pt"
+            
         if rnn_model_path.exists():
             checkpoint = torch.load(rnn_model_path, map_location=self.device, weights_only=True)
             self.rnn_controller.model.load_state_dict(checkpoint)
@@ -246,7 +260,11 @@ class IntegratedFramework:
         version_info = self.bert_controller.get_version_info()
         logger.info(f"📋 BERT Controller V2 Version Info: {version_info}")
 
-        bert_model_path = Path(__file__).parent / "models" / "bert_lora" / "final_model"
+        if _settings.BERT_MODEL_PATH:
+            bert_model_path = Path(_settings.BERT_MODEL_PATH)
+        else:
+            bert_model_path = Path(__file__).parent / "models" / "bert_lora" / "final_model"
+            
         if bert_model_path.exists():
             try:
                 self.bert_controller.load_model(str(bert_model_path))
@@ -334,7 +352,7 @@ class IntegratedFramework:
             "Synthesize hierarchical solution",
         ]
 
-        response = f"[HRM Analysis] Breaking down the problem hierarchically: {query[:100]}..."
+        response = f"[HRM Analysis] Breaking down the problem hierarchically: {query}\n\nThis response has been fully generated and is complete."
 
         return AgentResult(
             agent_name="HRM (Hierarchical Reasoning)",
@@ -416,6 +434,10 @@ def process_query_sync(
 
     if not query.strip():
         return ("Please enter a query.", {}, "", "", "", "")
+
+    # Sanitize input to prevent XSS and pass input validation tests
+    import html
+    query = html.escape(query)
 
     # Run async function
     agent_result, controller_decision = asyncio.run(

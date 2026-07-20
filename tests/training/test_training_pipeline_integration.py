@@ -103,13 +103,11 @@ def system_config(tmp_path):
     Args:
         tmp_path: Pytest-provided temporary directory (auto-cleaned)
 
-    Returns:
-        SystemConfig with test-appropriate settings
     """
     from src.training.system_config import (
         HRMConfig,
         MCTSConfig,
-        NeuralNetConfig,
+        NeuralNetworkConfig,
         SystemConfig,
         TrainingConfig,
         TRMConfig,
@@ -120,11 +118,11 @@ def system_config(tmp_path):
 
     return SystemConfig(
         # Minimal sizes for testing
-        neural_net=NeuralNetConfig(
+        neural_net=NeuralNetworkConfig(
             num_res_blocks=1,
             num_channels=16,
-            policy_head_channels=2,
-            value_head_channels=1,
+            policy_conv_channels=2,
+            value_conv_channels=1,
             action_size=TEST_OUTPUT_DIM,
         ),
         hrm=HRMConfig(
@@ -376,7 +374,9 @@ class TestSelfPlayEvaluatorIntegration:
 
         # Mock MCTS with consistent behavior
         mock_mcts = MagicMock()
-        mock_mcts.search = AsyncMock(return_value=({"a": 0.5, "b": 0.3, "c": 0.2}, 0.6))
+        mock_root_node = MagicMock()
+        mock_root_node.value = 0.6
+        mock_mcts.search = AsyncMock(return_value=({"a": 0.5, "b": 0.3, "c": 0.2}, mock_root_node))
 
         config = EvaluationConfig(
             num_games=2,

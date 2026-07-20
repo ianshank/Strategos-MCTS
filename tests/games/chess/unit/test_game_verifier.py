@@ -75,7 +75,7 @@ class TestChessGameVerifier:
     async def test_verify_stalemate(self, verifier: ChessGameVerifier) -> None:
         """Test verification of stalemate position."""
         # Create a stalemate position directly
-        stalemate_fen = "k7/8/1K6/8/8/8/8/8 b - - 0 1"
+        stalemate_fen = "k7/P7/1K6/8/8/8/8/8 b - - 0 1"
 
         position_result = verifier.verify_position(stalemate_fen)
 
@@ -117,7 +117,7 @@ class TestChessGameVerifier:
     def test_verify_position_checkmate(self, verifier: ChessGameVerifier) -> None:
         """Test verification of checkmate position."""
         # Back rank mate
-        fen = "6k1/5ppp/8/8/8/8/8/R3K3 b - - 0 1"
+        fen = "6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1"
         state = ChessPositionBuilder().with_fen(fen).build()
 
         # Apply the mating move
@@ -279,7 +279,7 @@ class TestPositionVerification:
         assert result.game_phase == "opening"
 
         # Endgame position
-        result = verifier.verify_position("8/8/4k3/8/4P3/8/4K3/8 w - - 0 1")
+        result = verifier.verify_position("8/8/4k3/8/4P3/8/4K3/8 w - - 0 40")
         assert result.game_phase == "endgame"
 
     @pytest.mark.unit

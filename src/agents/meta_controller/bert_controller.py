@@ -91,7 +91,7 @@ class BERTMetaController(AbstractMetaController):
         True
     """
 
-    DEFAULT_MODEL_NAME = "prajjwal1/bert-mini"
+    DEFAULT_MODEL_NAME = "prajjwal1/bert-mini"  # Kept for fallback, but settings takes precedence
     NUM_LABELS = 3
 
     def __init__(
@@ -158,18 +158,37 @@ class BERTMetaController(AbstractMetaController):
             self.device = torch.device(device)
 
         # Store configuration parameters
-        # Resolution order: explicit arg > BERT_MODEL_NAME env var > class default.
-        self.model_name = model_name or os.environ.get("BERT_MODEL_NAME", self.DEFAULT_MODEL_NAME)
+        # Resolution order: explicit arg > settings > BERT_MODEL_NAME env var > class default.
+        from src.config.settings import get_settings
+
+        self.model_name = (
+            model_name
+            or get_settings().BERT_DEFAULT_MODEL_NAME
+            or os.environ.get("BERT_MODEL_NAME", self.DEFAULT_MODEL_NAME)
+        )
         self.lora_r = lora_r
         self.lora_alpha = lora_alpha
         self.lora_dropout = lora_dropout
         self.use_lora = use_lora
 
         # Initialize tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        except ValueError:
+            # Fallback for models like prajjwal1/bert-mini that lack tokenizer.json
+            # and fail AutoTokenizer's slow-to-fast conversion heuristic.
+            from transformers import BertTokenizerFast
+
+            self.tokenizer = BertTokenizerFast.from_pretrained(self.model_name)
 
         # Initialize base model for sequence classification
-        base_model = AutoModelForSequenceClassification.from_pretrained(self.model_name, num_labels=self.NUM_LABELS)
+        try:
+            base_model = AutoModelForSequenceClassification.from_pretrained(self.model_name, num_labels=self.NUM_LABELS)
+        except ValueError:
+            # Fallback for models like prajjwal1/bert-mini that lack model_type in config.json
+            from transformers import BertForSequenceClassification
+
+            base_model = BertForSequenceClassification.from_pretrained(self.model_name, num_labels=self.NUM_LABELS)
 
         # Apply LoRA adapters if requested
         if self.use_lora:
@@ -444,4 +463,16 @@ class BERTMetaController(AbstractMetaController):
             "total_params": total_params,
             "trainable_params": trainable_params,
             "trainable_percentage": round(trainable_percentage, 2),
+        }
+
+    def get_version_info(self) -> dict[str, Any]:
+        """Get version and capability information."""
+        return {
+            "controller_version": getattr(self, "CONTROLLER_VERSION", "2.1.0"),
+            "transformers_available": _TRANSFORMERS_AVAILABLE,
+            "peft_available": _PEFT_AVAILABLE,
+            "peft_error": None,
+            "using_lora": self.use_lora,
+            "model_name": self.model_name,
+            "device": str(self.device),
         }

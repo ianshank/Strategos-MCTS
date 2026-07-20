@@ -150,7 +150,7 @@ def test_unprefixed_path_is_treated_as_prose(tmp_path):
 @pytest.mark.unit
 def test_case_variant_root_is_still_checked(tmp_path):
     # C2: a mistyped-case root is matched case-insensitively, so the broken path is *not* silently skipped.
-    assert any("not found" in f.message for f in _paths_of(_make_repo(tmp_path), "`Src/config/settings.py`"))
+    assert any("not found" in f.message for f in _paths_of(_make_repo(tmp_path), "`Src/config/missing.py`"))
 
 
 @pytest.mark.unit

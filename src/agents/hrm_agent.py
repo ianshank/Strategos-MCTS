@@ -105,7 +105,7 @@ class HModule(nn.Module):
         # Multi-head self-attention for relational reasoning
         self.attention = nn.MultiheadAttention(
             embed_dim=config.h_dim,
-            num_heads=8,
+            num_heads=config.num_heads,
             dropout=config.dropout,
             batch_first=True,
         )

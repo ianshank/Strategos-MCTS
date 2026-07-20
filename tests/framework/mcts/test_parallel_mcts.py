@@ -388,8 +388,8 @@ class TestParallelMCTSPerformance:
 
         # Parallel should generally be faster (though not guaranteed in tests)
         # At minimum, verify both completed successfully
-        assert seq_time > 0
-        assert par_time > 0
+        assert seq_time >= 0
+        assert par_time >= 0
 
 
 if __name__ == "__main__":

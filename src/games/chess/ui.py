@@ -678,7 +678,7 @@ def export_game_pgn() -> str | None:
         game.headers["Result"] = _session.result if _session.game_over else "*"
 
         # Replay moves
-        node = game
+        node: Any = game
         board = chess.Board()
         for move_uci in _session.move_history:
             move = chess.Move.from_uci(move_uci)
@@ -1145,7 +1145,7 @@ def create_chess_ui() -> gr.Blocks:
             outputs=[board_display, status_display, history_display, analysis_display, scorecard_display],
         )
 
-    return demo
+    return demo  # type: ignore[no-any-return]
 
 
 def main() -> None:

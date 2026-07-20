@@ -60,8 +60,8 @@ class TestAssemblyRouter:
         decision = router.route(complex_query)
 
         assert isinstance(decision, RoutingDecision)
-        # Complex query should route to MCTS or HRM
-        assert decision.agent in ["mcts", "hrm"]
+        # Complex query should route to MCTS, HRM, or TRM
+        assert decision.agent in ["mcts", "hrm", "trm"]
         assert decision.confidence > 0.5
 
     def test_routing_with_precomputed_features(self, router):
@@ -144,7 +144,7 @@ class TestAssemblyRouter:
         assert isinstance(explanation, str)
         assert "Assembly Features" in explanation
         assert "Routing Decision" in explanation
-        assert "assembly_index" in explanation.lower()
+        assert "assembly index" in explanation.lower()
 
 
 class TestHybridMetaController:

@@ -198,7 +198,7 @@ class ObservabilityFacade:
             try:
                 from src.observability.metrics import MetricsCollector
 
-                self._metrics = MetricsCollector()
+                self._metrics = MetricsCollector.get_instance()
             except ImportError:
                 logger.debug("Metrics module not available")
                 self._metrics = {}

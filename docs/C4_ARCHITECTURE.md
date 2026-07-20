@@ -169,13 +169,16 @@ graph TB
 | **Corpus Builder** | Python | Fetches arXiv papers and builds vector index |
 | **HRM Agent** | PyTorch, DeBERTa | Hierarchical problem decomposition |
 | **TRM Agent** | PyTorch, DeBERTa | Recursive solution refinement |
-| **Neural MCTS** | Python, NumPy, PyTorch | Tree search with neural guidance |
-| **Meta Controller** | PyTorch, GRU | Dynamic routing of queries to optimal agents |
+| **Neural MCTS** | Python, NumPy, PyTorch | AlphaZero-style tree search with neural guidance |
+| **Parallel MCTS** | Python, AsyncIO | Tree-parallel search with virtual-loss collision avoidance |
+| **Meta Controller** | PyTorch, GRU/BERT | Dynamic routing of queries to optimal agents |
+| **Assembly Router** | Python, NLP | Feature extraction (`ConceptExtractor`) → HRM/TRM/MCTS routing heuristics |
 | **Policy-Value Network** | PyTorch, ResNet | Predicts action probabilities and values |
-| **FastAPI Server** | FastAPI, Uvicorn | REST API for inference |
+| **FastAPI Server** | FastAPI, Uvicorn | REST API for inference (streaming, graph viz, comparison) |
 | **Inference Engine** | PyTorch | Model inference and prediction |
-| **Replay Buffer** | Python, NumPy | Stores and samples experiences |
+| **Replay Buffer** | Python, NumPy | Stores and samples experiences (torch-safe checkpoints) |
 | **Vector Store** | Pinecone | RAG knowledge base for retrieval |
+| **Prometheus Metrics** | prometheus-client | Counters/histograms for agents, MCTS, LLM calls; `/metrics` endpoint |
 
 ---
 
@@ -281,6 +284,8 @@ graph TB
         subgraph "Meta Controller"
             RouterNet[Router Network<br/><br/>Agent selection]
             FeatureExt[Feature Extractor<br/><br/>Query analysis]
+            AssemblyRouter[AssemblyRouter<br/><br/>HRM / TRM / MCTS heuristics]
+            ConceptExtractor[ConceptExtractor<br/><br/>NLP concept & complexity scoring]
         end
     end
 
@@ -295,10 +300,14 @@ graph TB
     StateEnc -->|Shared| PolicyNet
     StateEnc -->|Shared| ValueNet
 
-    FeatureExt -->|Feeds| RouterNet
+    FeatureExt --> RouterNet
+    ConceptExtractor --> AssemblyRouter
+    AssemblyRouter --> RouterNet
 
     style HRMBase fill:#3498DB,stroke:#1F618D,stroke-width:2px,color:#fff
     style TRMBase fill:#3498DB,stroke:#1F618D,stroke-width:2px,color:#fff
+    style AssemblyRouter fill:#8E44AD,stroke:#5B2C6F,stroke-width:2px,color:#fff
+    style ConceptExtractor fill:#8E44AD,stroke:#5B2C6F,stroke-width:2px,color:#fff
 ```
 
 ---
@@ -422,6 +431,10 @@ This updated C4 architecture reflects the **current state** of the application, 
 3.  **RAG Integration**: Pinecone vector database for retrieval-augmented generation.
 4.  **Docker Deployment**: Containerized training and inference workflows.
 5.  **External Services**: Integration with W&B, S3, and ArXiv.
+6.  **Parallel MCTS**: Tree-parallel search engine with virtual-loss collision avoidance and adaptive scaling (`src/framework/mcts/parallel_mcts.py`).
+7.  **Assembly Router & Concept Extractor**: NLP-driven routing heuristics — `ConceptExtractor` classifies query concepts into `technical_term`, `domain_entity`, or `process_action` with a complexity score; `AssemblyRouter` maps these features to HRM/TRM/MCTS (`src/framework/assembly/`, `src/agents/meta_controller/assembly_router.py`).
+8.  **Prometheus Observability**: Full counter/histogram instrumentation for agent latency, MCTS iterations, LLM call outcomes, and active operations (`src/monitoring/prometheus_metrics.py`; `/metrics` endpoint via `rest_server.py`).
+9.  **Test hardening (2026-07-20)**: 10 101 tests passing at 93.82% branch coverage; `ruff`, `black`, and `mypy` all clean across 305 source files.
 
 ### Technology Stack
 
@@ -445,20 +458,27 @@ The `.github/workflows/ci.yml` pipeline includes the local `quality-gate` skill'
 same pinned tool versions (the lint job installs the `[dev]` extra; the type-check job installs
 `[dev,neural]`, which includes it): `black --check` → `ruff check` → `mypy src/` (strictness comes from
 `[tool.mypy]` in `pyproject.toml`, not a `--strict` flag; CI adds `--no-error-summary`) → `pytest` with
-branch coverage (`--cov-fail-under=85`) → a hardcoded-secret grep. On top of that gate, CI-only jobs add
-`bandit` (HIGH-severity gate), `pip-audit` (CRITICAL gate), spec validation (`harness validate-spec` —
-error-level against spec schema v2 via `src/framework/harness/intent/spec_validator.py`: required
-`id`/`goal`/`status` frontmatter with a closed status lifecycle, authored `AC-n` criterion IDs,
-filename↔id and duplicate-id checks across `specs/`, and a no-changelog rule rejecting inline
-done-markers; one multi-path invocation so cross-file rules fire — plus, on PRs, `harness
-spec-trace` traceability: `src/**` diffs need a `spec/<id>` branch approved on the base branch or
-a `No-Spec: <reason>` commit trailer, and `verified` flips need same-line spec-id+`AC-n` mappings
-under `tests/`; the `spec-validate` job now gates the CI `summary` aggregate on failure), and a
-Docker build with a
-Trivy image scan whose SARIF results upload to GitHub code scanning (the `docker-build` job carries
-`security-events: write`; the upload is advisory and non-blocking). Configuration is centralized in `src/config/constants.py` + `src/config/settings.py`
-(Pydantic Settings) with domain-specific constant modules; there are no hardcoded secrets or magic numbers
-in the routing/adapter layers.
+branch coverage (`--cov-fail-under=85`, **achieved 93.82%** as of 2026-07-20) → a hardcoded-secret grep.
+On top of that gate, CI-only jobs add `bandit` (HIGH-severity gate), `pip-audit` (CRITICAL gate), spec
+validation (`harness validate-spec` — error-level against spec schema v2 via
+`src/framework/harness/intent/spec_validator.py`: required `id`/`goal`/`status` frontmatter with a closed
+status lifecycle, authored `AC-n` criterion IDs, filename↔id and duplicate-id checks across `specs/`, and
+a no-changelog rule rejecting inline done-markers; one multi-path invocation so cross-file rules fire —
+plus, on PRs, `harness spec-trace` traceability: `src/**` diffs need a `spec/<id>` branch approved on the
+base branch or a `No-Spec: <reason>` commit trailer, and `verified` flips need same-line spec-id+`AC-n`
+mappings under `tests/`; the `spec-validate` job now gates the CI `summary` aggregate on failure), and a
+Docker build with a Trivy image scan whose SARIF results upload to GitHub code scanning (the `docker-build`
+job carries `security-events: write`; the upload is advisory and non-blocking). Configuration is
+centralized in `src/config/constants.py` + `src/config/settings.py` (Pydantic Settings) with domain-specific
+constant modules; there are no hardcoded secrets or magic numbers in the routing/adapter layers.
+
+**Current gate status (2026-07-20):**
+| Gate | Status |
+|---|---|
+| `ruff check src/ tests/` | ✅ Clean (0 issues) |
+| `black src/ tests/ --check --line-length 120` | ✅ Clean |
+| `mypy src/` | ✅ Clean — 0 errors in 305 source files |
+| `pytest tests/ -m "not slow" --cov=src` | ✅ 10 101 passed, 43 skipped, **93.82%** coverage |
 
 > **Planned (not yet built):** the Phase 2 pilot (first spec driven through the full lifecycle;
 > gate flips warn→block on exit) and Phase 3 plugin packaging/extraction into

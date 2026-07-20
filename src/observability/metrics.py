@@ -25,12 +25,15 @@ logger = logging.getLogger(__name__)
 try:
     from prometheus_client import (
         REGISTRY,
+        generate_latest,
+        start_http_server,
+    )
+
+    from src.monitoring.prometheus_metrics import (
         Counter,
         Gauge,
         Histogram,
         Summary,
-        generate_latest,
-        start_http_server,
     )
 
     PROMETHEUS_AVAILABLE = True

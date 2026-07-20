@@ -87,12 +87,12 @@ class TestMoveValidator:
     @pytest.mark.unit
     def test_validate_check_move(self, validator: MoveValidator) -> None:
         """Test that check moves are identified correctly."""
-        # Position where Qh5 gives check
+        # Position where Bxf7+ gives check
         state = (
             ChessPositionBuilder().with_fen("r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3").build()
         )
 
-        result = validator.validate_move(state, "d1h5")
+        result = validator.validate_move(state, "c4f7")
 
         assert result.is_valid is True
         assert result.is_check is True

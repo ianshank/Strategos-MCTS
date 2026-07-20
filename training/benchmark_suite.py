@@ -398,7 +398,7 @@ class CodeMetrics:
     """Compute code generation metrics."""
 
     @staticmethod
-    def pass_at_k(results: list[dict[str, Any]], _k: int = 1) -> float:
+    def pass_at_k(results: list[dict[str, Any]], k: int = 1) -> float:
         """
         Compute Pass@k metric for code generation.
 
@@ -1370,7 +1370,7 @@ class BenchmarkSuite:
             "baseline_run": report.baseline_run,
             "comparison_runs": report.comparison_runs,
             "metric_deltas": report.metric_deltas,
-            "statistical_significance": report.statistical_significance,
+            "statistical_significance": {k: bool(v) for k, v in report.statistical_significance.items()},
             "recommendations": report.recommendations,
             "timestamp": report.timestamp,
         }

@@ -576,11 +576,16 @@ class TestChessDemoCLI:
         assert "Chess Demo" in result.stdout
 
     def test_mock_analyze(self):
+        import os
+
+        env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
         result = subprocess.run(
             [sys.executable, "chess_demo.py", "--analyze"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=30,
+            env=env,
         )
         assert result.returncode == 0
         assert "Best Move" in result.stdout or "best_move" in result.stdout

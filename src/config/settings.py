@@ -61,6 +61,9 @@ class Settings(BaseSettings):
         validate_default=True,
     )
 
+    # Application Version
+    APP_VERSION: str = Field(default="2025-11-25-FIX-REDUX", description="Application version identifier")
+
     # LLM Provider Configuration
     LLM_PROVIDER: LLMProvider = Field(
         default=LLMProvider.OPENAI, description="LLM provider to use (openai, anthropic, lmstudio)"
@@ -142,6 +145,11 @@ class Settings(BaseSettings):
     # OpenTelemetry Configuration
     OTEL_EXPORTER_OTLP_ENDPOINT: str | None = Field(
         default=None, description="OpenTelemetry OTLP exporter endpoint URL"
+    )
+
+    # Hardware/Device Configuration
+    TORCH_DEVICE_OVERRIDE: str | None = Field(
+        default=None, description="Override for torch device (e.g., 'cpu', 'cuda', 'mps')"
     )
 
     # S3 Storage Configuration
@@ -280,6 +288,20 @@ class Settings(BaseSettings):
 
     # Meta-Controller Configuration
     META_CONTROLLER_TYPE: str = Field(default="rnn", description="Meta-controller type: rnn, bert, hybrid, assembly")
+
+    RNN_MODEL_PATH: str | None = Field(
+        default=None,
+        description="Path to RNN meta-controller model weights (defaults to models/rnn_meta_controller.pt relative to app.py)",
+    )
+
+    BERT_MODEL_PATH: str | None = Field(
+        default=None,
+        description="Path to BERT meta-controller LoRA model (defaults to models/bert_lora/final_model relative to app.py)",
+    )
+
+    BERT_DEFAULT_MODEL_NAME: str = Field(
+        default="prajjwal1/bert-mini", description="Default pre-trained BERT model name"
+    )
 
     META_CONTROLLER_INPUT_DIM: int = Field(default=10, ge=1, le=1024, description="Meta-controller input dimension")
 
