@@ -69,7 +69,7 @@ on an aggregation node (`framework/graph/builder.py`).
 | **LLM adapters** | Provider-agnostic clients behind a Protocol, with a shared circuit breaker. | `src/adapters/llm/base.py`, `resilience.py`, `openai_client.py`, `anthropic_client.py`, `lmstudio_client.py` |
 | **Neural policy/value nets** | Policy & value networks backing neural MCTS and the hybrid agent. | `src/models/policy_network.py`, `value_network.py`, `policy_value_net.py` |
 | **Observability** | Structured logging, Prometheus metrics, OTel tracing, decorators/facade. | `src/observability/logging.py`, `metrics.py`, `tracing.py`, `facade.py`, `decorators.py` |
-| **Assembly theory** | Assembly-index features / substructure library — a scoring signal the meta-controller router consumes (`assembly_router.py`), not a cross-cutting layer. | `src/framework/assembly/` (`calculator.py`, `concept_extractor.py`, `substructure_library.py`) |
+| **Assembly theory** | Assembly-index features / substructure library — a scoring signal the meta-controller router consumes (`src/agents/meta_controller/assembly_router.py`), not a cross-cutting layer. | `src/framework/assembly/` (`calculator.py`, `concept_extractor.py`, `substructure_library.py`) |
 | **Core factories** | DI factories that construct the framework — LLM clients, agents, MCTS engine, meta-controller, and the assembled whole. | `src/framework/factories.py`; harness variant `src/framework/harness/factories.py` |
 | **Training factories** | Registry + trainer / data-loader / metrics factories for the training stack. | `src/framework/component_factory/` (`registry.py`, `*_factory.py`) |
 | **RAG & vector storage** | Retrieval augmentation + vector stores (FAISS / Pinecone / S3). | `src/api/rag_retriever.py`, `src/framework/mcts/llm_guided/rag/`, `src/storage/` (`faiss_store.py`, `pinecone_store.py`, `s3_client.py`) |
@@ -87,7 +87,7 @@ enabled (`framework/graph/builder.py`).
 These are the rules a change is judged against — violating one is how a PR fails CI or review.
 
 1. **All config flows through Pydantic Settings.** Read tunables and secrets via `get_settings()`;
-   put shared defaults/bounds in `constants.py`. Never hardcode API keys or magic numbers — a
+   put shared defaults/bounds in `src/config/constants.py`. Never hardcode API keys or magic numbers — a
    `git grep` for `sk-` literals runs in the gate.
 2. **I/O is async.** New I/O paths use `async`/`await` (httpx, aioboto3), matching the graph's
    async execution model.
