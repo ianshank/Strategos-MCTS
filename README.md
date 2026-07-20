@@ -150,8 +150,10 @@ Secrets are never committed: Kubernetes pulls them via the External Secrets Oper
 
 Phase work is specified as `specs/*.SPEC.md` (Goal / Acceptance Criteria / Constraints) validated by
 the harness (`harness validate-spec specs/<file>.SPEC.md`) and a CI `spec-validate` job. Reusable
-helper skills live in `.claude/skills/` (`quality-gate`, `validate-specs`, `coverage-baseline`); see
-`AGENTS.md` for the agent routing ledger.
+helper skills live in `.claude/skills/` (`quality-gate`, `validate-specs`, `coverage-baseline`,
+`strategos-primer` for codebase orientation, and `validate-context`, which deterministically checks
+the `.claude/` skills/agents against the tree). The `strategos-guide` agent (`.claude/agents/`) is the
+dispatchable counterpart of the primer. See `AGENTS.md` for the agent routing ledger.
 
 ## 📚 Documentation
 
