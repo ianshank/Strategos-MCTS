@@ -41,7 +41,7 @@ for what actually works today, not marketing copy.
 ## The layer model
 
 The graph routes; it does not chain agent→MCTS. A router picks one branch, and every branch converges
-on an aggregation node (`framework/graph/builder.py`).
+on an aggregation node (`src/framework/graph/builder.py`).
 
 ```
  request ─▶ LangGraph graph ─▶ router: neural meta-controller, else rule-based (the default & fallback)
@@ -80,7 +80,7 @@ on an aggregation node (`framework/graph/builder.py`).
 Peripheral areas you'll meet less often: `src/training/` (ML pipeline), `src/games/chess/`,
 `src/api/` (REST + inference servers), `src/enterprise/`, `src/integrations/`. `src/neuro_symbolic/`
 is optional but genuinely wired — the router adds a `symbolic_agent` node when symbolic reasoning is
-enabled (`framework/graph/builder.py`).
+enabled (`src/framework/graph/builder.py`).
 
 ## Non-negotiable invariants
 

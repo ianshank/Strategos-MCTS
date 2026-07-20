@@ -27,9 +27,10 @@ Three layers, in :meth:`ContextDocValidator.validate`:
    a bare filename resolves against the nearest directory cited earlier on the same line; only
    *rooted* paths (first segment in :data:`KNOWN_ROOTS`) are treated as existence claims, so a doc can
    still discuss a path that intentionally no longer exists by writing it unprefixed.
-3. **Pinned value claims** — coverage gate, console scripts, env flags, spec statuses and key symbols
-   still match their sources (``pyproject.toml`` / ``src/config/settings.py`` /
-   ``spec_validator.py``), checked against every doc that states them.
+3. **Pinned value claims** — the coverage gate, console scripts, env flags, spec statuses and key
+   symbols still exist in their sources (``pyproject.toml`` / ``src/config/settings.py`` /
+   ``spec_validator.py``); where a claim's literal is unambiguous (the coverage ``fail_under`` value
+   and the env-flag names) the primer/guide are additionally required to still quote it.
 
 Run standalone (exit 1 on any failure)::
 
@@ -109,6 +110,18 @@ def _expand_braces(token: str) -> list[str]:
     return out
 
 
+def _strip_trailing_punct(token: str) -> str:
+    """Strip trailing prose punctuation, but keep a ``]`` that closes a glob character class.
+
+    ``settings.py)`` -> ``settings.py``; ``src/pkg/*[ab]`` is left intact so the ``[]`` glob still works.
+    """
+    while token and token[-1] in _TRAILING_PUNCT:
+        if token[-1] == "]" and "[" in token[:-1]:
+            break
+        token = token[:-1]
+    return token
+
+
 class ContextDocValidator:
     """Validate the Claude context docs under a given ``repo_root`` (defaults to this repo)."""
 
@@ -182,7 +195,7 @@ class ContextDocValidator:
                 if not span or any(ch in span for ch in " <>$"):
                     continue  # multi-word spans / placeholders are prose, not a single path claim
                 for token in dict.fromkeys(_expand_braces(span)):  # dedupe, preserve order
-                    token = token.rstrip(_TRAILING_PUNCT)
+                    token = _strip_trailing_punct(token)
                     if not token or "{" in token or "}" in token:
                         continue
                     if self._is_rooted(token):

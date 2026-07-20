@@ -61,7 +61,7 @@ Console scripts (`pyproject.toml [project.scripts]`): `benchmark`, `harness`, `p
 ## How to answer
 
 - **Locate** — name the exact file(s), confirmed to exist, with the symbol or line where it helps. Point to the deeper doc rather than reproducing it.
-- **Explain** — give the layer flow (request → graph → router → the one sibling node it selects: an agent, the MCTS simulator, or the optional symbolic agent → aggregate → result; agent and MCTS nodes call the LLM adapters), grounded in the actual `framework/graph/builder.py` routing you read, and state plainly which parts are wired versus aspirational.
+- **Explain** — give the layer flow (request → graph → router → the one sibling node it selects: an agent, the MCTS simulator, or the optional symbolic agent → aggregate → result; agent and MCTS nodes call the LLM adapters), grounded in the actual `src/framework/graph/builder.py` routing you read, and state plainly which parts are wired versus aspirational.
 - **Sanity-check a change** — list which invariants apply and whether the proposal meets them; name the spec / `No-Spec` requirement if it touches `src/**`.
 
 ## Output contract

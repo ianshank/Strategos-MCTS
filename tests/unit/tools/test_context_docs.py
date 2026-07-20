@@ -354,3 +354,25 @@ def test_coverage_gate_missing_fail_under(tmp_path):
     (repo / "pyproject.toml").write_text('[project.scripts]\nbenchmark = "x:m"\n')
     failures = cd._check_coverage_gate(cd.ContextDocValidator(repo))
     assert failures and "no coverage `fail_under` found" in failures[0].message
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("settings.py)", "settings.py"),
+        ("settings.py].", "settings.py"),
+        ("src/pkg/*[ab]", "src/pkg/*[ab]"),  # a `]` closing a glob character class is preserved
+        ("plain.py", "plain.py"),
+    ],
+)
+def test_strip_trailing_punct(raw, expected):
+    assert cd._strip_trailing_punct(raw) == expected
+
+
+@pytest.mark.unit
+def test_glob_character_class_is_not_stripped(tmp_path):
+    # The `]` closing `[ab]` must survive so the glob still resolves.
+    repo = _make_repo(tmp_path)
+    _write(repo / "src/pkg/a.py")
+    assert _paths_of(repo, "`src/pkg/[ab].py`") == []
