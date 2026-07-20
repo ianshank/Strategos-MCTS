@@ -1,8 +1,9 @@
-"""
+﻿"""
 Regression tests for tech debt and code hardening fixes (2026-07-20).
 """
+
 import pytest
-import importlib
+
 
 @pytest.mark.unit
 def test_app_version_is_string():
@@ -28,7 +29,7 @@ def test_storage_imports_gracefully():
 @pytest.mark.unit
 def test_metrics_no_collision_on_reload():
     """
-    Regression test for removing redundant REGISTRY ternaries in metrics.py 
+    Regression test for removing redundant REGISTRY ternaries in metrics.py
     and resolving the 'mcts_iterations_total' collision.
     """
     from src.observability.metrics import MetricsCollector
@@ -37,7 +38,7 @@ def test_metrics_no_collision_on_reload():
     # due to the deduplication pattern introduced.
     collector1 = MetricsCollector()
     collector2 = MetricsCollector()
-    
+
     # We just assert that it instantiates cleanly.
     assert collector1 is not None
     assert collector2 is not None
