@@ -252,6 +252,8 @@ class ConceptExtractor:
             for term in tech_terms:
                 if term not in candidates:
                     candidates[term] = Concept(term=term, type="technical_term")
+                else:
+                    candidates[term].type = "technical_term"
                 candidates[term].frequency += 1
                 candidates[term].importance += 0.3  # Boost technical terms
 

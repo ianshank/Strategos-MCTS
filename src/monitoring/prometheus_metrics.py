@@ -21,39 +21,65 @@ from src.observability.logging import get_logger
 
 logger = get_logger(__name__)
 
+
 # Try to import Prometheus client
+class DummyMetric:
+    def __init__(self, *_args, **_kwargs):
+        pass
+
+    def labels(self, *_args, **_kwargs):
+        return self
+
+    def inc(self, *_args, **_kwargs):
+        pass
+
+    def dec(self, *_args, **_kwargs):
+        pass
+
+    def set(self, *_args, **_kwargs):
+        pass
+
+    def observe(self, *_args, **_kwargs):
+        pass
+
+    def info(self, *args, **kwargs):
+        pass
+
+
 try:
-    from prometheus_client import Counter, Gauge, Histogram, Info
+    from prometheus_client import REGISTRY
+    from prometheus_client import Counter as PromCounter
+    from prometheus_client import Gauge as PromGauge
+    from prometheus_client import Histogram as PromHistogram
+    from prometheus_client import Info as PromInfo
+    from prometheus_client import Summary as PromSummary
 
     PROMETHEUS_AVAILABLE = True
+
+    def _create_metric(metric_class, name, *args, **kwargs):
+        if name in REGISTRY._names_to_collectors:
+            REGISTRY.unregister(REGISTRY._names_to_collectors[name])
+        return metric_class(name, *args, **kwargs)
+
+    def Counter(name, *args, **kwargs):
+        return _create_metric(PromCounter, name, *args, **kwargs)
+
+    def Gauge(name, *args, **kwargs):
+        return _create_metric(PromGauge, name, *args, **kwargs)
+
+    def Histogram(name, *args, **kwargs):
+        return _create_metric(PromHistogram, name, *args, **kwargs)
+
+    def Info(name, *args, **kwargs):
+        return _create_metric(PromInfo, name, *args, **kwargs)
+
+    def Summary(name, *args, **kwargs):
+        return _create_metric(PromSummary, name, *args, **kwargs)
+
 except ImportError:
     logger.warning("prometheus-client not installed. Metrics will not be collected.")
     PROMETHEUS_AVAILABLE = False
-
-    # Define dummy classes for when Prometheus is not available
-    class DummyMetric:
-        def __init__(self, *_args, **_kwargs):
-            pass
-
-        def labels(self, *_args, **_kwargs):
-            return self
-
-        def inc(self, *_args, **_kwargs):
-            pass
-
-        def dec(self, *_args, **_kwargs):
-            pass
-
-        def set(self, *_args, **_kwargs):
-            pass
-
-        def observe(self, *_args, **_kwargs):
-            pass
-
-        def info(self, *args, **kwargs):
-            pass
-
-    Counter = Gauge = Histogram = Info = DummyMetric
+    Counter = Gauge = Histogram = Info = Summary = DummyMetric
 
 
 # ============================================================================
@@ -267,7 +293,7 @@ def track_operation(operation_type: str):
 
 
 @contextmanager
-def measure_latency(metric: Histogram, **labels):
+def measure_latency(metric: Any, **labels):
     """
     Context manager to measure operation latency.
 

@@ -118,8 +118,8 @@ class ChessPositionBuilder:
         Returns:
             Self for chaining
         """
-        # Back rank mate
-        self._fen = "6k1/5ppp/8/8/8/8/8/R3K3 b - - 0 1"
+        # Back rank mate (Rook on a8 checking king on g8, pawns block escape)
+        self._fen = "R5k1/5ppp/8/8/8/8/8/4K3 b - - 0 1"
         return self
 
     def with_stalemate(self) -> ChessPositionBuilder:
@@ -128,7 +128,8 @@ class ChessPositionBuilder:
         Returns:
             Self for chaining
         """
-        self._fen = "k7/8/1K6/8/8/8/8/8 b - - 0 1"
+        # Stalemate: King on a8, pawn on a7, king on b6
+        self._fen = "k7/P7/1K6/8/8/8/8/8 b - - 0 1"
         return self
 
     def with_endgame(self) -> ChessPositionBuilder:

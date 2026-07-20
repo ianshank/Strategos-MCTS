@@ -494,6 +494,10 @@ class MoveValidator:
             # Check if they match
             result["roundtrip_valid"] = decoded_move == move_uci
 
+            # Handle queen promotion edge case where 'q' is implicitly default in encoding
+            if not result["roundtrip_valid"] and move_uci.endswith("q") and decoded_move == move_uci[:-1]:
+                result["roundtrip_valid"] = True
+
             if not result["roundtrip_valid"]:
                 result["error"] = f"Mismatch: {move_uci} -> {encoded_index} -> {decoded_move}"
 

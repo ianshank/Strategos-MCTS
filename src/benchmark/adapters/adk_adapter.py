@@ -257,7 +257,7 @@ class ADKBenchmarkAdapter:
                 "Always explain your delegation reasoning."
             ),
             description="Coordinates multi-agent quality engineering workflows",
-            sub_agents=sub_agents,
+            sub_agents=sub_agents,  # type: ignore[arg-type]
         )
 
         self._logger.info("Built ADK coordinator with %d sub-agents", len(sub_agents))

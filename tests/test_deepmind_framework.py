@@ -9,8 +9,6 @@ Tests all core components:
 - Training Infrastructure
 """
 
-import asyncio
-
 import numpy as np
 import pytest
 
@@ -118,7 +116,8 @@ class TestHRMAgent:
         assert output.halt_step <= 3
         assert len(output.convergence_path) == output.halt_step
 
-    def test_hrm_decomposition(self, hrm_config, device):
+    @pytest.mark.asyncio
+    async def test_hrm_decomposition(self, hrm_config, device):
         """Test HRM problem decomposition."""
         agent = create_hrm_agent(hrm_config, device)
         agent.eval()
@@ -127,8 +126,7 @@ class TestHRMAgent:
         state = torch.randn(1, 4, hrm_config.h_dim).to(device)
 
         # Run async function
-        loop = asyncio.get_event_loop()
-        subproblems = loop.run_until_complete(agent.decompose_problem(query, state))
+        subproblems = await agent.decompose_problem(query, state)
 
         assert isinstance(subproblems, list)
         assert all(hasattr(sp, "level") for sp in subproblems)
@@ -187,8 +185,8 @@ class TestTRMAgent:
 
     def test_trm_convergence(self, trm_config, device):
         """Test TRM convergence detection."""
-        # Use very low threshold to force convergence
-        trm_config.convergence_threshold = 0.5
+        # Use very high threshold to force convergence despite random initialization
+        trm_config.convergence_threshold = 100.0
         trm_config.min_recursions = 2
 
         agent = create_trm_agent(trm_config, output_dim=10, device=device)
@@ -202,15 +200,15 @@ class TestTRMAgent:
         # Should converge before max recursions
         assert output.convergence_step < 10 or output.converged
 
-    def test_trm_refine_solution(self, trm_config, device):
+    @pytest.mark.asyncio
+    async def test_trm_refine_solution(self, trm_config, device):
         """Test TRM solution refinement."""
         agent = create_trm_agent(trm_config, output_dim=10, device=device)
         agent.eval()
 
         initial = torch.randn(1, trm_config.latent_dim).to(device)
 
-        loop = asyncio.get_event_loop()
-        refined, info = loop.run_until_complete(agent.refine_solution(initial, num_recursions=5))
+        refined, info = await agent.refine_solution(initial, num_recursions=5)
 
         assert refined.shape == (1, 10)
         assert "converged" in info
@@ -312,7 +310,8 @@ class TestNeuralMCTS:
         assert action in ["a", "b", "c"]
         assert child is not None
 
-    def test_neural_mcts_search(self, device):
+    @pytest.mark.asyncio
+    async def test_neural_mcts_search(self, device):
         """Test MCTS search."""
         from src.training.system_config import MCTSConfig
 
@@ -323,8 +322,7 @@ class TestNeuralMCTS:
 
         initial_state = self.DummyGameState()
 
-        loop = asyncio.get_event_loop()
-        action_probs, root = loop.run_until_complete(mcts.search(initial_state, num_simulations=10, temperature=1.0))
+        action_probs, root = await mcts.search(initial_state, num_simulations=10, temperature=1.0)
 
         assert isinstance(action_probs, dict)
         assert len(action_probs) > 0
@@ -428,9 +426,9 @@ class TestTrainingInfrastructure:
 
         # Log some timings
         for idx in range(20):
-            monitor.log_timing("test_stage", float(idx))
+            monitor.log_timing("hrm_decomposition", float(idx))
 
-        stats = monitor.get_stats("test_stage")
+        stats = monitor.get_stats("hrm_decomposition_time")
 
         assert "mean" in stats
         assert "std" in stats

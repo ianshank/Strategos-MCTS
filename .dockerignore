@@ -98,6 +98,13 @@ data/
 .DS_Store
 Thumbs.db
 
+# Dev scratch directory (local experiments, never in image)
+dev/
+
+# Test output artifacts
+unit_test_results.txt
+test_results.txt
+
 # Docker
 Dockerfile*
 docker-compose*

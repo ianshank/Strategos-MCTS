@@ -186,15 +186,15 @@ class StockfishAdapter:
         try:
             import chess.engine
 
-            self._engine = await chess.engine.SimpleEngine.popen_uci(stockfish_path)
+            self._engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
 
             # Configure engine
             if self._config.hash_size_mb:
-                await self._engine.configure({"Hash": self._config.hash_size_mb})
+                self._engine.configure({"Hash": self._config.hash_size_mb})
             if self._config.threads:
-                await self._engine.configure({"Threads": self._config.threads})
+                self._engine.configure({"Threads": self._config.threads})
             if self._config.skill_level is not None:
-                await self._engine.configure({"Skill Level": self._config.skill_level})
+                self._engine.configure({"Skill Level": self._config.skill_level})
 
             self._logger.info(
                 "Stockfish initialized",

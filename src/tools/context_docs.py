@@ -152,9 +152,9 @@ class ContextDocValidator:
 
     def rel(self, path: Path) -> str:
         try:
-            return str(path.resolve().relative_to(self.repo.resolve()))
+            return path.resolve().relative_to(self.repo.resolve()).as_posix()
         except ValueError:
-            return str(path)
+            return path.as_posix()
 
     def iter_docs(self) -> list[Path]:
         skills = sorted((self.repo / ".claude" / "skills").glob("*/SKILL.md"))

@@ -54,8 +54,11 @@ class TestCheckADKAvailable:
     """Test ADK availability check."""
 
     def test_returns_false_when_not_installed(self) -> None:
-        # ADK is not installed in test environment
-        assert _check_adk_available() is False
+        import sys
+
+        # ADK is not installed in test environment, or mock it if it is
+        with patch.dict(sys.modules, {"google.adk.agents": None}):
+            assert _check_adk_available() is False
 
     @patch("src.benchmark.adapters.adk_adapter.LlmAgent", create=True)
     def test_returns_true_when_installed(self, mock_agent: MagicMock) -> None:
@@ -378,9 +381,12 @@ class TestADKCoordinatorBuild:
 
     def test_raises_without_adk(self) -> None:
         """Building without ADK installed raises RuntimeError."""
+        import sys
+
         adapter = ADKBenchmarkAdapter(settings=self.settings)
-        with pytest.raises(RuntimeError, match="Google ADK not installed"):
-            adapter._get_or_build_coordinator()
+        with patch.dict(sys.modules, {"google.adk.agents": None}):
+            with pytest.raises(RuntimeError, match="Google ADK not installed"):
+                adapter._get_or_build_coordinator()
 
 
 class AsyncIterator:

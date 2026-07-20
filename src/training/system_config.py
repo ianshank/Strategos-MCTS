@@ -24,6 +24,7 @@ class HRMConfig:
     l_dim: int = 256  # Low-level execution dimension
     num_h_layers: int = 2  # Number of high-level layers
     num_l_layers: int = 4  # Number of low-level layers
+    num_heads: int = 8  # Number of attention heads in H-Module
 
     # Halting and iteration control
     max_outer_steps: int = 10  # Maximum planning steps

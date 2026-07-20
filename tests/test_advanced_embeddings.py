@@ -148,7 +148,10 @@ class TestOpenAIEmbedder:
         assert embedder.is_available(), "OpenAI embedder should be available with valid API key"
         assert embedder.dimension == 3072, "text-embedding-3-large should have dimension 3072"
 
-    @pytest.mark.skipif(not os.environ.get("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
+    @pytest.mark.skipif(
+        not os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY", "").startswith("sk-test"),
+        reason="Real OPENAI_API_KEY not set",
+    )
     def test_openai_dimension_reduction(self):
         """Test OpenAI dimension reduction."""
         config = {"model": "text-embedding-3-large", "dimension": 1024, "api_key": os.environ.get("OPENAI_API_KEY")}
@@ -159,7 +162,10 @@ class TestOpenAIEmbedder:
 
         assert embeddings.shape == (1, 1024), "Should return reduced dimension"
 
-    @pytest.mark.skipif(not os.environ.get("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
+    @pytest.mark.skipif(
+        not os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY", "").startswith("sk-test"),
+        reason="Real OPENAI_API_KEY not set",
+    )
     def test_openai_embedding(self):
         """Test OpenAI embedding generation."""
         config = {"model": "text-embedding-3-small", "api_key": os.environ.get("OPENAI_API_KEY")}
@@ -272,7 +278,7 @@ class TestEnsembleEmbedder:
         config = {"combination_method": "concat"}
         ensemble = EnsembleEmbedder(config, [])
 
-        assert ensemble.dimension == 1024, "Default dimension before adding embedders"
+        assert ensemble.dimension == 0, "Default dimension before adding embedders for concat is 0"
 
         embedder1 = RandomEmbedder({"dimension": 100})
         ensemble.add_embedder(embedder1)

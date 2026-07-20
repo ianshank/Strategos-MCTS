@@ -130,7 +130,7 @@ async def test_compactor_idempotent(tmp_path: Path) -> None:
     first = await compactor.compact_once()
     second = await compactor.compact_once()
     assert first == second
-    assert (tmp_path / "MEMORY.md").read_text() == first
+    assert (tmp_path / "MEMORY.md").read_text(encoding="utf-8") == first
 
 
 @pytest.mark.asyncio

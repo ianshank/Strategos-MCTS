@@ -150,10 +150,11 @@ class TestMetaControllerFeatures:
         # Get all field names
         feature_fields = fields(MetaControllerFeatures)
 
-        # Check that no fields have default values (MISSING means no default)
+        # Check that fields (except specific optional ones) have no default values
         for field in feature_fields:
-            assert field.default is MISSING
-            assert field.default_factory is MISSING
+            if field.name not in ("rag_relevance_score", "is_technical_query"):
+                assert field.default is MISSING
+                assert field.default_factory is MISSING
 
         # Verify that creating without all fields raises TypeError
         with pytest.raises(TypeError):

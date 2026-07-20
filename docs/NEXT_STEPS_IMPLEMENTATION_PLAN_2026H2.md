@@ -21,8 +21,15 @@
 > authoritative documentation instead of physical moves (`PROJECT_STRUCTURE.md` "Layout & naming
 > disambiguation"): inspection showed each proposed move would break a real contract, so the goal — an
 > unambiguous layout — was met without them (see `specs/phase_8_repo_organization.SPEC.md`).
->
-> **Version:** 2.0.0 · **Date:** 2026-06-30 · **Status:** Active
+
+> **Test hardening & quality gate pass (2026-07-20):**
+> Full test suite expanded to **10 101 passing** (up from 7 847 unit tests). Coverage lifted from
+> 89.12% → **93.82%**. All three linting/type gates now clean simultaneously: `ruff` (10 auto-fixed),
+> `black`, and `mypy` (7 type errors resolved across `prometheus_metrics.py`, `neural_trainer.py`,
+> `experiment_tracker.py`, `pinecone_store.py`). Chess encoding, async test patterns, assembly
+> concept-typing, and flaky timing assertions resolved. See `CHANGELOG.md` for a detailed diff.
+
+> **Version:** 2.0.0 · **Date:** 2026-07-20 · **Status:** Active
 > **Supersedes:** `docs/plans/NEXT_STEPS_PLAN.md` (v1.0), the status sections of
 > `docs/reports/GAP_ANALYSIS_REPORT.md`, and `docs/NEXT_STEPS_INVESTIGATION.md` where they conflict with
 > the **Verified Status** table below. (Archival roadmap docs were relocated under `docs/plans/` and
