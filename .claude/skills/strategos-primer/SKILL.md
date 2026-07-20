@@ -7,19 +7,19 @@ description: >-
   non-negotiable invariants a change must respect, and the map of deeper docs. Use this whenever you
   are getting oriented in this repo, explaining or diagramming its architecture, locating where a
   subsystem lives, planning or reviewing a cross-cutting change, or onboarding someone — any time you
-  need the mental model rather than a single command. Load it before editing so you respect the
-  config-via-settings, async, dependency-injection, spec-driven-development, and coverage-gate rules
-  that a change will otherwise fail on.
+  need the mental model rather than a single command. Reach for it before a cross-cutting or
+  unfamiliar-subsystem change so you respect the config-via-settings, async, dependency-injection,
+  spec-driven-development, and coverage-gate rules a change would otherwise fail on.
 ---
 
 # Strategos-MCTS Primer
 
 Orientation to this codebase for anyone starting work, explaining the design, or making a change that
 crosses subsystems. `CLAUDE.md` is the always-on quick reference (commands, patterns); this skill is
-the map you consult when you need the whole picture and where things actually live. **Paths here are
-verified against the current tree** — prefer them over `CLAUDE.md`'s "Key File Locations" table, which
-predates two moves (orchestration is now the `framework/graph/` package, not `graph.py`; component
-factories moved to `framework/component_factory/`).
+the map you consult when you need the whole picture and where things actually live. Paths here were
+verified against the current tree — where `CLAUDE.md`'s "Key File Locations" table disagrees, it lists
+`src/framework/graph.py`, but orchestration is now the `framework/graph/` package (its
+`framework/factories.py` entry is still correct — see the factory rows below).
 
 ## What the system is
 
@@ -30,8 +30,8 @@ ideas into a DeepMind-style reasoning system:
   (Task Refinement Module) iteratively refines solutions; a hybrid agent blends LLM + neural policies.
 - **MCTS search** — Monte Carlo Tree Search (classic, LLM-guided, and AlphaZero-style neural) explores
   action/solution spaces, optionally guided by policy/value networks.
-- **LangGraph orchestration** — a stateful async graph wires agents, search, and a neural
-  meta-controller (router) into one flow with checkpointing.
+- **LangGraph orchestration** — a stateful async graph wires agents, MCTS search, and a routing
+  meta-controller into one flow with checkpointing.
 
 Around that core sit a training pipeline, RAG, a benchmark harness, an autonomous agent harness, and a
 spec-driven development toolchain. The README is explicit that components are production-quality but
@@ -40,14 +40,20 @@ for what actually works today, not marketing copy.
 
 ## The layer model
 
+The graph routes; it does not chain agent→MCTS. A router picks one branch, and every branch converges
+on an aggregation node (`framework/graph/builder.py`).
+
 ```
- request ─▶ LangGraph orchestration ─▶ meta-controller routes to an agent ─▶ agent reasons
-             (framework/graph)           (agents/meta_controller)              (agents/*, framework/agents)
-                                                     │
-                                          agent may invoke MCTS search ──▶ LLM adapters (provider-agnostic)
-                                            (framework/mcts)                 (adapters/llm)
-             cross-cutting, present at every layer:
-               • config (config/)   • observability (observability/)   • assembly-theory features (framework/assembly)
+ request ─▶ LangGraph graph ─▶ router: neural meta-controller, else rule-based (the default & fallback)
+              (framework/graph)     (agents/meta_controller)
+                                        │  conditional edges fan out to sibling nodes…
+                                        ├─▶ an agent node — HRM / TRM / hybrid   (agents/*, framework/agents)
+                                        ├─▶ the MCTS simulator node              (framework/mcts)
+                                        └─▶ the symbolic agent node (optional)   (neuro_symbolic)
+                                        …and every branch converges ─▶ aggregate ─▶ result
+              agent nodes and the MCTS node call ─▶ LLM adapters (provider-agnostic)   (adapters/llm)
+              cross-cutting: config (config/) · observability (observability/)
+              (the meta-controller may consult an assembly-theory score — framework/assembly)
 ```
 
 ## Where each subsystem lives
@@ -58,18 +64,23 @@ for what actually works today, not marketing copy.
 | **Orchestration** | LangGraph graph construction + the `AgentState` TypedDict flowing through it. | `src/framework/graph/builder.py`, `integrated.py`, `state.py` |
 | **MCTS engine** | Search core plus neural / LLM-guided / parallel variants and domain adapters. | `src/framework/mcts/core.py`, `neural_mcts.py`, `llm_mcts.py`, `parallel_mcts.py`, `policies.py`, `progressive_widening.py` |
 | **Application agents** | HRM / TRM / hybrid agents. | `src/agents/hrm_agent.py`, `trm_agent.py`, `hybrid_agent.py` |
-| **Meta-controller** | Neural router (BERT / RNN / hybrid / assembly) that assigns a task to the best agent. | `src/agents/meta_controller/` (`bert_controller.py`, `rnn_controller.py`, `hybrid_controller.py`, `assembly_router.py`) |
+| **Meta-controller** | Routes each task, via conditional graph edges, to one sibling node — an agent, the MCTS simulator, or the optional symbolic agent. Neural (BERT / RNN / hybrid / assembly) when enabled, else rule-based. | `src/agents/meta_controller/` (`bert_controller.py`, `rnn_controller.py`, `hybrid_controller.py`, `assembly_router.py`) |
 | **Framework agents** | LLM-backed agent base used by the graph. | `src/framework/agents/base.py`, `llm_hrm.py`, `llm_trm.py` |
 | **LLM adapters** | Provider-agnostic clients behind a Protocol, with a shared circuit breaker. | `src/adapters/llm/base.py`, `resilience.py`, `openai_client.py`, `anthropic_client.py`, `lmstudio_client.py` |
+| **Neural policy/value nets** | Policy & value networks backing neural MCTS and the hybrid agent. | `src/models/policy_network.py`, `value_network.py`, `policy_value_net.py` |
 | **Observability** | Structured logging, Prometheus metrics, OTel tracing, decorators/facade. | `src/observability/logging.py`, `metrics.py`, `tracing.py`, `facade.py`, `decorators.py` |
-| **Assembly theory** | Assembly-index features / substructure library (a distinctive scoring signal). | `src/framework/assembly/` (`calculator.py`, `concept_extractor.py`, `substructure_library.py`) |
-| **Component factories** | DI/registry factories for trainers, data loaders, metrics. | `src/framework/component_factory/registry.py`, `*_factory.py` |
+| **Assembly theory** | Assembly-index features / substructure library — a scoring signal the meta-controller router consumes (`assembly_router.py`), not a cross-cutting layer. | `src/framework/assembly/` (`calculator.py`, `concept_extractor.py`, `substructure_library.py`) |
+| **Core factories** | DI factories that construct the framework — LLM clients, agents, MCTS engine, meta-controller, and the assembled whole. | `src/framework/factories.py`; harness variant `src/framework/harness/factories.py` |
+| **Training factories** | Registry + trainer / data-loader / metrics factories for the training stack. | `src/framework/component_factory/` (`registry.py`, `*_factory.py`) |
+| **RAG & vector storage** | Retrieval augmentation + vector stores (FAISS / Pinecone / S3). | `src/api/rag_retriever.py`, `src/framework/mcts/llm_guided/rag/`, `src/storage/` (`faiss_store.py`, `pinecone_store.py`, `s3_client.py`) |
 | **Benchmark** | System-vs-system evaluation harness + policy-lift measurement. | `src/benchmark/cli.py`, `factory.py`, `policy_lift.py`, `tasks/`, `evaluation/`, `reporting/` |
 | **Agent harness** | Deterministic autonomous agent loop, tools, hooks, topologies, Ralph outer loop, record/replay. | `src/framework/harness/` (`cli.py`, `loop/`, `tools/`, `hooks/`, `topology/`, `ralph/`, `replay/`, `intent/`) |
 | **Spec-driven dev** | Spec schema, validator, tracer, scaffolder driving the SDD workflow. | `src/framework/harness/intent/spec_loader.py`, `spec_validator.py`, `spec_trace.py`; specs in `specs/` |
 
-Peripheral areas you'll meet less often: `src/training/` (ML pipeline), `src/neuro_symbolic/`,
-`src/games/chess/`, `src/api/` (REST + inference servers), `src/enterprise/`, `src/integrations/`.
+Peripheral areas you'll meet less often: `src/training/` (ML pipeline), `src/games/chess/`,
+`src/api/` (REST + inference servers), `src/enterprise/`, `src/integrations/`. `src/neuro_symbolic/`
+is optional but genuinely wired — the router adds a `symbolic_agent` node when symbolic reasoning is
+enabled (`framework/graph/builder.py`).
 
 ## Non-negotiable invariants
 
@@ -144,13 +155,15 @@ Full detail: `CLAUDE.md` → "Spec-Driven Development", and `docs/plans/SDD_PLUG
 
 ## Gotchas
 
-- **`CLAUDE.md` path drift.** Its "Key File Locations" lists `framework/graph.py` and
-  `framework/factories.py`; the current tree has the `framework/graph/` package and
-  `framework/component_factory/` (plus `framework/harness/factories.py`). Trust the table above.
+- **One `CLAUDE.md` path drift.** Its "Key File Locations" lists `framework/graph.py`, but
+  orchestration is now the `framework/graph/` package. Its `framework/factories.py` entry is still
+  correct — that module holds the core factories, and `framework/component_factory/` is a *separate*
+  training-factory package, not a replacement.
 - **Local test skips.** LMStudio tests need a local server (`LMSTUDIO_SKIP=1` to skip); Pinecone tests
   need a key or mocks; neural MCTS is slow on CPU (use CUDA or fewer iterations).
-- **Persisted-artifact formats changed.** Substructure library is JSON; experience buffer is
-  `torch.save(weights_only=True)`. Legacy `pickle` is read only behind
-  `ASSEMBLY_TRUST_LEGACY_PICKLE` / `TRAINING_TRUST_LEGACY_PICKLE`, then migrated in place.
+- **Persisted-artifact formats changed.** Substructure library is JSON; the experience buffer is
+  written with `torch.save` and restored with `torch.load(..., weights_only=True)` (no pickle). Legacy
+  `pickle` is read only behind `ASSEMBLY_TRUST_LEGACY_PICKLE` / `TRAINING_TRUST_LEGACY_PICKLE`, then
+  migrated in place.
 - **Tooling is pinned** (`ruff`, `mypy` in the `[dev]` extra) for CI/local parity — bump deliberately
   and re-run the full gate.
