@@ -134,11 +134,10 @@ def mock_external_services(monkeypatch):
     try:
         import pinecone  # noqa: F401
 
-        with patch("pinecone.Index") as mock_index:
-            mock_index.return_value.upsert = MagicMock()
-            mock_index.return_value.query = MagicMock(return_value={"matches": []})
-            yield
-            return
+        mock_index = MagicMock()
+        mock_index.return_value.upsert = MagicMock()
+        mock_index.return_value.query = MagicMock(return_value={"matches": []})
+        monkeypatch.setattr("pinecone.Index", mock_index)
     except ImportError:
         pass
 

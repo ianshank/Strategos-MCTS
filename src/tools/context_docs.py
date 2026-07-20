@@ -143,6 +143,9 @@ class ContextDocValidator:
         flagged rather than silently accepted.
         """
         if any(ch in relpath for ch in _GLOB_METACHARS):
+            # NOTE: glob.glob is case-insensitive on Windows NTFS; this may
+            # match case-drifted paths.  Acceptable: CI runs on Linux and
+            # the non-glob path below enforces case sensitivity.
             return bool(_glob.glob(str(self.repo / relpath), recursive=True))
         candidate = self.repo / relpath
         if not candidate.exists():

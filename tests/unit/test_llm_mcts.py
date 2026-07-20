@@ -908,6 +908,7 @@ class TestBackwardCompatibility:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDemoCLI:
     def test_demo_module_imports(self):
         """Verify demo.py can be imported without errors."""

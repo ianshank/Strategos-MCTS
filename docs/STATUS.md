@@ -111,7 +111,7 @@ python -m src.benchmark.policy_lift --domain chess --checkpoint <trained.pt> \
 
 ## Implications for the plan
 
-- **Phase 2 is largely satisfied at the gate level** (88.98% ≥ 85%). Remaining work is opportunistic,
+- **Phase 2 is largely satisfied at the gate level** (93.65% ≥ 85%). Remaining work is opportunistic,
   targeting category B above — highest value: `data_science.py` (closes the last ADK agent), plus
   `api/auth.py` rising naturally from Phase 3.2.
 - Category A (chess) is gated on `python-chess`; raising it is a separate decision about adding the

@@ -59,7 +59,7 @@ This framework implements a multi-agent system combining hierarchical reasoning 
 ## 📦 Installation
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.10+ (3.11+ recommended)
 - Docker & Docker Compose (for containerized workflow)
 - NVIDIA GPU (recommended for training)
 

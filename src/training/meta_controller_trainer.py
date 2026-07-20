@@ -289,7 +289,7 @@ class MetaControllerTrainingOrchestrator:
                 lora_dropout=self.config.dropout,
             )
         except (ImportError, OSError, ValueError) as exc:
-            logger.warning("Falling back to simple BERT-like classifier (cannot load pretrained: %s)", exc)
+            logger.warning("Falling back to simple BERT-like classifier (cannot load pretrained or tokenizer deps missing: %s)", exc)
             return nn.Sequential(
                 nn.Linear(self.config.embedding_dim, self.config.hidden_dim),
                 nn.ReLU(),

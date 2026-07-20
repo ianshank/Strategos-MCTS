@@ -294,7 +294,8 @@ class TestModelInitialization:
         """Test BERT model initialization.
 
         Requires ``sentencepiece`` or ``tiktoken`` — skipped when neither is
-        installed (the HuggingFace BERT tokenizer raises ValueError otherwise).
+        installed because the trainer falls back to a simple nn.Sequential
+        classifier, which would not exercise the BERT code path.
         """
         from src.training.meta_controller_trainer import MetaControllerTrainingOrchestrator
 

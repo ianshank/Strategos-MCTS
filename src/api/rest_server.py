@@ -80,15 +80,15 @@ except ImportError as e:
     logger.warning(f"Import error: {e}")
 
 # Prometheus metrics (optional)
+from src.monitoring.prometheus_metrics import (  # noqa: E402
+    ACTIVE_REQUESTS,
+    ERROR_COUNT,
+    REQUEST_COUNT,
+    REQUEST_LATENCY,
+)
+
 try:
     from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-
-    from src.monitoring.prometheus_metrics import (
-        ACTIVE_REQUESTS,
-        ERROR_COUNT,
-        REQUEST_COUNT,
-        REQUEST_LATENCY,
-    )
 
     PROMETHEUS_AVAILABLE = True
 except ImportError:

@@ -4,7 +4,7 @@ This guide provides instructions for executing the full suite of Strategos-MCTS 
 
 ## Prerequisites
 
-- **Python 3.11** or higher.
+- **Python 3.10** or higher (3.11+ recommended).
 - A virtual environment initialized and activated (`python -m venv .venv`).
 - Ensure `.env` is configured (copy `.env.example` to `.env`).
 
