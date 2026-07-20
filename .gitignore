@@ -275,3 +275,11 @@ lift.json
 # Shared project skills (.claude/skills/) and a future committed .claude/settings.json
 # (see docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md) stay tracked.
 .claude/settings.local.json
+
+# Local developer scratch directories and generated artifacts
+dev/
+unit_test_results.txt
+# Root-level generated model weights (e.g. from quick training runs or meta-controller trainer).
+# NOTE: versioned weights under models/ and .claude/models/ are intentionally tracked via LFS
+# (see comments above at the *.pt section). Only root-level generated outputs are ignored here.
+/rnn_meta_controller.pt
