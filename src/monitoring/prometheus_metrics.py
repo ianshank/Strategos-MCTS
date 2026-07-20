@@ -21,28 +21,32 @@ from src.observability.logging import get_logger
 
 logger = get_logger(__name__)
 
-
-# Try to import Prometheus client
 class DummyMetric:
-    def __init__(self, *_args, **_kwargs):
+    """No-op metric stub used when prometheus_client is not installed.
+
+    Always importable regardless of whether prometheus_client is present,
+    so tests can verify the fallback behaviour directly.
+    """
+
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
         pass
 
-    def labels(self, *_args, **_kwargs):
+    def labels(self, *_args: object, **_kwargs: object) -> "DummyMetric":
         return self
 
-    def inc(self, *_args, **_kwargs):
+    def inc(self, *_args: object, **_kwargs: object) -> None:
         pass
 
-    def dec(self, *_args, **_kwargs):
+    def dec(self, *_args: object, **_kwargs: object) -> None:
         pass
 
-    def set(self, *_args, **_kwargs):
+    def set(self, *_args: object, **_kwargs: object) -> None:
         pass
 
-    def observe(self, *_args, **_kwargs):
+    def observe(self, *_args: object, **_kwargs: object) -> None:
         pass
 
-    def info(self, *args, **kwargs):
+    def info(self, *_args: object, **_kwargs: object) -> None:
         pass
 
 
@@ -79,7 +83,7 @@ try:
 except ImportError:
     logger.warning("prometheus-client not installed. Metrics will not be collected.")
     PROMETHEUS_AVAILABLE = False
-    Counter = Gauge = Histogram = Info = Summary = DummyMetric
+    Counter = Gauge = Histogram = Info = Summary = DummyMetric  # type: ignore[assignment,misc]
 
 
 # ============================================================================
