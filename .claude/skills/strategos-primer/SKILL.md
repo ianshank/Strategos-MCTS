@@ -54,7 +54,7 @@ for what actually works today, not marketing copy.
 
 | Subsystem | What it is | Entry points |
 |-----------|-----------|--------------|
-| **Config** | All tunables & secrets. `Settings(BaseSettings)` (settings.py:48), `get_settings()` (settings.py:753). | `src/config/settings.py`, `src/config/constants.py` |
+| **Config** | All tunables & secrets — the `Settings(BaseSettings)` model and the cached `get_settings()` accessor. | `src/config/settings.py`, `src/config/constants.py` |
 | **Orchestration** | LangGraph graph construction + the `AgentState` TypedDict flowing through it. | `src/framework/graph/builder.py`, `integrated.py`, `state.py` |
 | **MCTS engine** | Search core plus neural / LLM-guided / parallel variants and domain adapters. | `src/framework/mcts/core.py`, `neural_mcts.py`, `llm_mcts.py`, `parallel_mcts.py`, `policies.py`, `progressive_widening.py` |
 | **Application agents** | HRM / TRM / hybrid agents. | `src/agents/hrm_agent.py`, `trm_agent.py`, `hybrid_agent.py` |
