@@ -287,7 +287,7 @@ class MetaControllerTrainingOrchestrator:
                 seed=getattr(self.config, "seed", 42),
                 lora_dropout=self.config.dropout,
             )
-        except (ImportError, OSError) as exc:
+        except (ImportError, OSError, ValueError) as exc:
             logger.warning("Falling back to simple BERT-like classifier (cannot load pretrained: %s)", exc)
             return nn.Sequential(
                 nn.Linear(768, self.config.hidden_dim),
