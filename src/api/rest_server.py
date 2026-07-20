@@ -75,19 +75,14 @@ except ImportError as e:
 try:
     from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-    from src.monitoring.prometheus_metrics import Counter, Gauge, Histogram, _create_metric
+    from src.monitoring.prometheus_metrics import (
+        ACTIVE_REQUESTS,
+        ERROR_COUNT,
+        REQUEST_COUNT,
+        REQUEST_LATENCY,
+    )
 
     PROMETHEUS_AVAILABLE = True
-
-    # Define metrics
-    REQUEST_COUNT = _create_metric(
-        Counter, "mcts_requests_total", "Total number of requests", ["method", "endpoint", "status"]
-    )
-    REQUEST_LATENCY = _create_metric(
-        Histogram, "mcts_request_duration_seconds", "Request latency in seconds", ["method", "endpoint"]
-    )
-    ACTIVE_REQUESTS = _create_metric(Gauge, "mcts_active_requests", "Number of active requests")
-    ERROR_COUNT = _create_metric(Counter, "mcts_errors_total", "Total number of errors", ["error_type"])
 except ImportError:
     PROMETHEUS_AVAILABLE = False
 
