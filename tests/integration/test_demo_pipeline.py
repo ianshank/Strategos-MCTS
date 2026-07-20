@@ -13,12 +13,10 @@ Tests the complete demo pipeline end-to-end with mocked external services.
 """
 
 import os
-import shutil
-import sys
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -26,9 +24,8 @@ import pytest
 torch = pytest.importorskip("torch", reason="PyTorch required for demo pipeline tests")
 yaml = pytest.importorskip("yaml", reason="PyYAML required for config loading")
 
-# Add project root to path
+# Project root for locating config/fixture files
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
 
 
 # ============================================================================
@@ -38,75 +35,89 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 @pytest.fixture
 def demo_config():
-    """Load demo configuration."""
+    """Load demo configuration if available."""
     config_path = PROJECT_ROOT / "training" / "config_local_demo.yaml"
-
     if not config_path.exists():
-        pytest.skip("Demo config not found")
+        pytest.skip(f"Demo config not found at {config_path}")
 
     with open(config_path) as f:
-        return yaml.safe_load(f)
+        config = yaml.safe_load(f)
+
+    return config
 
 
 @pytest.fixture
 def temp_workspace(tmp_path):
-    """Create temporary workspace for testing."""
-    workspace = {
-        "root": tmp_path,
-        "checkpoints": tmp_path / "checkpoints" / "demo",
-        "logs": tmp_path / "logs" / "demo",
-        "cache": tmp_path / "cache",
-        "reports": tmp_path / "reports",
-    }
-
-    # Create directories
-    for path in workspace.values():
-        if isinstance(path, Path):
-            path.mkdir(parents=True, exist_ok=True)
+    """Create a temporary workspace for tests."""
+    workspace = tmp_path / "test_workspace"
+    workspace.mkdir()
+    (workspace / "checkpoints").mkdir()
+    (workspace / "logs").mkdir()
+    (workspace / "data").mkdir()
 
     yield workspace
 
-    # Cleanup
-    shutil.rmtree(tmp_path, ignore_errors=True)
-
 
 @pytest.fixture
-def mock_gpu():
-    """Mock CUDA GPU availability."""
-    with (
-        patch("torch.cuda.is_available", return_value=True),
-        patch("torch.cuda.get_device_name", return_value="NVIDIA GeForce RTX 4080"),
-        patch("torch.cuda.get_device_properties") as mock_props,
-    ):
-        # Mock device properties
-        mock_device = Mock()
-        mock_device.total_memory = 16 * 1024 * 1024 * 1024  # 16GB
-        mock_props.return_value = mock_device
-
-        yield
+def sample_training_config():
+    """Create a sample training configuration."""
+    return {
+        "training": {
+            "epochs": 2,
+            "batch_size": 4,
+            "learning_rate": 0.001,
+            "checkpoint_interval": 1,
+        },
+        "model": {
+            "hidden_size": 64,
+            "num_layers": 2,
+            "dropout": 0.1,
+        },
+        "mcts": {
+            "num_simulations": 10,
+            "c_puct": 1.0,
+            "temperature": 1.0,
+        },
+    }
 
 
 @pytest.fixture
 def mock_external_services(monkeypatch):
-    """Mock all external service API calls."""
+    """Mock all external service API calls.
+
+    Guards against missing optional dependencies (wandb, pinecone) so the
+    fixture itself does not crash when they are not installed.
+    """
     # Set environment variables
     monkeypatch.setenv("PINECONE_API_KEY", "test-pinecone-key")
     monkeypatch.setenv("WANDB_API_KEY", "test-wandb-key")
     monkeypatch.setenv("GITHUB_TOKEN", "test-github-token")
 
-    # Mock W&B
-    mock_wandb = MagicMock()
-    mock_wandb.init.return_value = MagicMock()
-    monkeypatch.setattr("wandb.init", mock_wandb.init)
-    monkeypatch.setattr("wandb.log", MagicMock())
-    monkeypatch.setattr("wandb.finish", MagicMock())
+    # Mock W&B (only if installed)
+    try:
+        import wandb  # noqa: F401
 
-    # Mock Pinecone
-    with patch("pinecone.Index") as mock_index:
-        mock_index.return_value.upsert = MagicMock()
-        mock_index.return_value.query = MagicMock(return_value={"matches": []})
+        mock_wandb = MagicMock()
+        mock_wandb.init.return_value = MagicMock()
+        monkeypatch.setattr("wandb.init", mock_wandb.init)
+        monkeypatch.setattr("wandb.log", MagicMock())
+        monkeypatch.setattr("wandb.finish", MagicMock())
+    except ImportError:
+        pass
 
-        yield
+    # Mock Pinecone (only if installed)
+    try:
+        import pinecone  # noqa: F401
+
+        with patch("pinecone.Index") as mock_index:
+            mock_index.return_value.upsert = MagicMock()
+            mock_index.return_value.query = MagicMock(return_value={"matches": []})
+            yield
+            return
+    except ImportError:
+        pass
+
+    yield
 
 
 # ============================================================================

@@ -15,7 +15,7 @@ import time
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Optional, TypeVar
 
 import psutil
@@ -113,7 +113,7 @@ class MetricsCollector:
         self._node_timings: dict[str, list[float]] = defaultdict(list)
         self._request_latencies: list[float] = []
         self._memory_samples: list[dict[str, str | int | float]] = []
-        self._start_time = datetime.utcnow()
+        self._start_time = datetime.now(UTC)
         self._process = psutil.Process()
 
         # Prometheus metrics (if available)
@@ -138,76 +138,124 @@ class MetricsCollector:
         MetricsCollector instance registered it and the singleton was then reset
         for tests), the existing collector is reused instead of re-registering.
         This prevents ``ValueError: Duplicated timeseries`` across test runs.
+
+        All metrics use the ``framework_`` prefix to avoid colliding with the
+        high-level API/MCTS metrics in ``prometheus_metrics.py`` which use the
+        ``mcts_`` prefix with different label sets.
         """
         if not PROMETHEUS_AVAILABLE or self._prometheus_initialized:
             return
 
-        # MCTS counters
-        self._prom_mcts_iterations = Counter(
-            "mcts_iterations_total",
-            "Total number of MCTS iterations",
-            ["session_id"],
-        ) if "mcts_iterations_total" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["mcts_iterations_total"]
-        self._prom_mcts_simulations = Counter(
-            "mcts_simulations_total",
-            "Total number of MCTS simulations",
-            ["session_id"],
-        ) if "mcts_simulations_total" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["mcts_simulations_total"]
+        # MCTS session counters (per-session tracking, distinct from global mcts_iterations_total)
+        self._prom_mcts_iterations = (
+            Counter(
+                "framework_mcts_iterations_total",
+                "Total MCTS iterations per session (framework layer)",
+                ["session_id"],
+            )
+            if "framework_mcts_iterations_total" not in REGISTRY._names_to_collectors
+            else REGISTRY._names_to_collectors["framework_mcts_iterations_total"]
+        )
+        self._prom_mcts_simulations = (
+            Counter(
+                "framework_mcts_simulations_total",
+                "Total MCTS simulations per session (framework layer)",
+                ["session_id"],
+            )
+            if "framework_mcts_simulations_total" not in REGISTRY._names_to_collectors
+            else REGISTRY._names_to_collectors["framework_mcts_simulations_total"]
+        )
 
-        # MCTS gauges
-        self._prom_mcts_tree_depth = Gauge(
-            "mcts_tree_depth",
-            "Current MCTS tree depth",
-            ["session_id"],
-        ) if "mcts_tree_depth" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["mcts_tree_depth"]
-        self._prom_mcts_total_nodes = Gauge(
-            "mcts_total_nodes",
-            "Total nodes in MCTS tree",
-            ["session_id"],
-        ) if "mcts_total_nodes" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["mcts_total_nodes"]
+        # MCTS tree gauges
+        self._prom_mcts_tree_depth = (
+            Gauge(
+                "framework_mcts_tree_depth",
+                "Current MCTS tree depth (framework layer)",
+                ["session_id"],
+            )
+            if "framework_mcts_tree_depth" not in REGISTRY._names_to_collectors
+            else REGISTRY._names_to_collectors["framework_mcts_tree_depth"]
+        )
+        self._prom_mcts_total_nodes = (
+            Gauge(
+                "framework_mcts_total_nodes",
+                "Total nodes in MCTS tree (framework layer)",
+                ["session_id"],
+            )
+            if "framework_mcts_total_nodes" not in REGISTRY._names_to_collectors
+            else REGISTRY._names_to_collectors["framework_mcts_total_nodes"]
+        )
 
         # UCB score histogram
-        self._prom_ucb_scores = Histogram(
-            "mcts_ucb_score",
-            "UCB score distribution",
-            ["session_id"],
-            buckets=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, float("inf")],
-        ) if "mcts_ucb_score" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["mcts_ucb_score"]
+        self._prom_ucb_scores = (
+            Histogram(
+                "framework_mcts_ucb_score",
+                "UCB score distribution (framework layer)",
+                ["session_id"],
+                buckets=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, float("inf")],
+            )
+            if "framework_mcts_ucb_score" not in REGISTRY._names_to_collectors
+            else REGISTRY._names_to_collectors["framework_mcts_ucb_score"]
+        )
 
-        # Agent metrics
-        self._prom_agent_executions = Counter(
-            "agent_executions_total",
-            "Total agent executions",
-            ["agent_name"],
-        ) if "agent_executions_total" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["agent_executions_total"]
-        self._prom_agent_confidence = Summary(
-            "agent_confidence",
-            "Agent confidence scores",
-            ["agent_name"],
-        ) if "agent_confidence" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["agent_confidence"]
-        self._prom_agent_execution_time = Histogram(
-            "agent_execution_time_ms",
-            "Agent execution time in milliseconds",
-            ["agent_name"],
-            buckets=[10, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
-        ) if "agent_execution_time_ms" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["agent_execution_time_ms"]
+        # Agent execution metrics
+        self._prom_agent_executions = (
+            Counter(
+                "framework_agent_executions_total",
+                "Total agent executions (framework layer)",
+                ["agent_name"],
+            )
+            if "framework_agent_executions_total" not in REGISTRY._names_to_collectors
+            else REGISTRY._names_to_collectors["framework_agent_executions_total"]
+        )
+        self._prom_agent_confidence = (
+            Summary(
+                "framework_agent_confidence",
+                "Agent confidence scores (framework layer)",
+                ["agent_name"],
+            )
+            if "framework_agent_confidence" not in REGISTRY._names_to_collectors
+            else REGISTRY._names_to_collectors["framework_agent_confidence"]
+        )
+        self._prom_agent_execution_time = (
+            Histogram(
+                "framework_agent_execution_time_ms",
+                "Agent execution time in milliseconds (framework layer)",
+                ["agent_name"],
+                buckets=[10, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
+            )
+            if "framework_agent_execution_time_ms" not in REGISTRY._names_to_collectors
+            else REGISTRY._names_to_collectors["framework_agent_execution_time_ms"]
+        )
 
-        # System metrics
-        self._prom_memory_usage = Gauge(
-            "framework_memory_usage_mb",
-            "Memory usage in MB",
-        ) if "framework_memory_usage_mb" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["framework_memory_usage_mb"]
-        self._prom_cpu_percent = Gauge(
-            "framework_cpu_percent",
-            "CPU usage percentage",
-        ) if "framework_cpu_percent" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["framework_cpu_percent"]
+        # System resource gauges
+        self._prom_memory_usage = (
+            Gauge(
+                "framework_memory_usage_mb",
+                "Framework process memory usage in MB",
+            )
+            if "framework_memory_usage_mb" not in REGISTRY._names_to_collectors
+            else REGISTRY._names_to_collectors["framework_memory_usage_mb"]
+        )
+        self._prom_cpu_percent = (
+            Gauge(
+                "framework_cpu_percent",
+                "Framework process CPU usage percentage",
+            )
+            if "framework_cpu_percent" not in REGISTRY._names_to_collectors
+            else REGISTRY._names_to_collectors["framework_cpu_percent"]
+        )
 
-        # Request latency
-        self._prom_request_latency = Histogram(
-            "request_latency_ms",
-            "Request latency in milliseconds",
-            buckets=[10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000],
-        ) if "request_latency_ms" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["request_latency_ms"]
+        # Request latency histogram
+        self._prom_request_latency = (
+            Histogram(
+                "framework_request_latency_ms",
+                "End-to-end request latency in milliseconds (framework layer)",
+                buckets=[10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000],
+            )
+            if "framework_request_latency_ms" not in REGISTRY._names_to_collectors
+            else REGISTRY._names_to_collectors["framework_request_latency_ms"]
+        )
 
         self._prometheus_initialized = True
 
@@ -333,7 +381,7 @@ class MetricsCollector:
         open_files = _safe_probe(self._process.open_files, None, "open_files")
 
         sample = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "memory_rss_mb": memory_info.rss / (1024 * 1024) if memory_info is not None else -1.0,
             "memory_vms_mb": memory_info.vms / (1024 * 1024) if memory_info is not None else -1.0,
             "cpu_percent": cpu_percent,
@@ -434,8 +482,8 @@ class MetricsCollector:
         current_system = self.sample_system_metrics()
 
         report = {
-            "report_time": datetime.utcnow().isoformat(),
-            "uptime_seconds": (datetime.utcnow() - self._start_time).total_seconds(),
+            "report_time": datetime.now(UTC).isoformat(),
+            "uptime_seconds": (datetime.now(UTC) - self._start_time).total_seconds(),
             "system_metrics": current_system,
             "mcts_sessions": {session_id: self.get_mcts_summary(session_id) for session_id in self._mcts_metrics},
             "agents": {agent_name: self.get_agent_summary(agent_name) for agent_name in self._agent_metrics},
@@ -465,7 +513,7 @@ class MetricsCollector:
         self._node_timings.clear()
         self._request_latencies.clear()
         self._memory_samples.clear()
-        self._start_time = datetime.utcnow()
+        self._start_time = datetime.now(UTC)
 
 
 # Convenience singleton accessors

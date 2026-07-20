@@ -21,6 +21,7 @@ from src.observability.logging import get_logger
 
 logger = get_logger(__name__)
 
+
 class DummyMetric:
     """No-op metric stub used when prometheus_client is not installed.
 
@@ -60,24 +61,33 @@ try:
 
     PROMETHEUS_AVAILABLE = True
 
-    def _create_metric(metric_class, name, *args, **kwargs):
-        if name in REGISTRY._names_to_collectors:
-            REGISTRY.unregister(REGISTRY._names_to_collectors[name])
-        return metric_class(name, *args, **kwargs)
+    def _create_metric(metric_class: type, name: str, *args: Any, **kwargs: Any) -> Any:
+        """Create a Prometheus metric, handling duplicates gracefully.
 
-    def Counter(name, *args, **kwargs):
+        Attempts creation first; on ``ValueError`` (duplicated timeseries) falls
+        back to unregistering the existing collector and retrying.
+        """
+        try:
+            return metric_class(name, *args, **kwargs)
+        except ValueError:
+            # Duplicated timeseries — unregister stale collector and retry
+            if name in REGISTRY._names_to_collectors:
+                REGISTRY.unregister(REGISTRY._names_to_collectors[name])
+            return metric_class(name, *args, **kwargs)
+
+    def Counter(name: str, *args: Any, **kwargs: Any) -> PromCounter:  # noqa: N802
         return _create_metric(PromCounter, name, *args, **kwargs)
 
-    def Gauge(name, *args, **kwargs):
+    def Gauge(name: str, *args: Any, **kwargs: Any) -> PromGauge:  # noqa: N802
         return _create_metric(PromGauge, name, *args, **kwargs)
 
-    def Histogram(name, *args, **kwargs):
+    def Histogram(name: str, *args: Any, **kwargs: Any) -> PromHistogram:  # noqa: N802
         return _create_metric(PromHistogram, name, *args, **kwargs)
 
-    def Info(name, *args, **kwargs):
+    def Info(name: str, *args: Any, **kwargs: Any) -> PromInfo:  # noqa: N802
         return _create_metric(PromInfo, name, *args, **kwargs)
 
-    def Summary(name, *args, **kwargs):
+    def Summary(name: str, *args: Any, **kwargs: Any) -> PromSummary:  # noqa: N802
         return _create_metric(PromSummary, name, *args, **kwargs)
 
 except ImportError:
@@ -258,14 +268,28 @@ SYSTEM_INFO = Info(
 # ============================================================================
 
 
-def setup_metrics(app_version: str = "1.0.0", environment: str = "production") -> None:
+def setup_metrics(app_version: str | None = None, environment: str | None = None) -> None:
     """
     Initialize metrics with system information.
 
     Args:
-        app_version: Application version
-        environment: Deployment environment (production, staging, development)
+        app_version: Application version (defaults to package metadata version)
+        environment: Deployment environment (defaults to DEFAULT_ENVIRONMENT from constants)
     """
+    if app_version is None:
+        try:
+            from importlib.metadata import version as _pkg_version
+
+            app_version = _pkg_version("langgraph-multi-agent-mcts")
+        except Exception:
+            app_version = "0.0.0-dev"
+    if environment is None:
+        try:
+            from src.config.constants import DEFAULT_ENVIRONMENT
+
+            environment = DEFAULT_ENVIRONMENT
+        except ImportError:
+            environment = "development"
     if PROMETHEUS_AVAILABLE:
         SYSTEM_INFO.info(
             {
