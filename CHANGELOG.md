@@ -89,8 +89,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   conditional block to satisfy mypy when wandb assignment is conditional.
 - **`braintrust_tracker.py` / `pinecone_store.py` / `llm_chess_engine.py`**: annotated the
   `except ImportError` fallback assignments as `X: Any = None` for type-correctness.
-- **`experiment_tracker.py`**: typed `self._run` as `Any` to accommodate the wandb `Run` type
-  when wandb is available.
+- **`MetricsCollector` Prometheus get-or-create** (`metrics.py`): `_init_prometheus_metrics()`
+  was registering metrics unconditionally on each instantiation. When tests reset
+  `_instance = None` and created a fresh instance, the global `CollectorRegistry` raised
+  `ValueError: Duplicated timeseries`. All 10 metric registrations now use
+  `if name not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors[name]`
+  — the standard get-or-create idiom. Fixed ~41 test isolation failures.
+- **`DummyMetric` always importable** (`prometheus_metrics.py`): `DummyMetric` was defined
+  inside the `except ImportError` block and therefore unavailable when `prometheus_client` is
+  installed. Tests importing it directly raised `ImportError`. Promoted to module scope above
+  the `try/except`; the except branch now assigns
+  `Counter = Gauge = Histogram = Info = DummyMetric  # type: ignore[assignment,misc]`.
+- **Windows UTF-8 stdout** (`demo.py`, `chess_demo.py`): `TreeVisualizer.render()` and
+  `fen_to_ascii()` emit Unicode box-drawing/chess piece characters. On Windows, `sys.stdout`
+  defaults to `cp1252` which cannot encode them, crashing `--tree` and `--analyze` CLI modes.
+  Fixed by calling `sys.stdout.reconfigure(encoding="utf-8", errors="replace")` at script
+  startup (guarded by `hasattr`). Test files updated to pass `encoding="utf-8"` to
+  `subprocess.run(..., text=True)` so the parent reader matches the subprocess encoding.
+- **`context_docs.py` case-sensitive `exists()` on Windows NTFS**: `Path.exists()` on NTFS
+  returns `True` for case-mismatched paths (e.g. `Src/config/settings.py` when only
+  `src/config/settings.py` exists). Case-drifted citations were silently passing the validator.
+  Fixed by resolving the candidate and comparing `relpath` parts (split on `/`, trailing slash
+  stripped) against the actual on-disk `Path.resolve().parts[n:]`.
+- **`context_docs.py` POSIX `rel()` on Windows**: `str(Path(...).relative_to(...))` returns
+  backslash-separated paths on Windows. Fixed with `Path.as_posix()` in both the success and
+  `ValueError` fallback branches so output is always `/`-separated on all platforms.
+- **`_create_bert_controller` `ValueError` fallback** (`meta_controller_trainer.py`): HuggingFace
+  `transformers` raises `ValueError` (not `OSError`) when a fast BERT tokenizer cannot be
+  instantiated due to a missing backend (sentencepiece/tiktoken). The fallback `except` tuple
+  only caught `(ImportError, OSError)`. Added `ValueError` so the `nn.Sequential` fallback path
+  is taken instead of propagating. Added `_HAS_SENTENCEPIECE`/`_HAS_TIKTOKEN` sentinel and
+  `@skip_if_no_bert_tokenizer` decorator in the test for portability.
+
+**Overall test result (unit suite `not slow`):** 8645 passed, 27 skipped, 0 failed ✅
 
 ### Repository Orientation Docs & Context-Doc Validation
 

@@ -295,6 +295,10 @@ module = [
     "src.storage.faiss_store",
     "src.training.neural_trainer",
     "src.training.experiment_tracker",
+    # prometheus_metrics.py has a DummyMetric fallback inside `except ImportError`
+    # that is never reached when prometheus_client is installed; the type: ignore[assignment,misc]
+    # on the fallback alias line becomes unused-ignore from mypy's perspective.
+    "src.monitoring.prometheus_metrics",
 ]
 warn_unused_ignores = false
 
