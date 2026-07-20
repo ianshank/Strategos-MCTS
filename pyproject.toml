@@ -127,6 +127,7 @@ all = [
 benchmark = "src.benchmark.cli:main"
 harness = "src.framework.harness.cli:main"
 policy-lift = "src.benchmark.policy_lift:main"
+validate-context-docs = "src.tools.context_docs:main"
 
 [project.urls]
 Homepage = "https://github.com/ianshank/langgraph_multi_agent_mcts"

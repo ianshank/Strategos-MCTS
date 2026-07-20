@@ -16,12 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`strategos-guide` agent** (`.claude/agents/strategos-guide.md`, read-only tools): the dispatchable
   counterpart of the primer — locates a subsystem, explains the architecture, or sanity-checks a change
   against the invariants, verifying every claim against the live tree.
-- **`validate-context` skill + `scripts/validate_context_docs.py`**: a deterministic (pure filesystem +
-  regex, no network/LLM) validator over every `.claude/skills/**/SKILL.md` and `.claude/agents/*.md` —
-  checks frontmatter schema, that every cited repo path resolves, and that pinned value claims (coverage
-  gate, console scripts, env flags, spec statuses) still match `pyproject.toml` / `src/config/settings.py`
-  / `src/framework/harness/intent/spec_validator.py`. Wired into the unit suite
-  (`tests/unit/docs/test_context_docs.py`) so context-doc drift fails CI.
+- **`validate-context` skill + `src/tools/context_docs.py`** (importable, type-checked, coverage-gated;
+  exposed as the `validate-context-docs` console script with a thin `scripts/validate_context_docs.py`
+  shim): a deterministic (pure filesystem + regex, no network/LLM) validator over every
+  `.claude/skills/**/SKILL.md` and `.claude/agents/*.md` — checks frontmatter schema, that every cited
+  repo path resolves, and that pinned value claims (coverage gate, console scripts, env flags, spec
+  statuses) still match `pyproject.toml` / `src/config/settings.py` /
+  `src/framework/harness/intent/spec_validator.py`. Wired into the unit suite
+  (`tests/unit/tools/test_context_docs.py`) so context-doc drift fails CI.
 
 ### Spec-Driven Development Hardening — Phase 1 (enforcement layer)
 

@@ -115,8 +115,8 @@ Fixtures: `tests/fixtures/harness_fixtures.py` (helpers), `tests/integration/har
 - Spec-driven specs: `specs/<id>.SPEC.md`, schema v2 (validate with `harness validate-spec specs/*.SPEC.md`)
 - Project skills: `.claude/skills/{quality-gate,validate-specs,coverage-baseline,strategos-primer,validate-context}`
 - Codebase orientation: `strategos-primer` skill + `strategos-guide` agent (`.claude/agents/`) map the
-  layers/subsystems/invariants; `validate-context` (`scripts/validate_context_docs.py`, in the unit suite)
-  deterministically checks those docs' paths and value-claims against the tree
+  layers/subsystems/invariants; `validate-context` (`src/tools/context_docs.py`, `validate-context-docs`
+  console script, in the unit suite) deterministically checks those docs' paths and value-claims vs the tree
 - SDD enforcement: `/spec-new` + `/spec-implement` (`.claude/commands/`), `spec-review` subagent
   (`.claude/agents/`), PreToolUse gate `.claude/hooks/spec_gate.py` (warn mode; `SPEC_GATE_BYPASS=1`
   for hotfixes; src/** PRs need a `spec/<id>` branch with an approved spec or a `No-Spec: <reason>` trailer)

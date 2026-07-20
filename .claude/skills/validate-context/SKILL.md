@@ -19,14 +19,15 @@ drift fails fast instead of surviving until someone notices.
 
 ```bash
 # Full check — exits 1 on any failure (a path that moved, a value claim that no longer matches source)
-python scripts/validate_context_docs.py
+validate-context-docs                    # console script; or: python -m src.tools.context_docs
+python -m src.tools.context_docs --debug  # per-token trace when diagnosing a verdict; --json for CI
 
 # The same checks as part of the unit suite — this is what gates CI
-pytest tests/unit/docs/test_context_docs.py -v
+pytest tests/unit/tools/test_context_docs.py -v
 ```
 
-What it verifies (implemented in `scripts/validate_context_docs.py`, wrapped by
-`tests/unit/docs/test_context_docs.py`):
+What it verifies (engine in `src/tools/context_docs.py`, thin `scripts/validate_context_docs.py` shim,
+wrapped by `tests/unit/tools/test_context_docs.py`):
 
 1. **Frontmatter schema** — every skill/agent doc has `name` + `description` (agents also `tools`),
    and `name` matches the file/dir.
@@ -43,7 +44,8 @@ Notes:
   path immediately.
 - To cite a path that *intentionally* no longer exists (to explain drift), write it **without** a
   `src/`-style root prefix, or add it to `INTENTIONALLY_ABSENT` in the validator. Only
-  fully-qualified, rooted paths are checked, so an unprefixed mention reads as prose.
+  fully-qualified, rooted paths are checked, so an unprefixed mention reads as prose. An allowlisted
+  path that later *reappears* fails the check, so the list can't quietly go stale.
 - Existence catches "the path moved," not "you forgot to mention X" — completeness stays a review
   (or `strategos-guide`) job.
 - Sits beside `/validate-specs` (spec schema) and `/quality-gate` (lint/type/test); this one guards

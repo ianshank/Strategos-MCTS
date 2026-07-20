@@ -18,8 +18,8 @@ Orientation to this codebase for anyone starting work, explaining the design, or
 crosses subsystems. `CLAUDE.md` is the always-on quick reference (commands, patterns); this skill is
 the map you consult when you need the whole picture and where things actually live. Paths here were
 verified against the current tree — where `CLAUDE.md`'s "Key File Locations" table disagrees, it lists
-`src/framework/graph.py`, but orchestration is now the `framework/graph/` package (its
-`framework/factories.py` entry is still correct — see the factory rows below).
+`src/framework/graph.py`, but orchestration is now the `src/framework/graph/` package (its
+`src/framework/factories.py` entry is still correct — see the factory rows below).
 
 ## What the system is
 
@@ -155,10 +155,10 @@ Full detail: `CLAUDE.md` → "Spec-Driven Development", and `docs/plans/SDD_PLUG
 
 ## Gotchas
 
-- **One `CLAUDE.md` path drift.** Its "Key File Locations" lists `framework/graph.py`, but
-  orchestration is now the `framework/graph/` package. Its `framework/factories.py` entry is still
-  correct — that module holds the core factories, and `framework/component_factory/` is a *separate*
-  training-factory package, not a replacement.
+- **One `CLAUDE.md` path drift.** Its "Key File Locations" lists `src/framework/graph.py`, but
+  orchestration is now the `src/framework/graph/` package. Its `src/framework/factories.py` entry is
+  still correct — that module holds the core factories, and `src/framework/component_factory/` is a
+  *separate* training-factory package, not a replacement.
 - **Local test skips.** LMStudio tests need a local server (`LMSTUDIO_SKIP=1` to skip); Pinecone tests
   need a key or mocks; neural MCTS is slow on CPU (use CUDA or fewer iterations).
 - **Persisted-artifact formats changed.** Substructure library is JSON; the experience buffer is
