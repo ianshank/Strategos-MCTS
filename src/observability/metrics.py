@@ -131,7 +131,14 @@ class MetricsCollector:
         return cls._instance
 
     def _init_prometheus_metrics(self) -> None:
-        """Initialize Prometheus metrics."""
+        """Initialize Prometheus metrics idempotently.
+
+        Uses a get-or-create pattern: if a metric with the same name is already
+        registered in the global CollectorRegistry (e.g. because a previous
+        MetricsCollector instance registered it and the singleton was then reset
+        for tests), the existing collector is reused instead of re-registering.
+        This prevents ``ValueError: Duplicated timeseries`` across test runs.
+        """
         if not PROMETHEUS_AVAILABLE or self._prometheus_initialized:
             return
 
@@ -140,24 +147,24 @@ class MetricsCollector:
             "mcts_iterations_total",
             "Total number of MCTS iterations",
             ["session_id"],
-        )
+        ) if "mcts_iterations_total" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["mcts_iterations_total"]
         self._prom_mcts_simulations = Counter(
             "mcts_simulations_total",
             "Total number of MCTS simulations",
             ["session_id"],
-        )
+        ) if "mcts_simulations_total" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["mcts_simulations_total"]
 
         # MCTS gauges
         self._prom_mcts_tree_depth = Gauge(
             "mcts_tree_depth",
             "Current MCTS tree depth",
             ["session_id"],
-        )
+        ) if "mcts_tree_depth" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["mcts_tree_depth"]
         self._prom_mcts_total_nodes = Gauge(
             "mcts_total_nodes",
             "Total nodes in MCTS tree",
             ["session_id"],
-        )
+        ) if "mcts_total_nodes" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["mcts_total_nodes"]
 
         # UCB score histogram
         self._prom_ucb_scores = Histogram(
@@ -165,42 +172,42 @@ class MetricsCollector:
             "UCB score distribution",
             ["session_id"],
             buckets=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, float("inf")],
-        )
+        ) if "mcts_ucb_score" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["mcts_ucb_score"]
 
         # Agent metrics
         self._prom_agent_executions = Counter(
             "agent_executions_total",
             "Total agent executions",
             ["agent_name"],
-        )
+        ) if "agent_executions_total" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["agent_executions_total"]
         self._prom_agent_confidence = Summary(
             "agent_confidence",
             "Agent confidence scores",
             ["agent_name"],
-        )
+        ) if "agent_confidence" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["agent_confidence"]
         self._prom_agent_execution_time = Histogram(
             "agent_execution_time_ms",
             "Agent execution time in milliseconds",
             ["agent_name"],
             buckets=[10, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
-        )
+        ) if "agent_execution_time_ms" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["agent_execution_time_ms"]
 
         # System metrics
         self._prom_memory_usage = Gauge(
             "framework_memory_usage_mb",
             "Memory usage in MB",
-        )
+        ) if "framework_memory_usage_mb" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["framework_memory_usage_mb"]
         self._prom_cpu_percent = Gauge(
             "framework_cpu_percent",
             "CPU usage percentage",
-        )
+        ) if "framework_cpu_percent" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["framework_cpu_percent"]
 
         # Request latency
         self._prom_request_latency = Histogram(
             "request_latency_ms",
             "Request latency in milliseconds",
             buckets=[10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000],
-        )
+        ) if "request_latency_ms" not in REGISTRY._names_to_collectors else REGISTRY._names_to_collectors["request_latency_ms"]
 
         self._prometheus_initialized = True
 

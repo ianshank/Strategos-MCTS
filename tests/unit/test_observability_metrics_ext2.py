@@ -23,7 +23,12 @@ pytestmark = pytest.mark.unit
 
 @pytest.fixture(autouse=True)
 def reset_metrics_singleton():
-    """Reset the MetricsCollector singleton between tests."""
+    """Reset the MetricsCollector singleton between tests.
+
+    MetricsCollector._init_prometheus_metrics uses a get-or-create pattern,
+    so re-creating the instance after resetting _instance = None no longer
+    raises ``ValueError: Duplicated timeseries``.
+    """
     from src.observability.metrics import MetricsCollector
 
     try:
