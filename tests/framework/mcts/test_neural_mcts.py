@@ -99,7 +99,7 @@ class TicTacToeState(GameState):
         return str(self.board.tobytes())
 
 
-class TestPolicyValueNetwork(nn.Module):
+class MockPolicyValueNetwork(nn.Module):
     """Simple network for testing."""
 
     def __init__(self, action_size=9):
@@ -264,7 +264,7 @@ class TestNeuralMCTS:
     @pytest.fixture
     def network(self):
         """Create test network."""
-        return TestPolicyValueNetwork()
+        return MockPolicyValueNetwork()
 
     @pytest.fixture
     def config(self):
@@ -407,7 +407,7 @@ class TestSelfPlayCollector:
 
     @pytest.fixture
     def network(self):
-        return TestPolicyValueNetwork()
+        return MockPolicyValueNetwork()
 
     @pytest.fixture
     def config(self):
@@ -470,7 +470,7 @@ class TestNeuralMCTSIntegration:
     @pytest.mark.asyncio
     async def test_full_search_workflow(self):
         """Test complete search workflow."""
-        network = TestPolicyValueNetwork()
+        network = MockPolicyValueNetwork()
         config = MCTSConfig(num_simulations=20)
         mcts = NeuralMCTS(network, config, device="cpu")
 
@@ -495,7 +495,7 @@ class TestNeuralMCTSIntegration:
     @pytest.mark.asyncio
     async def test_deterministic_search(self):
         """Test that search is deterministic with same seed."""
-        network = TestPolicyValueNetwork()
+        network = MockPolicyValueNetwork()
         config = MCTSConfig(num_simulations=10)
 
         # Two MCTS instances with same network

@@ -156,7 +156,7 @@ class ContextDocValidator:
             # Strip any trailing slash and split into parts.
             norm = relpath.rstrip("/\\").replace("\\", "/")
             rel_parts = tuple(norm.split("/")) if norm else ()
-            resolved_rel = resolved.parts[len(repo_resolved.parts):]
+            resolved_rel = resolved.parts[len(repo_resolved.parts) :]
             return rel_parts == resolved_rel
         except OSError:
             return True  # Cannot resolve — assume original check was correct.

@@ -13,14 +13,10 @@
 
 > **Tech-debt cleanup (branch `claude/tech-debt-cicd-cleanup-5i2eec`, specs `phase_5..8`):**
 > Phase **5** — green CI (ADK factory test + Trivy SARIF `security-events` permission). Phase **6** —
-> config centralization (assembly-router constants, LMStudio model dedup; the codebase was already
-> largely centralized). Phase **7** — coverage gap-analysis lifts holding the ≥85% gate (~89.6%):
-> `harness/cli.py`, `harness/factories.py`, `adk_adapter`, `rag/prompts`, `HybridMetaController`; also
-> fixed the inert `explain_decision` and the broken `harness replay` path. Phase **8a** — consolidated 36
-> archival root docs into `docs/{reports,summaries,plans,quickstart}`. Phase **8b–e** — resolved by
-> authoritative documentation instead of physical moves (`PROJECT_STRUCTURE.md` "Layout & naming
-> disambiguation"): inspection showed each proposed move would break a real contract, so the goal — an
-> unambiguous layout — was met without them (see `specs/phase_8_repo_organization.SPEC.md`).
+> config centralization (assembly-router constants, LMStudio model dedup). Phase **7** —
+> coverage gap-analysis lifts holding the ≥85% gate (~89.6%). Phase **8a-e** — resolved by
+> authoritative documentation instead of physical moves.
+> **All of these tech-debt cleanup phases were successfully implemented and merged (2026-07-20).**
 
 > **Test hardening & quality gate pass (2026-07-20):**
 > Full test suite expanded to **10 101 passing** (up from 7 847 unit tests). Coverage lifted from

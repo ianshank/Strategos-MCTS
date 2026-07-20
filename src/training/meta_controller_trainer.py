@@ -58,6 +58,7 @@ class MetaControllerTrainingConfig:
     embedding_dim: int = 768  # Input embedding dimension (BERT default)
     num_layers: int = 2
     dropout: float = 0.1
+    seed: int = 42  # Reproducibility seed for model initialization
 
     # Training settings
     learning_rate: float = 2e-5
@@ -284,13 +285,13 @@ class MetaControllerTrainingOrchestrator:
 
             return BERTMetaController(
                 name="MetaControllerTrainer_BERT",
-                seed=getattr(self.config, "seed", 42),
+                seed=self.config.seed,
                 lora_dropout=self.config.dropout,
             )
         except (ImportError, OSError, ValueError) as exc:
             logger.warning("Falling back to simple BERT-like classifier (cannot load pretrained: %s)", exc)
             return nn.Sequential(
-                nn.Linear(768, self.config.hidden_dim),
+                nn.Linear(self.config.embedding_dim, self.config.hidden_dim),
                 nn.ReLU(),
                 nn.Dropout(self.config.dropout),
                 nn.Linear(self.config.hidden_dim, self.config.num_agents),
@@ -303,7 +304,7 @@ class MetaControllerTrainingOrchestrator:
 
             return RNNMetaController(
                 name="MetaControllerTrainer_RNN",
-                seed=getattr(self.config, "seed", 42),
+                seed=self.config.seed,
                 hidden_dim=self.config.hidden_dim,
                 num_layers=self.config.num_layers,
                 dropout=self.config.dropout,

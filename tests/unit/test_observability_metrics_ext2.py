@@ -9,16 +9,19 @@ get_full_report, export_prometheus_format, reset, MetricsTimer, singletons).
 
 from __future__ import annotations
 
-import os
 import time
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-os.environ.setdefault("OPENAI_API_KEY", "sk-test-key-for-testing-only")
-os.environ.setdefault("LLM_PROVIDER", "openai")
-
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def _test_env(monkeypatch):
+    """Provide required env vars without leaking into the process environment."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-key-for-testing-only")
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
 
 
 @pytest.fixture(autouse=True)

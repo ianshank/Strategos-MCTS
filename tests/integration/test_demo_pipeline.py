@@ -48,12 +48,23 @@ def demo_config():
 
 @pytest.fixture
 def temp_workspace(tmp_path):
-    """Create a temporary workspace for tests."""
-    workspace = tmp_path / "test_workspace"
-    workspace.mkdir()
-    (workspace / "checkpoints").mkdir()
-    (workspace / "logs").mkdir()
-    (workspace / "data").mkdir()
+    """Create a temporary workspace for tests.
+
+    Returns a dict mapping logical names to Path objects so tests can
+    reference ``workspace["checkpoints"]`` etc.  pytest's ``tmp_path``
+    handles cleanup automatically — no manual ``shutil.rmtree`` needed.
+    """
+    workspace = {
+        "root": tmp_path,
+        "checkpoints": tmp_path / "checkpoints" / "demo",
+        "logs": tmp_path / "logs" / "demo",
+        "cache": tmp_path / "cache",
+        "reports": tmp_path / "reports",
+    }
+
+    for path in workspace.values():
+        if isinstance(path, Path):
+            path.mkdir(parents=True, exist_ok=True)
 
     yield workspace
 

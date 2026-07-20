@@ -147,114 +147,70 @@ class MetricsCollector:
             return
 
         # MCTS session counters (per-session tracking, distinct from global mcts_iterations_total)
-        self._prom_mcts_iterations = (
-            Counter(
-                "framework_mcts_iterations_total",
-                "Total MCTS iterations per session (framework layer)",
-                ["session_id"],
-            )
-            if "framework_mcts_iterations_total" not in REGISTRY._names_to_collectors
-            else REGISTRY._names_to_collectors["framework_mcts_iterations_total"]
+        self._prom_mcts_iterations = Counter(
+            "framework_mcts_iterations_total",
+            "Total MCTS iterations per session (framework layer)",
+            ["session_id"],
         )
-        self._prom_mcts_simulations = (
-            Counter(
-                "framework_mcts_simulations_total",
-                "Total MCTS simulations per session (framework layer)",
-                ["session_id"],
-            )
-            if "framework_mcts_simulations_total" not in REGISTRY._names_to_collectors
-            else REGISTRY._names_to_collectors["framework_mcts_simulations_total"]
+        self._prom_mcts_simulations = Counter(
+            "framework_mcts_simulations_total",
+            "Total MCTS simulations per session (framework layer)",
+            ["session_id"],
         )
 
         # MCTS tree gauges
-        self._prom_mcts_tree_depth = (
-            Gauge(
-                "framework_mcts_tree_depth",
-                "Current MCTS tree depth (framework layer)",
-                ["session_id"],
-            )
-            if "framework_mcts_tree_depth" not in REGISTRY._names_to_collectors
-            else REGISTRY._names_to_collectors["framework_mcts_tree_depth"]
+        self._prom_mcts_tree_depth = Gauge(
+            "framework_mcts_tree_depth",
+            "Current MCTS tree depth (framework layer)",
+            ["session_id"],
         )
-        self._prom_mcts_total_nodes = (
-            Gauge(
-                "framework_mcts_total_nodes",
-                "Total nodes in MCTS tree (framework layer)",
-                ["session_id"],
-            )
-            if "framework_mcts_total_nodes" not in REGISTRY._names_to_collectors
-            else REGISTRY._names_to_collectors["framework_mcts_total_nodes"]
+        self._prom_mcts_total_nodes = Gauge(
+            "framework_mcts_total_nodes",
+            "Total nodes in MCTS tree (framework layer)",
+            ["session_id"],
         )
 
         # UCB score histogram
-        self._prom_ucb_scores = (
-            Histogram(
-                "framework_mcts_ucb_score",
-                "UCB score distribution (framework layer)",
-                ["session_id"],
-                buckets=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, float("inf")],
-            )
-            if "framework_mcts_ucb_score" not in REGISTRY._names_to_collectors
-            else REGISTRY._names_to_collectors["framework_mcts_ucb_score"]
+        self._prom_ucb_scores = Histogram(
+            "framework_mcts_ucb_score",
+            "UCB score distribution (framework layer)",
+            ["session_id"],
+            buckets=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, float("inf")],
         )
 
         # Agent execution metrics
-        self._prom_agent_executions = (
-            Counter(
-                "framework_agent_executions_total",
-                "Total agent executions (framework layer)",
-                ["agent_name"],
-            )
-            if "framework_agent_executions_total" not in REGISTRY._names_to_collectors
-            else REGISTRY._names_to_collectors["framework_agent_executions_total"]
+        self._prom_agent_executions = Counter(
+            "framework_agent_executions_total",
+            "Total agent executions (framework layer)",
+            ["agent_name"],
         )
-        self._prom_agent_confidence = (
-            Summary(
-                "framework_agent_confidence",
-                "Agent confidence scores (framework layer)",
-                ["agent_name"],
-            )
-            if "framework_agent_confidence" not in REGISTRY._names_to_collectors
-            else REGISTRY._names_to_collectors["framework_agent_confidence"]
+        self._prom_agent_confidence = Summary(
+            "framework_agent_confidence",
+            "Agent confidence scores (framework layer)",
+            ["agent_name"],
         )
-        self._prom_agent_execution_time = (
-            Histogram(
-                "framework_agent_execution_time_ms",
-                "Agent execution time in milliseconds (framework layer)",
-                ["agent_name"],
-                buckets=[10, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
-            )
-            if "framework_agent_execution_time_ms" not in REGISTRY._names_to_collectors
-            else REGISTRY._names_to_collectors["framework_agent_execution_time_ms"]
+        self._prom_agent_execution_time = Histogram(
+            "framework_agent_execution_time_ms",
+            "Agent execution time in milliseconds (framework layer)",
+            ["agent_name"],
+            buckets=[10, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
         )
 
         # System resource gauges
-        self._prom_memory_usage = (
-            Gauge(
-                "framework_memory_usage_mb",
-                "Framework process memory usage in MB",
-            )
-            if "framework_memory_usage_mb" not in REGISTRY._names_to_collectors
-            else REGISTRY._names_to_collectors["framework_memory_usage_mb"]
+        self._prom_memory_usage = Gauge(
+            "framework_memory_usage_mb",
+            "Framework process memory usage in MB",
         )
-        self._prom_cpu_percent = (
-            Gauge(
-                "framework_cpu_percent",
-                "Framework process CPU usage percentage",
-            )
-            if "framework_cpu_percent" not in REGISTRY._names_to_collectors
-            else REGISTRY._names_to_collectors["framework_cpu_percent"]
+        self._prom_cpu_percent = Gauge(
+            "framework_cpu_percent",
+            "Framework process CPU usage percentage",
         )
 
         # Request latency histogram
-        self._prom_request_latency = (
-            Histogram(
-                "framework_request_latency_ms",
-                "End-to-end request latency in milliseconds (framework layer)",
-                buckets=[10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000],
-            )
-            if "framework_request_latency_ms" not in REGISTRY._names_to_collectors
-            else REGISTRY._names_to_collectors["framework_request_latency_ms"]
+        self._prom_request_latency = Histogram(
+            "framework_request_latency_ms",
+            "End-to-end request latency in milliseconds (framework layer)",
+            buckets=[10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000],
         )
 
         self._prometheus_initialized = True

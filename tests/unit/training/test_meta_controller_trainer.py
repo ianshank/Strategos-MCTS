@@ -443,8 +443,9 @@ class TestEarlyStopping:
 
         metrics = orchestrator.train(mock_data_loader, mock_data_loader)
 
-        # Should stop before 10 epochs
-        assert len(metrics) < 10
+        # Should stop before 10 epochs but must have run at least 1
+        assert len(metrics) > 0, "Training returned no metrics — possible initialization bug"
+        assert len(metrics) < 10, f"Early stopping did not trigger within 10 epochs (got {len(metrics)})"
 
     def test_check_early_stopping_method(self, training_config):
         """Test early stopping check logic."""

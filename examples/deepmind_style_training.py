@@ -13,7 +13,15 @@ Features demonstrated:
 """
 
 import asyncio
+import sys
 from pathlib import Path
+
+# Ensure stdout/stderr are UTF-8 on Windows (default cp1252 cannot encode
+# box-drawing / checkmark characters used in training output).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 import torch
 

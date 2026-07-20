@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Test Suite Hardening & Code Quality — Branch: `main` (2026-07-20)
 
 #### Fixed
+- **Code Hardening Pass (Phases 1-5):**
+  - **Storage imports:** Guarded `src/storage/__init__.py` and `s3_client.py` imports against missing optional dependencies (`tenacity`, `aioboto3`).
+  - **Metrics Collision:** Resolved collision by renaming `mcts_iterations_total` to `framework_mcts_iterations_total` in `metrics.py` and removing 11 redundant `REGISTRY._names_to_collectors` ternary checks.
+  - **Hardcoded Values:** Eliminated hardcoded version strings (`"1.0.0"`) in `rest_server.py`, delegating to `importlib.metadata` with `_APP_VERSION`. Removed magic numbers in BERT embedding layers.
+  - **Deprecations:** Replaced `datetime.utcnow()` with `datetime.now(UTC)` in `metrics.py`. Migrated Pydantic v1 `class Config:` to `model_config = ConfigDict(...)` in `rest_server.py`.
+  - **Test Isolation:** Hardened `test_demo_pipeline.py` and other integration tests against missing optional tools (`wandb`, `pinecone`). Replaced `sys.path.insert(0)` hacks. Tests now properly clean up using `pytest` fixtures instead of `shutil.rmtree`.
+  - **Windows Compatibility:** Added `sys.stdout.reconfigure(encoding="utf-8")` to `examples/` scripts to avoid `cp1252` encoding crashes.
+  - **Test Coverage:** Verified 10,090 tests passing with 93.65% coverage. Added `rich` to core dependencies for consistent output formatting.
 - **Async test compatibility** (`tests/test_deepmind_framework.py`): replaced deprecated
   `asyncio.get_event_loop().run_until_complete()` calls in `test_hrm_decomposition`,
   `test_trm_refine_solution`, and `test_neural_mcts_search` with `@pytest.mark.asyncio` /

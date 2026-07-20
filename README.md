@@ -83,6 +83,9 @@ This framework implements a multi-agent system combining hierarchical reasoning 
    bash scripts/run_docker_training.sh
    ```
 
+4. **Run Locally (No Docker):**
+   See **[`docs/RUN_ALL_LOCALLY.md`](docs/RUN_ALL_LOCALLY.md)** for detailed instructions and PowerShell scripts (`scripts/run_all_local.ps1`) to run the entire framework directly on Windows or macOS.
+
 ## 🏗️ Training Workflow
 
 The framework supports a comprehensive training lifecycle:
