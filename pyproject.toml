@@ -130,6 +130,7 @@ all = [
 benchmark = "src.benchmark.cli:main"
 harness = "src.framework.harness.cli:main"
 policy-lift = "src.benchmark.policy_lift:main"
+self-play-convergence = "src.training.self_play_convergence:main"
 validate-context-docs = "src.tools.context_docs:main"
 
 [project.urls]

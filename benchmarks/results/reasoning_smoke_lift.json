@@ -1,0 +1,35 @@
+{
+  "absolute_delta": 0.0,
+  "baseline_score": 1.0,
+  "confidence": 0.95,
+  "domain": "reasoning",
+  "lift_ci_lower_pct": 0.0,
+  "lift_ci_upper_pct": 0.0,
+  "lift_is_absolute_fallback": false,
+  "lift_pct": 0.0,
+  "meets_target": false,
+  "metric": "mean_reward",
+  "num_games": 30,
+  "point_meets_target": false,
+  "run": {
+    "baseline_checkpoint": null,
+    "checkpoint": "benchmarks/checkpoints/reasoning_smoke/ckpt_iter_5.pt",
+    "device": "cpu",
+    "max_moves": 50,
+    "network": {
+      "action_size": 8,
+      "dropout": 0.0,
+      "hidden_dims": [
+        512,
+        256
+      ],
+      "state_dim": 128,
+      "type": "mlp",
+      "use_batch_norm": false
+    },
+    "num_simulations": 16,
+    "seed": 0
+  },
+  "target_lift_pct": 20.0,
+  "trained_score": 1.0
+}
