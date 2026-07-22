@@ -64,7 +64,10 @@ dev = [
     # Cap ruff to the validated minor: ruff introduces new lint rules in minor releases,
     # so an unbounded range causes CI to drift and fail on code that passed locally.
     "ruff>=0.15.0,<0.16.0",
-    "black>=24.0,<27.0",
+    # Pin black to the validated minor for the same reason: black's stable style evolves
+    # across releases, so a wide range let CI (26.x) reformat files that an older local
+    # black left clean. Bump deliberately and re-run the gate when changing this pin.
+    "black>=26.3.0,<26.4.0",
     "pre-commit>=3.6.0",
     "bandit[toml]>=1.7.0",
     "pip-audit>=2.6.0",

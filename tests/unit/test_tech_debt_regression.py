@@ -12,8 +12,10 @@ def test_app_version_is_string():
     Ensures _APP_VERSION is loaded and is a string, preventing '1.0.0' magic numbers.
     """
     from src.api.rest_server import _APP_VERSION
+
     assert isinstance(_APP_VERSION, str)
     assert len(_APP_VERSION) > 0
+
 
 @pytest.mark.unit
 def test_storage_imports_gracefully():
@@ -23,8 +25,10 @@ def test_storage_imports_gracefully():
     if tenacity/aioboto3 are missing.
     """
     import src.storage as storage
+
     assert hasattr(storage, "S3_AVAILABLE")
     assert isinstance(storage.S3_AVAILABLE, bool)
+
 
 @pytest.mark.unit
 def test_metrics_no_collision_on_reload():
