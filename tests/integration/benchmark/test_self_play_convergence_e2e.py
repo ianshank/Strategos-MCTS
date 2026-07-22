@@ -73,6 +73,7 @@ def test_driver_checkpoint_feeds_policy_lift_gate(tmp_path):
     artifact = json.loads(output.read_text())
     assert artifact["domain"] == "reasoning"
     assert artifact["metric"] == "mean_reward"
-    assert artifact["lift_ci_lower_pct"] is not None
+    # Meaningful CI relation (not just "not None", which is always true for mean_reward).
+    assert artifact["lift_ci_lower_pct"] <= artifact["lift_pct"] <= artifact["lift_ci_upper_pct"]
     assert artifact["run"]["network"]["type"] == "mlp"
     assert artifact["run"]["num_simulations"] == 2

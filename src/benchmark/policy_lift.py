@@ -225,7 +225,7 @@ def build_network(
     return network.to(device)
 
 
-def _chess_default_architecture(spec: DomainSpec) -> dict[str, Any]:
+def chess_default_architecture(spec: DomainSpec) -> dict[str, Any]:
     """Conv defaults for adversarial board domains (currently chess-shaped)."""
     try:
         from src.games.chess.config import ChessBoardConfig
@@ -274,7 +274,7 @@ def load_architecture(
         arch = infer_mlp_architecture(state_dict)
     except ArchitectureError:
         if spec.metric == "win_rate":
-            return _chess_default_architecture(spec)
+            return chess_default_architecture(spec)
         raise
     if arch["action_size"] != spec.action_space_size:
         raise ArchitectureError(

@@ -25,6 +25,17 @@ from src.utils.stats import wilson_score_interval
 pytestmark = [pytest.mark.unit]
 
 
+@pytest.fixture(autouse=True)
+def _restore_domain_registry():
+    """Snapshot/restore the process-wide DomainRegistry so the fake_adversarial* domains
+    registered below do not leak into the rest of the session (the registry is a
+    class-level dict — registrations are global and otherwise never torn down)."""
+    snapshot = dict(DomainRegistry._registry)
+    yield
+    DomainRegistry._registry.clear()
+    DomainRegistry._registry.update(snapshot)
+
+
 class _TinyNet(nn.Module):
     def __init__(self, in_dim: int, n_actions: int):
         super().__init__()

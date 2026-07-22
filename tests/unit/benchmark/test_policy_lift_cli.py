@@ -349,7 +349,7 @@ class TestArchitectureResolutionFallbacks:
             single_agent=False,
             metric="win_rate",
         )
-        arch = pl._chess_default_architecture(spec)
+        arch = pl.chess_default_architecture(spec)
         assert arch["type"] == "resnet"
         assert arch["action_size"] == 4672
         assert arch["input_channels"] > 0

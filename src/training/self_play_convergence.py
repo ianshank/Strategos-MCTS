@@ -14,10 +14,12 @@ Design constraints (from the spec):
 
 - **One construction path.** The network is built through the gate's own
   :func:`src.benchmark.policy_lift.build_network` (conv/ResNet for adversarial
-  ``win_rate`` domains via :func:`~src.benchmark.policy_lift._chess_default_architecture`,
+  ``win_rate`` domains via :func:`src.benchmark.policy_lift.chess_default_architecture`,
   MLP for single-agent ``mean_reward`` domains). The resolved architecture dict is
-  written verbatim into the sidecar, so the gate reconstructs the *same* network —
-  no parallel network-construction path can drift from the gate's resolver.
+  written verbatim into the sidecar, so the gate reconstructs the *same* network — no
+  parallel network-construction path can drift from the gate's resolver. On ``--resume``
+  the checkpoint's own sidecar is the authoritative architecture source (mirroring the
+  gate), so a change in defaults between runs cannot corrupt the weight load.
 - **The driver never computes or asserts lift.** Measuring the >=20% gate remains the
   sole responsibility of ``src.benchmark.policy_lift``.
 """
@@ -26,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import re
 import sys
 from pathlib import Path
@@ -34,8 +37,8 @@ from typing import Any
 import numpy as np
 import torch
 
-from src.benchmark.policy_lift import _chess_default_architecture, build_network
-from src.config.constants import M5_DEFAULT_MLP_HIDDEN_DIMS
+from src.benchmark.policy_lift import build_network, chess_default_architecture
+from src.config.constants import M5_DEFAULT_MLP_HIDDEN_DIMS, M5_DEFAULT_SELF_PLAY_SIMULATIONS
 from src.framework.domain_registry import METRIC_WIN_RATE, DomainRegistry, DomainSpec
 from src.observability.logging import get_logger
 from src.training.self_play_trainer import SelfPlayConfig, SelfPlayTrainer
@@ -47,13 +50,40 @@ EXIT_OK = 0
 EXIT_ERROR = 2
 
 # Checkpoints are named by the iteration they complete so ``--resume`` can find the
-# latest and continue numbering monotonically.
+# latest and continue numbering monotonically. The template and pattern are paired —
+# ``test_checkpoint_name_roundtrips`` guards them against drift.
 _CHECKPOINT_TEMPLATE = "ckpt_iter_{n}.pt"
 _CHECKPOINT_RE = re.compile(r"^ckpt_iter_(\d+)\.pt$")
+SIDECAR_SUFFIX = ".meta.json"
 
-# A deliberately tiny default: the full-run default (MCTSConfig.num_simulations = 1600)
-# is far too expensive for smoke/plumbing runs, so callers opt into depth explicitly.
-DEFAULT_NUM_SIMULATIONS = 16
+# numpy's np.random.seed accepts a seed in [0, 2**32 - 1]; torch is more lenient but we
+# validate against the stricter bound so both seeders succeed.
+_MAX_SEED = 2**32 - 1
+
+__all__ = [
+    "EXIT_OK",
+    "EXIT_ERROR",
+    "build_parser",
+    "main",
+    "resolve_architecture",
+    "run",
+]
+
+
+def _positive_int(value: str) -> int:
+    """argparse type: a strictly-positive integer (``>= 1``)."""
+    parsed = int(value)
+    if parsed < 1:
+        raise argparse.ArgumentTypeError(f"must be a positive integer (>= 1), got {parsed}")
+    return parsed
+
+
+def _seed_int(value: str) -> int:
+    """argparse type: a seed within numpy's accepted range ``[0, 2**32 - 1]``."""
+    parsed = int(value)
+    if not 0 <= parsed <= _MAX_SEED:
+        raise argparse.ArgumentTypeError(f"must be in [0, {_MAX_SEED}], got {parsed}")
+    return parsed
 
 
 def resolve_architecture(spec: DomainSpec) -> dict[str, Any]:
@@ -66,7 +96,7 @@ def resolve_architecture(spec: DomainSpec) -> dict[str, Any]:
     if spec.metric == METRIC_WIN_RATE:
         # Conv/ResNet default for adversarial board domains (chess). Reused from the
         # gate so the driver cannot build an architecture the gate cannot resolve.
-        return _chess_default_architecture(spec)
+        return chess_default_architecture(spec)
 
     tensor = spec.initial_state_fn().to_tensor()
     if tensor.dim() != 1:
@@ -90,6 +120,20 @@ def resolve_architecture(spec: DomainSpec) -> dict[str, Any]:
     }
 
 
+def _sidecar_architecture(checkpoint: Path) -> dict[str, Any] | None:
+    """Return the ``network`` architecture dict from a checkpoint's sidecar, or ``None``.
+
+    ``None`` means the sidecar is absent or carries no ``network`` object, in which case
+    the caller falls back to :func:`resolve_architecture`.
+    """
+    sidecar = checkpoint.with_name(checkpoint.name + SIDECAR_SUFFIX)
+    if not sidecar.is_file():
+        return None
+    meta = json.loads(sidecar.read_text())  # JSONDecodeError surfaces as a clean error exit
+    network = meta.get("network") if isinstance(meta, dict) else None
+    return network if isinstance(network, dict) else None
+
+
 def _latest_checkpoint(checkpoint_dir: Path) -> tuple[int, Path] | None:
     """Return ``(iteration, path)`` for the highest-numbered checkpoint, or ``None``."""
     if not checkpoint_dir.is_dir():
@@ -105,8 +149,15 @@ def _latest_checkpoint(checkpoint_dir: Path) -> tuple[int, Path] | None:
     return best
 
 
+def _self_play_config(games_per_iteration: int | None) -> SelfPlayConfig:
+    """Build the self-play config, overriding games/iteration only when provided."""
+    if games_per_iteration is None:
+        return SelfPlayConfig()
+    return SelfPlayConfig(num_games_per_iteration=games_per_iteration)
+
+
 async def run(args: argparse.Namespace) -> int:
-    """Execute the self-play driver; returns the process exit code."""
+    """Execute the self-play driver; returns the process exit code (0 ok, 2 error)."""
     try:
         spec = DomainRegistry.get(args.domain)
     except KeyError as exc:
@@ -116,54 +167,77 @@ async def run(args: argparse.Namespace) -> int:
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
+    # Build the network + trainer and (optionally) load a resume checkpoint. Any failure
+    # here — arch resolution (ValueError), a bad --device or a resume state_dict shape
+    # mismatch (RuntimeError), or an unreadable sidecar (OSError/JSONDecodeError) — is
+    # reported as a clean error exit rather than a raw traceback, mirroring the gate CLI.
     try:
-        # ArchitectureError (from the gate) subclasses ValueError, as does the settings
-        # error raised when a single-agent domain needs credentials it cannot find.
-        arch = resolve_architecture(spec)
-    except ValueError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return EXIT_ERROR
+        resume_from = _latest_checkpoint(args.checkpoint_dir) if args.resume else None
+        # On resume, the checkpoint's own sidecar is authoritative for the architecture
+        # (spec AC-2), so a change in resolve_architecture defaults cannot corrupt the load.
+        arch = _sidecar_architecture(resume_from[1]) if resume_from is not None else None
+        if arch is None:
+            arch = resolve_architecture(spec)
 
-    network = build_network(arch, spec, args.device)
+        mcts_config = MCTSConfig()
+        mcts_config.num_simulations = args.num_simulations
+        trainer = SelfPlayTrainer(
+            network=build_network(arch, spec, args.device),
+            initial_state_fn=spec.initial_state_fn,
+            action_space_size=spec.action_space_size,
+            mcts_config=mcts_config,
+            config=_self_play_config(args.games_per_iteration),
+            single_agent=spec.single_agent,
+            device=args.device,
+            seed=args.seed,
+        )
 
-    mcts_config = MCTSConfig()
-    mcts_config.num_simulations = args.num_simulations
-    config_kwargs: dict[str, Any] = {}
-    if args.games_per_iteration is not None:
-        config_kwargs["num_games_per_iteration"] = args.games_per_iteration
-
-    trainer = SelfPlayTrainer(
-        network=network,
-        initial_state_fn=spec.initial_state_fn,
-        action_space_size=spec.action_space_size,
-        mcts_config=mcts_config,
-        config=SelfPlayConfig(**config_kwargs),
-        single_agent=spec.single_agent,
-        device=args.device,
-        seed=args.seed,
-    )
-
-    start_iteration = 0
-    if args.resume:
-        latest = _latest_checkpoint(args.checkpoint_dir)
-        if latest is None:
-            logger.info(
-                "No checkpoint to resume from; starting fresh",
-                extra={"checkpoint_dir": str(args.checkpoint_dir)},
-            )
-        else:
-            start_iteration, latest_path = latest
+        start_iteration = 0
+        if resume_from is not None:
+            start_iteration, latest_path = resume_from
             trainer.load_checkpoint(latest_path)
             logger.info(
                 "Resumed from checkpoint",
                 extra={"iteration": start_iteration, "path": str(latest_path)},
             )
+        elif args.resume:
+            logger.info(
+                "No checkpoint to resume from; starting fresh",
+                extra={"checkpoint_dir": str(args.checkpoint_dir)},
+            )
+    except (ValueError, RuntimeError, OSError, json.JSONDecodeError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_ERROR
 
-    try:
-        for offset in range(1, args.iterations + 1):
-            iteration = start_iteration + offset  # monotonic across resumes
+    logger.info(
+        "Self-play convergence run starting",
+        extra={
+            "domain": args.domain,
+            "metric": spec.metric,
+            "single_agent": spec.single_agent,
+            "iterations": args.iterations,
+            "num_simulations": args.num_simulations,
+            "games_per_iteration": args.games_per_iteration,
+            "device": args.device,
+            "seed": args.seed,
+            "checkpoint_dir": str(args.checkpoint_dir),
+            "resume": args.resume,
+            "start_iteration": start_iteration,
+        },
+    )
+    logger.debug("Resolved network architecture", extra={"architecture": arch})
+
+    for offset in range(1, args.iterations + 1):
+        iteration = start_iteration + offset  # monotonic across resumes
+        try:
             metrics = await trainer.train_iteration()
-            checkpoint_path = args.checkpoint_dir / _CHECKPOINT_TEMPLATE.format(n=iteration)
+        except RuntimeError as exc:  # CUDA OOM, shape errors, ... — keep the trace in logs
+            logger.exception("Self-play training iteration failed", extra={"iteration": iteration})
+            print(f"error: training failed at iteration {iteration}: {exc}", file=sys.stderr)
+            return EXIT_ERROR
+
+        checkpoint_path = args.checkpoint_dir / _CHECKPOINT_TEMPLATE.format(n=iteration)
+        try:
             trainer.save_checkpoint(
                 checkpoint_path,
                 metadata={
@@ -173,19 +247,32 @@ async def run(args: argparse.Namespace) -> int:
                     "seed": args.seed,
                 },
             )
-            logger.info(
-                "Iteration checkpoint saved",
-                extra={
-                    "iteration": iteration,
-                    "path": str(checkpoint_path),
-                    "total_loss": metrics.total_loss,
-                    "examples_collected": metrics.examples_collected,
-                },
-            )
-    except OSError as exc:  # unwritable checkpoint dir, disk full, ...
-        print(f"error: could not write checkpoint: {exc}", file=sys.stderr)
-        return EXIT_ERROR
+        except OSError as exc:  # unwritable checkpoint dir, disk full, ...
+            print(f"error: could not write checkpoint: {exc}", file=sys.stderr)
+            return EXIT_ERROR
 
+        logger.info(
+            "Iteration checkpoint saved",
+            extra={
+                "iteration": iteration,
+                "path": str(checkpoint_path),
+                "total_loss": metrics.total_loss,
+                "policy_loss": metrics.policy_loss,
+                "value_loss": metrics.value_loss,
+                "games_played": metrics.games_played,
+                "examples_collected": metrics.examples_collected,
+                "train_steps": metrics.train_steps,
+                "buffer_size": metrics.buffer_size,
+            },
+        )
+
+    logger.info(
+        "Self-play convergence run complete",
+        extra={
+            "final_iteration": start_iteration + args.iterations,
+            "checkpoint_dir": str(args.checkpoint_dir),
+        },
+    )
     return EXIT_OK
 
 
@@ -199,14 +286,19 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--domain", required=True, help="Registered domain name (e.g. chess, reasoning)")
-    parser.add_argument("--iterations", type=int, default=1, help="Self-play/train iterations to run this invocation")
+    parser.add_argument(
+        "--iterations",
+        type=_positive_int,
+        default=1,
+        help="Self-play/train iterations to run this invocation (>= 1)",
+    )
     parser.add_argument(
         "--checkpoint-dir",
         type=Path,
         required=True,
         help="Directory for checkpoints and their .meta.json sidecars",
     )
-    parser.add_argument("--seed", type=int, default=0, help="Seed for network init, self-play, and training")
+    parser.add_argument("--seed", type=_seed_int, default=0, help="Seed for network init, self-play, and training")
     parser.add_argument("--device", default="cpu", help="Torch device (default: cpu)")
     parser.add_argument(
         "--resume",
@@ -215,15 +307,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--num-simulations",
-        type=int,
-        default=DEFAULT_NUM_SIMULATIONS,
-        help=f"MCTS simulations per move (default: {DEFAULT_NUM_SIMULATIONS}; raise for real chess convergence)",
+        type=_positive_int,
+        default=M5_DEFAULT_SELF_PLAY_SIMULATIONS,
+        help=(
+            f"MCTS simulations per move (>= 1; default: {M5_DEFAULT_SELF_PLAY_SIMULATIONS}; "
+            "raise substantially for real chess convergence)"
+        ),
     )
     parser.add_argument(
         "--games-per-iteration",
-        type=int,
+        type=_positive_int,
         default=None,
-        help="Self-play games per iteration (default: SelfPlayConfig's value)",
+        help="Self-play games per iteration (>= 1; default: SelfPlayConfig's value)",
     )
     return parser
 
