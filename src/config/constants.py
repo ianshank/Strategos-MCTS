@@ -270,6 +270,12 @@ M5_MIN_BASELINE: Final[float] = 0.05
 M5_DEFAULT_GAMES_WIN_RATE: Final[int] = 100
 M5_DEFAULT_GAMES_MEAN_REWARD: Final[int] = 30
 
+# MCTS simulations per move for the self-play convergence driver's default (cheap
+# smoke/plumbing runs). Deliberately tiny — the full neural default
+# (system_config.MCTSConfig.num_simulations = 1600) is far too expensive for a driver
+# smoke run; real chess convergence overrides it via --num-simulations.
+M5_DEFAULT_SELF_PLAY_SIMULATIONS: Final[int] = 16
+
 # Confidence level for the lift interval (must be a key of the z-table in
 # src/utils/stats.py: 0.90 / 0.95 / 0.99).
 M5_DEFAULT_CONFIDENCE: Final[float] = 0.95

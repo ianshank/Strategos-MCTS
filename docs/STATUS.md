@@ -109,6 +109,46 @@ python -m src.benchmark.policy_lift --domain chess --checkpoint <trained.pt> \
   python-chess is actually installed — it had never run in CI. The `chess-tests` CI job
   excludes that directory until a repair pass lands.
 
+## M5 driver plumbing smoke (non-gate, synthetic domain)
+
+> **Added 2026-07-22.** This is a **CLI-plumbing smoke result — NOT a decision-quality result.**
+> It does **not** satisfy the M5 gate (AC-1/AC-3 require chess) and makes no ≥20% claim; the
+> "No ≥20% claim exists yet" bullet above stands unchanged.
+
+The `src.training.self_play_convergence` driver and the `policy_lift` gate now run end-to-end on the
+synthetic single-agent `reasoning` domain, exercising the full checkpoint → `.meta.json` sidecar →
+gate path (committed artifact: `benchmarks/results/reasoning_smoke_lift.json`). The lift is **~0 by
+construction**: `ReasoningState`'s reward saturates at 1.0 for any policy and greedy rollouts are
+deterministic, so baseline ≈ trained and the interval collapses to a point. Raw artifact fields
+(never a bare "X% lift"):
+
+| field | value |
+|---|---|
+| `domain` / `metric` | `reasoning` / `mean_reward` |
+| `lift_pct` | 0.0 |
+| `lift_ci_lower_pct` / `lift_ci_upper_pct` | 0.0 / 0.0 (zero-width; deterministic rollouts) |
+| `lift_is_absolute_fallback` | false |
+| `meets_target` | **false** (exit 1 — gate not met, as expected) |
+| `num_games` / `run.num_simulations` | 30 / 16 |
+| `baseline_score` / `trained_score` | 1.0 / 1.0 (reward saturation) |
+
+Reproduce (CPU-only, no GPU; a dummy key only satisfies Settings validation — no network call):
+
+```bash
+export OPENAI_API_KEY=sk-test-key-not-real   # Settings requires an 'sk-' key of length >= 20
+python -m src.training.self_play_convergence --domain reasoning --iterations 5 \
+  --checkpoint-dir benchmarks/checkpoints/reasoning_smoke --seed 0 --device cpu \
+  --num-simulations 16 --games-per-iteration 4
+python -m src.benchmark.policy_lift --domain reasoning \
+  --checkpoint benchmarks/checkpoints/reasoning_smoke/ckpt_iter_5.pt \
+  --num-games 30 --num-simulations 16 --seed 0 \
+  --output benchmarks/results/reasoning_smoke_lift.json   # exit 1 = gate not met (expected)
+```
+
+The real ≥20% claim requires the adversarial **chess** domain (win-rate / Wilson CI), trained by the
+operator with the `chess` extra + a GPU; the M5 gate section above — not this one — records that
+result when it lands.
+
 ## Implications for the plan
 
 - **Phase 2 is largely satisfied at the gate level** (93.65% ≥ 85%). Remaining work is opportunistic,

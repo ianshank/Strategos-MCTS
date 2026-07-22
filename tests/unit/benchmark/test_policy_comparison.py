@@ -18,10 +18,22 @@ from torch.nn import functional as F
 from src.benchmark import policy_comparison as pc
 from src.framework.domain_registry import METRIC_WIN_RATE, DomainRegistry, register_domain
 from src.framework.mcts.single_agent_domains import make_reasoning_state
+from src.training.self_play_trainer import SelfPlayConfig, SelfPlayTrainer
 from src.training.system_config import MCTSConfig
 from src.utils.stats import wilson_score_interval
 
 pytestmark = [pytest.mark.unit]
+
+
+@pytest.fixture(autouse=True)
+def _restore_domain_registry():
+    """Snapshot/restore the process-wide DomainRegistry so the fake_adversarial* domains
+    registered below do not leak into the rest of the session (the registry is a
+    class-level dict — registrations are global and otherwise never torn down)."""
+    snapshot = dict(DomainRegistry._registry)
+    yield
+    DomainRegistry._registry.clear()
+    DomainRegistry._registry.update(snapshot)
 
 
 class _TinyNet(nn.Module):
@@ -221,6 +233,44 @@ def test_end_to_end_single_agent_runs():
     assert 0.0 <= result.baseline_score <= 1.0
     assert 0.0 <= result.trained_score <= 1.0
     assert isinstance(result.lift_pct, float)
+    assert isinstance(result.lift_ci_lower_pct, float)
+    assert isinstance(result.lift_ci_upper_pct, float)
+    assert result.lift_ci_lower_pct <= result.lift_ci_upper_pct
+
+
+def test_train_iteration_then_compare_runs():
+    """Real driver-style path: one self-play train iteration, then a comparison — no mocks.
+
+    Asserts only structural fields (a tiny reasoning run is degenerate: deterministic greedy
+    rollouts + saturated reward give a zero-width CI, so magnitude/`meets_target` are not asserted).
+    """
+    in_dim = make_reasoning_state().to_tensor().shape[0]
+    size = DomainRegistry.action_space_size("reasoning")
+    cfg = MCTSConfig()
+    cfg.num_simulations = 4
+
+    trainer = SelfPlayTrainer(
+        network=_TinyNet(in_dim, size),
+        initial_state_fn=make_reasoning_state,
+        action_space_size=size,
+        mcts_config=cfg,
+        config=SelfPlayConfig(num_games_per_iteration=1, batch_size=4, buffer_capacity=64),
+        single_agent=True,
+        seed=0,
+    )
+    asyncio.run(trainer.train_iteration())
+
+    result = asyncio.run(
+        pc.compare_policies(
+            "reasoning",
+            _TinyNet(in_dim, size),
+            trainer.network,
+            num_games=2,
+            mcts_config=cfg,
+            max_moves=10,
+        )
+    )
+    assert result.lift_ci_lower_pct is not None
     assert isinstance(result.lift_ci_lower_pct, float)
     assert isinstance(result.lift_ci_upper_pct, float)
     assert result.lift_ci_lower_pct <= result.lift_ci_upper_pct
