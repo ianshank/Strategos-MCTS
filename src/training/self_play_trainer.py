@@ -52,6 +52,9 @@ class SelfPlayConfig:
     value_loss_weight: float = 1.0
     grad_clip: float = 1.0
     train_steps_per_iteration: int = 1
+    use_amp: bool = False
+    compile_model: bool = False
+    pin_memory: bool = False
 
 
 @dataclass
@@ -94,7 +97,18 @@ class SelfPlayTrainer:
             torch.manual_seed(seed)
             np.random.seed(seed)
 
-        self.network = network.to(device)
+        self.raw_network = network.to(device)
+        self.network = self.raw_network
+        if self.config.compile_model and hasattr(torch, "compile"):
+            try:
+                self.network = torch.compile(self.raw_network)
+                logger.info("Compiled PyTorch model with torch.compile")
+            except Exception as err:
+                logger.warning("Failed to compile model with torch.compile: %s", err)
+
+        self.use_amp = self.config.use_amp and self.device.startswith("cuda")
+        self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp) if self.use_amp else None
+
         self.mcts = NeuralMCTS(self.network, self.mcts_config, device=device, single_agent=single_agent)
         self.collector = SelfPlayCollector(self.mcts, self.mcts_config, action_space_size=action_space_size)
         self.loss_fn = AlphaZeroLoss(value_loss_weight=self.config.value_loss_weight)
@@ -108,6 +122,8 @@ class SelfPlayTrainer:
                 "action_space_size": action_space_size,
                 "device": device,
                 "buffer_capacity": self.config.buffer_capacity,
+                "use_amp": self.use_amp,
+                "compile_model": self.config.compile_model,
             },
         )
 
@@ -138,17 +154,33 @@ class SelfPlayTrainer:
         batch = [self.buffer[i] for i in idxs]
 
         states = torch.stack([self._as_tensor(ex.state) for ex in batch]).to(self.device)
+        if self.config.pin_memory and self.device.startswith("cuda"):
+            states = states.pin_memory()
         target_policy = torch.tensor(np.stack([ex.policy_target for ex in batch]), dtype=torch.float32).to(self.device)
         target_value = torch.tensor([ex.value_target for ex in batch], dtype=torch.float32).to(self.device)
 
         self.network.train()
         self.optimizer.zero_grad()
-        policy_logits, value = self.network(states)
-        total_loss, loss_dict = self.loss_fn(policy_logits, value, target_policy, target_value)
-        total_loss.backward()
-        if self.config.grad_clip and self.config.grad_clip > 0:
-            nn.utils.clip_grad_norm_(self.network.parameters(), self.config.grad_clip)
-        self.optimizer.step()
+
+        if self.use_amp:
+            with torch.cuda.amp.autocast():
+                policy_logits, value = self.network(states)
+                total_loss, loss_dict = self.loss_fn(policy_logits, value, target_policy, target_value)
+            assert self.scaler is not None
+            self.scaler.scale(total_loss).backward()
+            if self.config.grad_clip and self.config.grad_clip > 0:
+                self.scaler.unscale_(self.optimizer)
+                nn.utils.clip_grad_norm_(self.network.parameters(), self.config.grad_clip)
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+        else:
+            policy_logits, value = self.network(states)
+            total_loss, loss_dict = self.loss_fn(policy_logits, value, target_policy, target_value)
+            total_loss.backward()
+            if self.config.grad_clip and self.config.grad_clip > 0:
+                nn.utils.clip_grad_norm_(self.network.parameters(), self.config.grad_clip)
+            self.optimizer.step()
+
         return {key: float(val) for key, val in loss_dict.items()}
 
     async def train_iteration(self, num_games: int | None = None) -> SelfPlayIterationMetrics:
@@ -194,7 +226,10 @@ class SelfPlayTrainer:
         """
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(self.network.state_dict(), path)
+        torch.save(self.raw_network.state_dict(), path)
+        if torch.cuda.is_available() and self.device.startswith("cuda"):
+            torch.cuda.empty_cache()
+
         if metadata is not None:
             sidecar = path.with_name(path.name + ".meta.json")
             # schema_version is stamped last so caller metadata can never override it.

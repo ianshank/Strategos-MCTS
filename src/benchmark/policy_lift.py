@@ -219,7 +219,12 @@ def build_network(
             action_size=int(arch.get("action_size", spec.action_space_size)),
         )
         board_size = int(arch.get("board_size", M5_DEFAULT_ADVERSARIAL_BOARD_SIZE))
-        network = create_policy_value_network(config, board_size=board_size, device=device)
+        board_rows = int(arch.get("board_rows", board_size))
+        board_cols = int(arch.get("board_cols", board_size))
+        network = create_policy_value_network(
+            config, board_size=board_size, board_rows=board_rows, board_cols=board_cols, device=device
+        )
+
     else:
         raise ArchitectureError(f"Unknown network architecture type '{arch_type}' (expected 'mlp' or 'resnet')")
     return network.to(device)

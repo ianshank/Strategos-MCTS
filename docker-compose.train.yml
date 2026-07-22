@@ -17,31 +17,28 @@ version: '3.8'
 
 services:
   # ===========================================================================
-  # Training Service - Demo Mode (16GB GPU)
+  # Training Service - Connect Four Convergence
   # ===========================================================================
-  training-demo:
+  training-connect-four:
     build:
       context: .
       dockerfile: Dockerfile.train
-      target: demo
-    image: langgraph-mcts-train:demo
-    container_name: mcts-training-demo
+    image: langgraph-mcts-train:latest
+    container_name: mcts-training-connect-four
     runtime: nvidia
-    command: ["python", "-m", "training.cli", "train", "--demo", "--skip-verification"]
+    command: ["python", "-m", "src.training.self_play_convergence", "--domain", "connect_four", "--profile", "dev", "--checkpoint-dir", "/app/checkpoints/connect_four"]
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - CUDA_VISIBLE_DEVICES=0
-      - DEMO_MODE=1
-      - PINECONE_API_KEY=${PINECONE_API_KEY}
-      - WANDB_API_KEY=${WANDB_API_KEY}
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - TRAINING_USE_MIXED_PRECISION=true
+      - TRAINING_CUDA_MEMORY_FRACTION=0.9
+      - WANDB_API_KEY=${WANDB_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     volumes:
-      - ./training:/app/training
+      - ./src:/app/src
       - ./checkpoints:/app/checkpoints
       - ./logs:/app/logs
       - ./cache:/app/cache
-      - ./reports:/app/reports
     deploy:
       resources:
         reservations:
@@ -51,31 +48,28 @@ services:
               capabilities: [gpu]
     networks:
       - training-network
-    healthcheck:
-      test: ["CMD", "python", "/app/healthcheck.py"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     restart: unless-stopped
 
   # ===========================================================================
-  # Training Service - Production Mode
+  # Training Service - Chess Convergence
   # ===========================================================================
-  training-prod:
+  training-chess:
     build:
       context: .
       dockerfile: Dockerfile.train
-      target: production
-    image: langgraph-mcts-train:prod
-    container_name: mcts-training-prod
+    image: langgraph-mcts-train:latest
+    container_name: mcts-training-chess
     runtime: nvidia
+    command: ["python", "-m", "src.training.self_play_convergence", "--domain", "chess", "--profile", "full", "--checkpoint-dir", "/app/checkpoints/chess"]
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-      - PINECONE_API_KEY=${PINECONE_API_KEY}
-      - WANDB_API_KEY=${WANDB_API_KEY}
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - CUDA_VISIBLE_DEVICES=0
+      - TRAINING_USE_MIXED_PRECISION=true
+      - TRAINING_CUDA_MEMORY_FRACTION=0.9
+      - WANDB_API_KEY=${WANDB_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     volumes:
-      - ./training:/app/training:ro
+      - ./src:/app/src
       - ./checkpoints:/app/checkpoints
       - ./logs:/app/logs
       - ./cache:/app/cache
@@ -91,6 +85,7 @@ services:
     profiles:
       - production
     restart: unless-stopped
+
 
 networks:
   training-network:

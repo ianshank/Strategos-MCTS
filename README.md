@@ -47,14 +47,13 @@ This framework implements a multi-agent system combining hierarchical reasoning 
 - **MCTS vs single-shot comparison**: `/compare` + `demo.py --compare` + Gradio UI (`app.py`, `[ui]` extra).
 - All gated by settings flags (`ENABLE_STREAMING` / `ENABLE_GRAPH_VISUALIZATION` / `ENABLE_DEMO_COMPARISON`).
 
-### 🔁 Neural Self-Play (M5)
-- **Generalized `SelfPlayTrainer`** (`src/training/self_play_trainer.py`) with a single-agent path for
-  non-adversarial domains, composing neural MCTS + replay buffer + AlphaZero loss (torch-safe checkpoints).
-- **Domain registry** (`src/framework/domain_registry.py`) — config-driven selection; reasoning/planning
-  domains plus a schema-agnostic hashable-action wrapper.
-- **Policy-comparison benchmark** (`src/benchmark/policy_comparison.py`) with a domain-type-aware
-  decision-quality lift metric, and a **meta-controller learning loop**
-  (`docs/META_CONTROLLER_TRAINING.md`).
+### 🔁 Neural Self-Play & Fast Gameplay (M5+)
+- **Generalized `SelfPlayTrainer`** (`src/training/self_play_trainer.py`) supporting FP16 mixed precision, `torch.compile`, pinned memory, and non-pickle checkpoint sidecars.
+- **Fast Gameplay Domains** (`docs/GAME_DOMAINS.md`): Connect Four (`src/games/connect_four/`), Othello / Reversi (`src/games/othello/`), Chess, and single-agent reasoning/planning domains with zero required C dependencies.
+- **GPU Hardware Introspection** (`docs/GPU_TRAINING_GUIDE.md`): `src/utils/gpu_utils.py` for pre-flight memory validation, `GPUMemoryTracker`, and CUDA allocation fraction enforcement.
+- **Operational Training Profiles**: `--profile {smoke,dev,full}` presets for instant plumbing validation, dev testing, and full self-play training.
+- **Policy-comparison benchmark** (`src/benchmark/policy_comparison.py`) with a domain-type-aware decision-quality lift metric and a **meta-controller learning loop** (`docs/META_CONTROLLER_TRAINING.md`).
+
 
 ## 📦 Installation
 

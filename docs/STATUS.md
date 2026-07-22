@@ -15,16 +15,17 @@
 
 | Metric | Value |
 |---|---|
-| Full test suite | **10,090 passed, 0 failed, 134 skipped** (excludes `slow` marker) |
-| Unit tests (`tests/unit/`) | **8,775+ passed, 0 failed** |
-| Overall branch coverage (`src/`) | **93.65%** (gate: `fail_under = 85.0`) ✅ |
+| Full test suite | **10,136+ passed, 0 failed, 66 skipped** (excludes `slow` marker) |
+| Unit tests (`tests/unit/`) | **8,690 passed, 0 failed** |
+| Overall branch coverage (`src/`) | **93.35%** (gate: `fail_under = 85.0`) ✅ |
 | `ruff check src/ tests/` | **clean** — 0 issues ✅ |
 | `black src/ tests/ --check --line-length 120` | **clean** ✅ |
-| `mypy src/` (strict pins) | **clean** — no issues in 305 source files ✅ |
-| Wall time (full non-slow suite) | ~278s (4m 38s) |
+| `mypy src/` (strict pins) | **clean** — no issues in 320 source files ✅ |
+| Wall time (full non-slow suite) | ~253s (4m 13s) |
 
-The gate-enforcing total (93.65%) is well above 85%. This reflects Phases 0–5 (through the M5
-self-play stack) plus the July 2026 test hardening pass.
+The gate-enforcing total (93.35%) is well above 85%. This reflects Phases 0–5 (through the M5
+self-play stack), the July 2026 test hardening pass, and the GPU training & gameplay domain extensions (Connect Four, Othello, GPU hardware utils, and training profiles).
+
 
 
 ## How to reproduce

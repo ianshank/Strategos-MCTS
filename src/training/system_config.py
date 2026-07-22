@@ -289,6 +289,24 @@ class SystemConfig:
             config_dict = json.load(f)
         return cls.from_dict(config_dict)
 
+    @classmethod
+    def from_settings(cls) -> "SystemConfig":
+        """Create SystemConfig with values populated from application Settings."""
+        from src.config.settings import get_settings
+
+        settings = get_settings()
+        config = cls()
+        if settings.TORCH_DEVICE_OVERRIDE:
+            config.device = settings.TORCH_DEVICE_OVERRIDE
+
+        config.use_mixed_precision = settings.TRAINING_USE_MIXED_PRECISION
+        config.gradient_checkpointing = settings.TRAINING_GRADIENT_CHECKPOINTING
+        config.compile_model = settings.TRAINING_COMPILE_MODEL
+        config.distributed = settings.TRAINING_DISTRIBUTED
+        config.world_size = settings.TRAINING_WORLD_SIZE
+        config.backend = settings.TRAINING_BACKEND
+        return config
+
 
 # Preset configurations for different use cases
 def get_small_config() -> SystemConfig:

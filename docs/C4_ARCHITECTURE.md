@@ -173,12 +173,16 @@ graph TB
 | **Parallel MCTS** | Python, AsyncIO | Tree-parallel search with virtual-loss collision avoidance |
 | **Meta Controller** | PyTorch, GRU/BERT | Dynamic routing of queries to optimal agents |
 | **Assembly Router** | Python, NLP | Feature extraction (`ConceptExtractor`) → HRM/TRM/MCTS routing heuristics |
-| **Policy-Value Network** | PyTorch, ResNet | Predicts action probabilities and values |
+| **Policy-Value Network** | PyTorch, ResNet | Predicts action probabilities and values for square & rectangular boards (`(C, H, W)`) |
+| **Gameplay Domains** | Python, NumPy, PyTorch | Multi-domain environment suite (`chess`, `connect_four`, `othello`, reasoning, planning) |
+| **GPU Introspection** | Python, PyTorch | Memory tracking (`GPUMemoryTracker`), pre-flight checks, CUDA fraction clamping |
+| **Training Profiles** | Python | Standardized operational presets (`smoke`, `dev`, `full`) for MCTS self-play training |
 | **FastAPI Server** | FastAPI, Uvicorn | REST API for inference (streaming, graph viz, comparison) |
 | **Inference Engine** | PyTorch | Model inference and prediction |
 | **Replay Buffer** | Python, NumPy | Stores and samples experiences (torch-safe checkpoints) |
 | **Vector Store** | Pinecone | RAG knowledge base for retrieval |
 | **Prometheus Metrics** | prometheus-client | Counters/histograms for agents, MCTS, LLM calls; `/metrics` endpoint |
+
 
 ---
 

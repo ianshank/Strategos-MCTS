@@ -37,9 +37,9 @@ from typing import Any
 import numpy as np
 import torch
 
-from src.benchmark.policy_lift import build_network, chess_default_architecture
+from src.benchmark.policy_lift import build_network
 from src.config.constants import M5_DEFAULT_MLP_HIDDEN_DIMS, M5_DEFAULT_SELF_PLAY_SIMULATIONS
-from src.framework.domain_registry import METRIC_WIN_RATE, DomainRegistry, DomainSpec
+from src.framework.domain_registry import DomainRegistry, DomainSpec
 from src.observability.logging import get_logger
 from src.training.self_play_trainer import SelfPlayConfig, SelfPlayTrainer
 from src.training.system_config import MCTSConfig
@@ -89,27 +89,28 @@ def _seed_int(value: str) -> int:
 def resolve_architecture(spec: DomainSpec) -> dict[str, Any]:
     """Resolve the network architecture dict for ``spec``, reusing the gate's builders.
 
-    Adversarial ``win_rate`` domains (chess) use the gate's conv/ResNet default;
-    single-agent ``mean_reward`` domains use an MLP sized to the domain's 1-D state
-    tensor. The returned dict is what gets persisted to the checkpoint sidecar.
+    3-D state tensors (adversarial board domains like chess, connect_four, othello) use ResNet;
+    1-D state vectors (single-agent reasoning/planning) use MLP.
+    The returned dict is what gets persisted to the checkpoint sidecar.
     """
-    if spec.metric == METRIC_WIN_RATE:
-        # Conv/ResNet default for adversarial board domains (chess). Reused from the
-        # gate so the driver cannot build an architecture the gate cannot resolve.
-        return chess_default_architecture(spec)
-
     tensor = spec.initial_state_fn().to_tensor()
+    if tensor.dim() == 3:
+        # Conv/ResNet for 3-D board domains
+        return {
+            "type": "resnet",
+            "input_channels": int(tensor.shape[0]),
+            "board_rows": int(tensor.shape[1]),
+            "board_cols": int(tensor.shape[2]),
+            "board_size": int(max(tensor.shape[1], tensor.shape[2])),
+            "action_size": spec.action_space_size,
+        }
+
     if tensor.dim() != 1:
         raise ValueError(
-            f"Domain '{spec.name}' produces a {tensor.dim()}-D state tensor; the MLP driver "
-            "path expects a 1-D state vector. Adversarial board domains use the conv path."
+            f"Domain '{spec.name}' produces a {tensor.dim()}-D state tensor; expected 1-D for MLP or 3-D for ResNet."
         )
-    # Batch-norm-free / dropout-free MLP: NeuralMCTS self-play evaluates one state at a
-    # time (batch=1) and SelfPlayTrainer does not switch the net to eval() before
-    # self-play, so a BatchNorm1d layer would raise on the single-sample batch. (The
-    # conv path is unaffected: BatchNorm2d over an 8x8 board has 64 values per channel.)
-    # This layout still round-trips through the gate's resolver — the sidecar carries
-    # use_batch_norm/dropout, and policy_lift._build_mlp rebuilds the identical net.
+
+    # Batch-norm-free / dropout-free MLP for 1-D states
     return {
         "type": "mlp",
         "state_dim": int(tensor.shape[0]),
@@ -149,11 +150,21 @@ def _latest_checkpoint(checkpoint_dir: Path) -> tuple[int, Path] | None:
     return best
 
 
-def _self_play_config(games_per_iteration: int | None) -> SelfPlayConfig:
-    """Build the self-play config, overriding games/iteration only when provided."""
-    if games_per_iteration is None:
-        return SelfPlayConfig()
-    return SelfPlayConfig(num_games_per_iteration=games_per_iteration)
+def _self_play_config(
+    games_per_iteration: int | None = None,
+    use_amp: bool = False,
+    compile_model: bool = False,
+    pin_memory: bool = False,
+) -> SelfPlayConfig:
+    """Build the self-play config with options for GPU parameters."""
+    cfg = SelfPlayConfig(
+        use_amp=use_amp,
+        compile_model=compile_model,
+        pin_memory=pin_memory,
+    )
+    if games_per_iteration is not None:
+        cfg.num_games_per_iteration = games_per_iteration
+    return cfg
 
 
 async def run(args: argparse.Namespace) -> int:
@@ -164,29 +175,46 @@ async def run(args: argparse.Namespace) -> int:
         print(f"error: {exc.args[0]}", file=sys.stderr)
         return EXIT_ERROR
 
+    # Apply profile preset if supplied
+    if getattr(args, "profile", None) is not None:
+        from src.training.training_config import get_training_profile
+
+        profile_spec = get_training_profile(args.profile)
+        if args.num_simulations == M5_DEFAULT_SELF_PLAY_SIMULATIONS:
+            args.num_simulations = profile_spec.num_simulations
+        if args.games_per_iteration is None:
+            args.games_per_iteration = profile_spec.games_per_iteration
+        if args.device == "cpu" and profile_spec.device != "cpu":
+            args.device = profile_spec.device
+        if not args.mixed_precision:
+            args.mixed_precision = profile_spec.use_amp
+        if not args.compile:
+            args.compile = profile_spec.compile_model
+
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
-    # Build the network + trainer and (optionally) load a resume checkpoint. Any failure
-    # here — arch resolution (ValueError), a bad --device or a resume state_dict shape
-    # mismatch (RuntimeError), or an unreadable sidecar (OSError/JSONDecodeError) — is
-    # reported as a clean error exit rather than a raw traceback, mirroring the gate CLI.
+    # Build the network + trainer and (optionally) load a resume checkpoint.
     try:
         resume_from = _latest_checkpoint(args.checkpoint_dir) if args.resume else None
-        # On resume, the checkpoint's own sidecar is authoritative for the architecture
-        # (spec AC-2), so a change in resolve_architecture defaults cannot corrupt the load.
         arch = _sidecar_architecture(resume_from[1]) if resume_from is not None else None
         if arch is None:
             arch = resolve_architecture(spec)
 
         mcts_config = MCTSConfig()
         mcts_config.num_simulations = args.num_simulations
+        sp_config = _self_play_config(
+            games_per_iteration=args.games_per_iteration,
+            use_amp=args.mixed_precision,
+            compile_model=args.compile,
+            pin_memory=args.device.startswith("cuda"),
+        )
         trainer = SelfPlayTrainer(
             network=build_network(arch, spec, args.device),
             initial_state_fn=spec.initial_state_fn,
             action_space_size=spec.action_space_size,
             mcts_config=mcts_config,
-            config=_self_play_config(args.games_per_iteration),
+            config=sp_config,
             single_agent=spec.single_agent,
             device=args.device,
             seed=args.seed,
@@ -300,6 +328,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--seed", type=_seed_int, default=0, help="Seed for network init, self-play, and training")
     parser.add_argument("--device", default="cpu", help="Torch device (default: cpu)")
+    parser.add_argument(
+        "--profile",
+        choices=["smoke", "dev", "full"],
+        default=None,
+        help="Training profile preset (smoke, dev, full)",
+    )
+    parser.add_argument(
+        "--mixed-precision",
+        action="store_true",
+        default=False,
+        help="Enable FP16 mixed precision training",
+    )
+    parser.add_argument(
+        "--compile",
+        action="store_true",
+        default=False,
+        help="Enable PyTorch 2.0 torch.compile model compilation",
+    )
     parser.add_argument(
         "--resume",
         action="store_true",

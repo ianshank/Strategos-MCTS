@@ -33,7 +33,9 @@ DEFAULT_GOAL: Final[str] = "TODO: state the contract this spec enforces."
 # Statuses that make a spec "open": it claims its module against new specs.
 OPEN_STATUSES: Final[frozenset[str]] = frozenset({"draft", "approved"})
 
-_TEMPLATE: Final[str] = """---
+_TEMPLATE: Final[
+    str
+] = """---
 id: {spec_id}
 goal: {goal}
 module: {module}
