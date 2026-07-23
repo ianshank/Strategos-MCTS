@@ -259,9 +259,11 @@ docker_rebuild.log
 docker_final_build.log
 docker_correct_build.log
 data/test_*.json
+data/training_with_assembly*.json
 
 # Benchmark output artifacts
 benchmark_output/
+benchmarks/
 benchmark_results/
 benchmark_report.md
 benchmark_results.json

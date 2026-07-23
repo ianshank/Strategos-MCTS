@@ -184,6 +184,36 @@ class TestAlphaZeroLoss:
         # (unless value loss happens to be 0)
         assert d1["policy"] == pytest.approx(d2["policy"], abs=1e-5)
 
+    def test_illegal_action_inf_mask_no_nan(self):
+        loss_fn = AlphaZeroLoss()
+        target_policy = torch.tensor([[0.5, 0.5, 0.0, 0.0]])
+        # Illegal action logits masked with -inf
+        policy_logits = torch.tensor([[-0.6931, -0.6931, float("-inf"), float("-inf")]], requires_grad=True)
+        value = torch.tensor([[0.5]], requires_grad=True)
+        target_value = torch.tensor([0.5])
+        total_loss, loss_dict = loss_fn(policy_logits, value, target_policy, target_value)
+        assert not torch.isnan(total_loss)
+        assert torch.isfinite(total_loss)
+        total_loss.backward()
+        assert policy_logits.grad is not None
+        assert not torch.isnan(policy_logits.grad).any()
+        assert torch.isfinite(policy_logits.grad).all()
+
+    def test_value_view_as_shape(self):
+        loss_fn = AlphaZeroLoss()
+        policy_logits = torch.log_softmax(torch.randn(2, 4), dim=1)
+        target_policy = torch.softmax(torch.randn(2, 4), dim=1)
+        value = torch.tensor([[0.5], [-0.5]])
+
+        target_value_1d = torch.tensor([0.5, -0.5])
+        total_loss_1d, _ = loss_fn(policy_logits, value, target_policy, target_value_1d)
+        assert torch.isfinite(total_loss_1d)
+
+        target_value_2d = torch.tensor([[0.5], [-0.5]])
+        total_loss_2d, _ = loss_fn(policy_logits, value, target_policy, target_value_2d)
+        assert torch.isfinite(total_loss_2d)
+        assert torch.allclose(total_loss_1d, total_loss_2d)
+
 
 @pytest.mark.unit
 class TestMLPPolicyValueNetwork:

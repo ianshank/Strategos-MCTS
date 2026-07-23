@@ -173,12 +173,16 @@ graph TB
 | **Parallel MCTS** | Python, AsyncIO | Tree-parallel search with virtual-loss collision avoidance |
 | **Meta Controller** | PyTorch, GRU/BERT | Dynamic routing of queries to optimal agents |
 | **Assembly Router** | Python, NLP | Feature extraction (`ConceptExtractor`) → HRM/TRM/MCTS routing heuristics |
-| **Policy-Value Network** | PyTorch, ResNet | Predicts action probabilities and values |
+| **Policy-Value Network** | PyTorch, ResNet | Predicts action probabilities and values for square & rectangular boards (`(C, H, W)`) |
+| **Gameplay Domains** | Python, NumPy, PyTorch | Multi-domain environment suite (`chess`, `connect_four`, `othello`, reasoning, planning) |
+| **GPU Introspection** | Python, PyTorch | Memory tracking (`GPUMemoryTracker`), pre-flight checks, CUDA fraction clamping |
+| **Training Profiles** | Python | Standardized operational presets (`smoke`, `dev`, `full`) for MCTS self-play training |
 | **FastAPI Server** | FastAPI, Uvicorn | REST API for inference (streaming, graph viz, comparison) |
 | **Inference Engine** | PyTorch | Model inference and prediction |
 | **Replay Buffer** | Python, NumPy | Stores and samples experiences (torch-safe checkpoints) |
 | **Vector Store** | Pinecone | RAG knowledge base for retrieval |
 | **Prometheus Metrics** | prometheus-client | Counters/histograms for agents, MCTS, LLM calls; `/metrics` endpoint |
+
 
 ---
 
@@ -254,6 +258,46 @@ graph TB
     PerfMon -->|Logs to| WandBLogger
 
     style OrcMain fill:#E74C3C,stroke:#922B21,stroke-width:2px,color:#fff
+```
+
+### 3.5 Self-Play Training & Gameplay Domains
+
+```mermaid
+graph TB
+    subgraph "Self-Play Training Component"
+        CLI[SelfPlayConvergence<br/><br/>CLI entry point]
+        Trainer[SelfPlayTrainer<br/><br/>Training loop]
+        Profiles[TrainingProfiles<br/><br/>smoke/dev/full]
+        SysConfig[SystemConfig<br/><br/>device/AMP/compile]
+        Registry[DomainRegistry<br/><br/>Domain dispatch]
+        
+        subgraph "Game Domains"
+            Chess[Chess]
+            ConnectFour[ConnectFour]
+            Othello[Othello]
+            Reasoning[Reasoning]
+            Planning[Planning]
+        end
+        
+        PVNet[PolicyValueNetwork<br/><br/>MLP for reasoning/planning, ResNet for board games]
+        GPUUtils[GPUUtils<br/><br/>Memory tracking, pre-flight checks]
+    end
+
+    CLI -->|Configures via| Profiles
+    CLI -->|Configures via| SysConfig
+    CLI -->|Runs| Trainer
+    Trainer -->|Dispatches via| Registry
+    Registry --> Chess
+    Registry --> ConnectFour
+    Registry --> Othello
+    Registry --> Reasoning
+    Registry --> Planning
+    Trainer -->|Trains| PVNet
+    Trainer -->|Monitors via| GPUUtils
+    
+    style CLI fill:#E74C3C,stroke:#922B21,stroke-width:2px,color:#fff
+    style Trainer fill:#3498DB,stroke:#1F618D,stroke-width:2px,color:#fff
+    style PVNet fill:#8E44AD,stroke:#5B2C6F,stroke-width:2px,color:#fff
 ```
 
 ### 3.2 Neural Network Components (DeepMind Implementation)
@@ -383,8 +427,8 @@ service modules (so `rest_server.py`, which is omitted from coverage, stays logi
 
 ```mermaid
 graph LR
-    Registry[DomainRegistry<br/>reasoning / planning smoke tests<br/>chess via lazy loader] --> Trainer[SelfPlayTrainer<br/>single_agent flag]
-    ChessReg[chess registration<br/>optional 'chess' extra] -.-> Registry
+    Registry["DomainRegistry<br/>reasoning / planning (single-agent)<br/>chess / connect_four / othello (adversarial)<br/>lazy-loaded game domains"] --> Trainer["SelfPlayTrainer<br/>single_agent flag"]
+    GameRegs["game registrations<br/>chess / connect_four / othello<br/>lazy-loaded via DomainRegistry"] -.-> Registry
     Trainer --> NMCTS[NeuralMCTS<br/>+ SelfPlayCollector]
     NMCTS --> Buffer[ExperienceBuffer<br/>torch-safe]
     Buffer --> Loss[AlphaZeroLoss]

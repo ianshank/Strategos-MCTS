@@ -7,7 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### GPU Training, Gameplay Domains & Training Pipeline Enhancements
+
+#### Added
+- **GPU Training & Hardware Management:**
+  - Added Pydantic Settings fields for `TRAINING_USE_MIXED_PRECISION` (FP16 autocast), `TRAINING_COMPILE_MODEL` (`torch.compile`), `TRAINING_CUDA_MEMORY_FRACTION`, `TRAINING_PIN_MEMORY`, and `TRAINING_BACKEND` validation (`nccl`/`gloo`).
+  - Added hardware introspection and memory management module `src/utils/gpu_utils.py` providing `get_gpu_info()`, `check_gpu_ready()`, `set_cuda_memory_fraction()`, and `GPUMemoryTracker` context manager.
+  - Integrated FP16 AMP autocast + `GradScaler` and memory pinning into `SelfPlayTrainer`.
+  - Added comprehensive `docs/GPU_TRAINING_GUIDE.md` reference guide.
+- **Fast Gameplay Domains:**
+  - Implemented `ConnectFourState` (`src/games/connect_four/`), an adversarial 6×7 Connect Four domain with 4-in-a-row detection, deterministic SHA-256 state hashing, and `(3, 6, 7)` tensor encoding.
+  - Implemented `OthelloState` (`src/games/othello/`), an adversarial 8×8 Othello / Reversi domain with directional piece flips, pass handling, and `(3, 8, 8)` tensor encoding.
+  - Registered both domains in `DomainRegistry` under `metric="win_rate"` with zero optional external dependencies.
+  - Added comprehensive `docs/GAME_DOMAINS.md` domain overview.
+- **Operational Training Profiles:**
+  - Created `TrainingProfile` presets (`src/training/training_config.py`): `smoke` (4 games, 8 simulations), `dev` (50 games, 200 simulations), `full` (500 games, 800 simulations).
+  - Updated CLI convergence driver `src/training/self_play_convergence.py` with `--profile`, `--mixed-precision`, and `--compile` options.
+  - Updated `docker-compose.train.yml` and `Dockerfile.train` for containerized GPU training execution.
+- **Dynamic ResNet Architecture Resolution:**
+  - Enhanced `PolicyValueNetwork` and `resolve_architecture()` to support rectangular board dimensions (`board_rows`, `board_cols`), dynamically adjusting `PolicyHead` and `ValueHead` linear layers to any 3D state tensor shape `(C, H, W)`.
+
+#### Fixed & Hardened
+- **Dynamic Win & Initialization Rules:**
+  - Refactored `ConnectFourState._check_winner()` to use `CONFIG.in_a_row` dynamically instead of fixed index offsets.
+  - Refactored `OthelloState._make_initial_board()` to calculate mid-board piece positions from `CONFIG.board_size // 2`.
+  - Parameterized GPU memory fraction bounds in `gpu_utils.py` using `MIN_CUDA_MEMORY_FRACTION` and `MAX_CUDA_MEMORY_FRACTION` constants.
+- **Test Suite & Coverage Quality:**
+  - Verified 10,136+ passing tests with 93.35% coverage (exceeding 85% requirement gate).
+  - Maintained 100% clean status for `ruff check src/ tests/`, `black src/ tests/`, and `mypy src/` across 320 source files.
+- **CI Pipeline Fixes:**
+  - Modernized deprecated `torch.cuda.amp` API to `torch.amp` with explicit `device_type` parameter across `trainer.py`, `agent_trainer.py`, and `unified_orchestrator.py`.
+  - Fixed `test_cuda_memory_fraction_invoked_on_cuda_device` CI failure by mocking `build_network` and `SelfPlayTrainer` to prevent CUDA initialization on GPU-less runners.
+  - Reformatted source with `black` 26.3.1 for CI parity.
+
 ### Test Suite Hardening & Code Quality — Branch: `main` (2026-07-20)
+
 
 #### Fixed
 - **Code Hardening Pass (Phases 1-5):**

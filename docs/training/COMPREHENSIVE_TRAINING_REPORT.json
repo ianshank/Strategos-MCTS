@@ -1,5 +1,5 @@
 {
-  "start_time": "2025-11-19T18:42:36.412935",
+  "start_time": "2026-07-23T09:45:47.710136",
   "modules": {
     "module_1": {
       "labs": {
@@ -8,12 +8,12 @@
           "deliverable": "docs/training/MODULE_1_LAB_RESULTS.md"
         },
         "lab2": {
-          "status": "completed",
+          "status": "failed",
           "command": "python scripts/smoke_test_traced.py",
-          "returncode": 0,
-          "stdout": "=== MCTS Framework API Smoke Tests (with LangSmith Tracing) ===\nTarget: http://localhost:8000\nStarted at: 2025-11-19 18:42:42.263764\n\nTest: Health Check... PASS (HTTP 200, 54ms)\nTest: Readiness Check... PASS (HTTP 200, 29ms)\nTest: OpenAPI Docs... PASS (HTTP 200, 15ms)\nTest: Query (Valid Key)... PASS (HTTP 200, 228ms)\nTest: Query (with MCTS)... PASS (HTTP 200, 120ms)\nTest: Auth Failure... PASS (HTTP 401, 8ms)\nTest: Validation Error... PASS (HTTP 422, 56ms)\nTest: Metrics Endpoint... PASS (HTTP 200, 19ms)\n\n=== Results ===\nPassed: 8\nFailed: 0\nTotal:  8\n\nSUCCESS: All smoke tests passed!\n",
+          "returncode": 1,
+          "stdout": "=== MCTS Framework API Smoke Tests (with LangSmith Tracing) ===\nTarget: http://localhost:8000\nStarted at: 2026-07-23 09:46:05.078949\n\nTest: Health Check... ERROR ([WinError 10061] No connection could be made because the target machine actively refused it)\nTest: Readiness Check... ERROR ([WinError 10061] No connection could be made because the target machine actively refused it)\nTest: OpenAPI Docs... ERROR ([WinError 10061] No connection could be made because the target machine actively refused it)\nTest: Query (Valid Key)... ERROR ([WinError 10061] No connection could be made because the target machine actively refused it)\nTest: Query (with MCTS)... ERROR ([WinError 10061] No connection could be made because the target machine actively refused it)\nTest: Auth Failure... ERROR ([WinError 10061] No connection could be made because the target machine actively refused it)\nTest: Validation Error... ERROR ([WinError 10061] No connection could be made because the target machine actively refused",
           "stderr": "",
-          "success": true
+          "success": false
         },
         "lab3": {
           "status": "completed",
@@ -26,7 +26,7 @@
         "passing": true,
         "deliverable": "docs/training/MODULE_1_QUIZ_RESULTS.md"
       },
-      "execution_time_seconds": 2.248586416244507
+      "execution_time_seconds": 34.394089698791504
     },
     "module_2": {
       "hrm": {
@@ -45,7 +45,7 @@
         "root_cause": "exploration_constant_too_low",
         "fix_applied": true
       },
-      "execution_time_seconds": 0.0013039112091064453
+      "execution_time_seconds": 0.0006685256958007812
     },
     "module_3": {
       "exercises": {
@@ -68,7 +68,7 @@
         "file": "src/workflows/smart_query_router.py",
         "test_coverage": "90%"
       },
-      "execution_time_seconds": 0.0005729198455810547
+      "execution_time_seconds": 0.0014996528625488281
     },
     "module_4": {
       "exercises": {
@@ -92,11 +92,11 @@
         ],
         "count": 4
       },
-      "execution_time_seconds": 0.0010905265808105469
+      "execution_time_seconds": 0.0015017986297607422
     }
   },
   "tests": {},
   "summary": {},
-  "end_time": "2025-11-19T18:42:43.153167",
-  "total_duration": 6.740232
+  "end_time": "2026-07-23T09:46:38.021285",
+  "total_duration": 50.311149
 }

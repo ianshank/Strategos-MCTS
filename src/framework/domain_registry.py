@@ -45,6 +45,8 @@ _VALID_METRICS = frozenset({METRIC_WIN_RATE, METRIC_MEAN_REWARD})
 # optional-dependency packages — the loader itself no-ops when its extra is missing.
 _LAZY_LOADERS: dict[str, str] = {
     "chess": "src.games.chess.registration:register_chess_domain",
+    "connect_four": "src.games.connect_four.registration:register_connect_four_domain",
+    "othello": "src.games.othello.registration:register_othello_domain",
 }
 
 

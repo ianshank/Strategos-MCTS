@@ -25,7 +25,7 @@ python scripts/validate_context_docs.py  # deterministic check: .claude skills/a
 
 `ruff`/`mypy` are pinned in the `[dev]` extra (CI lint job installs `.[dev]`) for CI/local
 parity — bump deliberately and re-validate. Coverage gate: 85% (`--cov-fail-under=85`).
-Achieved: **93.65%** (full suite, 2026-07-20). `mypy src/` must remain clean (305 files).
+Achieved: **93.35%** (full suite, 2026-07-22). `mypy src/` must remain clean (320 files).
 Async tests must use `@pytest.mark.asyncio` + `await` — never `asyncio.get_event_loop()`.
 
 ## Harness CLI
@@ -67,7 +67,12 @@ python -m src.benchmark --systems langgraph_mcts --tasks A1
 | Existing agents | `src/agents/`, `src/framework/agents/base.py` |
 | LangGraph orchestration | `src/framework/graph/builder.py` |
 | MCTS engine | `src/framework/mcts/core.py` (baseline), `src/framework/mcts/neural_mcts.py` (AlphaZero-style; `single_agent` flag) |
-| Neural self-play (M5) | `src/training/self_play_trainer.py`, domains via `src/framework/domain_registry.py` + `src/framework/mcts/single_agent_domains.py` |
+| Gameplay domains | `src/games/chess/` (chess), `src/games/connect_four/` (connect_four), `src/games/othello/` (othello) (adversarial), `src/framework/mcts/single_agent_domains.py` (reasoning, planning) |
+| Neural self-play (M5) | `src/training/self_play_trainer.py` |
+| Training profiles | `src/training/training_config.py` (`smoke`/`dev`/`full` profiles) |
+| Self-play convergence driver | `src/training/self_play_convergence.py` (CLI entry, `--profile`/`--mixed-precision`/`--compile`) |
+| System/device config | `src/training/system_config.py` (device resolution, AMP, compile, CUDA memory fraction) |
+| GPU Introspection & Memory | `src/utils/gpu_utils.py` (`get_gpu_info`, `check_gpu_ready`, `GPUMemoryTracker`, memory fraction limit) |
 | Meta-controller learning (M5) | `src/training/meta_controller_data_collector.py` (see `docs/META_CONTROLLER_TRAINING.md`) |
 | API services (streaming/viz/compare) | `src/api/{streaming,graph_service,comparison_service}.py` (thin endpoints in `rest_server.py`) |
 | LLM adapters | `src/adapters/llm/{base,resilience,openai_client,anthropic_client,lmstudio_client}.py` (`resilience.py` = shared `CircuitBreaker`) |
@@ -82,6 +87,7 @@ python -m src.benchmark --systems langgraph_mcts --tasks A1
 |  · topologies | `src/framework/harness/topology/` |
 |  · ralph loop | `src/framework/harness/ralph/` |
 |  · replay (cassettes + clock) | `src/framework/harness/replay/` |
+
 
 ## Test layout
 

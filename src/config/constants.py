@@ -287,3 +287,13 @@ M5_DEFAULT_MLP_HIDDEN_DIMS: Final[tuple[int, ...]] = (512, 256)
 # Board size assumed when deriving a default conv architecture for adversarial
 # board domains (chess).
 M5_DEFAULT_ADVERSARIAL_BOARD_SIZE: Final[int] = 8
+
+# ============================================================================
+# GPU & Training Configuration
+# ============================================================================
+
+DEFAULT_CUDA_MEMORY_FRACTION: Final[float] = 0.9
+MIN_CUDA_MEMORY_FRACTION: Final[float] = 0.1
+MAX_CUDA_MEMORY_FRACTION: Final[float] = 1.0
+MIN_GPU_MEMORY_GB: Final[float] = 2.0
+SUPPORTED_CUDA_BACKENDS: Final[tuple[str, ...]] = ("nccl", "gloo")

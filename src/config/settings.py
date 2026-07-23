@@ -19,6 +19,13 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from src.config.constants import (
+    DEFAULT_CUDA_MEMORY_FRACTION,
+    MAX_CUDA_MEMORY_FRACTION,
+    MIN_CUDA_MEMORY_FRACTION,
+    SUPPORTED_CUDA_BACKENDS,
+)
+
 
 class LLMProvider(str, Enum):
     """Supported LLM providers."""
@@ -151,6 +158,31 @@ class Settings(BaseSettings):
     TORCH_DEVICE_OVERRIDE: str | None = Field(
         default=None, description="Override for torch device (e.g., 'cpu', 'cuda', 'mps')"
     )
+
+    TRAINING_USE_MIXED_PRECISION: bool = Field(default=True, description="Enable FP16 mixed precision training")
+
+    TRAINING_GRADIENT_CHECKPOINTING: bool = Field(default=False, description="Trade compute for GPU memory")
+
+    TRAINING_COMPILE_MODEL: bool = Field(default=False, description="Enable PyTorch 2.0 torch.compile")
+
+    TRAINING_DISTRIBUTED: bool = Field(default=False, description="Enable distributed multi-GPU training")
+
+    TRAINING_WORLD_SIZE: int = Field(default=1, ge=1, description="Distributed training world size")
+
+    TRAINING_BACKEND: str = Field(
+        default=SUPPORTED_CUDA_BACKENDS[0], description="Distributed training backend (nccl, gloo)"
+    )
+
+    TRAINING_CUDA_MEMORY_FRACTION: float = Field(
+        default=DEFAULT_CUDA_MEMORY_FRACTION,
+        ge=MIN_CUDA_MEMORY_FRACTION,
+        le=MAX_CUDA_MEMORY_FRACTION,
+        description="CUDA memory fraction limit",
+    )
+
+    TRAINING_PIN_MEMORY: bool = Field(default=True, description="Pin memory for DataLoader CPU->GPU transfer")
+
+    TRAINING_NUM_WORKERS: int = Field(default=4, ge=0, description="Number of worker processes for data loading")
 
     # S3 Storage Configuration
     S3_BUCKET: str | None = Field(default=None, description="S3 bucket name for artifact storage")
@@ -535,6 +567,16 @@ class Settings(BaseSettings):
         normalized = v.strip().lower()
         if normalized not in allowed:
             raise ValueError(f"AUTH_MODE must be one of {sorted(allowed)}, got '{v}'")
+        return normalized
+
+    @field_validator("TRAINING_BACKEND")
+    @classmethod
+    def validate_training_backend(cls, v: str) -> str:
+        """Restrict TRAINING_BACKEND to supported distributed backends."""
+        allowed = set(SUPPORTED_CUDA_BACKENDS)
+        normalized = v.strip().lower()
+        if normalized not in allowed:
+            raise ValueError(f"TRAINING_BACKEND must be one of {sorted(allowed)}, got '{v}'")
         return normalized
 
     @field_validator("OPENAI_API_KEY")

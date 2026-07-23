@@ -16,11 +16,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.observability.logging import get_logger
+from src.observability.logging import get_correlation_id, get_structured_logger
 
 from ..training.system_config import NeuralNetworkConfig
 
-logger = get_logger(__name__)
+logger = get_structured_logger(__name__)
 
 
 class ResidualBlock(nn.Module):
@@ -72,14 +72,17 @@ class PolicyHead(nn.Module):
         policy_conv_channels: int,
         action_size: int,
         board_size: int = 19,
+        board_rows: int | None = None,
+        board_cols: int | None = None,
     ):
         super().__init__()
 
         self.conv = nn.Conv2d(input_channels, policy_conv_channels, kernel_size=1, bias=False)
         self.bn = nn.BatchNorm2d(policy_conv_channels)
 
-        # Assuming square board
-        fc_input_size = policy_conv_channels * board_size * board_size
+        rows = board_rows if board_rows is not None else board_size
+        cols = board_cols if board_cols is not None else board_size
+        fc_input_size = policy_conv_channels * rows * cols
 
         self.fc = nn.Linear(fc_input_size, action_size)
 
@@ -93,14 +96,12 @@ class PolicyHead(nn.Module):
         Returns:
             Log probabilities: [batch, action_size]
         """
-        batch_size = x.size(0)
-
         out = self.conv(x)
         out = self.bn(out)
         out = F.relu(out)
 
         # Flatten spatial dimensions
-        out = out.view(batch_size, -1)
+        out = out.flatten(1)
 
         # Fully connected layer
         out = self.fc(out)
@@ -123,14 +124,17 @@ class ValueHead(nn.Module):
         value_conv_channels: int,
         value_fc_hidden: int,
         board_size: int = 19,
+        board_rows: int | None = None,
+        board_cols: int | None = None,
     ):
         super().__init__()
 
         self.conv = nn.Conv2d(input_channels, value_conv_channels, kernel_size=1, bias=False)
         self.bn = nn.BatchNorm2d(value_conv_channels)
 
-        # Assuming square board
-        fc_input_size = value_conv_channels * board_size * board_size
+        rows = board_rows if board_rows is not None else board_size
+        cols = board_cols if board_cols is not None else board_size
+        fc_input_size = value_conv_channels * rows * cols
 
         self.fc1 = nn.Linear(fc_input_size, value_fc_hidden)
         self.fc2 = nn.Linear(value_fc_hidden, 1)
@@ -145,14 +149,12 @@ class ValueHead(nn.Module):
         Returns:
             Value: [batch, 1] in range [-1, 1]
         """
-        batch_size = x.size(0)
-
         out = self.conv(x)
         out = self.bn(out)
         out = F.relu(out)
 
         # Flatten spatial dimensions
-        out = out.view(batch_size, -1)
+        out = out.flatten(1)
 
         # Fully connected layers
         out = self.fc1(out)
@@ -171,19 +173,29 @@ class PolicyValueNetwork(nn.Module):
     This is the core neural network used in AlphaZero-style learning.
     """
 
-    def __init__(self, config: NeuralNetworkConfig, board_size: int = 19):
+    def __init__(
+        self,
+        config: NeuralNetworkConfig,
+        board_size: int = 19,
+        board_rows: int | None = None,
+        board_cols: int | None = None,
+    ):
         super().__init__()
         self.config = config
         self.board_size = board_size
+        self.board_rows = board_rows or board_size
+        self.board_cols = board_cols or board_size
 
         logger.debug(
-            "PolicyValueNetwork initialized: input_channels=%d, num_channels=%d, "
-            "num_res_blocks=%d, action_size=%d, board_size=%d",
-            config.input_channels,
-            config.num_channels,
-            config.num_res_blocks,
-            config.action_size,
-            board_size,
+            "PolicyValueNetwork initialized",
+            correlation_id=get_correlation_id(),
+            input_channels=config.input_channels,
+            num_channels=config.num_channels,
+            num_res_blocks=config.num_res_blocks,
+            action_size=config.action_size,
+            board_size=board_size,
+            board_rows=self.board_rows,
+            board_cols=self.board_cols,
         )
 
         # Initial convolution
@@ -207,6 +219,8 @@ class PolicyValueNetwork(nn.Module):
             policy_conv_channels=config.policy_conv_channels,
             action_size=config.action_size,
             board_size=board_size,
+            board_rows=self.board_rows,
+            board_cols=self.board_cols,
         )
 
         # Value head
@@ -215,6 +229,8 @@ class PolicyValueNetwork(nn.Module):
             value_conv_channels=config.value_conv_channels,
             value_fc_hidden=config.value_fc_hidden,
             board_size=board_size,
+            board_rows=self.board_rows,
+            board_cols=self.board_cols,
         )
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
@@ -302,11 +318,13 @@ class AlphaZeroLoss(nn.Module):
             (total_loss, loss_dict) tuple
         """
         # Value loss: MSE between predicted and actual outcome
-        value_loss = F.mse_loss(value.squeeze(-1), target_value)
+        value_loss = F.mse_loss(value.view_as(target_value), target_value)
 
         # Policy loss: Cross-entropy between MCTS policy and network policy
         # Target policy is already normalized, policy_logits are log probabilities
-        policy_loss = -torch.sum(target_policy * policy_logits, dim=1).mean()
+        # Prevent 0.0 * -inf = nan when illegal actions are masked with -inf logits
+        masked_logits = torch.where(target_policy > 0, policy_logits, torch.zeros_like(policy_logits))
+        policy_loss = -torch.sum(target_policy * masked_logits, dim=1).mean()
 
         # Combined loss
         total_loss = self.value_loss_weight * value_loss + policy_loss
@@ -324,6 +342,8 @@ def create_policy_value_network(
     config: NeuralNetworkConfig,
     board_size: int = 19,
     device: str = "cpu",
+    board_rows: int | None = None,
+    board_cols: int | None = None,
 ) -> PolicyValueNetwork:
     """
     Factory function to create and initialize policy-value network.
@@ -332,11 +352,13 @@ def create_policy_value_network(
         config: Network configuration
         board_size: Board/grid size (for games)
         device: Device to place model on
+        board_rows: Optional row count for rectangular boards
+        board_cols: Optional col count for rectangular boards
 
     Returns:
         Initialized PolicyValueNetwork
     """
-    network = PolicyValueNetwork(config, board_size)
+    network = PolicyValueNetwork(config, board_size=board_size, board_rows=board_rows, board_cols=board_cols)
 
     # He initialization for convolutional layers
     def init_weights(m):

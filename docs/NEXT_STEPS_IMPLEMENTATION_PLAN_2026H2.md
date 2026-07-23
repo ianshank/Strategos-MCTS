@@ -24,8 +24,10 @@
 > `black`, and `mypy` (7 type errors resolved across `prometheus_metrics.py`, `neural_trainer.py`,
 > `experiment_tracker.py`, `pinecone_store.py`). Chess encoding, async test patterns, assembly
 > concept-typing, and flaky timing assertions resolved. See `CHANGELOG.md` for a detailed diff.
-
-> **Version:** 2.0.0 · **Date:** 2026-07-20 · **Status:** Active
+>
+> **GPU Training & Fast Gameplay Extensions (2026-07-22):**
+> Built GPU hardware introspection (`src/utils/gpu_utils.py`), and AMP FP16 and `torch.compile` integrations (`src/training/self_play_trainer.py`). Added two zero-dependency fast domains (Connect Four, Othello) with dynamic N-in-a-row/center-init configurations, and dynamic rectangular 3D ResNet scaling (`C, H, W`). Centralized `--profile {smoke,dev,full}` presets. See `docs/GAME_DOMAINS.md` and `docs/GPU_TRAINING_GUIDE.md`. Suite stands at **10,136+ passing**, **93.35% coverage**.
+> **Version:** 2.1.0 · **Date:** 2026-07-22 · **Status:** Active
 > **Supersedes:** `docs/plans/NEXT_STEPS_PLAN.md` (v1.0), the status sections of
 > `docs/reports/GAP_ANALYSIS_REPORT.md`, and `docs/NEXT_STEPS_INVESTIGATION.md` where they conflict with
 > the **Verified Status** table below. (Archival roadmap docs were relocated under `docs/plans/` and

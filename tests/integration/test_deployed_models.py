@@ -6,7 +6,6 @@ Tests the production readiness of deployed models exported to `models/production
 Verifies model loading, inference, and basic performance criteria.
 """
 
-import sys
 import time
 from pathlib import Path
 
@@ -16,9 +15,7 @@ import pytest
 torch = pytest.importorskip("torch", reason="PyTorch required for deployed model tests")
 yaml = pytest.importorskip("yaml", reason="PyYAML required for config loading")
 
-# Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
     from training.agent_trainer import HRMTrainer, TRMTrainer
@@ -33,8 +30,11 @@ def safe_torch_load():
     if hasattr(torch.serialization, "add_safe_globals"):
         import numpy as np
 
+        np_core = getattr(np, "_core", None)
+        if np_core is None:
+            np_core = np.core
         # Add all needed numpy types
-        torch.serialization.add_safe_globals([np._core.multiarray.scalar, np.dtype, np.dtypes.Float64DType])
+        torch.serialization.add_safe_globals([np_core.multiarray.scalar, np.dtype, np.dtypes.Float64DType])
 
 
 @pytest.fixture
@@ -76,8 +76,18 @@ def test_hrm_model_loading_and_inference(production_models_dir, production_confi
     if not model_path.exists():
         pytest.skip("HRM model not deployed")
 
-    # Initialize trainer wrapper
-    trainer = HRMTrainer(production_config)
+    try:
+        trainer = HRMTrainer(production_config)
+    except (ImportError, ValueError, OSError) as err:
+        err_msg = str(err).lower()
+        if (
+            "token" in err_msg
+            or "pretrained" in err_msg
+            or "transformers" in err_msg
+            or isinstance(err, (ImportError, OSError))
+        ):
+            pytest.skip(f"Tokenizer or model dependency missing: {err}")
+        raise
 
     # Load checkpoint
     try:
@@ -91,7 +101,7 @@ def test_hrm_model_loading_and_inference(production_models_dir, production_confi
             # CPU has no Half matmul support; upcast in case any weights
             # (fp16 hub snapshot or fp16-exported checkpoint) came in as Half
             trainer.model.float()
-    except Exception as e:
+    except (OSError, ValueError) as e:
         pytest.fail(f"Failed to load HRM model: {e}")
 
     # Run dummy inference
@@ -119,7 +129,18 @@ def test_trm_model_loading_and_inference(production_models_dir, production_confi
     if not model_path.exists():
         pytest.skip("TRM model not deployed")
 
-    trainer = TRMTrainer(production_config)
+    try:
+        trainer = TRMTrainer(production_config)
+    except (ImportError, ValueError, OSError) as err:
+        err_msg = str(err).lower()
+        if (
+            "token" in err_msg
+            or "pretrained" in err_msg
+            or "transformers" in err_msg
+            or isinstance(err, (ImportError, OSError))
+        ):
+            pytest.skip(f"Tokenizer or model dependency missing: {err}")
+        raise
 
     try:
         checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
@@ -132,7 +153,7 @@ def test_trm_model_loading_and_inference(production_models_dir, production_confi
             # CPU has no Half matmul support; upcast in case any weights
             # (fp16 hub snapshot or fp16-exported checkpoint) came in as Half
             trainer.model.float()
-    except Exception as e:
+    except (OSError, ValueError) as e:
         pytest.fail(f"Failed to load TRM model: {e}")
 
     input_ids = torch.randint(0, 1000, (1, 128)).to(device)
@@ -158,7 +179,7 @@ def test_meta_controller_loading(production_models_dir):
         checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
         assert "model_state_dict" in checkpoint
         assert "config" in checkpoint
-    except Exception as e:
+    except (OSError, ValueError) as e:
         pytest.fail(f"Failed to load meta-controller: {e}")
 
 

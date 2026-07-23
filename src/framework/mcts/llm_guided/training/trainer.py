@@ -341,7 +341,7 @@ class DistillationTrainer:
 
         # AMP scaler - only enabled for CUDA devices
         self._use_amp = self._config.use_amp and self._device.type == "cuda"
-        self._scaler = torch.cuda.amp.GradScaler() if self._use_amp else None
+        self._scaler = torch.amp.GradScaler("cuda", enabled=self._use_amp) if self._use_amp else None
 
         if self._config.use_amp and not self._use_amp:
             logger.warning(
@@ -523,7 +523,7 @@ class DistillationTrainer:
             batch = batch.to(self._device)
 
             # Forward pass
-            with torch.cuda.amp.autocast(enabled=self._use_amp):
+            with torch.amp.autocast(self._device.type, enabled=self._use_amp):
                 loss, batch_metrics = self._compute_loss(batch)
 
             # Check for NaN/inf loss - skip batch if detected

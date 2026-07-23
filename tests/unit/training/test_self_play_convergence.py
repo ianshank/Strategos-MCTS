@@ -320,9 +320,64 @@ def test_checkpoint_name_roundtrips():
         assert int(match.group(1)) == iteration
 
 
+@pytest.mark.unit
+def test_cuda_memory_fraction_invoked_on_cuda_device(tmp_path, monkeypatch):
+    """When device starts with cuda, set_cuda_memory_fraction is called during setup."""
+    from unittest.mock import MagicMock, patch
+
+    import src.training.self_play_convergence as spc
+
+    mock_set_mem = MagicMock()
+    monkeypatch.setattr(spc, "set_cuda_memory_fraction", mock_set_mem)
+
+    # Mock build_network so it does NOT call .to("cuda:0") — CI has no GPU
+    mock_network = MagicMock()
+    monkeypatch.setattr(spc, "build_network", lambda arch, spec, device: mock_network)
+
+    # Mock SelfPlayTrainer to avoid any CUDA initialisation
+    class DummyMetrics:
+        total_loss = 0.1
+        policy_loss = 0.05
+        value_loss = 0.05
+        games_played = 1
+        examples_collected = 1
+        train_steps = 1
+        buffer_size = 1
+
+    async def mock_train(self):
+        return DummyMetrics()
+
+    mock_trainer = MagicMock()
+    mock_trainer.train_iteration = mock_train.__get__(mock_trainer)
+    mock_trainer.save_checkpoint = MagicMock()
+
+    with patch("src.training.self_play_convergence.SelfPlayTrainer", return_value=mock_trainer):
+        monkeypatch.setattr("torch.cuda.is_available", lambda: False)
+
+        argv = [
+            "--domain",
+            "reasoning",
+            "--iterations",
+            "1",
+            "--checkpoint-dir",
+            str(tmp_path / "ckpts"),
+            "--device",
+            "cuda:0",
+            "--num-simulations",
+            "1",
+            "--games-per-iteration",
+            "1",
+        ]
+        code = _run(argv)
+
+    assert code == EXIT_OK
+    mock_set_mem.assert_called_once()
+
+
 # --------------------------------------------------------------------- chess (deferred)
 
 
+@pytest.mark.unit
 @pytest.mark.skipif(not chess_available(), reason="chess extra (python-chess) not installed")
 def test_chess_architecture_resolves_to_conv():
     """AC-1/AC-2 for chess run only where the chess extra exists (deferred in this CI)."""

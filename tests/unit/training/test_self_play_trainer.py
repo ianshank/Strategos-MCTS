@@ -169,3 +169,35 @@ def test_checkpoint_roundtrip(tmp_path):
 
     for p1, p2 in zip(trainer.network.parameters(), fresh.network.parameters()):
         assert torch.equal(p1, p2)
+
+
+@pytest.mark.unit
+def test_device_auto_resolution():
+    trainer = SelfPlayTrainer(
+        network=_TinyNet(),
+        initial_state_fn=_ClimbState,
+        action_space_size=_ACTION_SPACE,
+        mcts_config=_mcts_config(),
+        single_agent=True,
+        device="auto",
+    )
+    assert trainer.device in ("cuda", "cpu", "mps") or trainer.device.startswith("cuda")
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_pin_memory_cpu_safe():
+    config = SelfPlayConfig(num_games_per_iteration=1, batch_size=2, pin_memory=True)
+    trainer = SelfPlayTrainer(
+        network=_TinyNet(),
+        initial_state_fn=_ClimbState,
+        action_space_size=_ACTION_SPACE,
+        mcts_config=_mcts_config(),
+        config=config,
+        single_agent=True,
+        device="cpu",
+    )
+    await trainer.generate_self_play(1)
+    loss_dict = trainer.train_step()
+    assert loss_dict is not None
+    assert np.isfinite(loss_dict["total"])

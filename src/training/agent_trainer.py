@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 import torch
 import torch.nn as nn
-from torch.cuda.amp import autocast
+from torch.amp import autocast
 
 from src.observability.logging import get_logger
 
@@ -174,7 +174,9 @@ class HRMTrainer:
         metrics = TrainingMetrics()
 
         if self.config.use_mixed_precision and self.scaler is not None:
-            with autocast():
+            with autocast(
+                device_type="cuda" if "cuda" in str(self.device) else "cpu", enabled=self.config.use_mixed_precision
+            ):
                 # Forward pass
                 hrm_output = self.agent(states, return_decomposition=True)
                 predictions = hrm_output.final_state
@@ -331,7 +333,9 @@ class TRMTrainer:
         metrics = TrainingMetrics()
 
         if self.config.use_mixed_precision and self.scaler is not None:
-            with autocast():
+            with autocast(
+                device_type="cuda" if "cuda" in str(self.device) else "cpu", enabled=self.config.use_mixed_precision
+            ):
                 # Forward pass
                 trm_output = self.agent(inputs, check_convergence=True)
 
