@@ -141,6 +141,17 @@ class EvaluationHarness:
             if completed:
                 self._logger.info("Resuming run %s: %d completed cells loaded", self._run_id, len(completed))
 
+        # Only keep completed results that match the current run matrix, so resuming with a filtered
+        # task list / adapter set doesn't leak stale cells into this run's results.
+        allowed_tasks = {task.task_id for task in tasks}
+        allowed_systems = {adapter.name for adapter in available_adapters}
+        allowed_iters = set(range(run_config.num_iterations))
+        completed = {
+            key: result
+            for key, result in completed.items()
+            if result.task_id in allowed_tasks and result.system in allowed_systems and result.iteration in allowed_iters
+        }
+
         self._results = list(completed.values())
         pending_flush: list[BenchmarkResult] = []
         flush_every = run_config.checkpoint_every_n_results
