@@ -101,6 +101,11 @@ Thumbs.db
 # Dev scratch directory (local experiments, never in image)
 dev/
 
+# Training checkpoints and benchmark output (mount as volume)
+checkpoints/
+benchmark_output/
+benchmarks/
+
 # Test output artifacts
 unit_test_results.txt
 test_results.txt

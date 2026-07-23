@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Suite & Coverage Quality:**
   - Verified 10,136+ passing tests with 93.35% coverage (exceeding 85% requirement gate).
   - Maintained 100% clean status for `ruff check src/ tests/`, `black src/ tests/`, and `mypy src/` across 320 source files.
+- **CI Pipeline Fixes:**
+  - Modernized deprecated `torch.cuda.amp` API to `torch.amp` with explicit `device_type` parameter across `trainer.py`, `agent_trainer.py`, and `unified_orchestrator.py`.
+  - Fixed `test_cuda_memory_fraction_invoked_on_cuda_device` CI failure by mocking `build_network` and `SelfPlayTrainer` to prevent CUDA initialization on GPU-less runners.
+  - Reformatted source with `black` 26.3.1 for CI parity.
 
 ### Test Suite Hardening & Code Quality — Branch: `main` (2026-07-20)
 

@@ -9,9 +9,18 @@ import pytest
 
 chess = pytest.importorskip("chess", reason="python-chess not installed")
 
-# Mock gradio before importing ui module
-sys.modules.setdefault("gradio", MagicMock())
-sys.modules.setdefault("gradio.themes", MagicMock())
+# Try importing gradio to avoid test pollution, otherwise fallback to MagicMock when not installed
+try:
+    import gradio
+except ImportError:
+    # Temporarily mock gradio to allow importing src.games.chess.ui
+    sys.modules["gradio"] = MagicMock()
+    sys.modules["gradio.themes"] = MagicMock()
+    # Force import the module while mocked
+    from src.games.chess import ui as _unused_ui  # noqa: F401
+    # Clean up sys.modules to avoid polluting other tests
+    del sys.modules["gradio"]
+    del sys.modules["gradio.themes"]
 
 from src.games.chess.continuous_learning import GameResult, ScoreCard
 

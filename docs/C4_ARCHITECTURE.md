@@ -260,6 +260,46 @@ graph TB
     style OrcMain fill:#E74C3C,stroke:#922B21,stroke-width:2px,color:#fff
 ```
 
+### 3.5 Self-Play Training & Gameplay Domains
+
+```mermaid
+graph TB
+    subgraph "Self-Play Training Component"
+        CLI[SelfPlayConvergence<br/><br/>CLI entry point]
+        Trainer[SelfPlayTrainer<br/><br/>Training loop]
+        Profiles[TrainingProfiles<br/><br/>smoke/dev/full]
+        SysConfig[SystemConfig<br/><br/>device/AMP/compile]
+        Registry[DomainRegistry<br/><br/>Domain dispatch]
+        
+        subgraph "Game Domains"
+            Chess[Chess]
+            ConnectFour[ConnectFour]
+            Othello[Othello]
+            Reasoning[Reasoning]
+            Planning[Planning]
+        end
+        
+        PVNet[PolicyValueNetwork<br/><br/>MLP for reasoning/planning, ResNet for board games]
+        GPUUtils[GPUUtils<br/><br/>Memory tracking, pre-flight checks]
+    end
+
+    CLI -->|Configures via| Profiles
+    CLI -->|Configures via| SysConfig
+    CLI -->|Runs| Trainer
+    Trainer -->|Dispatches via| Registry
+    Registry --> Chess
+    Registry --> ConnectFour
+    Registry --> Othello
+    Registry --> Reasoning
+    Registry --> Planning
+    Trainer -->|Trains| PVNet
+    Trainer -->|Monitors via| GPUUtils
+    
+    style CLI fill:#E74C3C,stroke:#922B21,stroke-width:2px,color:#fff
+    style Trainer fill:#3498DB,stroke:#1F618D,stroke-width:2px,color:#fff
+    style PVNet fill:#8E44AD,stroke:#5B2C6F,stroke-width:2px,color:#fff
+```
+
 ### 3.2 Neural Network Components (DeepMind Implementation)
 
 ```mermaid
@@ -387,8 +427,8 @@ service modules (so `rest_server.py`, which is omitted from coverage, stays logi
 
 ```mermaid
 graph LR
-    Registry[DomainRegistry<br/>reasoning / planning smoke tests<br/>chess via lazy loader] --> Trainer[SelfPlayTrainer<br/>single_agent flag]
-    ChessReg[chess registration<br/>optional 'chess' extra] -.-> Registry
+    Registry["DomainRegistry<br/>reasoning / planning (single-agent)<br/>chess / connect_four / othello (adversarial)<br/>lazy-loaded game domains"] --> Trainer["SelfPlayTrainer<br/>single_agent flag"]
+    GameRegs["game registrations<br/>chess / connect_four / othello<br/>lazy-loaded via DomainRegistry"] -.-> Registry
     Trainer --> NMCTS[NeuralMCTS<br/>+ SelfPlayCollector]
     NMCTS --> Buffer[ExperienceBuffer<br/>torch-safe]
     Buffer --> Loss[AlphaZeroLoss]

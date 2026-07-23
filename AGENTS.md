@@ -67,8 +67,11 @@ python -m src.benchmark --systems langgraph_mcts --tasks A1
 | Existing agents | `src/agents/`, `src/framework/agents/base.py` |
 | LangGraph orchestration | `src/framework/graph/builder.py` |
 | MCTS engine | `src/framework/mcts/core.py` (baseline), `src/framework/mcts/neural_mcts.py` (AlphaZero-style; `single_agent` flag) |
-| Gameplay domains | `src/games/chess/`, `src/games/connect_four/`, `src/games/othello/` (adversarial), `src/framework/mcts/single_agent_domains.py` |
-| Neural self-play (M5) | `src/training/self_play_trainer.py`, `src/training/training_config.py` (`smoke`/`dev`/`full` profiles) |
+| Gameplay domains | `src/games/chess/` (chess), `src/games/connect_four/` (connect_four), `src/games/othello/` (othello) (adversarial), `src/framework/mcts/single_agent_domains.py` (reasoning, planning) |
+| Neural self-play (M5) | `src/training/self_play_trainer.py` |
+| Training profiles | `src/training/training_config.py` (`smoke`/`dev`/`full` profiles) |
+| Self-play convergence driver | `src/training/self_play_convergence.py` (CLI entry, `--profile`/`--mixed-precision`/`--compile`) |
+| System/device config | `src/training/system_config.py` (device resolution, AMP, compile, CUDA memory fraction) |
 | GPU Introspection & Memory | `src/utils/gpu_utils.py` (`get_gpu_info`, `check_gpu_ready`, `GPUMemoryTracker`, memory fraction limit) |
 | Meta-controller learning (M5) | `src/training/meta_controller_data_collector.py` (see `docs/META_CONTROLLER_TRAINING.md`) |
 | API services (streaming/viz/compare) | `src/api/{streaming,graph_service,comparison_service}.py` (thin endpoints in `rest_server.py`) |

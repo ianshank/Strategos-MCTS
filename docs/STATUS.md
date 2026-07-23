@@ -1,6 +1,6 @@
 # Project Status — Evidence-Backed Baseline
 
-> **Date:** 2026-07-20 · **Status:** Authoritative baseline (Phase 0.2 — test hardening & CI Hardening)
+> **Date:** 2026-07-23 · **Status:** Authoritative baseline (Phase 0.2 — test hardening & CI Hardening)
 > **Supersedes** the stale `88.4% / 44 failures` figures in `planning/milestones.yaml`,
 > `docs/plans/IMPLEMENTATION_ROADMAP.md`, and `docs/plans/IMPLEMENTATION_PLAN_COMPREHENSIVE.md`.
 >
