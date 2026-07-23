@@ -96,6 +96,11 @@ experiment = [
 vectordb = [
     "pinecone>=7.0.0",
 ]
+checkpoint-sqlite = [
+    # Durable LangGraph checkpointer backend, selected via GRAPH_CHECKPOINT_BACKEND=sqlite.
+    # Optional: absence is handled gracefully and only errors when sqlite is explicitly selected.
+    "langgraph-checkpoint-sqlite>=1.0.0,<3.0.0",
+]
 google-adk = [
     "google-adk>=1.14",
     "google-cloud-aiplatform[adk,agent-engines]>=1.93.0",
@@ -126,7 +131,7 @@ chess = [
     "python-chess>=1.10.0",
 ]
 all = [
-    "langgraph-multi-agent-mcts[dev,prometheus,api,neural,experiment,vectordb,google-adk,benchmark,ui,chess]",
+    "langgraph-multi-agent-mcts[dev,prometheus,api,neural,experiment,vectordb,google-adk,benchmark,ui,chess,checkpoint-sqlite]",
 ]
 
 [project.scripts]

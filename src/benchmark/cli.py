@@ -115,6 +115,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--resume",
+        metavar="RUN_ID",
+        default=None,
+        help="Resume a prior run: skip already-completed (iteration, system, task) cells",
+    )
+
+    parser.add_argument(
         "--no-report",
         action="store_true",
         help="Skip markdown report generation",
@@ -196,7 +203,7 @@ async def run_benchmark(args: argparse.Namespace) -> int:
 
     # Execute
     try:
-        results = await harness.run(task_ids=args.tasks)
+        results = await harness.run(task_ids=args.tasks, resume_run_id=getattr(args, "resume", None))
     except Exception as e:
         logger.error("Benchmark execution failed: %s", e, exc_info=True)
         return 1

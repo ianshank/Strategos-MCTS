@@ -10,6 +10,7 @@ Provides:
 """
 
 from enum import Enum
+from typing import Literal
 
 from pydantic import (
     Field,
@@ -21,8 +22,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.config.constants import (
     DEFAULT_CUDA_MEMORY_FRACTION,
+    DEFAULT_GRAPH_NODE_RETRY_BACKOFF_FACTOR,
+    DEFAULT_GRAPH_NODE_RETRY_EXCEPTIONS,
+    DEFAULT_GRAPH_NODE_RETRY_INITIAL_DELAY_SECONDS,
+    DEFAULT_GRAPH_NODE_RETRY_MAX_ATTEMPTS,
     MAX_CUDA_MEMORY_FRACTION,
+    MAX_GRAPH_NODE_RETRY_ATTEMPTS,
+    MAX_GRAPH_NODE_RETRY_BACKOFF_FACTOR,
+    MAX_GRAPH_NODE_RETRY_DELAY_SECONDS,
     MIN_CUDA_MEMORY_FRACTION,
+    MIN_GRAPH_NODE_RETRY_ATTEMPTS,
+    MIN_GRAPH_NODE_RETRY_BACKOFF_FACTOR,
+    MIN_GRAPH_NODE_RETRY_DELAY_SECONDS,
     SUPPORTED_CUDA_BACKENDS,
 )
 
@@ -274,6 +285,52 @@ class Settings(BaseSettings):
     )
 
     FRAMEWORK_ENABLE_PARALLEL_AGENTS: bool = Field(default=True, description="Enable parallel agent execution")
+
+    # Graph Node Retry Configuration (retry-with-backoff at worker-node I/O boundaries)
+    GRAPH_NODE_RETRY_ENABLED: bool = Field(
+        default=True, description="Enable retry-with-backoff on transient graph worker-node I/O failures"
+    )
+    GRAPH_NODE_RETRY_MAX_ATTEMPTS: int = Field(
+        default=DEFAULT_GRAPH_NODE_RETRY_MAX_ATTEMPTS,
+        ge=MIN_GRAPH_NODE_RETRY_ATTEMPTS,
+        le=MAX_GRAPH_NODE_RETRY_ATTEMPTS,
+        description="Max attempts for a retryable node I/O call before propagating (stacks over adapter retries)",
+    )
+    GRAPH_NODE_RETRY_INITIAL_DELAY_SECONDS: float = Field(
+        default=DEFAULT_GRAPH_NODE_RETRY_INITIAL_DELAY_SECONDS,
+        ge=MIN_GRAPH_NODE_RETRY_DELAY_SECONDS,
+        le=MAX_GRAPH_NODE_RETRY_DELAY_SECONDS,
+        description="Initial backoff delay (seconds) before the first retry of a node I/O call",
+    )
+    GRAPH_NODE_RETRY_BACKOFF_FACTOR: float = Field(
+        default=DEFAULT_GRAPH_NODE_RETRY_BACKOFF_FACTOR,
+        ge=MIN_GRAPH_NODE_RETRY_BACKOFF_FACTOR,
+        le=MAX_GRAPH_NODE_RETRY_BACKOFF_FACTOR,
+        description="Multiplier applied to the retry delay after each failed attempt",
+    )
+    GRAPH_NODE_RETRY_EXCEPTIONS: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_GRAPH_NODE_RETRY_EXCEPTIONS),
+        description="Allowlist of retryable exceptions (bare builtin names or dotted import paths)",
+    )
+
+    # Graph Execution Trace Logging (structured event per node transition)
+    GRAPH_TRACE_ENABLED: bool = Field(
+        default=True, description="Emit a structured trace event for every graph node transition"
+    )
+    GRAPH_TRACE_DIR: str | None = Field(
+        default=None,
+        description="Directory for per-run JSONL trace files; None emits to structured logs/metrics only",
+    )
+
+    # Graph Checkpoint Backend (LangGraph checkpointer selection)
+    GRAPH_CHECKPOINT_BACKEND: Literal["memory", "sqlite"] = Field(
+        default="memory",
+        description="LangGraph checkpoint backend: in-process 'memory' (default) or durable 'sqlite'",
+    )
+    GRAPH_CHECKPOINT_SQLITE_PATH: str | None = Field(
+        default=None,
+        description="SQLite DB path for the 'sqlite' checkpoint backend (None => in-memory sqlite)",
+    )
 
     # LLM Generation Configuration
     LLM_TEMPERATURE: float = Field(default=0.7, ge=0.0, le=2.0, description="Temperature for LLM generation")

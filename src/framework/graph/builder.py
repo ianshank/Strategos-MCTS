@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 # LangGraph is an optional dependency whose typed API shifts across versions. For static
@@ -91,7 +92,14 @@ except ImportError:
 
 from src.observability.logging import get_logger
 
+from .retry import NodeRetryPolicy, with_node_retry
+from .schema import (
+    GraphConstructionError,
+    validate_graph_topology,
+    validate_state_schema,
+)
 from .state import AgentState
+from .tracing import GraphTraceRecorder, make_traced_node
 
 logger = get_logger(__name__)
 
@@ -119,6 +127,8 @@ class GraphBuilder:
         adk_agents: dict[str, Any] | None = None,
         neuro_symbolic_config: Any | None = None,
         synthesis_temperature: float = 0.5,
+        retry_policy: NodeRetryPolicy | None = None,
+        trace_recorder: GraphTraceRecorder | None = None,
     ):
         """
         Initialize graph builder.
@@ -149,6 +159,11 @@ class GraphBuilder:
         self.enable_parallel_agents = enable_parallel_agents
         self.adk_agents = adk_agents or {}
         self.synthesis_temperature = synthesis_temperature
+        # Retry policy for worker-node I/O boundaries. Disabled by default so a directly
+        # constructed builder is unchanged; IntegratedFramework injects the settings-derived policy.
+        self.retry_policy = retry_policy or NodeRetryPolicy(enabled=False)
+        # Optional execution-trace recorder (None => no tracing); injected by IntegratedFramework.
+        self.trace_recorder = trace_recorder
 
         # MCTS configuration
         self.mcts_config = mcts_config or create_preset_config(ConfigPreset.BALANCED)
@@ -202,34 +217,54 @@ class GraphBuilder:
             raise ImportError("LangGraph not installed. Install with: pip install langgraph")
 
         logger.info("Building LangGraph state machine")
+
+        # Validate the state schema before wiring anything so a malformed schema fails
+        # at construction time rather than mid-execution.
+        validate_state_schema(AgentState)
+
         workflow = StateGraph(AgentState)
 
+        # Track the wired topology locally (langgraph's internal graph representation is
+        # version-sensitive) so it can be validated deterministically before returning.
+        node_names: set[str] = set()
+        static_edges: list[tuple[str, str]] = []
+        conditional_targets: list[str] = []
+
+        def _add_node(name: str, handler: Any) -> None:
+            if name in node_names:
+                raise GraphConstructionError(f"Duplicate node name: '{name}'")
+            workflow.add_node(name, self._wrap_node(handler, name))
+            node_names.add(name)
+
+        def _add_edge(source: str, destination: str) -> None:
+            workflow.add_edge(source, destination)
+            static_edges.append((source, destination))
+
         # Add nodes
-        workflow.add_node("entry", self._entry_node)
-        workflow.add_node("retrieve_context", self._retrieve_context_node)
-        workflow.add_node("route_decision", self._route_decision_node)
-        workflow.add_node("parallel_agents", self._parallel_agents_node)
-        workflow.add_node("hrm_agent", self._hrm_agent_node)
-        workflow.add_node("trm_agent", self._trm_agent_node)
-        workflow.add_node("mcts_simulator", self._mcts_simulator_node)
+        _add_node("entry", self._entry_node)
+        _add_node("retrieve_context", self._retrieve_context_node)
+        _add_node("route_decision", self._route_decision_node)
+        _add_node("parallel_agents", self._parallel_agents_node)
+        _add_node("hrm_agent", self._hrm_agent_node)
+        _add_node("trm_agent", self._trm_agent_node)
+        _add_node("mcts_simulator", self._mcts_simulator_node)
 
         # Add ADK agent nodes
         for name, agent in self.adk_agents.items():
-            node_name = f"adk_{name}"
-            workflow.add_node(node_name, self._create_adk_node_handler(name, agent))
+            _add_node(f"adk_{name}", self._create_adk_node_handler(name, agent))
 
         # Add symbolic reasoning agent node if enabled
         if self.use_symbolic_reasoning and self.symbolic_extension:
-            workflow.add_node("symbolic_agent", self._symbolic_agent_node)
+            _add_node("symbolic_agent", self._symbolic_agent_node)
 
-        workflow.add_node("aggregate_results", self._aggregate_results_node)
-        workflow.add_node("evaluate_consensus", self._evaluate_consensus_node)
-        workflow.add_node("synthesize", self._synthesize_node)
+        _add_node("aggregate_results", self._aggregate_results_node)
+        _add_node("evaluate_consensus", self._evaluate_consensus_node)
+        _add_node("synthesize", self._synthesize_node)
 
         # Define edges
         workflow.set_entry_point("entry")
-        workflow.add_edge("entry", "retrieve_context")
-        workflow.add_edge("retrieve_context", "route_decision")
+        _add_edge("entry", "retrieve_context")
+        _add_edge("retrieve_context", "route_decision")
 
         # Conditional routing
         routing_map = {
@@ -253,40 +288,77 @@ class GraphBuilder:
             self._route_to_agents,
             routing_map,
         )
+        conditional_targets.extend(routing_map.values())
 
         # Parallel agents to aggregation
-        workflow.add_edge("parallel_agents", "aggregate_results")
+        _add_edge("parallel_agents", "aggregate_results")
 
         # Sequential agent nodes
-        workflow.add_edge("hrm_agent", "aggregate_results")
-        workflow.add_edge("trm_agent", "aggregate_results")
-        workflow.add_edge("mcts_simulator", "aggregate_results")
+        _add_edge("hrm_agent", "aggregate_results")
+        _add_edge("trm_agent", "aggregate_results")
+        _add_edge("mcts_simulator", "aggregate_results")
 
         # Symbolic agent to aggregation
         if self.use_symbolic_reasoning:
-            workflow.add_edge("symbolic_agent", "aggregate_results")
+            _add_edge("symbolic_agent", "aggregate_results")
 
         # ADK agents to aggregation
         for name in self.adk_agents:
-            workflow.add_edge(f"adk_{name}", "aggregate_results")
+            _add_edge(f"adk_{name}", "aggregate_results")
 
         # Aggregation to evaluation
-        workflow.add_edge("aggregate_results", "evaluate_consensus")
+        _add_edge("aggregate_results", "evaluate_consensus")
 
         # Conditional consensus check
+        consensus_map = {
+            "synthesize": "synthesize",
+            "iterate": "route_decision",
+        }
         workflow.add_conditional_edges(
             "evaluate_consensus",
             self._check_consensus,
-            {
-                "synthesize": "synthesize",
-                "iterate": "route_decision",
-            },
+            consensus_map,
         )
+        conditional_targets.extend(consensus_map.values())
 
         # Synthesis to end
-        workflow.add_edge("synthesize", END)
+        _add_edge("synthesize", END)
+
+        # Validate the fully wired topology (every edge / conditional target refers to a
+        # registered node or END) before handing the graph back for compilation.
+        validate_graph_topology(
+            nodes=node_names,
+            edges=static_edges,
+            conditional_targets=conditional_targets,
+            entry_point="entry",
+            terminal=END,
+        )
 
         return workflow
+
+    def _wrap_node(self, handler: Any, name: str) -> Any:
+        """Return the registered form of a node ``handler``.
+
+        Single wrapping seam applied to every node at registration time: when a trace
+        recorder is configured, every node (deterministic ones included, so the full
+        execution path is reconstructable) is wrapped to emit a structured transition event.
+        """
+        recorder = getattr(self, "trace_recorder", None)
+        if recorder is None:
+            return handler
+        return make_traced_node(recorder, handler, name)
+
+    def _node_retry(self, node_name: str, fn: Callable[[], Any]) -> Callable[[], Any]:
+        """Wrap a zero-arg node I/O callable with the configured retry policy.
+
+        Returns ``fn`` unchanged when retries are disabled or the node is not retryable, so
+        deterministic nodes and the default (injected-disabled) path carry no overhead.
+        Tolerates a builder constructed via ``__new__`` (no policy attribute) by not retrying.
+        """
+        policy = getattr(self, "retry_policy", None)
+        if policy is None:
+            return fn
+        return with_node_retry(policy, node_name, fn)
 
     def _entry_node(self, state: AgentState) -> dict:
         """Initialize state and parse query with validation."""
@@ -320,8 +392,11 @@ class GraphBuilder:
             return {"rag_context": "", "retrieved_docs": []}
 
         try:
-            # Retrieve documents with error handling
-            docs = self.vector_store.similarity_search(query, k=self.top_k_retrieval)
+            # Retrieve documents; retry transient failures before falling back to empty context.
+            def _search() -> Any:
+                return self.vector_store.similarity_search(query, k=self.top_k_retrieval)
+
+            docs = self._node_retry("retrieve_context", _search)()
 
             # Format context
             context = "\n\n".join([doc.page_content for doc in docs])
@@ -629,20 +704,15 @@ class GraphBuilder:
         """Execute HRM and TRM agents in parallel."""
         self.logger.info("Executing HRM and TRM agents in parallel")
 
-        # Run both agents concurrently
-        hrm_task = asyncio.create_task(
-            self.hrm_agent.process(
-                query=state["query"],
-                rag_context=state.get("rag_context"),
-            )
-        )
+        # Run both agents concurrently, each with its own retry at the process() boundary.
+        async def _hrm_call() -> Any:
+            return await self.hrm_agent.process(query=state["query"], rag_context=state.get("rag_context"))
 
-        trm_task = asyncio.create_task(
-            self.trm_agent.process(
-                query=state["query"],
-                rag_context=state.get("rag_context"),
-            )
-        )
+        async def _trm_call() -> Any:
+            return await self.trm_agent.process(query=state["query"], rag_context=state.get("rag_context"))
+
+        hrm_task = asyncio.create_task(self._node_retry("parallel_agents", _hrm_call)())
+        trm_task = asyncio.create_task(self._node_retry("parallel_agents", _trm_call)())
 
         # Await both results
         hrm_result, trm_result = await asyncio.gather(hrm_task, trm_task)
@@ -675,10 +745,10 @@ class GraphBuilder:
         """Execute HRM agent."""
         self.logger.info("Executing HRM agent")
 
-        result = await self.hrm_agent.process(
-            query=state["query"],
-            rag_context=state.get("rag_context"),
-        )
+        async def _call() -> Any:
+            return await self.hrm_agent.process(query=state["query"], rag_context=state.get("rag_context"))
+
+        result = await self._node_retry("hrm_agent", _call)()
 
         return {
             "hrm_results": {
@@ -698,10 +768,10 @@ class GraphBuilder:
         """Execute TRM agent."""
         self.logger.info("Executing TRM agent")
 
-        result = await self.trm_agent.process(
-            query=state["query"],
-            rag_context=state.get("rag_context"),
-        )
+        async def _call() -> Any:
+            return await self.trm_agent.process(query=state["query"], rag_context=state.get("rag_context"))
+
+        result = await self._node_retry("trm_agent", _call)()
 
         return {
             "trm_results": {
@@ -732,7 +802,12 @@ class GraphBuilder:
                 ],
             }
 
-        result = await self.symbolic_extension.handle_symbolic_node(state)
+        extension = self.symbolic_extension  # non-None past the guard above
+
+        async def _handle() -> Any:
+            return await extension.handle_symbolic_node(state)
+
+        result = await self._node_retry("symbolic_agent", _handle)()
 
         # Store proof tree if available
         proof_tree = None
@@ -874,7 +949,13 @@ class GraphBuilder:
         )
 
         return {
-            "mcts_root": root,
+            # A JSON-serializable summary replaces the live MCTSNode (never read from state
+            # anywhere in src/), so checkpointed graph state stays serializable.
+            "mcts_root": {
+                "state_id": root.state.state_id,
+                "tree_depth": tree_depth,
+                "tree_node_count": tree_node_count,
+            },
             "mcts_best_action": best_action,
             "mcts_stats": stats,
             "agent_outputs": [
@@ -909,16 +990,19 @@ class GraphBuilder:
             # We'll assume they implement a standard ADKAgentAdapter interface
             # or we pass the query directly
             try:
-                # Check if it's a mock or real agent
-                if hasattr(agent, "process_query"):  # Assuming custom method
-                    response = await agent.process_query(state["query"])
-                elif hasattr(agent, "run"):  # Standard LangChain-like
-                    response = await agent.run(state["query"])
-                elif hasattr(agent, "process"):  # Framework standard
-                    response = await agent.process(state["query"])
-                else:
+                # Invoke the ADK agent (signature varies); retry transient failures at this
+                # boundary before falling back to the 0-confidence error result below.
+                async def _invoke() -> Any:
+                    if hasattr(agent, "process_query"):  # Custom method
+                        return await agent.process_query(state["query"])
+                    if hasattr(agent, "run"):  # Standard LangChain-like
+                        return await agent.run(state["query"])
+                    if hasattr(agent, "process"):  # Framework standard
+                        return await agent.process(state["query"])
                     # Fallback for demonstration/mock objects
-                    response = {"response": f"Processed by {name}", "confidence": 0.8}
+                    return {"response": f"Processed by {name}", "confidence": 0.8}
+
+                response = await self._node_retry(f"adk_{name}", _invoke)()
 
                 # Extract content based on response type
                 if isinstance(response, dict):
@@ -1042,10 +1126,14 @@ Prioritize higher-confidence outputs. Integrate insights from all agents.
 Final Response:"""
 
         try:
-            response = await self.model_adapter.generate(
-                prompt=synthesis_prompt,
-                temperature=self.synthesis_temperature,
-            )
+
+            async def _generate() -> Any:
+                return await self.model_adapter.generate(
+                    prompt=synthesis_prompt,
+                    temperature=self.synthesis_temperature,
+                )
+
+            response = await self._node_retry("synthesize", _generate)()
             final_response = response.text
         except Exception as e:
             self.logger.error(f"Synthesis failed: {e}")
