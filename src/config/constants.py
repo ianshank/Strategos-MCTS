@@ -43,6 +43,38 @@ MIN_HTTP_MAX_RETRIES: Final[int] = 0
 MAX_HTTP_MAX_RETRIES: Final[int] = 10
 
 # ============================================================================
+# Graph Orchestration Hardening
+# ============================================================================
+
+# Retry-with-backoff for LangGraph worker-node I/O boundaries.
+DEFAULT_GRAPH_NODE_RETRY_MAX_ATTEMPTS: Final[int] = 3
+MIN_GRAPH_NODE_RETRY_ATTEMPTS: Final[int] = 1
+MAX_GRAPH_NODE_RETRY_ATTEMPTS: Final[int] = 10
+
+DEFAULT_GRAPH_NODE_RETRY_INITIAL_DELAY_SECONDS: Final[float] = 0.5
+MIN_GRAPH_NODE_RETRY_DELAY_SECONDS: Final[float] = 0.0
+MAX_GRAPH_NODE_RETRY_DELAY_SECONDS: Final[float] = 30.0
+
+DEFAULT_GRAPH_NODE_RETRY_BACKOFF_FACTOR: Final[float] = 2.0
+MIN_GRAPH_NODE_RETRY_BACKOFF_FACTOR: Final[float] = 1.0
+MAX_GRAPH_NODE_RETRY_BACKOFF_FACTOR: Final[float] = 10.0
+
+# Default transient-exception allowlist (bare builtins + dotted LLM-adapter exceptions).
+# Deliberately excludes non-transient errors (auth, invalid-request, context-length) and
+# CircuitBreakerOpenError (retrying would defeat the breaker).
+DEFAULT_GRAPH_NODE_RETRY_EXCEPTIONS: Final[tuple[str, ...]] = (
+    "TimeoutError",
+    "ConnectionError",
+    "src.adapters.llm.exceptions.LLMTimeoutError",
+    "src.adapters.llm.exceptions.LLMConnectionError",
+    "src.adapters.llm.exceptions.LLMServerError",
+    "src.adapters.llm.exceptions.LLMRateLimitError",
+)
+
+# Execution-trace logging for graph node transitions.
+DEFAULT_TRACE_DIGEST_HEX_CHARS: Final[int] = 16
+
+# ============================================================================
 # Security Configuration
 # ============================================================================
 

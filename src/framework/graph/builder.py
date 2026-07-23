@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 # LangGraph is an optional dependency whose typed API shifts across versions. For static
@@ -91,6 +92,7 @@ except ImportError:
 
 from src.observability.logging import get_logger
 
+from .retry import NodeRetryPolicy, with_node_retry
 from .schema import (
     GraphConstructionError,
     validate_graph_topology,
@@ -124,6 +126,7 @@ class GraphBuilder:
         adk_agents: dict[str, Any] | None = None,
         neuro_symbolic_config: Any | None = None,
         synthesis_temperature: float = 0.5,
+        retry_policy: NodeRetryPolicy | None = None,
     ):
         """
         Initialize graph builder.
@@ -154,6 +157,9 @@ class GraphBuilder:
         self.enable_parallel_agents = enable_parallel_agents
         self.adk_agents = adk_agents or {}
         self.synthesis_temperature = synthesis_temperature
+        # Retry policy for worker-node I/O boundaries. Disabled by default so a directly
+        # constructed builder is unchanged; IntegratedFramework injects the settings-derived policy.
+        self.retry_policy = retry_policy or NodeRetryPolicy(enabled=False)
 
         # MCTS configuration
         self.mcts_config = mcts_config or create_preset_config(ConfigPreset.BALANCED)
@@ -334,6 +340,18 @@ class GraphBuilder:
         """
         return handler
 
+    def _node_retry(self, node_name: str, fn: Callable[[], Any]) -> Callable[[], Any]:
+        """Wrap a zero-arg node I/O callable with the configured retry policy.
+
+        Returns ``fn`` unchanged when retries are disabled or the node is not retryable, so
+        deterministic nodes and the default (injected-disabled) path carry no overhead.
+        Tolerates a builder constructed via ``__new__`` (no policy attribute) by not retrying.
+        """
+        policy = getattr(self, "retry_policy", None)
+        if policy is None:
+            return fn
+        return with_node_retry(policy, node_name, fn)
+
     def _entry_node(self, state: AgentState) -> dict:
         """Initialize state and parse query with validation."""
         query = state.get("query", "")
@@ -366,8 +384,11 @@ class GraphBuilder:
             return {"rag_context": "", "retrieved_docs": []}
 
         try:
-            # Retrieve documents with error handling
-            docs = self.vector_store.similarity_search(query, k=self.top_k_retrieval)
+            # Retrieve documents; retry transient failures before falling back to empty context.
+            def _search() -> Any:
+                return self.vector_store.similarity_search(query, k=self.top_k_retrieval)
+
+            docs = self._node_retry("retrieve_context", _search)()
 
             # Format context
             context = "\n\n".join([doc.page_content for doc in docs])
@@ -675,20 +696,15 @@ class GraphBuilder:
         """Execute HRM and TRM agents in parallel."""
         self.logger.info("Executing HRM and TRM agents in parallel")
 
-        # Run both agents concurrently
-        hrm_task = asyncio.create_task(
-            self.hrm_agent.process(
-                query=state["query"],
-                rag_context=state.get("rag_context"),
-            )
-        )
+        # Run both agents concurrently, each with its own retry at the process() boundary.
+        async def _hrm_call() -> Any:
+            return await self.hrm_agent.process(query=state["query"], rag_context=state.get("rag_context"))
 
-        trm_task = asyncio.create_task(
-            self.trm_agent.process(
-                query=state["query"],
-                rag_context=state.get("rag_context"),
-            )
-        )
+        async def _trm_call() -> Any:
+            return await self.trm_agent.process(query=state["query"], rag_context=state.get("rag_context"))
+
+        hrm_task = asyncio.create_task(self._node_retry("parallel_agents", _hrm_call)())
+        trm_task = asyncio.create_task(self._node_retry("parallel_agents", _trm_call)())
 
         # Await both results
         hrm_result, trm_result = await asyncio.gather(hrm_task, trm_task)
@@ -721,10 +737,10 @@ class GraphBuilder:
         """Execute HRM agent."""
         self.logger.info("Executing HRM agent")
 
-        result = await self.hrm_agent.process(
-            query=state["query"],
-            rag_context=state.get("rag_context"),
-        )
+        async def _call() -> Any:
+            return await self.hrm_agent.process(query=state["query"], rag_context=state.get("rag_context"))
+
+        result = await self._node_retry("hrm_agent", _call)()
 
         return {
             "hrm_results": {
@@ -744,10 +760,10 @@ class GraphBuilder:
         """Execute TRM agent."""
         self.logger.info("Executing TRM agent")
 
-        result = await self.trm_agent.process(
-            query=state["query"],
-            rag_context=state.get("rag_context"),
-        )
+        async def _call() -> Any:
+            return await self.trm_agent.process(query=state["query"], rag_context=state.get("rag_context"))
+
+        result = await self._node_retry("trm_agent", _call)()
 
         return {
             "trm_results": {
@@ -778,7 +794,12 @@ class GraphBuilder:
                 ],
             }
 
-        result = await self.symbolic_extension.handle_symbolic_node(state)
+        extension = self.symbolic_extension  # non-None past the guard above
+
+        async def _handle() -> Any:
+            return await extension.handle_symbolic_node(state)
+
+        result = await self._node_retry("symbolic_agent", _handle)()
 
         # Store proof tree if available
         proof_tree = None
@@ -955,16 +976,19 @@ class GraphBuilder:
             # We'll assume they implement a standard ADKAgentAdapter interface
             # or we pass the query directly
             try:
-                # Check if it's a mock or real agent
-                if hasattr(agent, "process_query"):  # Assuming custom method
-                    response = await agent.process_query(state["query"])
-                elif hasattr(agent, "run"):  # Standard LangChain-like
-                    response = await agent.run(state["query"])
-                elif hasattr(agent, "process"):  # Framework standard
-                    response = await agent.process(state["query"])
-                else:
+                # Invoke the ADK agent (signature varies); retry transient failures at this
+                # boundary before falling back to the 0-confidence error result below.
+                async def _invoke() -> Any:
+                    if hasattr(agent, "process_query"):  # Custom method
+                        return await agent.process_query(state["query"])
+                    if hasattr(agent, "run"):  # Standard LangChain-like
+                        return await agent.run(state["query"])
+                    if hasattr(agent, "process"):  # Framework standard
+                        return await agent.process(state["query"])
                     # Fallback for demonstration/mock objects
-                    response = {"response": f"Processed by {name}", "confidence": 0.8}
+                    return {"response": f"Processed by {name}", "confidence": 0.8}
+
+                response = await self._node_retry(f"adk_{name}", _invoke)()
 
                 # Extract content based on response type
                 if isinstance(response, dict):
@@ -1088,10 +1112,14 @@ Prioritize higher-confidence outputs. Integrate insights from all agents.
 Final Response:"""
 
         try:
-            response = await self.model_adapter.generate(
-                prompt=synthesis_prompt,
-                temperature=self.synthesis_temperature,
-            )
+
+            async def _generate() -> Any:
+                return await self.model_adapter.generate(
+                    prompt=synthesis_prompt,
+                    temperature=self.synthesis_temperature,
+                )
+
+            response = await self._node_retry("synthesize", _generate)()
             final_response = response.text
         except Exception as e:
             self.logger.error(f"Synthesis failed: {e}")

@@ -36,6 +36,7 @@ from src.config.constants import DEFAULT_KROKI_BASE_URL, DEFAULT_KROKI_TIMEOUT_S
 from ..mcts.config import MCTSConfig
 from ..mcts.experiments import ExperimentTracker
 from .builder import GraphBuilder
+from .retry import NodeRetryPolicy, policy_from_settings
 from .schema import validate_initial_state
 
 
@@ -91,6 +92,16 @@ class IntegratedFramework:
             self.trm_agent = None
             self.logger.warning("Could not import LLM HRM/TRM agents")
 
+        # Derive the worker-node retry policy from settings (graceful if settings are
+        # unavailable, e.g. in minimal test environments without configured env).
+        try:
+            from src.config.settings import get_settings
+
+            retry_policy = policy_from_settings(get_settings())
+        except Exception as exc:  # noqa: BLE001 - never let settings issues break graph init
+            self.logger.warning("Node retry disabled (settings unavailable): %s", exc)
+            retry_policy = NodeRetryPolicy(enabled=False)
+
         # Build graph
         self.graph_builder = GraphBuilder(
             hrm_agent=self.hrm_agent,
@@ -104,6 +115,7 @@ class IntegratedFramework:
             consensus_threshold=consensus_threshold,
             enable_parallel_agents=enable_parallel_agents,
             adk_agents=self.adk_agents,
+            retry_policy=retry_policy,
         )
 
         # Compile graph
