@@ -203,7 +203,7 @@ async def run_benchmark(args: argparse.Namespace) -> int:
 
     # Execute
     try:
-        results = await harness.run(task_ids=args.tasks, resume_run_id=args.resume)
+        results = await harness.run(task_ids=args.tasks, resume_run_id=getattr(args, "resume", None))
     except Exception as e:
         logger.error("Benchmark execution failed: %s", e, exc_info=True)
         return 1
