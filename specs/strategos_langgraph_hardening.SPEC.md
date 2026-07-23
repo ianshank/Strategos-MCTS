@@ -2,7 +2,7 @@
 id: strategos_langgraph_hardening
 goal: Harden the LangGraph orchestration layer with construction-time state validation, checkpoint/resume for long-running jobs, retry-with-backoff at node I/O boundaries, and structured execution traces
 module: src/framework/graph/
-status: draft
+status: approved
 ---
 
 # Goal
