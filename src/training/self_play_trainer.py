@@ -101,9 +101,15 @@ class SelfPlayTrainer:
 
         self.raw_network = network.to(self.device)
         self.network = self.raw_network
+
+        from src.utils import distributed
+
+        self.is_distributed = distributed.is_distributed()
+        self.network = distributed.wrap_ddp(self.raw_network, self.device)
+
         if self.config.compile_model and hasattr(torch, "compile"):
             try:
-                self.network = torch.compile(self.raw_network)
+                self.network = torch.compile(self.network)
                 logger.info("Compiled PyTorch model with torch.compile")
             except Exception as err:
                 logger.warning("Failed to compile model with torch.compile: %s", err)
@@ -233,6 +239,11 @@ class SelfPlayTrainer:
         to a ``<path>.meta.json`` sidecar so tools like the ``policy-lift`` CLI can
         reconstruct the network without guessing the architecture.
         """
+        from src.utils import distributed
+
+        if self.is_distributed and not distributed.is_main_process():
+            return
+
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(self.raw_network.state_dict(), path)

@@ -285,3 +285,4 @@ unit_test_results.txt
 # NOTE: versioned weights under models/ and .claude/models/ are intentionally tracked via LFS
 # (see comments above at the *.pt section). Only root-level generated outputs are ignored here.
 /rnn_meta_controller.pt
+.agents/

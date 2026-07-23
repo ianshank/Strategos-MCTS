@@ -193,13 +193,23 @@ async def run(args: argparse.Namespace) -> int:
         if not args.compile:
             args.compile = profile_spec.compile_model
 
+    settings = get_settings()
+    from src.utils import distributed
+
+    world_size = distributed.get_world_size(default=settings.TRAINING_WORLD_SIZE)
+    is_distributed_run = settings.TRAINING_DISTRIBUTED or world_size > 1
+
+    if is_distributed_run:
+        distributed.init_distributed(backend=settings.TRAINING_BACKEND)
+        if torch.cuda.is_available():
+            args.device = f"cuda:{distributed.get_local_rank()}"
+
     if args.device is None:
         args.device = "cpu"
     elif args.device == "auto":
         args.device = get_default_device_str()
 
     if args.device.startswith("cuda"):
-        settings = get_settings()
         set_cuda_memory_fraction(settings.TRAINING_CUDA_MEMORY_FRACTION)
 
     torch.manual_seed(args.seed)
@@ -312,6 +322,10 @@ async def run(args: argparse.Namespace) -> int:
             "checkpoint_dir": str(args.checkpoint_dir),
         },
     )
+
+    if is_distributed_run:
+        distributed.cleanup_distributed()
+
     return EXIT_OK
 
 

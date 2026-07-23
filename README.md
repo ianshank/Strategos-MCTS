@@ -29,8 +29,10 @@ This framework implements a multi-agent system combining hierarchical reasoning 
 - **TRM (Task Refinement Module)**: Iterative agent for refining and optimizing solutions.
 - **Neural MCTS**: AlphaZero-style tree search guided by policy/value networks.
 - **Meta-Controller**: Neural router (GRU/BERT) that dynamically assigns tasks to the best agent.
+- **Deep Research Agent Swarm (`/deep-research`)**: Multi-agent literature discovery and architectural feasibility pipeline (Planner -> Fetcher -> Critic -> Synthesizer).
 
-### 🛠️ Training Pipeline
+### 🛠️ Training Pipeline & Scaling
+- **Multi-GPU Distributed Training**: PyTorch DistributedDataParallel (`src/utils/distributed.py`) via `torchrun` with Rank-0 I/O fencing.
 - **End-to-End Orchestration**: Automated multi-stage training (Pre-training → Fine-tuning → Self-Play).
 - **Synthetic Data Generation**: LLM-powered generator for creating high-quality training datasets.
 - **Research Corpus Builder**: Automated fetching and indexing of arXiv papers for RAG.
@@ -48,7 +50,7 @@ This framework implements a multi-agent system combining hierarchical reasoning 
 - All gated by settings flags (`ENABLE_STREAMING` / `ENABLE_GRAPH_VISUALIZATION` / `ENABLE_DEMO_COMPARISON`).
 
 ### 🔁 Neural Self-Play & Fast Gameplay (M5+)
-- **Generalized `SelfPlayTrainer`** (`src/training/self_play_trainer.py`) supporting FP16 mixed precision, `torch.compile`, pinned memory, and non-pickle checkpoint sidecars.
+- **Generalized `SelfPlayTrainer`** (`src/training/self_play_trainer.py`) supporting DistributedDataParallel (DDP), FP16 mixed precision, `torch.compile`, pinned memory, and non-pickle checkpoint sidecars.
 - **Fast Gameplay Domains** (`docs/GAME_DOMAINS.md`): Connect Four (`src/games/connect_four/`), Othello / Reversi (`src/games/othello/`), Chess, and single-agent reasoning/planning domains with zero required C dependencies.
 - **GPU Hardware Introspection** (`docs/GPU_TRAINING_GUIDE.md`): `src/utils/gpu_utils.py` for pre-flight memory validation, `GPUMemoryTracker`, and CUDA allocation fraction enforcement.
 - **Operational Training Profiles**: `--profile {smoke,dev,full}` presets for instant plumbing validation, dev testing, and full self-play training.

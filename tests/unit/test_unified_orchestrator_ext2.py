@@ -34,6 +34,7 @@ def _make_orchestrator():
     dummy_param = torch.nn.Parameter(torch.randn(2, 2))
 
     mock_pv_net = MagicMock()
+    del mock_pv_net.module
     mock_pv_net.get_parameter_count.return_value = 100
     mock_pv_net.parameters.return_value = iter([dummy_param])
     mock_pv_net.state_dict.return_value = {"w": torch.randn(2, 2)}

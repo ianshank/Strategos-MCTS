@@ -298,18 +298,29 @@ class SystemConfig:
     def from_settings(cls) -> "SystemConfig":
         """Create SystemConfig with values populated from application Settings."""
         from src.config.settings import get_settings
+        from src.utils import distributed
 
         settings = get_settings()
         config = cls()
+
+        # Parse DDP variables via distributed utils
+        local_rank = distributed.get_local_rank()
+        rank = distributed.get_rank()
+        world_size = distributed.get_world_size(default=settings.TRAINING_WORLD_SIZE)
+
+        config.distributed = settings.TRAINING_DISTRIBUTED or world_size > 1
+        config.world_size = world_size
+        config.rank = rank
+        config.backend = settings.TRAINING_BACKEND
+
         if settings.TORCH_DEVICE_OVERRIDE:
             config.device = settings.TORCH_DEVICE_OVERRIDE
+        elif config.distributed and torch.cuda.is_available():
+            config.device = f"cuda:{local_rank}"
 
         config.use_mixed_precision = settings.TRAINING_USE_MIXED_PRECISION
         config.gradient_checkpointing = settings.TRAINING_GRADIENT_CHECKPOINTING
         config.compile_model = settings.TRAINING_COMPILE_MODEL
-        config.distributed = settings.TRAINING_DISTRIBUTED
-        config.world_size = settings.TRAINING_WORLD_SIZE
-        config.backend = settings.TRAINING_BACKEND
         config.validate()
         return config
 

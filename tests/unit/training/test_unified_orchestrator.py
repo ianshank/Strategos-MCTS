@@ -35,6 +35,7 @@ def _make_mock_model(param_count: int = 100):
     model.train = MagicMock()
     model.eval = MagicMock()
     model.to = MagicMock(return_value=model)
+    del model.module
     return model
 
 
