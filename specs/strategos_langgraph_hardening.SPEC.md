@@ -96,10 +96,12 @@ of scope here.
   is additive, not a Pydantic conversion.
 - All new tunables live in Pydantic Settings with bounds, defaults mirrored in
   `src/config/constants.py`; no hardcoded values.
-- Governed footprint beyond the frontmatter `module` prefix: AC-5 touches
-  `src/benchmark/evaluation/` (harness plus new run store) and
-  `src/benchmark/cli.py`; settings work touches `src/config/settings.py` and
-  `src/config/constants.py`. No other `src/` paths are in scope.
+- In-scope implementation paths: `src/framework/graph/` (the frontmatter
+  `module`); plus, for AC-5, `src/benchmark/evaluation/` (the harness and the new
+  run store) and `src/benchmark/cli.py`; plus, for settings,
+  `src/config/settings.py` and `src/config/constants.py`. The `module` prefix
+  names the primary governed subtree; these bullets enumerate the full in-scope
+  footprint, and no other `src/` paths are in scope.
 - Reuse existing building blocks — the `retry` decorator in
   `src/observability/decorators.py`, correlation IDs and the structured logger in
   `src/observability/logging.py`, `MetricsCollector.record_node_timing`, and the
