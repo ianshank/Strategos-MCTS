@@ -491,18 +491,22 @@ class SelfPlayEvaluator:
             self.mcts.network = current_model
             self.mcts.clear_cache()
 
-            # Run MCTS search. add_root_noise=False: this is deterministic evaluation (temperature
-            # is 0), so the root Dirichlet noise that aids self-play exploration must be OFF, or the
-            # arena result becomes non-reproducible.
-            action_probs, root_node = await self.mcts.search(
-                state,
-                num_simulations=self.config.mcts_iterations,
-                temperature=self.config.temperature,
-                add_root_noise=False,
-            )
-
-            # Restore original model
-            self.mcts.network = original_model
+            try:
+                # Run MCTS search. add_root_noise=False: this is deterministic evaluation
+                # (temperature is 0), so the root Dirichlet noise that aids self-play
+                # exploration must be OFF, or the arena result becomes non-reproducible.
+                action_probs, root_node = await self.mcts.search(
+                    state,
+                    num_simulations=self.config.mcts_iterations,
+                    temperature=self.config.temperature,
+                    add_root_noise=False,
+                )
+            finally:
+                # Always restore the shared engine's network (and drop this model's cache
+                # entries) even if search raises: evaluate() continues past per-game
+                # failures, and a leaked swap would run later games on the wrong model.
+                self.mcts.network = original_model
+                self.mcts.clear_cache()
 
             # Track MCTS values
             root_value = root_node.value if root_node is not None else 0.0

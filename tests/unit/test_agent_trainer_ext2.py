@@ -690,7 +690,9 @@ class TestSelfPlayEvaluatorPlayGame:
         root_nodes = [MagicMock(value=0.8), MagicMock(value=0.4), MagicMock(value=0.6)]
         call_idx = [0]
 
-        async def search_fn(state, num_simulations, temperature, add_root_noise=False):
+        # Default mirrors the real NeuralMCTS.search signature (add_root_noise=True), so this
+        # test would notice if production ever stopped passing add_root_noise=False explicitly.
+        async def search_fn(state, num_simulations, temperature, add_root_noise=True):
             node = root_nodes[call_idx[0]] if call_idx[0] < len(root_nodes) else MagicMock(value=0.5)
             call_idx[0] += 1
             return {"action_0": 1.0}, node

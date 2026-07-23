@@ -155,9 +155,10 @@ The adversarial (chess) gate path was hardened so a GPU run measures a **valid**
 win/loss tally is read from model1's own perspective (it was inverted — a stronger model scored
 below 50%); the per-ply network swap now clears the eval cache (which was network-blind and let the
 two models reuse each other's evaluations); and arena search runs with root Dirichlet noise off
-(deterministic evaluation). These fixes live in `src/framework/mcts` + `src/training` (outside the
+(deterministic evaluation). These fixes live in `src/training/` (the arena evaluator — outside the
 `src/benchmark/` gate-semantics constraint) but they *do* move the measured win-rate — they make it
-correct; they cannot pre-guarantee AC-4 passes.
+correct; they cannot pre-guarantee AC-4 passes. A separate follow-up PR audits the search core's
+negamax value-sign convention (`src/framework/mcts/neural_mcts.py`).
 
 Every non-GPU piece is in place: the AC-4 test (`tests/integration/benchmark/test_m5_lift_gate.py`,
 skipped until the artifact exists), the AC-3 schema test, the four spec-trace `Covers m5_policy_lift
