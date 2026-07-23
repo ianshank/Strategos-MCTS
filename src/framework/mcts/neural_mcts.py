@@ -55,6 +55,17 @@ class GameState:
         """Get reward for the player (1 or -1)."""
         raise NotImplementedError
 
+    @property
+    def current_player(self) -> int:
+        """The side to move at this state (1 or -1).
+
+        Two-player domains should override this (chess does) so terminal rewards can be
+        evaluated from the side-to-move perspective — the same convention as the network's
+        value head. The default of 1 keeps single-agent domains (whose ``get_reward``
+        ignores ``player``) and legacy two-player states behaving exactly as before.
+        """
+        return 1
+
     def to_tensor(self) -> torch.Tensor:
         """Convert state to tensor for neural network input."""
         raise NotImplementedError
@@ -155,7 +166,9 @@ class NeuralMCTSNode:
                     prior=prior,
                 )
 
-    def select_child(self, c_puct: float) -> tuple[Any | None, NeuralMCTSNode | None]:
+    def select_child(
+        self, c_puct: float, *, negate_child_value: bool = False
+    ) -> tuple[Any | None, NeuralMCTSNode | None]:
         """
         Select best child using PUCT algorithm.
 
@@ -163,6 +176,11 @@ class NeuralMCTSNode:
 
         Args:
             c_puct: Exploration constant
+            negate_child_value: Negate the child's Q for two-player (negamax) search.
+                Under the negamax backup each node's value is stored from the perspective
+                of the side to move AT THAT NODE — i.e. the parent's opponent — so the
+                parent must select on ``-child.value``. Single-agent search stores absolute
+                values and keeps the default (no negation).
 
         Returns:
             (action, child_node) tuple
@@ -175,8 +193,8 @@ class NeuralMCTSNode:
         sqrt_parent_visits = math.sqrt(self.visit_count)
 
         for action, child in self.children.items():
-            # Q-value (average value)
-            q_value = child.value
+            # Q-value (average value), flipped to the parent's perspective for negamax
+            q_value = -child.value if negate_child_value else child.value
 
             # U-value (exploration bonus)
             u_value = c_puct * child.prior * sqrt_parent_visits / (1 + child.visit_count + child.virtual_loss)
@@ -443,8 +461,10 @@ class NeuralMCTS:
             current.add_virtual_loss(self.config.virtual_loss)
             path.append(current)
 
-            # Select best child
-            _, selected = current.select_child(self.config.c_puct)
+            # Select best child. Two-player search negates the child Q (negamax: the
+            # child's stored value is from the opponent's perspective); single-agent
+            # search keeps absolute values.
+            _, selected = current.select_child(self.config.c_puct, negate_child_value=not self.single_agent)
             assert selected is not None, "select_child returned None"
             current = selected
 
@@ -452,10 +472,15 @@ class NeuralMCTS:
         path.append(current)
         current.add_virtual_loss(self.config.virtual_loss)
 
-        # Evaluate leaf node
+        # Evaluate leaf node. Convention: the leaf value is from the perspective of the
+        # side to move AT THE LEAF — the same perspective the network's value head is
+        # trained on (canonical side-to-move inputs + side-to-move targets) — so the
+        # negamax backup below assigns every node its own side-to-move value.
         if current.is_terminal:
-            # Terminal node: use game result
-            value = current.state.get_reward()
+            # Terminal node: game result from the side to move at the terminal state.
+            # (current_player defaults to 1, so single-agent domains and legacy states
+            # without a side-to-move accessor behave exactly as before.)
+            value = current.state.get_reward(player=current.state.current_player)
         else:
             # Non-terminal: expand and evaluate with network
             policy_probs, value = await self.evaluate_state(current.state, add_noise=False)
