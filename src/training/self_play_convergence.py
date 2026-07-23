@@ -218,7 +218,7 @@ async def run(args: argparse.Namespace) -> int:
             games_per_iteration=args.games_per_iteration,
             use_amp=args.mixed_precision,
             compile_model=args.compile,
-            pin_memory=args.device.startswith("cuda"),
+            pin_memory=args.device.startswith("cuda") and get_settings().TRAINING_PIN_MEMORY,
         )
         trainer = SelfPlayTrainer(
             network=build_network(arch, spec, args.device),
