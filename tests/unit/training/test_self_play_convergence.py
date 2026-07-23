@@ -322,14 +322,18 @@ def test_checkpoint_name_roundtrips():
 
 def test_cuda_memory_fraction_invoked_on_cuda_device(tmp_path, monkeypatch):
     """When device starts with cuda, set_cuda_memory_fraction is called during setup."""
-    from unittest.mock import MagicMock
+    from unittest.mock import MagicMock, patch
 
     import src.training.self_play_convergence as spc
 
     mock_set_mem = MagicMock()
     monkeypatch.setattr(spc, "set_cuda_memory_fraction", mock_set_mem)
 
-    # Mock SelfPlayTrainer.train_iteration to avoid full run
+    # Mock build_network so it does NOT call .to("cuda:0") — CI has no GPU
+    mock_network = MagicMock()
+    monkeypatch.setattr(spc, "build_network", lambda arch, spec, device: mock_network)
+
+    # Mock SelfPlayTrainer to avoid any CUDA initialisation
     class DummyMetrics:
         total_loss = 0.1
         policy_loss = 0.05
@@ -342,24 +346,29 @@ def test_cuda_memory_fraction_invoked_on_cuda_device(tmp_path, monkeypatch):
     async def mock_train(self):
         return DummyMetrics()
 
-    monkeypatch.setattr("src.training.self_play_trainer.SelfPlayTrainer.train_iteration", mock_train)
-    monkeypatch.setattr("torch.cuda.is_available", lambda: False)  # keep torch from blowing up on fake device
+    mock_trainer = MagicMock()
+    mock_trainer.train_iteration = mock_train.__get__(mock_trainer)
+    mock_trainer.save_checkpoint = MagicMock()
 
-    argv = [
-        "--domain",
-        "reasoning",
-        "--iterations",
-        "1",
-        "--checkpoint-dir",
-        str(tmp_path / "ckpts"),
-        "--device",
-        "cuda:0",
-        "--num-simulations",
-        "1",
-        "--games-per-iteration",
-        "1",
-    ]
-    code = _run(argv)
+    with patch("src.training.self_play_convergence.SelfPlayTrainer", return_value=mock_trainer):
+        monkeypatch.setattr("torch.cuda.is_available", lambda: False)
+
+        argv = [
+            "--domain",
+            "reasoning",
+            "--iterations",
+            "1",
+            "--checkpoint-dir",
+            str(tmp_path / "ckpts"),
+            "--device",
+            "cuda:0",
+            "--num-simulations",
+            "1",
+            "--games-per-iteration",
+            "1",
+        ]
+        code = _run(argv)
+
     assert code == EXIT_OK
     mock_set_mem.assert_called_once()
 

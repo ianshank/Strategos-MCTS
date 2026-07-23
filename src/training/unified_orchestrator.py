@@ -20,7 +20,7 @@ from typing import Any
 import psutil
 import torch
 import torch.nn as nn
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 
 from ..agents.hrm_agent import HRMLoss, create_hrm_agent
 from ..agents.trm_agent import TRMLoss, create_trm_agent
@@ -248,7 +248,11 @@ class UnifiedTrainingOrchestrator:
         )
 
         # Mixed precision scaler
-        self.scaler = GradScaler() if self.config.use_mixed_precision else None
+        self.scaler = (
+            GradScaler("cuda" if "cuda" in str(self.device) else "cpu", enabled=self.config.use_mixed_precision)
+            if self.config.use_mixed_precision
+            else None
+        )
 
         # Log total initialization summary
         total_params = pv_params + hrm_params + trm_params
@@ -657,7 +661,9 @@ class UnifiedTrainingOrchestrator:
 
             # Forward pass
             if self.config.use_mixed_precision and self.scaler:
-                with autocast():
+                with autocast(
+                    device_type="cuda" if "cuda" in str(self.device) else "cpu", enabled=self.config.use_mixed_precision
+                ):
                     policy_logits, value_pred = self.policy_value_net(states)
                     loss, loss_dict = self.pv_loss_fn(policy_logits, value_pred, policies, values)
                     # Apply importance sampling weights
