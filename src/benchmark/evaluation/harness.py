@@ -18,6 +18,7 @@ from src.benchmark.adapters.protocol import BenchmarkSystemProtocol
 from src.benchmark.config.benchmark_settings import BenchmarkSettings, get_benchmark_settings
 from src.benchmark.evaluation.cost_calculator import CostCalculator
 from src.benchmark.evaluation.models import BenchmarkResult
+from src.benchmark.evaluation.run_store import BenchmarkRunStore, JobKey
 from src.benchmark.evaluation.scorer import ScorerProtocol
 from src.benchmark.tasks.models import BenchmarkTask
 from src.benchmark.tasks.registry import BenchmarkTaskRegistry
@@ -80,6 +81,7 @@ class EvaluationHarness:
     async def run(
         self,
         task_ids: list[str] | None = None,
+        resume_run_id: str | None = None,
     ) -> list[BenchmarkResult]:
         """
         Execute the full benchmark suite.
@@ -87,11 +89,13 @@ class EvaluationHarness:
         Args:
             task_ids: Optional list of specific task IDs to run.
                      If None, runs all registered tasks.
+            resume_run_id: Optional prior run id to resume; already-completed
+                     (iteration, system, task) cells are skipped rather than re-run.
 
         Returns:
             List of all BenchmarkResult instances
         """
-        self._run_id = str(uuid.uuid4())[:8]
+        self._run_id = resume_run_id or str(uuid.uuid4())[:8]
         set_correlation_id(f"benchmark-{self._run_id}")
 
         self._logger.info(
@@ -119,14 +123,44 @@ class EvaluationHarness:
             return []
 
         # Execute benchmark
-        self._results = []
         run_config = self._settings.run
+
+        # Durable, resumable result store (kill-safe). On resume, already-completed cells are
+        # loaded and skipped so the sweep continues without re-running or losing prior work.
+        run_store: BenchmarkRunStore | None = None
+        completed: dict[str, BenchmarkResult] = {}
+        if run_config.incremental_persistence:
+            run_dir = Path(self._settings.report.output_dir) / "runs" / self._run_id
+            run_store = BenchmarkRunStore(run_dir, self._run_id)
+            completed = run_store.load_completed()
+            run_store.write_manifest(
+                self._settings,
+                [task.task_id for task in tasks],
+                [adapter.name for adapter in available_adapters],
+            )
+            if completed:
+                self._logger.info("Resuming run %s: %d completed cells loaded", self._run_id, len(completed))
+
+        self._results = list(completed.values())
+        pending_flush: list[BenchmarkResult] = []
+        flush_every = run_config.checkpoint_every_n_results
+
+        def _flush() -> None:
+            if run_store is None:
+                return
+            for buffered in pending_flush:
+                run_store.append_result(buffered)
+            pending_flush.clear()
 
         for iteration in range(run_config.num_iterations):
             self._logger.info("Starting iteration %d/%d", iteration + 1, run_config.num_iterations)
 
             for task in tasks:
                 for adapter in available_adapters:
+                    cell_key = JobKey(task.task_id, adapter.name, iteration).key()
+                    if cell_key in completed:
+                        continue  # already finished in a prior run
+
                     result = await self._execute_with_timeout(adapter, task, iteration)
                     result.run_id = self._run_id
                     result.iteration = iteration
@@ -136,6 +170,14 @@ class EvaluationHarness:
                         result.scoring = await self._scorer.score(result, task)
 
                     self._results.append(result)
+
+                    # Persist the finished (scored) record so it is never re-scored on resume.
+                    if run_store is not None:
+                        pending_flush.append(result)
+                        if len(pending_flush) >= flush_every:
+                            _flush()
+
+        _flush()
 
         # Apply cost estimates
         if self._cost_calculator:

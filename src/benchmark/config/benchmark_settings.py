@@ -73,6 +73,16 @@ class BenchmarkRunConfig(BaseSettings):
         le=30.0,
         description="Base delay for exponential backoff retries",
     )
+    incremental_persistence: bool = Field(
+        default=True,
+        description="Durably append each scored result so a crashed sweep can resume without loss",
+    )
+    checkpoint_every_n_results: int = Field(
+        default=1,
+        ge=1,
+        le=100,
+        description="Flush the durable result log every N results (1 = every result; >1 may lose up to N-1 on SIGKILL)",
+    )
     warmup_runs: int = Field(
         default=0,
         ge=0,
