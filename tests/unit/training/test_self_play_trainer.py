@@ -171,6 +171,7 @@ def test_checkpoint_roundtrip(tmp_path):
         assert torch.equal(p1, p2)
 
 
+@pytest.mark.unit
 def test_device_auto_resolution():
     trainer = SelfPlayTrainer(
         network=_TinyNet(),
@@ -180,10 +181,12 @@ def test_device_auto_resolution():
         single_agent=True,
         device="auto",
     )
-    assert trainer.device in ("cuda", "cpu") or trainer.device.startswith("cuda")
+    assert trainer.device in ("cuda", "cpu", "mps") or trainer.device.startswith("cuda")
 
 
-def test_pin_memory_cpu_safe():
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_pin_memory_cpu_safe():
     config = SelfPlayConfig(num_games_per_iteration=1, batch_size=2, pin_memory=True)
     trainer = SelfPlayTrainer(
         network=_TinyNet(),
@@ -194,7 +197,7 @@ def test_pin_memory_cpu_safe():
         single_agent=True,
         device="cpu",
     )
-    asyncio.run(trainer.generate_self_play(1))
+    await trainer.generate_self_play(1)
     loss_dict = trainer.train_step()
     assert loss_dict is not None
     assert np.isfinite(loss_dict["total"])

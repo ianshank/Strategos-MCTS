@@ -156,15 +156,17 @@ class SelfPlayTrainer:
         batch = [self.buffer[i] for i in idxs]
 
         states = torch.stack([self._as_tensor(ex.state) for ex in batch])
+        target_policy = torch.tensor(np.stack([ex.policy_target for ex in batch]), dtype=torch.float32)
+        target_value = torch.tensor([ex.value_target for ex in batch], dtype=torch.float32)
+
         if self.config.pin_memory and self.device.startswith("cuda"):
             states = states.pin_memory()
+            target_policy = target_policy.pin_memory()
+            target_value = target_value.pin_memory()
+
         states = states.to(self.device, non_blocking=self.config.pin_memory)
-        target_policy = torch.tensor(np.stack([ex.policy_target for ex in batch]), dtype=torch.float32).to(
-            self.device, non_blocking=self.config.pin_memory
-        )
-        target_value = torch.tensor([ex.value_target for ex in batch], dtype=torch.float32).to(
-            self.device, non_blocking=self.config.pin_memory
-        )
+        target_policy = target_policy.to(self.device, non_blocking=self.config.pin_memory)
+        target_value = target_value.to(self.device, non_blocking=self.config.pin_memory)
 
         self.network.train()
         self.optimizer.zero_grad()

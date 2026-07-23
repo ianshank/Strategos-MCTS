@@ -260,6 +260,7 @@ class TestSystemConfig:
         serialized = json.dumps(d)
         assert isinstance(serialized, str)
 
+    @pytest.mark.unit
     def test_from_settings_revalidates_post_init(self):
         """from_settings re-validates device-dependent settings after applying overrides."""
         mock_settings = patch("src.config.settings.get_settings").start()
@@ -283,6 +284,7 @@ class TestSystemConfig:
         finally:
             patch.stopall()
 
+    @pytest.mark.unit
     def test_validate_method_updates_cpu_invariants(self):
         """Calling validate() directly re-enforces CPU configuration rules."""
         cfg = SystemConfig(device="cpu")

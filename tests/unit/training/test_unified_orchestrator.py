@@ -465,7 +465,9 @@ class TestTrainingFailureHandling:
             with caplog.at_level(logging.WARNING):
                 result = uo._handle_training_failure("hrm_train_epoch", "boom", dict(self._ZEROS))
 
-        assert result == self._ZEROS
+        expected = self._ZEROS.copy()
+        expected["degraded"] = True
+        assert result == expected
         assert any("training_step_degraded" in r.getMessage() or "degraded" in r.getMessage() for r in caplog.records)
 
     def test_strict_mode_raises_training_error(self):

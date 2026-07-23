@@ -16,7 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.observability.logging import get_structured_logger
+from src.observability.logging import get_correlation_id, get_structured_logger
 
 from ..training.system_config import NeuralNetworkConfig
 
@@ -188,6 +188,7 @@ class PolicyValueNetwork(nn.Module):
 
         logger.debug(
             "PolicyValueNetwork initialized",
+            correlation_id=get_correlation_id(),
             input_channels=config.input_channels,
             num_channels=config.num_channels,
             num_res_blocks=config.num_res_blocks,

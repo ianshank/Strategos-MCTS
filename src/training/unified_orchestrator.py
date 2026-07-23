@@ -59,14 +59,14 @@ def _strict_training_errors() -> bool:
         return False
 
 
-def _handle_training_failure(stage: str, reason: str, zero_metrics: dict[str, float]) -> dict[str, float]:
+def _handle_training_failure(stage: str, reason: str, zero_metrics: dict[str, float]) -> dict[str, Any]:
     """
     Centralize the strict-vs-degraded decision for a failed training step.
 
     When ``TRAINING_STRICT_ERRORS`` is enabled, raise a ``TrainingError`` so a failed step
     can never masquerade as a successful one with zero loss. Otherwise emit a structured
     ``training_step_degraded`` warning (so the silent degradation is observable) and return
-    the zero-filled metrics, preserving the previous behavior.
+    the zero-filled metrics with a degraded flag set to True.
     """
     if _strict_training_errors():
         raise TrainingError(
@@ -80,7 +80,9 @@ def _handle_training_failure(stage: str, reason: str, zero_metrics: dict[str, fl
         stage=stage,
         reason=reason,
     )
-    return zero_metrics
+    result = zero_metrics.copy()
+    result["degraded"] = True
+    return result
 
 
 class UnifiedTrainingOrchestrator:
@@ -414,11 +416,12 @@ class UnifiedTrainingOrchestrator:
                 with TimingContext(self.monitor, "hrm_training"):
                     hrm_metrics = await self._train_hrm_agent()
                     metrics.update(hrm_metrics)
+                hrm_degraded = hrm_metrics.get("degraded", False)
                 logger.log_agent_execution(
                     agent_name="HRM",
                     duration_ms=round((time.perf_counter() - phase_start) * 1000, 2),
-                    confidence=1.0 - hrm_metrics.get("hrm_loss", 0.0),
-                    success=True,
+                    confidence=0.0 if hrm_degraded else (1.0 - hrm_metrics.get("hrm_loss", 0.0)),
+                    success=not hrm_degraded,
                     iteration=iteration,
                     loss=hrm_metrics.get("hrm_loss", 0.0),
                     halt_step=hrm_metrics.get("hrm_halt_step", 0.0),
@@ -435,11 +438,12 @@ class UnifiedTrainingOrchestrator:
                 with TimingContext(self.monitor, "trm_training"):
                     trm_metrics = await self._train_trm_agent()
                     metrics.update(trm_metrics)
+                trm_degraded = trm_metrics.get("degraded", False)
                 logger.log_agent_execution(
                     agent_name="TRM",
                     duration_ms=round((time.perf_counter() - phase_start) * 1000, 2),
-                    confidence=1.0 - trm_metrics.get("trm_loss", 0.0),
-                    success=True,
+                    confidence=0.0 if trm_degraded else (1.0 - trm_metrics.get("trm_loss", 0.0)),
+                    success=not trm_degraded,
                     iteration=iteration,
                     loss=trm_metrics.get("trm_loss", 0.0),
                     convergence_step=trm_metrics.get("trm_convergence_step", 0.0),
@@ -770,7 +774,7 @@ class UnifiedTrainingOrchestrator:
                 total_norm += param_norm.item() ** 2
         return float(total_norm**0.5)
 
-    async def _train_hrm_agent(self) -> dict[str, float]:
+    async def _train_hrm_agent(self) -> dict[str, Any]:
         """
         Train HRM agent with proper loss computation.
 
@@ -873,7 +877,7 @@ class UnifiedTrainingOrchestrator:
 
         return result
 
-    async def _train_trm_agent(self) -> dict[str, float]:
+    async def _train_trm_agent(self) -> dict[str, Any]:
         """
         Train TRM agent with deep supervision.
 

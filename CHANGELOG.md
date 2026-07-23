@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dynamic Win & Initialization Rules:**
   - Refactored `ConnectFourState._check_winner()` to use `CONFIG.in_a_row` dynamically instead of fixed index offsets.
   - Refactored `OthelloState._make_initial_board()` to calculate mid-board piece positions from `CONFIG.board_size // 2`.
-  - Parametrized GPU memory fraction bounds in `gpu_utils.py` using `MIN_CUDA_MEMORY_FRACTION` and `MAX_CUDA_MEMORY_FRACTION` constants.
+  - Parameterized GPU memory fraction bounds in `gpu_utils.py` using `MIN_CUDA_MEMORY_FRACTION` and `MAX_CUDA_MEMORY_FRACTION` constants.
 - **Test Suite & Coverage Quality:**
   - Verified 10,136+ passing tests with 93.35% coverage (exceeding 85% requirement gate).
   - Maintained 100% clean status for `ruff check src/ tests/`, `black src/ tests/`, and `mypy src/` across 320 source files.

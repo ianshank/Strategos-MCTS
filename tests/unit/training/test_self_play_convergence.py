@@ -320,6 +320,7 @@ def test_checkpoint_name_roundtrips():
         assert int(match.group(1)) == iteration
 
 
+@pytest.mark.unit
 def test_cuda_memory_fraction_invoked_on_cuda_device(tmp_path, monkeypatch):
     """When device starts with cuda, set_cuda_memory_fraction is called during setup."""
     from unittest.mock import MagicMock, patch
@@ -376,6 +377,7 @@ def test_cuda_memory_fraction_invoked_on_cuda_device(tmp_path, monkeypatch):
 # --------------------------------------------------------------------- chess (deferred)
 
 
+@pytest.mark.unit
 @pytest.mark.skipif(not chess_available(), reason="chess extra (python-chess) not installed")
 def test_chess_architecture_resolves_to_conv():
     """AC-1/AC-2 for chess run only where the chess extra exists (deferred in this CI)."""

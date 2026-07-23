@@ -146,7 +146,7 @@ class TestUIPageLoad:
     )
     def test_page_components_present(self, gradio_app):
         """Verify all expected UI components are present."""
-        demo = gradio_app.demo
+        demo = getattr(gradio_app, "demo", None)
         if demo is None:
             pytest.skip("Gradio UI demo block not available")
 

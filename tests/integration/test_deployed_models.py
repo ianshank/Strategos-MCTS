@@ -30,7 +30,9 @@ def safe_torch_load():
     if hasattr(torch.serialization, "add_safe_globals"):
         import numpy as np
 
-        np_core = getattr(np, "_core", np.core)
+        np_core = getattr(np, "_core", None)
+        if np_core is None:
+            np_core = np.core
         # Add all needed numpy types
         torch.serialization.add_safe_globals([np_core.multiarray.scalar, np.dtype, np.dtypes.Float64DType])
 
@@ -76,8 +78,16 @@ def test_hrm_model_loading_and_inference(production_models_dir, production_confi
 
     try:
         trainer = HRMTrainer(production_config)
-    except (ImportError, ValueError) as err:
-        pytest.skip(f"Tokenizer dependency missing: {err}")
+    except (ImportError, ValueError, OSError) as err:
+        err_msg = str(err).lower()
+        if (
+            "token" in err_msg
+            or "pretrained" in err_msg
+            or "transformers" in err_msg
+            or isinstance(err, (ImportError, OSError))
+        ):
+            pytest.skip(f"Tokenizer or model dependency missing: {err}")
+        raise
 
     # Load checkpoint
     try:
@@ -121,8 +131,16 @@ def test_trm_model_loading_and_inference(production_models_dir, production_confi
 
     try:
         trainer = TRMTrainer(production_config)
-    except (ImportError, ValueError) as err:
-        pytest.skip(f"Tokenizer dependency missing: {err}")
+    except (ImportError, ValueError, OSError) as err:
+        err_msg = str(err).lower()
+        if (
+            "token" in err_msg
+            or "pretrained" in err_msg
+            or "transformers" in err_msg
+            or isinstance(err, (ImportError, OSError))
+        ):
+            pytest.skip(f"Tokenizer or model dependency missing: {err}")
+        raise
 
     try:
         checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)

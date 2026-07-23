@@ -186,14 +186,16 @@ async def run(args: argparse.Namespace) -> int:
             args.num_simulations = profile_spec.num_simulations
         if args.games_per_iteration is None:
             args.games_per_iteration = profile_spec.games_per_iteration
-        if args.device == "cpu" and profile_spec.device != "cpu":
-            args.device = profile_spec.device
+        if args.device is None:
+            args.device = profile_spec.resolved_device()
         if not args.mixed_precision:
             args.mixed_precision = profile_spec.use_amp
         if not args.compile:
             args.compile = profile_spec.compile_model
 
-    if args.device == "auto":
+    if args.device is None:
+        args.device = "cpu"
+    elif args.device == "auto":
         args.device = get_default_device_str()
 
     if args.device.startswith("cuda"):
@@ -336,7 +338,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory for checkpoints and their .meta.json sidecars",
     )
     parser.add_argument("--seed", type=_seed_int, default=0, help="Seed for network init, self-play, and training")
-    parser.add_argument("--device", default="cpu", help="Torch device (default: cpu)")
+    parser.add_argument("--device", default=None, help="Torch device (default: cpu)")
     parser.add_argument(
         "--profile",
         choices=["smoke", "dev", "full"],
