@@ -17,8 +17,11 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-import torch
-from torch import nn
+
+# Skip cleanly (not a collection error) when the optional torch dependency is absent,
+# matching the suite convention for neural-MCTS tests.
+torch = pytest.importorskip("torch", reason="PyTorch required for neural MCTS tests")
+nn = torch.nn
 
 from src.framework.mcts.neural_mcts import GameState, NeuralMCTS
 from src.games.chess.registration import chess_available
