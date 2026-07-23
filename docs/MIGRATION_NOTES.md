@@ -38,7 +38,7 @@ These are additive and opt-in; nothing pre-existing is migrated:
   `BENCHMARK_RUN_INCREMENTAL_PERSISTENCE`; makes a crashed sweep resumable with
   `python -m src.benchmark --resume <run_id>`.
 - **Execution trace files** — per-run `<GRAPH_TRACE_DIR>/<run_id>.jsonl`. Off by default
-  (`GRAPH_TRACE_DIR` unset); structured-log/metric emission is always on regardless.
+  (`GRAPH_TRACE_DIR` unset); structured-log/metric emission is enabled by default (`GRAPH_TRACE_ENABLED=true`) and can be disabled via `GRAPH_TRACE_ENABLED=false`.
 - **SQLite graph checkpoints** — written only when `GRAPH_CHECKPOINT_BACKEND=sqlite` and the
   optional `langgraph-checkpoint-sqlite` extra is installed.
 
