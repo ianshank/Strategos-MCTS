@@ -10,6 +10,7 @@ Provides:
 """
 
 from enum import Enum
+from typing import Literal
 
 from pydantic import (
     Field,
@@ -319,6 +320,16 @@ class Settings(BaseSettings):
     GRAPH_TRACE_DIR: str | None = Field(
         default=None,
         description="Directory for per-run JSONL trace files; None emits to structured logs/metrics only",
+    )
+
+    # Graph Checkpoint Backend (LangGraph checkpointer selection)
+    GRAPH_CHECKPOINT_BACKEND: Literal["memory", "sqlite"] = Field(
+        default="memory",
+        description="LangGraph checkpoint backend: in-process 'memory' (default) or durable 'sqlite'",
+    )
+    GRAPH_CHECKPOINT_SQLITE_PATH: str | None = Field(
+        default=None,
+        description="SQLite DB path for the 'sqlite' checkpoint backend (None => in-memory sqlite)",
     )
 
     # LLM Generation Configuration

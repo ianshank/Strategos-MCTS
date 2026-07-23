@@ -25,7 +25,7 @@ class AgentState(TypedDict):
     agent_outputs: Annotated[list[dict], operator.add]
 
     # MCTS simulation (updated for new core)
-    mcts_root: NotRequired[Any]  # MCTSNode
+    mcts_root: NotRequired[dict]  # JSON-serializable tree summary (state_id, depth, node count)
     mcts_iterations: NotRequired[int]
     mcts_best_action: NotRequired[str]
     mcts_stats: NotRequired[dict]

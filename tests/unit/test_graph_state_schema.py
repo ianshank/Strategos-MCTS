@@ -192,8 +192,17 @@ class TestValidateInitialState:
             validate_initial_state({**_valid_state(), "retrieved_docs": {"not": "a list"}})
 
     def test_any_typed_key_accepts_anything(self):
-        # mcts_root: NotRequired[Any] accepts arbitrary values.
-        validate_initial_state({**_valid_state(), "mcts_root": object()})
+        # An Any-typed field accepts arbitrary values (the type check is skipped).
+        class AnySchema(TypedDict):
+            v: NotRequired[Any]
+
+        validate_initial_state({"v": object()}, AnySchema)
+
+    def test_mcts_root_accepts_dict_rejects_object(self):
+        # mcts_root is now a JSON-serializable dict summary, not a live node.
+        validate_initial_state({**_valid_state(), "mcts_root": {"state_id": "root", "tree_depth": 2}})
+        with pytest.raises(StateValidationError):
+            validate_initial_state({**_valid_state(), "mcts_root": object()})
 
     def test_non_mapping_rejected(self):
         with pytest.raises(StateValidationError, match="must be a mapping"):

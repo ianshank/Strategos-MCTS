@@ -949,7 +949,13 @@ class GraphBuilder:
         )
 
         return {
-            "mcts_root": root,
+            # A JSON-serializable summary replaces the live MCTSNode (never read from state
+            # anywhere in src/), so checkpointed graph state stays serializable.
+            "mcts_root": {
+                "state_id": root.state.state_id,
+                "tree_depth": tree_depth,
+                "tree_node_count": tree_node_count,
+            },
             "mcts_best_action": best_action,
             "mcts_stats": stats,
             "agent_outputs": [

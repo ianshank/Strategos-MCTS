@@ -39,7 +39,7 @@ from ..mcts.config import MCTSConfig
 from ..mcts.experiments import ExperimentTracker
 from .builder import GraphBuilder
 from .retry import NodeRetryPolicy, policy_from_settings
-from .schema import validate_initial_state
+from .schema import GraphConstructionError, validate_initial_state
 from .tracing import GraphTraceRecorder, JsonlTraceSink, set_trace_context
 
 
@@ -64,11 +64,16 @@ class IntegratedFramework:
         consensus_threshold: float = 0.75,
         enable_parallel_agents: bool = True,
         adk_agents: dict[str, Any] | None = None,
+        checkpointer: Any | None = None,
+        interrupt_before: list[str] | None = None,
+        interrupt_after: list[str] | None = None,
     ):
         """
         Initialize integrated framework.
 
-        Backward compatible with LangGraphMultiAgentFramework.
+        Backward compatible with LangGraphMultiAgentFramework. ``checkpointer`` overrides the
+        settings-selected backend; ``interrupt_before``/``interrupt_after`` name nodes at which
+        the compiled graph pauses for resume/human-in-the-loop.
         """
         self.model_adapter = model_adapter
         self.logger = logger
@@ -95,22 +100,28 @@ class IntegratedFramework:
             self.trm_agent = None
             self.logger.warning("Could not import LLM HRM/TRM agents")
 
-        # Derive the worker-node retry policy and execution-trace recorder from settings
-        # (graceful if settings/metrics are unavailable, e.g. in minimal test environments).
-        retry_policy = NodeRetryPolicy(enabled=False)
-        self.trace_recorder: GraphTraceRecorder | None = None
+        # Load settings best-effort: only a genuinely unavailable settings object degrades the
+        # hardening features. A *misconfiguration* (bad retry allowlist, sqlite backend without
+        # the extra) must raise at construction, so those paths run outside this guard.
+        settings = None
         try:
             from src.config.settings import get_settings
 
             settings = get_settings()
-            retry_policy = policy_from_settings(settings)
-            if settings.GRAPH_TRACE_ENABLED:
-                from src.observability.metrics import MetricsCollector
+        except Exception as exc:  # noqa: BLE001 - settings truly unavailable -> degrade, don't crash
+            self.logger.warning("Settings unavailable; graph hardening features degraded: %s", exc)
 
-                sink = JsonlTraceSink(settings.GRAPH_TRACE_DIR) if settings.GRAPH_TRACE_DIR else None
-                self.trace_recorder = GraphTraceRecorder(sink=sink, metrics=MetricsCollector.get_instance())
-        except Exception as exc:  # noqa: BLE001 - never let settings issues break graph init
-            self.logger.warning("Graph hardening features degraded (settings unavailable): %s", exc)
+        retry_policy = policy_from_settings(settings) if settings is not None else NodeRetryPolicy(enabled=False)
+
+        self.trace_recorder: GraphTraceRecorder | None = None
+        if settings is not None and settings.GRAPH_TRACE_ENABLED:
+            from src.observability.metrics import MetricsCollector
+
+            sink = JsonlTraceSink(settings.GRAPH_TRACE_DIR) if settings.GRAPH_TRACE_DIR else None
+            self.trace_recorder = GraphTraceRecorder(sink=sink, metrics=MetricsCollector.get_instance())
+
+        # Resolve the checkpointer: an injected saver wins; otherwise select by backend.
+        resolved_checkpointer = self._resolve_checkpointer(settings, checkpointer)
 
         # Build graph
         self.graph_builder = GraphBuilder(
@@ -132,13 +143,49 @@ class IntegratedFramework:
         # Compile graph
         if StateGraph is not None:
             self.graph = self.graph_builder.build_graph()
-            self.memory = MemorySaver() if MemorySaver else None
-            self.app = self.graph.compile(checkpointer=self.memory) if self.memory else self.graph.compile()
+            self.memory = resolved_checkpointer
+            compile_kwargs: dict[str, Any] = {}
+            if self.memory is not None:
+                compile_kwargs["checkpointer"] = self.memory
+            if interrupt_before:
+                compile_kwargs["interrupt_before"] = interrupt_before
+            if interrupt_after:
+                compile_kwargs["interrupt_after"] = interrupt_after
+            self.app = self.graph.compile(**compile_kwargs)
         else:
             self.graph = None
             self.app = None
 
         self.logger.info("Integrated framework initialized with new MCTS core")
+
+    def _resolve_checkpointer(self, settings: Any | None, injected: Any | None) -> Any | None:
+        """Select the LangGraph checkpointer: injected saver wins, else settings backend.
+
+        Raises:
+            GraphConstructionError: if the 'sqlite' backend is selected without its extra
+                installed — a silent fallback would fake durability, so it fails loudly.
+        """
+        if injected is not None:
+            return injected
+        backend = getattr(settings, "GRAPH_CHECKPOINT_BACKEND", "memory") if settings is not None else "memory"
+        if backend == "sqlite":
+            path = getattr(settings, "GRAPH_CHECKPOINT_SQLITE_PATH", None)
+            return self._build_sqlite_saver(path)
+        return MemorySaver() if MemorySaver else None
+
+    @staticmethod
+    def _build_sqlite_saver(path: str | None) -> Any:
+        try:
+            from langgraph.checkpoint.sqlite import SqliteSaver
+        except ImportError as exc:
+            raise GraphConstructionError(
+                "GRAPH_CHECKPOINT_BACKEND='sqlite' requires the optional 'langgraph-checkpoint-sqlite' "
+                "dependency (pip install '.[checkpoint-sqlite]')."
+            ) from exc
+        import sqlite3
+
+        conn = sqlite3.connect(path or ":memory:", check_same_thread=False)
+        return SqliteSaver(conn)
 
     def _build_initial_state(self, query: str, use_rag: bool, use_mcts: bool) -> dict:
         """Construct and validate the initial graph state before invocation.
@@ -165,6 +212,18 @@ class IntegratedFramework:
         thread_id = configurable.get("thread_id", "default")
         return str(thread_id)
 
+    @staticmethod
+    def _resolve_config(config: dict | None, thread_id: str | None) -> dict:
+        """Build a LangGraph config, threading a caller-supplied per-job thread id.
+
+        An explicit ``config`` is respected as-is; otherwise a config is synthesized with
+        ``thread_id`` (or 'default'), replacing the previously hardcoded thread id so
+        concurrent jobs no longer collide on one checkpoint thread.
+        """
+        if config is not None:
+            return config
+        return {"configurable": {"thread_id": thread_id or "default"}}
+
     def _start_trace(self, config: dict) -> str:
         """Generate a run id, bind trace/correlation context, and begin the run."""
         run_id = uuid.uuid4().hex[:12]
@@ -185,6 +244,7 @@ class IntegratedFramework:
         use_rag: bool = True,
         use_mcts: bool = False,
         config: dict | None = None,
+        thread_id: str | None = None,
     ) -> dict:
         """
         Process query through LangGraph.
@@ -205,7 +265,7 @@ class IntegratedFramework:
 
         initial_state = self._build_initial_state(query, use_rag, use_mcts)
 
-        config = config or {"configurable": {"thread_id": "default"}}
+        config = self._resolve_config(config, thread_id)
 
         run_id = self._start_trace(config)
         try:
@@ -225,6 +285,7 @@ class IntegratedFramework:
         use_rag: bool = True,
         use_mcts: bool = False,
         config: dict | None = None,
+        thread_id: str | None = None,
     ):
         """
         Stream node-level state updates through LangGraph.
@@ -245,7 +306,7 @@ class IntegratedFramework:
 
         initial_state = self._build_initial_state(query, use_rag, use_mcts)
 
-        config = config or {"configurable": {"thread_id": "default"}}
+        config = self._resolve_config(config, thread_id)
 
         self.logger.debug(f"Starting streaming execution for query: {query[:100]}")
 
@@ -264,6 +325,7 @@ class IntegratedFramework:
         use_rag: bool = True,
         use_mcts: bool = False,
         config: dict | None = None,
+        thread_id: str | None = None,
         include_types: list[str] | None = None,
     ):
         """
@@ -289,7 +351,7 @@ class IntegratedFramework:
 
         initial_state = self._build_initial_state(query, use_rag, use_mcts)
 
-        config = config or {"configurable": {"thread_id": "default"}}
+        config = self._resolve_config(config, thread_id)
 
         # Default to all event types if not specified
         include_types = include_types or [
