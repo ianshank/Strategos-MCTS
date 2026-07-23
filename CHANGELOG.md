@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### GPU Training, Gameplay Domains & Training Pipeline Enhancements (2026-07-22)
+### GPU Training, Gameplay Domains & Training Pipeline Enhancements
 
 #### Added
 - **GPU Training & Hardware Management:**

@@ -22,6 +22,7 @@ To add a new domain to the framework:
    - `is_terminal() -> bool`
    - `get_reward(player: int = 1) -> float`
    - `to_tensor() -> torch.Tensor`
+   - `get_hash() -> str`
 
 2. Register the domain with `DomainRegistry`:
 
@@ -31,11 +32,10 @@ from src.framework.domain_registry import DomainRegistry, DomainSpec
 DomainRegistry.register(
     DomainSpec(
         name="my_custom_domain",
-        metric_type="win_rate",  # or "mean_reward"
+        metric="win_rate",  # or "mean_reward"
         single_agent=False,
         initial_state_fn=MyCustomState.create_initial_state,
         action_space_size=10,
-        state_shape=(3, 8, 8),
     )
 )
 ```

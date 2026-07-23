@@ -36,7 +36,7 @@ from src.observability.logging import get_logger
 
 # NeuralMCTS uses the neural-specific MCTSConfig (num_simulations / c_puct / temperature_*),
 # which is distinct from the baseline src.framework.mcts.config.MCTSConfig.
-from src.training.system_config import MCTSConfig
+from src.training.system_config import MCTSConfig, get_default_device_str
 
 logger = get_logger(__name__)
 
@@ -88,6 +88,8 @@ class SelfPlayTrainer:
     ) -> None:
         self.config = config or SelfPlayConfig()
         self.mcts_config = mcts_config or MCTSConfig()
+        if device == "auto":
+            device = get_default_device_str()
         self.device = device
         self.single_agent = single_agent
         self.action_space_size = action_space_size
@@ -97,7 +99,7 @@ class SelfPlayTrainer:
             torch.manual_seed(seed)
             np.random.seed(seed)
 
-        self.raw_network = network.to(device)
+        self.raw_network = network.to(self.device)
         self.network = self.raw_network
         if self.config.compile_model and hasattr(torch, "compile"):
             try:
@@ -107,7 +109,7 @@ class SelfPlayTrainer:
                 logger.warning("Failed to compile model with torch.compile: %s", err)
 
         self.use_amp = self.config.use_amp and self.device.startswith("cuda")
-        self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp) if self.use_amp else None
+        self.scaler = torch.amp.GradScaler("cuda", enabled=self.use_amp) if self.use_amp else None
 
         self.mcts = NeuralMCTS(self.network, self.mcts_config, device=device, single_agent=single_agent)
         self.collector = SelfPlayCollector(self.mcts, self.mcts_config, action_space_size=action_space_size)
@@ -153,17 +155,22 @@ class SelfPlayTrainer:
         idxs = np.random.choice(len(self.buffer), size=batch_size, replace=False)
         batch = [self.buffer[i] for i in idxs]
 
-        states = torch.stack([self._as_tensor(ex.state) for ex in batch]).to(self.device)
+        states = torch.stack([self._as_tensor(ex.state) for ex in batch])
         if self.config.pin_memory and self.device.startswith("cuda"):
             states = states.pin_memory()
-        target_policy = torch.tensor(np.stack([ex.policy_target for ex in batch]), dtype=torch.float32).to(self.device)
-        target_value = torch.tensor([ex.value_target for ex in batch], dtype=torch.float32).to(self.device)
+        states = states.to(self.device, non_blocking=self.config.pin_memory)
+        target_policy = torch.tensor(np.stack([ex.policy_target for ex in batch]), dtype=torch.float32).to(
+            self.device, non_blocking=self.config.pin_memory
+        )
+        target_value = torch.tensor([ex.value_target for ex in batch], dtype=torch.float32).to(
+            self.device, non_blocking=self.config.pin_memory
+        )
 
         self.network.train()
         self.optimizer.zero_grad()
 
         if self.use_amp:
-            with torch.cuda.amp.autocast():
+            with torch.amp.autocast("cuda"):
                 policy_logits, value = self.network(states)
                 total_loss, loss_dict = self.loss_fn(policy_logits, value, target_policy, target_value)
             assert self.scaler is not None
@@ -227,8 +234,6 @@ class SelfPlayTrainer:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(self.raw_network.state_dict(), path)
-        if torch.cuda.is_available() and self.device.startswith("cuda"):
-            torch.cuda.empty_cache()
 
         if metadata is not None:
             sidecar = path.with_name(path.name + ".meta.json")

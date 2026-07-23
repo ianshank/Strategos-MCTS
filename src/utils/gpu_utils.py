@@ -74,7 +74,15 @@ def check_gpu_ready(min_memory_gb: float = MIN_GPU_MEMORY_GB) -> bool:
         logger.info("GPU pre-flight check: CUDA is not available")
         return False
 
-    free_mem = info["memory_total_gb"] - info["memory_allocated_gb"]
+    try:
+        import torch  # noqa: PLC0415
+
+        free_bytes, _total_bytes = torch.cuda.mem_get_info()
+        free_mem = free_bytes / (1024**3)
+    except Exception as err:
+        logger.warning("GPU pre-flight check: Failed to query CUDA memory info: %s", err)
+        return False
+
     if free_mem < min_memory_gb:
         logger.warning(
             "GPU pre-flight check: Available memory (%.2f GB) is below required minimum (%.2f GB)",

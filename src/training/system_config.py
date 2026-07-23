@@ -202,8 +202,8 @@ class SystemConfig:
     data_dir: str = "./data"
     log_dir: str = "./logs"
 
-    def __post_init__(self):
-        """Validate configuration after initialization."""
+    def validate(self) -> None:
+        """Validate configuration parameters and re-enforce device-dependent settings."""
         # Ensure device is valid
         if self.device.startswith("cuda") and not torch.cuda.is_available():
             logger.warning("CUDA requested but not available, falling back to CPU")
@@ -214,6 +214,10 @@ class SystemConfig:
             self.use_mixed_precision = False
             self.distributed = False
             self.backend = "gloo"
+
+    def __post_init__(self):
+        """Validate configuration after initialization."""
+        self.validate()
 
     def to_dict(self) -> dict:
         """Convert configuration to dictionary for logging."""
@@ -271,6 +275,7 @@ class SystemConfig:
             if key in config_dict:
                 setattr(config, key, config_dict[key])
 
+        config.validate()
         return config
 
     def save(self, path: str):
@@ -305,6 +310,7 @@ class SystemConfig:
         config.distributed = settings.TRAINING_DISTRIBUTED
         config.world_size = settings.TRAINING_WORLD_SIZE
         config.backend = settings.TRAINING_BACKEND
+        config.validate()
         return config
 
 

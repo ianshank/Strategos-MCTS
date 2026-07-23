@@ -61,7 +61,10 @@ def test_check_gpu_ready_true_when_enough_memory() -> None:
         "memory_total_gb": 16.0,
         "memory_allocated_gb": 2.0,
     }
-    with mock.patch("src.utils.gpu_utils.get_gpu_info", return_value=info):
+    with (
+        mock.patch("src.utils.gpu_utils.get_gpu_info", return_value=info),
+        mock.patch("torch.cuda.mem_get_info", return_value=(14 * (1024**3), 16 * (1024**3))),
+    ):
         assert check_gpu_ready(min_memory_gb=4.0) is True
 
 
@@ -73,7 +76,25 @@ def test_check_gpu_ready_false_when_insufficient_memory() -> None:
         "memory_total_gb": 8.0,
         "memory_allocated_gb": 7.0,
     }
-    with mock.patch("src.utils.gpu_utils.get_gpu_info", return_value=info):
+    with (
+        mock.patch("src.utils.gpu_utils.get_gpu_info", return_value=info),
+        mock.patch("torch.cuda.mem_get_info", return_value=(1 * (1024**3), 8 * (1024**3))),
+    ):
+        assert check_gpu_ready(min_memory_gb=4.0) is False
+
+
+@pytest.mark.unit
+def test_check_gpu_ready_false_on_mem_get_info_error() -> None:
+    info = {
+        "cuda_available": True,
+        "device_name": "Test GPU",
+        "memory_total_gb": 16.0,
+        "memory_allocated_gb": 2.0,
+    }
+    with (
+        mock.patch("src.utils.gpu_utils.get_gpu_info", return_value=info),
+        mock.patch("torch.cuda.mem_get_info", side_effect=RuntimeError("CUDA Error")),
+    ):
         assert check_gpu_ready(min_memory_gb=4.0) is False
 
 

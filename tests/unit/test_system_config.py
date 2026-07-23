@@ -260,6 +260,42 @@ class TestSystemConfig:
         serialized = json.dumps(d)
         assert isinstance(serialized, str)
 
+    def test_from_settings_revalidates_post_init(self):
+        """from_settings re-validates device-dependent settings after applying overrides."""
+        mock_settings = patch("src.config.settings.get_settings").start()
+        mock_settings.return_value.TORCH_DEVICE_OVERRIDE = None
+        mock_settings.return_value.TRAINING_USE_MIXED_PRECISION = True
+        mock_settings.return_value.TRAINING_GRADIENT_CHECKPOINTING = False
+        mock_settings.return_value.TRAINING_COMPILE_MODEL = False
+        mock_settings.return_value.TRAINING_DISTRIBUTED = True
+        mock_settings.return_value.TRAINING_WORLD_SIZE = 1
+        mock_settings.return_value.TRAINING_BACKEND = "nccl"
+
+        try:
+            with patch.object(torch.cuda, "is_available", return_value=False):
+                cfg = SystemConfig.from_settings()
+                assert cfg.device == "cpu"
+                # Even though settings specified use_mixed_precision=True and distributed=True,
+                # post-init re-validation forces them False when device is CPU.
+                assert cfg.use_mixed_precision is False
+                assert cfg.distributed is False
+                assert cfg.backend == "gloo"
+        finally:
+            patch.stopall()
+
+    def test_validate_method_updates_cpu_invariants(self):
+        """Calling validate() directly re-enforces CPU configuration rules."""
+        cfg = SystemConfig(device="cpu")
+        cfg.use_mixed_precision = True
+        cfg.distributed = True
+        cfg.backend = "nccl"
+
+        cfg.validate()
+
+        assert cfg.use_mixed_precision is False
+        assert cfg.distributed is False
+        assert cfg.backend == "gloo"
+
 
 @pytest.mark.unit
 class TestPresetConfigs:

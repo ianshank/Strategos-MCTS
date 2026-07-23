@@ -320,6 +320,50 @@ def test_checkpoint_name_roundtrips():
         assert int(match.group(1)) == iteration
 
 
+def test_cuda_memory_fraction_invoked_on_cuda_device(tmp_path, monkeypatch):
+    """When device starts with cuda, set_cuda_memory_fraction is called during setup."""
+    from unittest.mock import MagicMock
+
+    import src.training.self_play_convergence as spc
+
+    mock_set_mem = MagicMock()
+    monkeypatch.setattr(spc, "set_cuda_memory_fraction", mock_set_mem)
+
+    # Mock SelfPlayTrainer.train_iteration to avoid full run
+    class DummyMetrics:
+        total_loss = 0.1
+        policy_loss = 0.05
+        value_loss = 0.05
+        games_played = 1
+        examples_collected = 1
+        train_steps = 1
+        buffer_size = 1
+
+    async def mock_train(self):
+        return DummyMetrics()
+
+    monkeypatch.setattr("src.training.self_play_trainer.SelfPlayTrainer.train_iteration", mock_train)
+    monkeypatch.setattr("torch.cuda.is_available", lambda: False)  # keep torch from blowing up on fake device
+
+    argv = [
+        "--domain",
+        "reasoning",
+        "--iterations",
+        "1",
+        "--checkpoint-dir",
+        str(tmp_path / "ckpts"),
+        "--device",
+        "cuda:0",
+        "--num-simulations",
+        "1",
+        "--games-per-iteration",
+        "1",
+    ]
+    code = _run(argv)
+    assert code == EXIT_OK
+    mock_set_mem.assert_called_once()
+
+
 # --------------------------------------------------------------------- chess (deferred)
 
 

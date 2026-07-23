@@ -39,10 +39,12 @@ import torch
 
 from src.benchmark.policy_lift import build_network
 from src.config.constants import M5_DEFAULT_MLP_HIDDEN_DIMS, M5_DEFAULT_SELF_PLAY_SIMULATIONS
+from src.config.settings import get_settings
 from src.framework.domain_registry import DomainRegistry, DomainSpec
 from src.observability.logging import get_logger
 from src.training.self_play_trainer import SelfPlayConfig, SelfPlayTrainer
-from src.training.system_config import MCTSConfig
+from src.training.system_config import MCTSConfig, get_default_device_str
+from src.utils.gpu_utils import set_cuda_memory_fraction
 
 logger = get_logger(__name__)
 
@@ -190,6 +192,13 @@ async def run(args: argparse.Namespace) -> int:
             args.mixed_precision = profile_spec.use_amp
         if not args.compile:
             args.compile = profile_spec.compile_model
+
+    if args.device == "auto":
+        args.device = get_default_device_str()
+
+    if args.device.startswith("cuda"):
+        settings = get_settings()
+        set_cuda_memory_fraction(settings.TRAINING_CUDA_MEMORY_FRACTION)
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)

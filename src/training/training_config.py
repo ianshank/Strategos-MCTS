@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from src.training.self_play_trainer import SelfPlayConfig
-from src.training.system_config import MCTSConfig
+from src.training.system_config import MCTSConfig, get_default_device_str
 
 
 class TrainingProfile(str, Enum):
@@ -30,6 +30,10 @@ class TrainingProfileSpec:
     compile_model: bool
     pin_memory: bool
     device: str
+
+    def resolved_device(self) -> str:
+        """Return concrete device string, resolving 'auto' if necessary."""
+        return resolve_device(self.device)
 
 
 _PROFILES: dict[TrainingProfile, TrainingProfileSpec] = {
@@ -67,6 +71,13 @@ _PROFILES: dict[TrainingProfile, TrainingProfileSpec] = {
         device="auto",
     ),
 }
+
+
+def resolve_device(device: str) -> str:
+    """Resolve 'auto' to a concrete device string via get_default_device_str()."""
+    if device == "auto":
+        return get_default_device_str()
+    return device
 
 
 def get_training_profile(profile: str | TrainingProfile) -> TrainingProfileSpec:
