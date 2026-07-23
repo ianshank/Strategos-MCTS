@@ -36,6 +36,11 @@ class TicTacToeState(GameState):
         self.board = board if board is not None else np.zeros((3, 3), dtype=int)
         self.player = player
 
+    @property
+    def current_player(self) -> int:
+        """Side to move (1 = X, -1 = O) — enables side-to-move terminal evaluation."""
+        return self.player
+
     def get_legal_actions(self):
         actions = []
         for i in range(3):
