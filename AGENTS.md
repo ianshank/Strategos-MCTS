@@ -73,6 +73,7 @@ python -m src.benchmark --systems langgraph_mcts --tasks A1
 | Self-play convergence driver | `src/training/self_play_convergence.py` (CLI entry, `--profile`/`--mixed-precision`/`--compile`) |
 | System/device config | `src/training/system_config.py` (device resolution, AMP, compile, CUDA memory fraction) |
 | GPU Introspection & Memory | `src/utils/gpu_utils.py` (`get_gpu_info`, `check_gpu_ready`, `GPUMemoryTracker`, memory fraction limit) |
+| Distributed utilities (DDP) | `src/utils/distributed.py` (`init_distributed`, `is_main_process`, `wrap_ddp`, `unwrap_model`, process topology) |
 | Meta-controller learning (M5) | `src/training/meta_controller_data_collector.py` (see `docs/META_CONTROLLER_TRAINING.md`) |
 | API services (streaming/viz/compare) | `src/api/{streaming,graph_service,comparison_service}.py` (thin endpoints in `rest_server.py`) |
 | LLM adapters | `src/adapters/llm/{base,resilience,openai_client,anthropic_client,lmstudio_client}.py` (`resilience.py` = shared `CircuitBreaker`) |
@@ -128,6 +129,9 @@ Fixtures: `tests/fixtures/harness_fixtures.py` (helpers), `tests/integration/har
 - SDD enforcement: `/spec-new` + `/spec-implement` (`.claude/commands/`), `spec-review` subagent
   (`.claude/agents/`), PreToolUse gate `.claude/hooks/spec_gate.py` (warn mode; `SPEC_GATE_BYPASS=1`
   for hotfixes; src/** PRs need a `spec/<id>` branch with an approved spec or a `No-Spec: <reason>` trailer)
+- Deep Research: `/deep-research` command (`.claude/commands/`), orchestrated by `research-planner`, 
+  `research-fetcher`, `research-critic`, and `research-synthesizer` agents (`.claude/agents/`) with 
+  reports output to `docs/reports/` using the `deep-research` skill (`.claude/skills/`).
 - Implementation template: `MULTI_AGENT_MCTS_TEMPLATE.md`
 - Architecture: `docs/C4_ARCHITECTURE.md`
 - This file is a routing ledger, not an encyclopedia. Drill into a path above for detail.

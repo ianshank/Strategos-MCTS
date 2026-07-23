@@ -65,6 +65,7 @@ docs/
 # Development-only assets not needed in the runtime image
 specs/
 .claude/
+.agents/
 planning/
 .github/
 

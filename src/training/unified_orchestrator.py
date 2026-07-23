@@ -159,7 +159,16 @@ class UnifiedTrainingOrchestrator:
             board_size=self.board_size,
             device=self.device,
         )
-        pv_params = self.policy_value_net.get_parameter_count()
+
+        if getattr(self.config, "distributed", False):
+            from src.utils import distributed
+
+            self.policy_value_net = distributed.wrap_ddp(self.policy_value_net, self.device)
+
+        from src.utils import distributed
+
+        model_for_params = distributed.unwrap_model(self.policy_value_net)
+        pv_params = model_for_params.get_parameter_count()
         logger.info(
             "Policy-Value Network initialized",
             component="policy_value_net",
@@ -307,6 +316,12 @@ class UnifiedTrainingOrchestrator:
 
     def _setup_wandb(self):
         """Setup Weights & Biases experiment tracking."""
+        from src.utils import distributed
+
+        if getattr(self.config, "distributed", False) and not distributed.is_main_process():
+            self.config.use_wandb = False
+            return
+
         try:
             import wandb
 
@@ -1104,11 +1119,18 @@ class UnifiedTrainingOrchestrator:
 
     def _save_checkpoint(self, iteration: int, metrics: dict, is_best: bool = False):
         """Save model checkpoint."""
+        from src.utils import distributed
+
+        if getattr(self.config, "distributed", False) and not distributed.is_main_process():
+            return
+
         save_start = time.perf_counter()
+
+        model_to_save = distributed.unwrap_model(self.policy_value_net)
 
         checkpoint = {
             "iteration": iteration,
-            "policy_value_net": self.policy_value_net.state_dict(),
+            "policy_value_net": model_to_save.state_dict(),
             "hrm_agent": self.hrm_agent.state_dict(),
             "trm_agent": self.trm_agent.state_dict(),
             "pv_optimizer": self.pv_optimizer.state_dict(),

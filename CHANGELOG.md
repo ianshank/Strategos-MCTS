@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Multi-GPU DDP Scaling, Centralized Utilities & Deep Research Workflow
+
+#### Added
+- **Multi-GPU Distributed Data Parallel (DDP) Scaling:**
+  - Created `src/utils/distributed.py` to centralize process topology resolution, `init_distributed()`, `cleanup_distributed()`, `is_main_process()`, `wrap_ddp()`, and `unwrap_model()`.
+  - Integrated dynamic `LOCAL_RANK`, `RANK`, and `WORLD_SIZE` environment variable resolution into `SystemConfig.from_settings()` for `torchrun` compatibility.
+  - Refactored `src/training/self_play_convergence.py`, `src/training/self_play_trainer.py`, and `src/training/unified_orchestrator.py` to support multi-GPU data-parallel scaling.
+  - Added Rank-0 fencing to safeguard checkpoint saving and Weights & Biases experiment tracking against race conditions.
+  - Added specification [`specs/ddp_orchestrator.SPEC.md`](specs/ddp_orchestrator.SPEC.md) for formal SDD traceability.
+- **Deep Research Multi-Agent Workflow (`/deep-research`):**
+  - Added `/deep-research` slash command (`.claude/commands/deep-research.md`) and operational standard (`.claude/skills/deep-research/SKILL.md`).
+  - Implemented a 4-agent research swarm (`research-planner`, `research-fetcher`, `research-critic`, `research-synthesizer`) to perform literature discovery and architectural feasibility analysis outputting to `docs/reports/`.
+
 ### GPU Training, Gameplay Domains & Training Pipeline Enhancements
 
 #### Added

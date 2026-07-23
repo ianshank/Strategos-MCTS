@@ -81,6 +81,7 @@ graph TB
     subgraph "LangGraph Multi-Agent MCTS System"
         subgraph "Training System"
             Orchestrator[Training Orchestrator<br/>Python/AsyncIO<br/><br/>Coordinates training pipeline]
+            DDPUtils[Distributed Utils<br/>PyTorch DDP<br/><br/>Multi-GPU topology & DDP wrapping]
             DataGen[Synthetic Generator<br/>Python/LLM<br/><br/>Generates training data]
             CorpusBuilder[Corpus Builder<br/>Python<br/><br/>Fetches & indexes papers]
             Monitor[Performance Monitor<br/>Python<br/><br/>Tracks metrics]
