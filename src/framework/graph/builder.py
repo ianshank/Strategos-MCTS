@@ -99,6 +99,7 @@ from .schema import (
     validate_state_schema,
 )
 from .state import AgentState
+from .tracing import GraphTraceRecorder, make_traced_node
 
 logger = get_logger(__name__)
 
@@ -127,6 +128,7 @@ class GraphBuilder:
         neuro_symbolic_config: Any | None = None,
         synthesis_temperature: float = 0.5,
         retry_policy: NodeRetryPolicy | None = None,
+        trace_recorder: GraphTraceRecorder | None = None,
     ):
         """
         Initialize graph builder.
@@ -160,6 +162,8 @@ class GraphBuilder:
         # Retry policy for worker-node I/O boundaries. Disabled by default so a directly
         # constructed builder is unchanged; IntegratedFramework injects the settings-derived policy.
         self.retry_policy = retry_policy or NodeRetryPolicy(enabled=False)
+        # Optional execution-trace recorder (None => no tracing); injected by IntegratedFramework.
+        self.trace_recorder = trace_recorder
 
         # MCTS configuration
         self.mcts_config = mcts_config or create_preset_config(ConfigPreset.BALANCED)
@@ -335,10 +339,14 @@ class GraphBuilder:
     def _wrap_node(self, handler: Any, name: str) -> Any:
         """Return the registered form of a node ``handler``.
 
-        Single wrapping seam applied to every node at registration time; node-transition
-        instrumentation composes here.
+        Single wrapping seam applied to every node at registration time: when a trace
+        recorder is configured, every node (deterministic ones included, so the full
+        execution path is reconstructable) is wrapped to emit a structured transition event.
         """
-        return handler
+        recorder = getattr(self, "trace_recorder", None)
+        if recorder is None:
+            return handler
+        return make_traced_node(recorder, handler, name)
 
     def _node_retry(self, node_name: str, fn: Callable[[], Any]) -> Callable[[], Any]:
         """Wrap a zero-arg node I/O callable with the configured retry policy.

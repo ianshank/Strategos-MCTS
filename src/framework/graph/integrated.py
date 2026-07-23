@@ -10,6 +10,7 @@ Provides:
 
 from __future__ import annotations
 
+import uuid
 from typing import TYPE_CHECKING, Any
 
 # LangGraph is an optional dependency whose typed API shifts across versions. For static
@@ -32,12 +33,14 @@ else:
         MemorySaver = None
 
 from src.config.constants import DEFAULT_KROKI_BASE_URL, DEFAULT_KROKI_TIMEOUT_SECONDS
+from src.observability.logging import set_correlation_id
 
 from ..mcts.config import MCTSConfig
 from ..mcts.experiments import ExperimentTracker
 from .builder import GraphBuilder
 from .retry import NodeRetryPolicy, policy_from_settings
 from .schema import validate_initial_state
+from .tracing import GraphTraceRecorder, JsonlTraceSink, set_trace_context
 
 
 class IntegratedFramework:
@@ -92,15 +95,22 @@ class IntegratedFramework:
             self.trm_agent = None
             self.logger.warning("Could not import LLM HRM/TRM agents")
 
-        # Derive the worker-node retry policy from settings (graceful if settings are
-        # unavailable, e.g. in minimal test environments without configured env).
+        # Derive the worker-node retry policy and execution-trace recorder from settings
+        # (graceful if settings/metrics are unavailable, e.g. in minimal test environments).
+        retry_policy = NodeRetryPolicy(enabled=False)
+        self.trace_recorder: GraphTraceRecorder | None = None
         try:
             from src.config.settings import get_settings
 
-            retry_policy = policy_from_settings(get_settings())
+            settings = get_settings()
+            retry_policy = policy_from_settings(settings)
+            if settings.GRAPH_TRACE_ENABLED:
+                from src.observability.metrics import MetricsCollector
+
+                sink = JsonlTraceSink(settings.GRAPH_TRACE_DIR) if settings.GRAPH_TRACE_DIR else None
+                self.trace_recorder = GraphTraceRecorder(sink=sink, metrics=MetricsCollector.get_instance())
         except Exception as exc:  # noqa: BLE001 - never let settings issues break graph init
-            self.logger.warning("Node retry disabled (settings unavailable): %s", exc)
-            retry_policy = NodeRetryPolicy(enabled=False)
+            self.logger.warning("Graph hardening features degraded (settings unavailable): %s", exc)
 
         # Build graph
         self.graph_builder = GraphBuilder(
@@ -116,6 +126,7 @@ class IntegratedFramework:
             enable_parallel_agents=enable_parallel_agents,
             adk_agents=self.adk_agents,
             retry_policy=retry_policy,
+            trace_recorder=self.trace_recorder,
         )
 
         # Compile graph
@@ -147,6 +158,27 @@ class IntegratedFramework:
         validate_initial_state(initial_state)
         return initial_state
 
+    @staticmethod
+    def _resolve_thread_id(config: dict) -> str:
+        """Extract the LangGraph thread id from a config dict (default 'default')."""
+        configurable = config.get("configurable", {}) if isinstance(config, dict) else {}
+        thread_id = configurable.get("thread_id", "default")
+        return str(thread_id)
+
+    def _start_trace(self, config: dict) -> str:
+        """Generate a run id, bind trace/correlation context, and begin the run."""
+        run_id = uuid.uuid4().hex[:12]
+        set_correlation_id(run_id)
+        set_trace_context(run_id, self._resolve_thread_id(config))
+        if self.trace_recorder is not None:
+            self.trace_recorder.begin_run(run_id)
+        return run_id
+
+    def _end_trace(self, run_id: str) -> None:
+        """End the run's trace sequence (safe when tracing is disabled)."""
+        if self.trace_recorder is not None:
+            self.trace_recorder.end_run(run_id)
+
     async def process(
         self,
         query: str,
@@ -175,7 +207,11 @@ class IntegratedFramework:
 
         config = config or {"configurable": {"thread_id": "default"}}
 
-        result = await self.app.ainvoke(initial_state, config=config)
+        run_id = self._start_trace(config)
+        try:
+            result = await self.app.ainvoke(initial_state, config=config)
+        finally:
+            self._end_trace(run_id)
 
         return {
             "response": result.get("final_response", ""),
@@ -213,10 +249,14 @@ class IntegratedFramework:
 
         self.logger.debug(f"Starting streaming execution for query: {query[:100]}")
 
-        async for event in self.app.astream(initial_state, config=config):
-            for node_name, state_update in event.items():
-                self.logger.debug(f"Node '{node_name}' completed with keys: {list(state_update.keys())}")
-                yield node_name, state_update
+        run_id = self._start_trace(config)
+        try:
+            async for event in self.app.astream(initial_state, config=config):
+                for node_name, state_update in event.items():
+                    self.logger.debug(f"Node '{node_name}' completed with keys: {list(state_update.keys())}")
+                    yield node_name, state_update
+        finally:
+            self._end_trace(run_id)
 
     async def astream_events(
         self,
@@ -262,6 +302,7 @@ class IntegratedFramework:
 
         self.logger.debug(f"Starting event streaming for query: {query[:100]}, event_types: {include_types}")
 
+        run_id = self._start_trace(config)
         try:
             async for event in self.app.astream_events(
                 initial_state,
@@ -306,6 +347,8 @@ class IntegratedFramework:
                 "metadata": {},
                 "tags": [],
             }
+        finally:
+            self._end_trace(run_id)
 
     def get_experiment_tracker(self) -> ExperimentTracker:
         """Get the experiment tracker for analysis."""

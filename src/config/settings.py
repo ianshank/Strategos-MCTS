@@ -312,6 +312,15 @@ class Settings(BaseSettings):
         description="Allowlist of retryable exceptions (bare builtin names or dotted import paths)",
     )
 
+    # Graph Execution Trace Logging (structured event per node transition)
+    GRAPH_TRACE_ENABLED: bool = Field(
+        default=True, description="Emit a structured trace event for every graph node transition"
+    )
+    GRAPH_TRACE_DIR: str | None = Field(
+        default=None,
+        description="Directory for per-run JSONL trace files; None emits to structured logs/metrics only",
+    )
+
     # LLM Generation Configuration
     LLM_TEMPERATURE: float = Field(default=0.7, ge=0.0, le=2.0, description="Temperature for LLM generation")
 
