@@ -50,11 +50,23 @@ def get_gpu_info() -> dict[str, Any]:
             "capability": (0, 0),
         }
 
-    device_idx = torch.cuda.current_device()
-    props = torch.cuda.get_device_properties(device_idx)
-    total_mem = props.total_memory / (1024**3)
-    allocated = torch.cuda.memory_allocated(device_idx) / (1024**3)
-    reserved = torch.cuda.memory_reserved(device_idx) / (1024**3)
+    try:
+        device_idx = torch.cuda.current_device()
+        props = torch.cuda.get_device_properties(device_idx)
+        total_mem = props.total_memory / (1024**3)
+        allocated = torch.cuda.memory_allocated(device_idx) / (1024**3)
+        reserved = torch.cuda.memory_reserved(device_idx) / (1024**3)
+    except Exception as err:
+        logger.warning("Failed to collect CUDA GPU info: %s", err)
+        return {
+            "cuda_available": False,
+            "device_count": 0,
+            "device_name": "N/A",
+            "memory_total_gb": 0.0,
+            "memory_allocated_gb": 0.0,
+            "memory_reserved_gb": 0.0,
+            "capability": (0, 0),
+        }
 
     return {
         "cuda_available": True,
