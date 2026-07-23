@@ -8,6 +8,8 @@ policy-lift gate's architecture resolver via the sidecar) on the CPU-only synthe
 The chess AC-1/AC-2 verification is deferred: ``python-chess`` is absent from this CI, so
 the chess cases below ``skipif`` out — a reasoning run proves the mechanism but does NOT
 satisfy AC-1/AC-2 for chess (roadmap: reasoning/planning lifts are smoke tests only).
+
+Covers m5_policy_lift AC-1 and m5_policy_lift AC-2 (spec-trace verified-flip mapping).
 """
 
 from __future__ import annotations

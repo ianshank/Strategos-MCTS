@@ -16,6 +16,8 @@ Deferred on purpose:
           --checkpoint-dir <dir> --seed <s> --device cuda --num-simulations <400-800>
       python -m src.benchmark.policy_lift --domain chess --checkpoint <dir>/ckpt_iter_<N>.pt \\
           --num-games 100 --output benchmarks/results/m5_policy_lift.json
+
+Covers m5_policy_lift AC-3 (spec-trace verified-flip mapping).
 """
 
 from __future__ import annotations
