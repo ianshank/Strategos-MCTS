@@ -640,8 +640,9 @@ class TestSelfPlayEvaluatorPlayGame:
 
         result, game_stats = await evaluator.play_game(model1, model2, model1_starts=False)
 
-        # get_reward called with player=1 when model1 does not start
-        state.get_reward.assert_called_with(player=1)
+        # Result is read from MODEL1's perspective: model1 is black when it does not start, so
+        # player=-1 (black). Previously this asserted player=1, which read the opponent's result.
+        state.get_reward.assert_called_with(player=-1)
 
     @pytest.mark.asyncio
     async def test_play_game_root_node_none(self):
@@ -689,7 +690,9 @@ class TestSelfPlayEvaluatorPlayGame:
         root_nodes = [MagicMock(value=0.8), MagicMock(value=0.4), MagicMock(value=0.6)]
         call_idx = [0]
 
-        async def search_fn(state, num_simulations, temperature):
+        # Default mirrors the real NeuralMCTS.search signature (add_root_noise=True), so this
+        # test would notice if production ever stopped passing add_root_noise=False explicitly.
+        async def search_fn(state, num_simulations, temperature, add_root_noise=True):
             node = root_nodes[call_idx[0]] if call_idx[0] < len(root_nodes) else MagicMock(value=0.5)
             call_idx[0] += 1
             return {"action_0": 1.0}, node

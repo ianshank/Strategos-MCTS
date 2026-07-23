@@ -150,6 +150,40 @@ The real ≥20% claim requires the adversarial **chess** domain (win-rate / Wils
 operator with the `chess` extra + a GPU; the M5 gate section above — not this one — records that
 result when it lands.
 
+## M5 chess gate — operator runbook (GPU) + AC-3/AC-4 readiness
+
+The adversarial (chess) gate path was hardened so a GPU run measures a **valid** win-rate: the arena
+win/loss tally is read from model1's own perspective (it was inverted — a stronger model scored
+below 50%); the per-ply network swap now clears the eval cache (which was network-blind and let the
+two models reuse each other's evaluations); and arena search runs with root Dirichlet noise off
+(deterministic evaluation). These fixes live in `src/training/` (the arena evaluator — outside the
+`src/benchmark/` gate-semantics constraint) but they *do* move the measured win-rate — they make it
+correct; they cannot pre-guarantee AC-4 passes. A separate follow-up PR audits the search core's
+negamax value-sign convention (`src/framework/mcts/neural_mcts.py`).
+
+Every non-GPU piece is in place: the AC-4 test (`tests/integration/benchmark/test_m5_lift_gate.py`,
+skipped until the artifact exists), the AC-3 schema test, the four spec-trace `Covers m5_policy_lift
+AC-n` mappings under `tests/`, and a bounded chess CPU smoke
+(`tests/integration/benchmark/test_chess_gate_smoke.py`, `@slow`, local/manual). Operator sequence:
+
+```bash
+pip install -e ".[neural,chess]"
+# 1. Train chess to convergence on GPU (raise --num-simulations well above the tiny driver default).
+python -m src.training.self_play_convergence --domain chess --iterations <N> \
+  --checkpoint-dir checkpoints/chess --seed 0 --device cuda --num-simulations 400
+# 2. Record the gate over 100 games (exit 0 = met, 1 = not met — both valid for AC-3, never 2).
+python -m src.benchmark.policy_lift --domain chess \
+  --checkpoint checkpoints/chess/ckpt_iter_<N>.pt --num-games 100 \
+  --output benchmarks/results/m5_policy_lift.json
+# 3. Commit benchmarks/results/m5_policy_lift.json  ->  satisfies AC-3 (un-skips the artifact test).
+# 4. If meets_target is true: a specs+tests-only PR (no src/) in which a HUMAN flips
+#    specs/m5_policy_lift.SPEC.md status -> verified. The four AC mappings already exist under tests/;
+#    validate with `harness spec-trace --base-ref origin/main --head-ref HEAD`.
+```
+
+Run the full suite with `--ignore=tests/games/chess/unit` when the chess extra is installed — that
+directory targets a pre-refactor API and is excluded from CI as well.
+
 ## Implications for the plan
 
 - **Phase 2 is largely satisfied at the gate level** (93.65% ≥ 85%). Remaining work is opportunistic,

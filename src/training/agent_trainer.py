@@ -487,19 +487,30 @@ class SelfPlayEvaluator:
         while not state.is_terminal():
             current_model = models[current_model_idx]
 
-            # Temporarily set the model for MCTS
+            # Temporarily set the model for MCTS, and clear the eval cache on the swap. The cache
+            # is keyed by state hash only (network-blind), so without this the two models would
+            # reuse each other's cached (policy, value) for the same position — biasing the very
+            # win-rate the arena measures.
             original_model = self.mcts.network
             self.mcts.network = current_model
+            self.mcts.clear_cache()
 
-            # Run MCTS search
-            action_probs, root_node = await self.mcts.search(
-                state,
-                num_simulations=self.config.mcts_iterations,
-                temperature=self.config.temperature,
-            )
-
-            # Restore original model
-            self.mcts.network = original_model
+            try:
+                # Run MCTS search. add_root_noise=False: this is deterministic evaluation
+                # (temperature is 0), so the root Dirichlet noise that aids self-play
+                # exploration must be OFF, or the arena result becomes non-reproducible.
+                action_probs, root_node = await self.mcts.search(
+                    state,
+                    num_simulations=self.config.mcts_iterations,
+                    temperature=self.config.temperature,
+                    add_root_noise=False,
+                )
+            finally:
+                # Always restore the shared engine's network (and drop this model's cache
+                # entries) even if search raises: evaluate() continues past per-game
+                # failures, and a leaked swap would run later games on the wrong model.
+                self.mcts.network = original_model
+                self.mcts.clear_cache()
 
             # Track MCTS values
             root_value = root_node.value if root_node is not None else 0.0
@@ -522,8 +533,13 @@ class SelfPlayEvaluator:
             move_count += 1
             current_model_idx = 1 - current_model_idx  # Switch player
 
-        # Determine result
-        reward = state.get_reward(player=0 if model1_starts else 1)
+        # Determine result from MODEL1's own perspective. The first mover (models[0]) is the
+        # white/player-1 side, so model1 is white iff model1_starts. get_reward(player=1) is the
+        # white perspective and any other player value is black's (src/games/chess/state.py), so
+        # model1's perspective is player=1 when it starts and player=-1 when it does not. The
+        # previous `player=0 if model1_starts else 1` read the OPPONENT's perspective in both
+        # branches, inverting every win/loss (a stronger model1 measured below 50%).
+        reward = state.get_reward(player=1 if model1_starts else -1)
         if reward > 0:
             result = 1  # Model1 wins
         elif reward < 0:
@@ -538,6 +554,11 @@ class SelfPlayEvaluator:
         game_stats["moves"] = move_count
         game_stats["model1_avg_mcts_value"] = sum(model1_values) / len(model1_values) if model1_values else 0.0
         game_stats["model2_avg_mcts_value"] = sum(model2_values) / len(model2_values) if model2_values else 0.0
+
+        logger.debug(
+            "Arena game complete",
+            extra={"result": result, "model1_starts": model1_starts, "moves": move_count},
+        )
 
         return result, game_stats
 
