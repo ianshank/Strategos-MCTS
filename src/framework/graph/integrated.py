@@ -36,6 +36,7 @@ from src.config.constants import DEFAULT_KROKI_BASE_URL, DEFAULT_KROKI_TIMEOUT_S
 from ..mcts.config import MCTSConfig
 from ..mcts.experiments import ExperimentTracker
 from .builder import GraphBuilder
+from .schema import validate_initial_state
 
 
 class IntegratedFramework:
@@ -116,6 +117,24 @@ class IntegratedFramework:
 
         self.logger.info("Integrated framework initialized with new MCTS core")
 
+    def _build_initial_state(self, query: str, use_rag: bool, use_mcts: bool) -> dict:
+        """Construct and validate the initial graph state before invocation.
+
+        Raises:
+            StateValidationError: if the constructed state is not schema-conformant,
+                so a malformed input fails before any node runs rather than mid-graph.
+        """
+        initial_state: dict[str, Any] = {
+            "query": query,
+            "use_rag": use_rag,
+            "use_mcts": use_mcts,
+            "iteration": 0,
+            "max_iterations": self.graph_builder.max_iterations,
+            "agent_outputs": [],
+        }
+        validate_initial_state(initial_state)
+        return initial_state
+
     async def process(
         self,
         query: str,
@@ -140,14 +159,7 @@ class IntegratedFramework:
         if self.app is None:
             raise RuntimeError("LangGraph not available. Install with: pip install langgraph")
 
-        initial_state = {
-            "query": query,
-            "use_rag": use_rag,
-            "use_mcts": use_mcts,
-            "iteration": 0,
-            "max_iterations": self.graph_builder.max_iterations,
-            "agent_outputs": [],
-        }
+        initial_state = self._build_initial_state(query, use_rag, use_mcts)
 
         config = config or {"configurable": {"thread_id": "default"}}
 
@@ -183,14 +195,7 @@ class IntegratedFramework:
         if self.app is None:
             raise RuntimeError("LangGraph not available. Install with: pip install langgraph")
 
-        initial_state = {
-            "query": query,
-            "use_rag": use_rag,
-            "use_mcts": use_mcts,
-            "iteration": 0,
-            "max_iterations": self.graph_builder.max_iterations,
-            "agent_outputs": [],
-        }
+        initial_state = self._build_initial_state(query, use_rag, use_mcts)
 
         config = config or {"configurable": {"thread_id": "default"}}
 
@@ -230,14 +235,7 @@ class IntegratedFramework:
         if self.app is None:
             raise RuntimeError("LangGraph not available. Install with: pip install langgraph")
 
-        initial_state = {
-            "query": query,
-            "use_rag": use_rag,
-            "use_mcts": use_mcts,
-            "iteration": 0,
-            "max_iterations": self.graph_builder.max_iterations,
-            "agent_outputs": [],
-        }
+        initial_state = self._build_initial_state(query, use_rag, use_mcts)
 
         config = config or {"configurable": {"thread_id": "default"}}
 
