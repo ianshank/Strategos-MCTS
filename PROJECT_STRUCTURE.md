@@ -1,10 +1,12 @@
 # Project Structure
 
 ```
-langgraph-multi-agent-mcts/
+langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 ├── README.md                    # Project overview and quick start
 ├── CHANGELOG.md                 # Version history
 ├── ATTRIBUTION.md               # Third-party attributions
+├── LICENSE                      # MIT license
+├── CITATION.cff                 # Citation metadata ("Cite this repository")
 ├── pyproject.toml               # Package configuration and dependencies
 ├── requirements.txt             # Direct dependencies for Docker/pip
 ├── Dockerfile                   # Multi-stage production Docker build
@@ -32,22 +34,23 @@ langgraph-multi-agent-mcts/
 │   ├── mcp_config.example.json  # Example configuration
 │   └── mcp_config_template.json # Configuration template
 │
-├── docs/                        # Documentation
+├── docs/                        # Documentation (see docs/README.md for the full index)
+│   ├── README.md                # Documentation landing page / Diátaxis index
 │   ├── architecture.md          # System architecture
 │   ├── langgraph_mcts_architecture.md  # MCTS architecture details
+│   ├── C4_ARCHITECTURE.md       # C4 diagrams of system components
 │   ├── API_CONFIGURATION_GUIDE.md      # API configuration
 │   ├── API_QUICK_REFERENCE.md          # API quick reference
 │   ├── MCP_SERVER_GUIDE.md             # MCP server setup
-│   ├── DEPLOYMENT_REPORT.md            # Deployment status report
-│   ├── NEURAL_TRAINING_SUMMARY.md      # Neural network training
-│   ├── INTEGRATION_STATUS.md           # Integration status
 │   ├── STATUS.md                # Reproducible test/coverage baseline (source of truth)
-│   ├── reports/                 # Analyses & completion reports (e.g. SCALABILITY_ANALYSIS.md)
+│   ├── NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md  # Active roadmap
+│   ├── reports/                 # Analyses, status snapshots & completion reports
+│   │                            #   (DEPLOYMENT_REPORT, INTEGRATION_STATUS, SCALABILITY_ANALYSIS, …)
 │   ├── summaries/               # Feature/module implementation summaries
 │   ├── plans/                   # Roadmaps, implementation plans, PR descriptions
 │   ├── quickstart/              # Quickstart guides (Docker, synthetic generation)
-│   ├── img/                     # Documentation images
-│   ├── mermaid/                 # Architecture diagrams
+│   ├── diagrams/                # Rendered architecture SVGs
+│   ├── mermaid/                 # Mermaid diagram sources
 │   ├── runbooks/                # Operational runbooks
 │   └── testing/                 # Test documentation
 │
@@ -118,9 +121,16 @@ langgraph-multi-agent-mcts/
 │   ├── orchestrator.py          # Training orchestration
 │   └── tests/                   # Training tests
 │
-├── .github/                     # GitHub configuration
-│   └── workflows/
-│       └── ci.yml               # CI/CD pipeline (9 jobs)
+├── .github/                     # GitHub configuration & community health files
+│   ├── CONTRIBUTING.md          # Contribution guide (quality gate, SDD workflow)
+│   ├── SECURITY.md              # Security & vulnerability reporting policy
+│   ├── CODE_OF_CONDUCT.md       # Contributor Covenant v2.1
+│   ├── SUPPORT.md               # Where to get help
+│   ├── CODEOWNERS               # Review ownership
+│   ├── PULL_REQUEST_TEMPLATE.md # PR template (spec linkage + checklist)
+│   ├── ISSUE_TEMPLATE/          # Bug report / feature request forms
+│   ├── dependabot.yml           # Automated dependency update PRs
+│   └── workflows/               # CI/CD pipelines (ci, docker-deployment, e2e_with_langsmith)
 │
 └── artifacts/                   # Generated artifacts (gitignored)
     ├── models/                  # Trained model weights
@@ -169,9 +179,11 @@ would break import contracts, Docker build context, or fresh-clone tests:
 
 ## Quick Navigation
 
+- **Documentation index**: See `docs/README.md`
 - **Getting Started**: See `README.md`
 - **Architecture**: See `docs/architecture.md`
 - **API Documentation**: Run server and visit `http://localhost:8000/docs`
 - **Examples**: Browse `examples/` directory
 - **Configuration**: See `config/README.md`
-- **Deployment**: See `docs/DEPLOYMENT_REPORT.md`
+- **Deployment**: See `docs/DOCKER_DEPLOYMENT.md` (status: `docs/STATUS.md`; historical report:
+  `docs/reports/DEPLOYMENT_REPORT.md`)

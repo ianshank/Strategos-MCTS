@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Enterprise Documentation, Governance & Repository Organization
+
+#### Added
+- **Community health & governance files:** `LICENSE` (MIT) and `CITATION.cff` at the repository root, plus
+  `.github/CONTRIBUTING.md`, `.github/SECURITY.md`, `.github/CODE_OF_CONDUCT.md` (Contributor Covenant v2.1),
+  `.github/SUPPORT.md`, `.github/CODEOWNERS`, `.github/PULL_REQUEST_TEMPLATE.md`, issue forms under
+  `.github/ISSUE_TEMPLATE/` (bug report, feature request, config), and `.github/dependabot.yml` for automated
+  dependency-update PRs (pip, github-actions, docker).
+- **Documentation index:** new `docs/README.md` landing page organizing all documentation by purpose
+  (status/roadmap, explanation, how-to, reference, reports/archive).
+
+#### Changed
+- **README:** rebranded the title to **Strategos-MCTS** (dist name `langgraph-multi-agent-mcts` noted);
+  added a badge row (CI, coverage, license, Python, ruff/black), a table of contents, and Security/Support
+  sections; replaced the broken architecture image with an inline Mermaid system-context diagram; fixed the
+  clone URL and the Contributing/License links.
+- **Packaging metadata (`pyproject.toml`):** replaced the placeholder author with a real maintainer; pointed
+  `readme` at `README.md`; corrected `[project.urls]` to `ianshank/Strategos-MCTS` and added `Issues` and
+  `Changelog`; declared `license-files = ["LICENSE"]`.
+- **Repository organization:** moved stale point-in-time docs from the `docs/` top level into
+  `docs/reports/` and `docs/summaries/`, the misplaced `docs/IMPLEMENTATION_PLAN.md` into `docs/plans/`, and
+  the stale root `PROJECT.md` into `docs/reports/PROJECT_PR85_MILESTONE.md`; refreshed `PROJECT_STRUCTURE.md`
+  and inbound links accordingly.
+- **Tooling parity:** aligned `.pre-commit-config.yaml` ruff/mypy revisions with the pinned `[dev]` versions
+  in `pyproject.toml` for CI/local consistency.
+
+#### Removed
+- Deleted `docs/SCALABILITY_ANALYSIS.md`, a byte-identical duplicate of `docs/reports/SCALABILITY_ANALYSIS.md`.
+
 ### Multi-GPU DDP Scaling, Centralized Utilities & Deep Research Workflow
 
 #### Added

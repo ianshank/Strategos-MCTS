@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "Strategos-MCTS"
+abstract: >-
+  A multi-agent framework combining hierarchical reasoning (HRM), iterative
+  refinement (TRM), and Monte Carlo Tree Search (MCTS) guided by neural
+  networks, orchestrated with LangGraph. Distributed on PyPI as
+  langgraph-multi-agent-mcts.
+type: software
+authors:
+  - family-names: Shank
+    given-names: Ian
+    email: ianshank@gmail.com
+repository-code: "https://github.com/ianshank/Strategos-MCTS"
+url: "https://github.com/ianshank/Strategos-MCTS"
+license: MIT
+version: "0.1.0"
+keywords:
+  - langgraph
+  - mcts
+  - multi-agent
+  - llm
+  - ai
+  - alphazero
+  - self-play

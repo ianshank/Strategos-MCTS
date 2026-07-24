@@ -305,7 +305,8 @@ harness run --spec spec.md --ralph # outer Ralph loop
   - Logging and observability patterns
 - **Architecture**: See `docs/C4_ARCHITECTURE.md` for system diagrams
 - **Training**: See `docs/LOCAL_TRAINING_GUIDE.md` for ML pipeline
-- **Deployment**: See `docs/DEPLOYMENT_REPORT.md` for deployment status
+- **Deployment**: See `docs/DOCKER_DEPLOYMENT.md` for the deployment guide and `docs/STATUS.md` for
+  current status (the historical `docs/reports/DEPLOYMENT_REPORT.md` is retained for reference)
 - **Current status (source of truth)**: See `docs/STATUS.md` for the reproducible test/coverage
   baseline, and `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md` for the active roadmap.
 

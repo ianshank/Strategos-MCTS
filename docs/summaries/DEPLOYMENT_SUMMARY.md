@@ -24,7 +24,7 @@ Successfully implemented a comprehensive Docker deployment pipeline for the Mult
 ### 1. Docker Images
 
 #### Dockerfile.train (GPU Training)
-**Location:** [Dockerfile.train](../Dockerfile.train)
+**Location:** [Dockerfile.train](../../Dockerfile.train)
 
 **Features:**
 - Base: `nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04`
@@ -44,7 +44,7 @@ docker build -f Dockerfile.train --target production -t mcts-train:prod .
 ```
 
 #### Dockerfile (API Server)
-**Location:** [Dockerfile](../Dockerfile)
+**Location:** [Dockerfile](../../Dockerfile)
 
 **Features:**
 - Multi-stage build for minimal size
@@ -55,7 +55,7 @@ docker build -f Dockerfile.train --target production -t mcts-train:prod .
 ### 2. Docker Compose Configuration
 
 #### docker-compose.train.yml (Training Services)
-**Location:** [docker-compose.train.yml](../docker-compose.train.yml)
+**Location:** [docker-compose.train.yml](../../docker-compose.train.yml)
 
 **Services:**
 - `training-demo` - 16GB GPU demo mode
@@ -74,7 +74,7 @@ docker-compose -f docker-compose.train.yml --profile production up training-prod
 ```
 
 #### docker-compose.yml (Full Stack)
-**Location:** [docker-compose.yml](../docker-compose.yml)
+**Location:** [docker-compose.yml](../../docker-compose.yml)
 
 **Services:**
 - MCTS Framework API
@@ -87,7 +87,7 @@ docker-compose -f docker-compose.train.yml --profile production up training-prod
 ### 3. Testing Infrastructure
 
 #### Pre-Deployment Sanity Checks
-**Location:** [scripts/deployment_sanity_check.py](../scripts/deployment_sanity_check.py)
+**Location:** [scripts/deployment_sanity_check.py](../../scripts/deployment_sanity_check.py)
 
 **Checks:**
 - ✅ Configuration file validity (YAML, TOML)
@@ -120,7 +120,7 @@ Summary
 ```
 
 #### Post-Deployment Smoke Tests
-**Location:** [tests/deployment/test_docker_smoke.py](../tests/deployment/test_docker_smoke.py)
+**Location:** [tests/deployment/test_docker_smoke.py](../../tests/deployment/test_docker_smoke.py)
 
 **Tests:**
 - Container health and status
@@ -144,7 +144,7 @@ TRAINING_CONTAINER=mcts-training-demo pytest tests/deployment/ -v
 ### 4. CI/CD Pipeline
 
 #### GitHub Actions Workflow
-**Location:** [.github/workflows/docker-deployment.yml](../.github/workflows/docker-deployment.yml)
+**Location:** [.github/workflows/docker-deployment.yml](../../.github/workflows/docker-deployment.yml)
 
 **Stages:**
 
@@ -185,7 +185,7 @@ gh workflow run docker-deployment.yml -f deploy_environment=production
 ### 5. Documentation
 
 #### Docker Deployment Guide
-**Location:** [docs/DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md)
+**Location:** [docs/DOCKER_DEPLOYMENT.md](../DOCKER_DEPLOYMENT.md)
 
 **Contents:**
 - Prerequisites and requirements
@@ -425,8 +425,8 @@ langgraph_multi_agent_mcts/
 
 ## Support and Resources
 
-- **Documentation:** [docs/DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md)
-- **Local Training:** [docs/LOCAL_TRAINING_GUIDE.md](LOCAL_TRAINING_GUIDE.md)
+- **Documentation:** [docs/DOCKER_DEPLOYMENT.md](../DOCKER_DEPLOYMENT.md)
+- **Local Training:** [docs/LOCAL_TRAINING_GUIDE.md](../LOCAL_TRAINING_GUIDE.md)
 - **GitHub Issues:** [Issues](https://github.com/your-org/langgraph_multi_agent_mcts/issues)
 - **Discussions:** [Discussions](https://github.com/your-org/langgraph_multi_agent_mcts/discussions)
 
