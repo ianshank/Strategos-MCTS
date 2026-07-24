@@ -10,12 +10,13 @@ requires) never silently disable these features. All defaults and bounds come fr
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.config.constants import (
+    DEFAULT_CANDIDATE_SCORER,
     DEFAULT_GRAPH_NODE_RETRY_BACKOFF_FACTOR,
     DEFAULT_GRAPH_NODE_RETRY_EXCEPTIONS,
     DEFAULT_GRAPH_NODE_RETRY_INITIAL_DELAY_SECONDS,
@@ -88,6 +89,19 @@ class GraphHardeningSettings(BaseSettings):
     GRAPH_CHECKPOINT_SQLITE_PATH: str | None = Field(
         default=None,
         description="SQLite DB path for the 'sqlite' checkpoint backend (None => in-memory sqlite)",
+    )
+
+    # MCTS candidate-scoring seam. Chooses how the winning candidate action is selected
+    # after search returns per-candidate statistics. 'identity' preserves the engine's own
+    # MAX_VISITS selection (behaviour-preserving default); 'value' re-ranks by mean value.
+    GRAPH_MCTS_CANDIDATE_SCORER: Literal["identity", "value"] = Field(
+        # The default lives in constants.py (str-typed); cast narrows it to the field's Literal so
+        # `mypy src/` accepts it without a context-dependent type: ignore.
+        default=cast(Literal["identity", "value"], DEFAULT_CANDIDATE_SCORER),
+        description=(
+            "Candidate scorer for the MCTS node: 'identity' preserves the engine's MAX_VISITS "
+            "selection (default); 'value' re-ranks candidates by mean value."
+        ),
     )
 
 

@@ -37,6 +37,7 @@ from src.observability.logging import peek_correlation_id, restore_correlation_i
 
 from ..mcts.config import MCTSConfig
 from ..mcts.experiments import ExperimentTracker
+from ..mcts.scoring import create_candidate_scorer
 from .builder import GraphBuilder
 from .retry import policy_from_settings
 from .schema import GraphConstructionError, validate_initial_state
@@ -129,6 +130,11 @@ class IntegratedFramework:
         # Resolve the checkpointer: an injected saver wins; otherwise select by backend.
         resolved_checkpointer = self._resolve_checkpointer(graph_settings, checkpointer)
 
+        # Candidate scorer for the MCTS node's selection seam. The factory validates the
+        # settings-selected name at construction (unknown => ValueError, no silent fallback);
+        # the default 'identity' preserves the engine's own selection.
+        candidate_scorer = create_candidate_scorer(graph_settings.GRAPH_MCTS_CANDIDATE_SCORER)
+
         # Build graph
         self.graph_builder = GraphBuilder(
             hrm_agent=self.hrm_agent,
@@ -144,6 +150,7 @@ class IntegratedFramework:
             adk_agents=self.adk_agents,
             retry_policy=retry_policy,
             trace_recorder=self.trace_recorder,
+            candidate_scorer=candidate_scorer,
         )
 
         # Compile graph

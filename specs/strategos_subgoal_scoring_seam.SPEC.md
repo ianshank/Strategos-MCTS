@@ -1,70 +1,83 @@
 ---
 id: strategos_subgoal_scoring_seam
-goal: Introduce an explicit, pluggable candidate-scoring seam in the LangGraph MCTS node that exposes real per-candidate value estimates and lets a scorer rank candidates, with the baseline path bit-for-bit unchanged, so later uncertainty and risk-penalty specs have a genuine value and a single injection point
+goal: Introduce an explicit, pluggable candidate-scoring seam in the LangGraph MCTS node that exposes real per-candidate value estimates and lets an opt-in scorer re-rank them, with the default (identity) path byte-for-byte unchanged, so later uncertainty and risk-penalty specs have a genuine value and a single injection point
 module: src/framework/graph/
-status: draft
+status: approved
 ---
 
 # Goal
 
-Today the LangGraph MCTS node (`src/framework/graph/builder.py`, `_mcts_simulator_node`) runs
-the baseline `MCTSEngine` over hardcoded placeholder actions and collapses the result into a
-single scalar summary, so there is nowhere for a candidate scorer to observe or influence
-selection. This spec adds an explicit candidate-scoring **seam**: the node builds a list of
-per-candidate records from the engine's existing `action_stats`, passes them through a
-`CandidateScorer` protocol (default: value-only, order-preserving) before final selection, and
-exposes a `ValueSource` abstraction so a candidate's value can optionally come from the existing
-`NeuralMCTS` head instead of the baseline mean. Default behavior — baseline engine, default
-`MCTS_IMPL`, default scorer — is byte-for-byte identical to the pre-change node. No new subgoal
-semantics are invented here; this is the enabling seam that the roadmap's MDN dispersion
-(`strategos_coarse_dynamics_mdn`) and risk-averse scorer (`strategos_risk_averse_subgoal_scorer`)
-plug into.
+Today the LangGraph MCTS node (`src/framework/graph/builder.py`, `_mcts_simulator_node`) runs the
+baseline `MCTSEngine`, which selects `best_action` internally via its `MAX_VISITS` policy, and the
+node collapses the result into a scalar summary — so there is nowhere for a candidate scorer to
+observe or influence selection. This spec adds an explicit candidate-scoring **seam**: the node
+builds an ordered list of per-candidate records (`candidate_id`, `value`, `visits`) from the
+engine's existing `action_stats`, and passes them through a `CandidateScorer` protocol before
+emitting the final action. The **default** scorer is an identity pass-through that returns the
+engine's own `MAX_VISITS` choice, so wiring the seam changes nothing observable; an **opt-in**
+scorer (starting with a value-argmax scorer) can re-rank candidates without touching the search
+core. No new subgoal semantics are invented and no new `AgentState`/node-output keys are added —
+the exposure is at the `CandidateScorer` protocol boundary only. This is the enabling seam the
+roadmap's MDN dispersion (`strategos_coarse_dynamics_mdn`) and risk-averse scorer
+(`strategos_risk_averse_subgoal_scorer`) plug into.
 
 # Acceptance Criteria
 
 - AC-1: `_mcts_simulator_node` constructs an explicit ordered list of candidate records
-  (`candidate_id`, `value`, `visits`) from `MCTSEngine` `action_stats` at one injection point and
-  routes them through a `CandidateScorer` protocol whose default implementation ranks by value only
-  and preserves the engine's existing ordering; with the default scorer and default settings the
-  selected candidate, the emitted result summary, and the `confidence` value are byte-for-byte
-  identical to the pre-change node on a fixed seed. Falsified by any divergence in selection,
-  summary, or confidence on the default path. Intended test:
+  (`candidate_id`, `value`, `visits`) from `MCTSEngine.action_stats` at one injection point and
+  passes them through a `CandidateScorer`; the **default** scorer is an identity pass-through that
+  returns the engine's own `_select_best_action` (`MAX_VISITS`) choice, so with the default scorer
+  and default settings the emitted `mcts_best_action`, the `agent_outputs` summary text, and the
+  `confidence` value are byte-for-byte identical to the pre-change node on a fixed seed. Falsified by
+  any divergence in selection, summary, or confidence on the default path. Intended test:
   `tests/unit/framework/graph/test_mcts_candidate_seam.py`.
-- AC-2: A `ValueSource` abstraction supplies each candidate's value; `MCTS_IMPL=neural` selects a
-  `NeuralMCTS`-backed source (via `evaluate_state`) for domains that provide a network and a state
-  adapter, and when the `neural` extra (torch) is absent or no network is configured the node raises
-  `GraphConstructionError` at construction — never a silent fallback to the baseline mean; the
-  default `MCTS_IMPL` is unchanged so non-neural installs behave exactly as before. Falsified by a
-  silent fallback, a top-level torch import, or a changed default. Intended test:
-  `tests/unit/framework/graph/test_value_source_neural.py` (importorskip torch).
-- AC-3: The seam is deterministic-preserving when not exercised: the default `CandidateScorer` and
-  `ValueSource` draw no numbers from `MCTSEngine`'s shared RNG, add no terms to the value-sum
-  accumulation, and change no child-insertion order, so two seeded runs of the default node are
-  identical and match the pre-change baseline. Falsified by any RNG draw, altered accumulation, or
-  reordering on the default path. Intended test:
+- AC-2: The scorer is selected by a bounded Pydantic Settings enum
+  (`GRAPH_MCTS_CANDIDATE_SCORER`, default `identity`) resolved through a factory; the opt-in
+  `value` scorer re-ranks candidates by mean `value` with a deterministic first-wins tie-break, so
+  when selected it makes `mcts_best_action` the highest-value candidate (authoritative over the
+  engine's visit-argmax when they differ). An unrecognized scorer name raises at construction
+  (a `ValueError`/`GraphConstructionError`), never a silent fallback to the default. Falsified by a
+  `value` scorer that does not change selection on a value≠visits case, by a non-deterministic
+  tie-break, or by an unknown name silently degrading to identity. Intended tests:
+  `tests/unit/framework/mcts/test_candidate_scoring.py`,
+  `tests/unit/framework/graph/test_mcts_candidate_seam.py`.
+- AC-3: The seam preserves determinism on the default path: the default `CandidateScorer` draws no
+  numbers from `MCTSEngine`'s shared RNG, adds no term to the value-sum accumulation, changes no
+  child-insertion order, and resolves selection ties first-wins (matching `max(..., key=...)`), so
+  two seeded runs of the default node are identical to each other and to the pre-change baseline;
+  and importing/constructing the default (baseline) scoring path leaves `torch` out of
+  `sys.modules`. Falsified by any RNG draw, altered accumulation, reordering, tie-break divergence,
+  or a `torch` import on the baseline path. Intended test:
   `tests/unit/framework/graph/test_mcts_seam_determinism.py`.
 
 # Constraints
 
-- All new tunables (scorer selection, value-source selection) live in Pydantic Settings with bounds
-  and defaults mirrored in `src/config/constants.py`; reuse the `MCTS_IMPL`/`MCTSImplementation`
-  selector pattern in `src/config/settings.py`. No hardcoded values.
-- torch stays optional: the `NeuralMCTS` value source is import-guarded and reachable only when
-  `MCTS_IMPL=neural`; the baseline node path imports no torch.
-- Reuse existing surfaces — `MCTSEngine.action_stats`, `_select_best_action`, and the
-  `MCTS_IMPL` selector — no parallel selection logic.
+- All new tunables live in Pydantic Settings with the default mirrored in `src/config/constants.py`;
+  the scorer selector follows the `GraphHardeningSettings` `GRAPH_*` pattern in
+  `src/config/graph_settings.py` (validated independently of the LLM API key), resolved to a
+  `CandidateScorer` in `IntegratedFramework.__init__` and injected into `GraphBuilder` exactly like
+  `retry_policy` / `trace_recorder`. No hardcoded values.
+- The scoring module (`src/framework/mcts/scoring.py`) is pure and deterministic: no RNG, no I/O,
+  no `torch`. Construction-time validation (unknown scorer name) happens in the factory when
+  `IntegratedFramework` builds the scorer; a directly-constructed `GraphBuilder` with no scorer
+  defaults to identity and is unchanged.
+- Reuse existing surfaces — `MCTSEngine.action_stats`, `_select_best_action`, and the DI pattern of
+  optional `GraphBuilder.__init__` params — no parallel selection logic.
 - Unit tests carry the >=85% branch coverage gate; no network in unit tests.
 
 # Invariants
 
 - The baseline `MCTSEngine` selection semantics (`MAX_VISITS` default, UCB1) are unchanged; the seam
-  observes and optionally re-ranks, it does not alter backpropagation or the tree policy.
-- `AgentState` shape and the graph topology are unchanged; only the node's internal scoring path
-  gains the seam.
+  observes and, only for a non-default scorer, re-ranks — it never alters backpropagation or the
+  tree policy.
+- `AgentState` shape, node-output keys, and the graph topology are unchanged; the per-candidate
+  exposure exists only at the `CandidateScorer` protocol boundary inside the node.
 
 # Out of Scope
 
+- A `NeuralMCTS`-backed `ValueSource` (replacing each candidate's value with a network estimate).
+  The graph node operates on placeholder string actions, not `GameState`, so a neural value source
+  cannot run end-to-end in the node yet; it is deferred to a follow-up spec
+  (`strategos_neural_value_source`) that also supplies the reasoning-domain state adapter.
 - The MDN dispersion estimator and the risk-averse penalty (separate roadmap specs).
-- A reasoning-domain adapter for `NeuralMCTS` (games only here; reasoning-domain wiring is a
-  follow-up spec if pursued).
-- Any change that would make the seam active by default.
+- Any change that would make a non-identity scorer active by default.

@@ -41,6 +41,11 @@ from ..mcts.experiments import ExperimentTracker
 from ..mcts.policies import (
     HybridRolloutPolicy,
 )
+from ..mcts.scoring import (
+    CandidateScorer,
+    IdentityCandidateScorer,
+    candidates_from_action_stats,
+)
 
 # Neural Meta-Controller imports (optional)
 try:
@@ -129,6 +134,7 @@ class GraphBuilder:
         synthesis_temperature: float = 0.5,
         retry_policy: NodeRetryPolicy | None = None,
         trace_recorder: GraphTraceRecorder | None = None,
+        candidate_scorer: CandidateScorer | None = None,
     ):
         """
         Initialize graph builder.
@@ -164,6 +170,11 @@ class GraphBuilder:
         self.retry_policy = retry_policy or NodeRetryPolicy(enabled=False)
         # Optional execution-trace recorder (None => no tracing); injected by IntegratedFramework.
         self.trace_recorder = trace_recorder
+        # Candidate scorer for the MCTS node's selection seam. Defaults to the identity
+        # pass-through, which returns the engine's own MAX_VISITS choice, so a directly
+        # constructed builder is byte-for-byte unchanged; IntegratedFramework injects the
+        # settings-derived scorer.
+        self.candidate_scorer: CandidateScorer = candidate_scorer or IdentityCandidateScorer()
 
         # MCTS configuration
         self.mcts_config = mcts_config or create_preset_config(ConfigPreset.BALANCED)
@@ -939,6 +950,50 @@ class GraphBuilder:
                 },
             )
 
+        # --- Candidate scoring seam --------------------------------------------------
+        # The engine chose ``best_action`` via its selection policy. Expose the
+        # per-candidate statistics to the injected scorer, which may re-rank them. The
+        # default IdentityCandidateScorer returns the engine's choice unchanged, so the
+        # emitted best action / summary / confidence stay byte-for-byte identical to the
+        # pre-seam node. Only an overriding (non-default) scorer recomputes the emitted
+        # visit/value from the chosen candidate.
+        best_action_visits = stats["best_action_visits"]
+        best_action_value = stats["best_action_value"]
+        # ``action_stats`` is always a mapping on real engine output; guard defensively so a
+        # stubbed/minimal/None stats value (e.g. in unit tests) yields no candidates and the
+        # seam transparently preserves the engine's own selection.
+        raw_action_stats = stats.get("action_stats")
+        action_stats = raw_action_stats if isinstance(raw_action_stats, dict) else {}
+        scored_action = self.candidate_scorer.select_best(
+            candidates_from_action_stats(action_stats),
+            engine_choice=best_action,
+        )
+        # Only honor an override that names a *known* candidate; a scorer returning an unknown
+        # id must not desync the emitted action from its stats/summary — keep the engine's choice.
+        if scored_action is not None and scored_action != best_action and scored_action in action_stats:
+            chosen = action_stats[scored_action]
+            self.logger.debug(
+                "Candidate scorer re-ranked MCTS selection",
+                extra={
+                    "scorer": self.candidate_scorer.name,
+                    "engine_choice": best_action,
+                    "scored_action": scored_action,
+                },
+            )
+            best_action = scored_action
+            best_action_visits = chosen["visits"]
+            best_action_value = chosen["value"]
+            # Keep the emitted stats consistent with the re-ranked selection so downstream consumers
+            # (the synthesis value blend, the experiment tracker) see the chosen action's stats, not
+            # the engine's MAX_VISITS pick. A shallow copy leaves the default (no-override) path — and
+            # its byte-for-byte guarantee — untouched.
+            stats = {
+                **stats,
+                "best_action": best_action,
+                "best_action_visits": best_action_visits,
+                "best_action_value": best_action_value,
+            }
+
         end_time = time.perf_counter()
         execution_time_ms = (end_time - start_time) * 1000
 
@@ -983,11 +1038,11 @@ class GraphBuilder:
                         f"Simulated {stats['iterations']} scenarios with "
                         f"seed {self.mcts_config.seed}. "
                         f"Recommended action: {best_action} "
-                        f"(visits={stats['best_action_visits']}, "
-                        f"value={stats['best_action_value']:.3f})"
+                        f"(visits={best_action_visits}, "
+                        f"value={best_action_value:.3f})"
                     ),
                     "confidence": min(
-                        stats["best_action_visits"] / stats["iterations"] if stats["iterations"] > 0 else 0.5,
+                        best_action_visits / stats["iterations"] if stats["iterations"] > 0 else 0.5,
                         1.0,
                     ),
                 }
