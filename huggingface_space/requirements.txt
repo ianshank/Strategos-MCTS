@@ -10,10 +10,10 @@ numpy>=1.24.0,<2.0.0
 
 # Machine Learning - Neural Models
 # Use modern versions to ensure compatibility
-# transformers>=4.46.0 ensures we have the modern API
+# transformers>=5.14.1 ensures we have the modern API
 # peft>=0.12.0 ensures compatibility with modern transformers
 torch>=2.1.0
-transformers>=4.46.0
+transformers>=5.14.1
 peft>=0.12.0
 accelerate>=0.26.0
 # sentence-transformers disabled - incompatible with transformers 4.46.0
