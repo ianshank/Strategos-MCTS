@@ -46,7 +46,7 @@ class TestFlagGating:
         assert isinstance(scorer, RiskAverseSubgoalScorer)
         assert scorer.lambda_weight == 2.5
 
-    async def test_flag_off_node_runs_and_is_deterministic(self, mcts_state=None):  # AC-2
+    async def test_flag_off_node_runs_and_is_deterministic(self):  # AC-2
         # Two OFF frameworks produce identical node output on the same seed (the identity/baseline path).
         state = {"query": "penalty-off determinism query"}
         first = await _build_framework().graph_builder._mcts_simulator_node(dict(state))

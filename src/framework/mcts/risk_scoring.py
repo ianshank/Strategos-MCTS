@@ -55,7 +55,8 @@ class MetadataDispersionSource:
         self.key = key
 
     def dispersion_for(self, candidate: CandidateRecord) -> float:
-        return float(candidate.metadata.get(self.key, 0.0))
+        # Clamp to the non-negative contract: a negative dispersion would *increase* the score.
+        return max(0.0, float(candidate.metadata.get(self.key, 0.0)))
 
 
 class CallableDispersionSource:
@@ -65,7 +66,8 @@ class CallableDispersionSource:
         self._fn = fn
 
     def dispersion_for(self, candidate: CandidateRecord) -> float:
-        return float(self._fn(candidate))
+        # Clamp to the non-negative contract regardless of what the callable returns.
+        return max(0.0, float(self._fn(candidate)))
 
 
 class RiskAverseSubgoalScorer:

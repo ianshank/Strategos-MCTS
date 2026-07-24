@@ -97,3 +97,16 @@ class TestDispersionSources:
         scorer = RiskAverseSubgoalScorer(lambda_weight=1.0)
         # default MetadataDispersionSource reads metadata['dispersion']
         assert scorer.score(_rec("a", 1.0, 0.25)) == pytest.approx(0.75)
+
+    def test_metadata_source_clamps_negative_dispersion(self):
+        # A negative dispersion must not reward uncertainty: clamp to 0.
+        assert MetadataDispersionSource().dispersion_for(_rec("a", 1.0, -5.0)) == 0.0
+
+    def test_callable_source_clamps_negative_dispersion(self):
+        source = CallableDispersionSource(lambda c: -1.0)
+        assert source.dispersion_for(CandidateRecord("a", 1.0, 1)) == 0.0
+
+    def test_negative_dispersion_does_not_increase_score(self):
+        scorer = RiskAverseSubgoalScorer(lambda_weight=10.0, dispersion_source=MetadataDispersionSource())
+        # metadata dispersion = -0.5 clamps to 0 -> score == value (never > value).
+        assert scorer.score(_rec("a", 1.0, -0.5)) == pytest.approx(1.0)
