@@ -1,7 +1,7 @@
 # Multi-stage Docker configuration for testing and evaluation
 # Optimized for running comprehensive Module 1-4 assessments with LangSmith, WandB, and Braintrust
 
-FROM python:3.11-slim as base
+FROM python:3.14-slim as base
 
 # Set environment variables for Python
 ENV PYTHONDONTWRITEBYTECODE=1 \

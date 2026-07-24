@@ -1,6 +1,6 @@
 # Multi-stage build for LangGraph Multi-Agent MCTS Framework
 # Stage 1: Build dependencies
-FROM python:3.11-slim as builder
+FROM python:3.14-slim as builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -34,7 +34,7 @@ RUN pip install --upgrade pip setuptools wheel && \
     pip install ".[api,prometheus]"
 
 # Stage 2: Production image
-FROM python:3.11-slim as production
+FROM python:3.14-slim as production
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
