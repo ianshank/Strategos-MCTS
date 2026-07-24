@@ -25,6 +25,14 @@ DEFAULT_MCTS_C: Final[float] = 1.414  # sqrt(2) is theoretically optimal
 MIN_MCTS_C: Final[float] = 0.0
 MAX_MCTS_C: Final[float] = 10.0
 
+# MCTS candidate-scoring seam. The scorer decides which candidate action wins after
+# the search returns per-candidate statistics. "identity" preserves the engine's own
+# MAX_VISITS selection (behaviour-preserving default); "value" re-ranks by mean value.
+CANDIDATE_SCORER_IDENTITY: Final[str] = "identity"
+CANDIDATE_SCORER_VALUE: Final[str] = "value"
+CANDIDATE_SCORER_NAMES: Final[tuple[str, ...]] = (CANDIDATE_SCORER_IDENTITY, CANDIDATE_SCORER_VALUE)
+DEFAULT_CANDIDATE_SCORER: Final[str] = CANDIDATE_SCORER_IDENTITY
+
 # Default seed for reproducibility
 DEFAULT_SEED: Final[int] = 42
 
