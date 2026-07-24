@@ -28,7 +28,7 @@ wandb>=0.16.0
 langsmith>=0.1.40
 
 # Required for Gradio OAuth and model loading
-huggingface_hub>=0.20.0,<0.30.0
+huggingface_hub>=1.24.0,<1.25.0
 
 # Note: This demo now uses REAL trained models:
 # - RNN Meta-Controller (models/rnn_meta_controller.pt)
