@@ -26,7 +26,7 @@ from src.observability.decorators import retry as _retry_decorator
 from .schema import GraphConstructionError
 
 if TYPE_CHECKING:
-    from src.config.settings import Settings
+    from src.config.graph_settings import GraphHardeningSettings
 
 T = TypeVar("T")
 
@@ -104,7 +104,7 @@ def resolve_exception_types(paths: list[str] | tuple[str, ...]) -> tuple[type[Ex
     return tuple(resolved)
 
 
-def policy_from_settings(settings: Settings) -> NodeRetryPolicy:
+def policy_from_settings(settings: GraphHardeningSettings) -> NodeRetryPolicy:
     """Build a :class:`NodeRetryPolicy` from application settings.
 
     Raises:
@@ -138,18 +138,30 @@ def get_node_attempts() -> int:
     return _node_attempts.get()
 
 
+def set_node_attempts(attempts: int) -> None:
+    """Publish an explicit attempt count for the current node (used to aggregate concurrent I/O)."""
+    _node_attempts.set(attempts)
+
+
 def _record_attempt(_exc: Exception, attempt: int) -> None:
     # on_retry(exc, attempt) fires after attempt `attempt` fails, before attempt `attempt + 1`.
     _node_attempts.set(attempt + 1)
 
 
-def with_node_retry(policy: NodeRetryPolicy, node_name: str, fn: Callable[[], T]) -> Callable[[], T]:
+def with_node_retry(
+    policy: NodeRetryPolicy,
+    node_name: str,
+    fn: Callable[[], T],
+    on_retry: Callable[[Exception, int], None] | None = None,
+) -> Callable[[], T]:
     """Wrap a zero-arg I/O callable with the retry policy, if applicable.
 
     Returns ``fn`` unchanged when retries are disabled, the allowlist is empty, or the node is
     not retryable — so non-retryable and disabled paths carry zero overhead and unchanged
     semantics. The wrapped callable is sync or async matching ``fn`` (the underlying decorator
-    detects coroutine functions).
+    detects coroutine functions). ``on_retry`` overrides the default attempt recorder; concurrent
+    callers (e.g. ``parallel_agents``) pass a shared aggregator because each ``asyncio`` task runs
+    in a copied context where the module ContextVar would not propagate back to the parent.
     """
     if not policy.enabled or not policy.retryable_exceptions or not is_retryable_node(node_name):
         return fn
@@ -158,5 +170,5 @@ def with_node_retry(policy: NodeRetryPolicy, node_name: str, fn: Callable[[], T]
         initial_delay=policy.initial_delay_seconds,
         backoff_factor=policy.backoff_factor,
         exceptions=policy.retryable_exceptions,
-        on_retry=_record_attempt,
+        on_retry=on_retry if on_retry is not None else _record_attempt,
     )(fn)

@@ -550,6 +550,34 @@ class TestParallelAgentsNode:
         assert result["hrm_results"]["response"] == "HRM response"
         assert result["trm_results"]["response"] == "TRM response"
 
+    @pytest.mark.asyncio
+    async def test_error_path_publishes_aggregated_attempts(self, graph_builder):
+        """A child error after retries still publishes the aggregated attempt count.
+
+        Regression: ``set_node_attempts`` ran only after ``asyncio.gather`` succeeded, so the
+        error path recorded the default count of 1. The ``finally`` block now publishes the
+        aggregated count regardless of outcome. Covers strategos_langgraph_hardening AC-3.
+        """
+        from src.framework.graph.retry import NodeRetryPolicy, get_node_attempts, reset_node_attempts
+
+        graph_builder.retry_policy = NodeRetryPolicy(
+            enabled=True,
+            max_attempts=3,
+            initial_delay_seconds=0.0,
+            backoff_factor=1.0,
+            retryable_exceptions=(ConnectionError,),
+        )
+        # One child fails transiently on every attempt; retries exhaust and the node propagates.
+        graph_builder.hrm_agent.process = AsyncMock(side_effect=ConnectionError("transient"))
+
+        reset_node_attempts()
+        with pytest.raises(ConnectionError):
+            await graph_builder._parallel_agents_node({"query": "q", "rag_context": None})
+
+        # The aggregated count (>1 because retries fired) was published despite the error,
+        # rather than being left at the reset default of 1.
+        assert get_node_attempts() >= 2
+
 
 @pytest.mark.unit
 class TestHrmAgentNode:

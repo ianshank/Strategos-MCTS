@@ -302,7 +302,8 @@ class TestEdgeCases:
             error=None,
         )
         # Simulate a hard kill mid-write: append a partial JSON line.
-        (tmp_path / "run1.jsonl").open("a").write("{partial-record")
+        with (tmp_path / "run1.jsonl").open("a") as handle:
+            handle.write("{partial-record")
         events = load_trace(tmp_path, "run1")
         assert len(events) == 1
         assert events[0].node == "entry"

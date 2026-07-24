@@ -11,7 +11,7 @@ Provides:
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 # LangGraph is an optional dependency whose typed API shifts across versions. For static
 # analysis treat its symbols as Any (the TYPE_CHECKING branch is the only one mypy sees), so
@@ -32,15 +32,24 @@ else:
         END = "__end__"
         MemorySaver = None
 
-from src.config.constants import DEFAULT_KROKI_BASE_URL, DEFAULT_KROKI_TIMEOUT_SECONDS
-from src.observability.logging import set_correlation_id
+from src.config.constants import DEFAULT_KROKI_BASE_URL, DEFAULT_KROKI_TIMEOUT_SECONDS, GRAPH_RUN_ID_HEX_CHARS
+from src.observability.logging import peek_correlation_id, restore_correlation_id, set_correlation_id
 
 from ..mcts.config import MCTSConfig
 from ..mcts.experiments import ExperimentTracker
 from .builder import GraphBuilder
-from .retry import NodeRetryPolicy, policy_from_settings
+from .retry import policy_from_settings
 from .schema import GraphConstructionError, validate_initial_state
-from .tracing import GraphTraceRecorder, JsonlTraceSink, set_trace_context
+from .tracing import GraphTraceRecorder, JsonlTraceSink, set_trace_context, snapshot_trace_context
+
+
+class _TraceScope(NamedTuple):
+    """Captured trace/correlation state so a run's ids can be restored afterwards."""
+
+    run_id: str
+    prev_correlation_id: str | None
+    prev_run_id: str
+    prev_thread_id: str
 
 
 class IntegratedFramework:
@@ -100,28 +109,25 @@ class IntegratedFramework:
             self.trm_agent = None
             self.logger.warning("Could not import LLM HRM/TRM agents")
 
-        # Load settings best-effort: only a genuinely unavailable settings object degrades the
-        # hardening features. A *misconfiguration* (bad retry allowlist, sqlite backend without
-        # the extra) must raise at construction, so those paths run outside this guard.
-        settings = None
-        try:
-            from src.config.settings import get_settings
+        # Graph-hardening config validates independently of the API key: a malformed GRAPH_*
+        # value fails fast here (correct), while a missing LLM key never silently disables these
+        # features. Unlike the monolithic Settings, GraphHardeningSettings has no key requirement.
+        from src.config.graph_settings import get_graph_hardening_settings
 
-            settings = get_settings()
-        except Exception as exc:  # noqa: BLE001 - settings truly unavailable -> degrade, don't crash
-            self.logger.warning("Settings unavailable; graph hardening features degraded: %s", exc)
+        graph_settings = get_graph_hardening_settings()
 
-        retry_policy = policy_from_settings(settings) if settings is not None else NodeRetryPolicy(enabled=False)
+        retry_policy = policy_from_settings(graph_settings)
 
         self.trace_recorder: GraphTraceRecorder | None = None
-        if settings is not None and settings.GRAPH_TRACE_ENABLED:
+        if graph_settings.GRAPH_TRACE_ENABLED:
             from src.observability.metrics import MetricsCollector
 
-            sink = JsonlTraceSink(settings.GRAPH_TRACE_DIR) if settings.GRAPH_TRACE_DIR else None
+            trace_dir = graph_settings.GRAPH_TRACE_DIR
+            sink = JsonlTraceSink(trace_dir) if trace_dir else None
             self.trace_recorder = GraphTraceRecorder(sink=sink, metrics=MetricsCollector.get_instance())
 
         # Resolve the checkpointer: an injected saver wins; otherwise select by backend.
-        resolved_checkpointer = self._resolve_checkpointer(settings, checkpointer)
+        resolved_checkpointer = self._resolve_checkpointer(graph_settings, checkpointer)
 
         # Build graph
         self.graph_builder = GraphBuilder(
@@ -224,19 +230,27 @@ class IntegratedFramework:
             return config
         return {"configurable": {"thread_id": thread_id or "default"}}
 
-    def _start_trace(self, config: dict) -> str:
-        """Generate a run id, bind trace/correlation context, and begin the run."""
-        run_id = uuid.uuid4().hex[:12]
+    def _start_trace(self, config: dict) -> _TraceScope:
+        """Generate a run id, bind trace/correlation context, and begin the run.
+
+        Captures the prior correlation id and trace context so :meth:`_end_trace` can restore
+        them — otherwise this run's ids would leak into later work on the same task/ContextVar.
+        """
+        prev_correlation = peek_correlation_id()
+        prev_run_id, prev_thread_id = snapshot_trace_context()
+        run_id = uuid.uuid4().hex[:GRAPH_RUN_ID_HEX_CHARS]
         set_correlation_id(run_id)
         set_trace_context(run_id, self._resolve_thread_id(config))
         if self.trace_recorder is not None:
             self.trace_recorder.begin_run(run_id)
-        return run_id
+        return _TraceScope(run_id, prev_correlation, prev_run_id, prev_thread_id)
 
-    def _end_trace(self, run_id: str) -> None:
-        """End the run's trace sequence (safe when tracing is disabled)."""
+    def _end_trace(self, scope: _TraceScope) -> None:
+        """End the run's trace sequence and restore the prior correlation/trace context."""
         if self.trace_recorder is not None:
-            self.trace_recorder.end_run(run_id)
+            self.trace_recorder.end_run(scope.run_id)
+        restore_correlation_id(scope.prev_correlation_id)
+        set_trace_context(scope.prev_run_id, scope.prev_thread_id)
 
     async def process(
         self,
@@ -267,11 +281,11 @@ class IntegratedFramework:
 
         config = self._resolve_config(config, thread_id)
 
-        run_id = self._start_trace(config)
+        trace_scope = self._start_trace(config)
         try:
             result = await self.app.ainvoke(initial_state, config=config)
         finally:
-            self._end_trace(run_id)
+            self._end_trace(trace_scope)
 
         return {
             "response": result.get("final_response", ""),
@@ -310,14 +324,14 @@ class IntegratedFramework:
 
         self.logger.debug(f"Starting streaming execution for query: {query[:100]}")
 
-        run_id = self._start_trace(config)
+        trace_scope = self._start_trace(config)
         try:
             async for event in self.app.astream(initial_state, config=config):
                 for node_name, state_update in event.items():
                     self.logger.debug(f"Node '{node_name}' completed with keys: {list(state_update.keys())}")
                     yield node_name, state_update
         finally:
-            self._end_trace(run_id)
+            self._end_trace(trace_scope)
 
     async def astream_events(
         self,
@@ -364,7 +378,7 @@ class IntegratedFramework:
 
         self.logger.debug(f"Starting event streaming for query: {query[:100]}, event_types: {include_types}")
 
-        run_id = self._start_trace(config)
+        trace_scope = self._start_trace(config)
         try:
             async for event in self.app.astream_events(
                 initial_state,
@@ -410,7 +424,7 @@ class IntegratedFramework:
                 "tags": [],
             }
         finally:
-            self._end_trace(run_id)
+            self._end_trace(trace_scope)
 
     def get_experiment_tracker(self) -> ExperimentTracker:
         """Get the experiment tracker for analysis."""

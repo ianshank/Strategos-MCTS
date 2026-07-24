@@ -13,11 +13,12 @@ memory log, so a torn trailing line (e.g. from SIGKILL) is tolerated on read.
 
 from __future__ import annotations
 
+import asyncio
 import functools
 import hashlib
 import itertools
 import json
-import os
+import time
 from collections.abc import Callable, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -25,8 +26,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from src.config.constants import DEFAULT_TRACE_DIGEST_HEX_CHARS
+from src.config.constants import DEFAULT_TRACE_DIGEST_HEX_CHARS, GRAPH_TRACE_LOGGER_NAME
 from src.observability.logging import get_structured_logger
+from src.utils.jsonl import append_jsonl, iter_jsonl
 
 from .retry import get_node_attempts, reset_node_attempts
 
@@ -42,6 +44,11 @@ def set_trace_context(run_id: str, thread_id: str) -> None:
     """Bind the current run id and thread id for node-transition attribution."""
     _current_run_id.set(run_id)
     _current_thread_id.set(thread_id)
+
+
+def snapshot_trace_context() -> tuple[str, str]:
+    """Capture the current ``(run_id, thread_id)`` so it can be restored later."""
+    return _current_run_id.get(), _current_thread_id.get()
 
 
 def current_run_id() -> str:
@@ -121,15 +128,7 @@ class JsonlTraceSink:
         self.root = Path(root)
 
     def append(self, run_id: str, record: Mapping[str, Any]) -> None:
-        self.root.mkdir(parents=True, exist_ok=True)
-        path = self.root / f"{run_id}.jsonl"
-        line = json.dumps(record, default=str) + "\n"
-        # O_APPEND gives atomic appends up to PIPE_BUF; trace lines are well under that.
-        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
-        try:
-            os.write(fd, line.encode("utf-8"))
-        finally:
-            os.close(fd)
+        append_jsonl(self.root / f"{run_id}.jsonl", record)
 
 
 class GraphTraceRecorder:
@@ -145,7 +144,7 @@ class GraphTraceRecorder:
         self._sink = sink
         self._clock = clock
         self._metrics = metrics
-        self._slog = slog or get_structured_logger("graph.trace")
+        self._slog = slog or get_structured_logger(GRAPH_TRACE_LOGGER_NAME)
         self._counters: dict[str, itertools.count[int]] = {}
 
     def begin_run(self, run_id: str) -> None:
@@ -199,9 +198,7 @@ class GraphTraceRecorder:
 
 def _finish(
     recorder: GraphTraceRecorder, node: str, start: float, state: Any, result: Any, error: BaseException | None
-):
-    import time
-
+) -> None:
     duration_ms = (time.perf_counter() - start) * 1000.0
     recorder.record(
         run_id=_current_run_id.get(),
@@ -218,9 +215,6 @@ def _finish(
 
 def make_traced_node(recorder: GraphTraceRecorder, handler: Callable[..., Any], node: str) -> Callable[..., Any]:
     """Wrap a node handler so every transition is recorded (sync or async preserved)."""
-    import asyncio
-    import time
-
     if asyncio.iscoroutinefunction(handler):
 
         @functools.wraps(handler)
@@ -254,18 +248,12 @@ def make_traced_node(recorder: GraphTraceRecorder, handler: Callable[..., Any], 
 
 def load_trace(root: str | Path, run_id: str) -> list[NodeTraceEvent]:
     """Load and order the trace events for a run, tolerating a torn trailing line."""
-    path = Path(root) / f"{run_id}.jsonl"
     events: list[NodeTraceEvent] = []
-    if not path.exists():
-        return events
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
-            continue
+    for record in iter_jsonl(Path(root) / f"{run_id}.jsonl"):
         try:
-            events.append(event_from_dict(json.loads(line)))
-        except (json.JSONDecodeError, KeyError, ValueError, TypeError):
-            # A partial final record (e.g. from a hard kill) is skipped, not fatal.
+            events.append(event_from_dict(record))
+        except (KeyError, ValueError, TypeError):
+            # A record whose fields don't map to a NodeTraceEvent is skipped, not fatal.
             continue
     events.sort(key=lambda e: e.seq)
     return events

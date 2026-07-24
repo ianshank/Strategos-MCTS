@@ -33,9 +33,7 @@ def hrm_config():
 def mock_hrm_llm():
     """Mock LLM for HRM testing."""
     client = create_mock_llm(provider="openai")
-    client.set_responses(
-        [
-            """HRM Hierarchical Analysis:
+    client.set_responses(["""HRM Hierarchical Analysis:
 Level 1 - Primary Objective: Secure defensive perimeter
 Level 2 - Sub-objectives:
   2.1 Establish observation posts
@@ -46,9 +44,7 @@ Level 3 - Tactical tasks:
   3.1.2 Position infantry at key chokepoints
   3.1.3 Establish radio relay points
 Confidence: 0.88
-Decomposition depth: 3"""
-        ]
-    )
+Decomposition depth: 3"""])
     return client
 
 

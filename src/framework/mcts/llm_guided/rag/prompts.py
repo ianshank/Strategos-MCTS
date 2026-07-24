@@ -105,11 +105,9 @@ class RAGPromptBuilder:
         sections = []
 
         # System context
-        sections.append(
-            """You are an expert code reviewer evaluating Python solutions.
+        sections.append("""You are an expert code reviewer evaluating Python solutions.
 Your task is to analyze the code's correctness, efficiency, and style,
-then estimate its probability of passing all test cases."""
-        )
+then estimate its probability of passing all test cases.""")
 
         # RAG context (brief)
         if rag_context and not rag_context.is_empty():

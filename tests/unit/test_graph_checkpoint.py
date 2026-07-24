@@ -62,3 +62,23 @@ class TestResolveConfig:
     def test_resolve_thread_id_reads_config(self):
         assert IntegratedFramework._resolve_thread_id({"configurable": {"thread_id": "abc"}}) == "abc"
         assert IntegratedFramework._resolve_thread_id({}) == "default"
+
+
+class TestTraceScopeRestore:
+    def test_start_end_trace_restores_prior_context(self, framework):
+        from src.framework.graph.tracing import set_trace_context, snapshot_trace_context
+        from src.observability.logging import peek_correlation_id, set_correlation_id
+
+        framework.trace_recorder = None
+        set_correlation_id("outer-corr")
+        set_trace_context("outer-run", "outer-thread")
+
+        scope = framework._start_trace({"configurable": {"thread_id": "job1"}})
+        # During the run, the correlation id and trace context reflect the new run.
+        assert peek_correlation_id() == scope.run_id
+        assert snapshot_trace_context() == (scope.run_id, "job1")
+
+        framework._end_trace(scope)
+        # After the run, the prior context is restored (no leakage onto the same task).
+        assert peek_correlation_id() == "outer-corr"
+        assert snapshot_trace_context() == ("outer-run", "outer-thread")

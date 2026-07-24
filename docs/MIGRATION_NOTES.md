@@ -37,8 +37,10 @@ These are additive and opt-in; nothing pre-existing is migrated:
   log) plus a `run.json` manifest. Enabled by default via
   `BENCHMARK_RUN_INCREMENTAL_PERSISTENCE`; makes a crashed sweep resumable with
   `python -m src.benchmark --resume <run_id>`.
-- **Execution trace files** — per-run `<GRAPH_TRACE_DIR>/<run_id>.jsonl`. Off by default
-  (`GRAPH_TRACE_DIR` unset); structured-log/metric emission is enabled by default (`GRAPH_TRACE_ENABLED=true`) and can be disabled via `GRAPH_TRACE_ENABLED=false`.
+- **Execution trace files** — when tracing is enabled (`GRAPH_TRACE_ENABLED`, default true),
+  every node transition emits to the structured logger and per-node metrics; setting
+  `GRAPH_TRACE_DIR` additionally writes per-run `<GRAPH_TRACE_DIR>/<run_id>.jsonl` files (off by
+  default). Set `GRAPH_TRACE_ENABLED=false` to disable all trace emission.
 - **SQLite graph checkpoints** — written only when `GRAPH_CHECKPOINT_BACKEND=sqlite` and the
   optional `langgraph-checkpoint-sqlite` extra is installed.
 
