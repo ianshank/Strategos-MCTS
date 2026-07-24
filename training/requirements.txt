@@ -81,7 +81,7 @@ tensorboard~=2.13.0  # TensorBoard for training visualization
 pyyaml~=6.0  # YAML configuration files
 omegaconf~=2.3.0  # Hierarchical configuration with variable interpolation
 pydantic~=2.0.0  # Data validation and settings management
-python-dotenv~=1.0.0  # Environment variable management
+python-dotenv~=1.2.2  # Environment variable management
 
 
 # =============================================================================
