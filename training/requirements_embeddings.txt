@@ -14,7 +14,7 @@ torch>=2.0.0
 voyageai>=0.2.0
 
 # Cohere Embed v3 (Matryoshka support)
-cohere>=4.0.0
+cohere>=7.0.8
 
 # OpenAI embeddings
 openai>=1.0.0
