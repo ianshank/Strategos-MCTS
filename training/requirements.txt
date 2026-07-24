@@ -88,7 +88,7 @@ python-dotenv~=1.0.0  # Environment variable management
 # Visualization & UI
 # =============================================================================
 
-matplotlib~=3.7.0  # Plotting and visualization
+matplotlib~=3.11.1  # Plotting and visualization
 seaborn~=0.12.0  # Statistical data visualization
 rich~=13.0.0  # Terminal formatting and progress bars
 
