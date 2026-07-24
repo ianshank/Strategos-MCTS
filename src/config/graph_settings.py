@@ -21,12 +21,15 @@ from src.config.constants import (
     DEFAULT_GRAPH_NODE_RETRY_EXCEPTIONS,
     DEFAULT_GRAPH_NODE_RETRY_INITIAL_DELAY_SECONDS,
     DEFAULT_GRAPH_NODE_RETRY_MAX_ATTEMPTS,
+    DEFAULT_SUBGOAL_UNCERTAINTY_LAMBDA,
     MAX_GRAPH_NODE_RETRY_ATTEMPTS,
     MAX_GRAPH_NODE_RETRY_BACKOFF_FACTOR,
     MAX_GRAPH_NODE_RETRY_DELAY_SECONDS,
+    MAX_SUBGOAL_UNCERTAINTY_LAMBDA,
     MIN_GRAPH_NODE_RETRY_ATTEMPTS,
     MIN_GRAPH_NODE_RETRY_BACKOFF_FACTOR,
     MIN_GRAPH_NODE_RETRY_DELAY_SECONDS,
+    MIN_SUBGOAL_UNCERTAINTY_LAMBDA,
 )
 
 
@@ -102,6 +105,27 @@ class GraphHardeningSettings(BaseSettings):
             "Candidate scorer for the MCTS node: 'identity' preserves the engine's MAX_VISITS "
             "selection (default); 'value' re-ranks candidates by mean value."
         ),
+    )
+
+    # Risk-averse subgoal penalty. When ON this OVERRIDES GRAPH_MCTS_CANDIDATE_SCORER with a
+    # RiskAverseSubgoalScorer (score = value - lambda * dispersion). OFF (default) keeps the
+    # configured scorer (default 'identity'), so selection is byte-for-byte unchanged.
+    ENABLE_UNCERTAINTY_SUBGOAL_PENALTY: bool = Field(
+        default=False,
+        description=(
+            "Use the risk-averse subgoal scorer (value - lambda*dispersion), overriding "
+            "GRAPH_MCTS_CANDIDATE_SCORER. Off by default (byte-for-byte baseline). "
+            "NOTE: with today's placeholder graph candidates no coarse-dynamics dispersion "
+            "is attached, so the scorer is a value-ranking no-op at the graph node until a "
+            "follow-up wires real dispersion onto candidate metadata; it logs a one-time "
+            "warning in that case."
+        ),
+    )
+    SUBGOAL_UNCERTAINTY_LAMBDA: float = Field(
+        default=DEFAULT_SUBGOAL_UNCERTAINTY_LAMBDA,
+        ge=MIN_SUBGOAL_UNCERTAINTY_LAMBDA,
+        le=MAX_SUBGOAL_UNCERTAINTY_LAMBDA,
+        description="Dispersion-penalty weight (lambda >= 0) for the risk-averse subgoal scorer",
     )
 
 

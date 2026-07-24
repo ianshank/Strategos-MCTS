@@ -33,6 +33,20 @@ CANDIDATE_SCORER_VALUE: Final[str] = "value"
 CANDIDATE_SCORER_NAMES: Final[tuple[str, ...]] = (CANDIDATE_SCORER_IDENTITY, CANDIDATE_SCORER_VALUE)
 DEFAULT_CANDIDATE_SCORER: Final[str] = CANDIDATE_SCORER_IDENTITY
 
+# Risk-averse subgoal scoring: score = value - lambda * dispersion (off by default).
+# lambda is the dispersion-penalty weight (>= 0); dispersion is read from candidate
+# metadata under this key (populated by the coarse-dynamics MDN once integrated).
+# NOTE: CANDIDATE_SCORER_RISK_AVERSE is intentionally NOT in CANDIDATE_SCORER_NAMES /
+# the GRAPH_MCTS_CANDIDATE_SCORER enum. The risk scorer needs a lambda + dispersion
+# source (not name-only construction), so it is wired directly and flag-gated via
+# ENABLE_UNCERTAINTY_SUBGOAL_PENALTY rather than selected through the string registry
+# factory (create_candidate_scorer). The constant names the scorer for logs/telemetry.
+CANDIDATE_SCORER_RISK_AVERSE: Final[str] = "risk_averse"
+DEFAULT_SUBGOAL_UNCERTAINTY_LAMBDA: Final[float] = 1.0
+MIN_SUBGOAL_UNCERTAINTY_LAMBDA: Final[float] = 0.0
+MAX_SUBGOAL_UNCERTAINTY_LAMBDA: Final[float] = 100.0
+RISK_DISPERSION_METADATA_KEY: Final[str] = "dispersion"
+
 # Default seed for reproducibility
 DEFAULT_SEED: Final[int] = 42
 
