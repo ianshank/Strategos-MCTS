@@ -29,6 +29,7 @@ from src.config.constants import (
     DEFAULT_COARSE_WINDOW,
     DEFAULT_MDN_COMPONENTS,
     DEFAULT_MDN_HIDDEN_DIM,
+    MAX_COARSE_WINDOW,
     MAX_MDN_COMPONENTS,
     MIN_COARSE_WINDOW,
     MIN_MDN_COMPONENTS,
@@ -62,8 +63,8 @@ class CoarseTransitionAggregator:
     """
 
     def __init__(self, window: int = DEFAULT_COARSE_WINDOW) -> None:
-        if window < MIN_COARSE_WINDOW:
-            raise ValueError(f"window must be >= {MIN_COARSE_WINDOW}, got {window}")
+        if not MIN_COARSE_WINDOW <= window <= MAX_COARSE_WINDOW:
+            raise ValueError(f"window must be in [{MIN_COARSE_WINDOW}, {MAX_COARSE_WINDOW}], got {window}")
         self.window = window
 
     @staticmethod
@@ -160,10 +161,14 @@ class CoarseDynamicsMDN(nn.Module if _TORCH_AVAILABLE else object):  # type: ign
             raise ValueError(
                 f"num_components must be in [{MIN_MDN_COMPONENTS}, {MAX_MDN_COMPONENTS}], got {num_components}"
             )
+        resolved_output_dim = output_dim if output_dim is not None else input_dim
+        for _name, _dim in (("input_dim", input_dim), ("hidden_dim", hidden_dim), ("output_dim", resolved_output_dim)):
+            if _dim <= 0:
+                raise ValueError(f"{_name} must be a positive integer, got {_dim}")
         super().__init__()
         self.input_dim = input_dim
         self.num_components = num_components
-        self.output_dim = output_dim if output_dim is not None else input_dim
+        self.output_dim = resolved_output_dim
         self.trunk = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
