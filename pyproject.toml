@@ -6,9 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "langgraph-multi-agent-mcts"
 version = "0.1.0"
 description = "Multi-Agent Framework with MCTS Integration and LangGraph"
-readme = "docs/langgraph_mcts_architecture.md"
+readme = "README.md"
 authors = [
-    {name = "MCTS Framework Team", email = "team@example.com"}
+    {name = "Ian Shank", email = "ianshank@gmail.com"}
 ]
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -142,9 +142,14 @@ self-play-convergence = "src.training.self_play_convergence:main"
 validate-context-docs = "src.tools.context_docs:main"
 
 [project.urls]
-Homepage = "https://github.com/ianshank/langgraph_multi_agent_mcts"
-Repository = "https://github.com/ianshank/langgraph_multi_agent_mcts"
-Documentation = "https://github.com/ianshank/langgraph_multi_agent_mcts/docs"
+Homepage = "https://github.com/ianshank/Strategos-MCTS"
+Repository = "https://github.com/ianshank/Strategos-MCTS"
+Documentation = "https://github.com/ianshank/Strategos-MCTS/tree/main/docs"
+Issues = "https://github.com/ianshank/Strategos-MCTS/issues"
+Changelog = "https://github.com/ianshank/Strategos-MCTS/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 where = ["."]
