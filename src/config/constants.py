@@ -28,6 +28,18 @@ MAX_MCTS_C: Final[float] = 10.0
 # Default seed for reproducibility
 DEFAULT_SEED: Final[int] = 42
 
+# Coarse-dynamics Mixture Density Network (MDN) — defaults and bounds.
+# Number of low-level states aggregated into one coarse (multi-step) transition.
+DEFAULT_COARSE_WINDOW: Final[int] = 4
+MIN_COARSE_WINDOW: Final[int] = 1
+MAX_COARSE_WINDOW: Final[int] = 1024
+# Mixture component count (K) of the diagonal-Gaussian MDN head.
+DEFAULT_MDN_COMPONENTS: Final[int] = 5
+MIN_MDN_COMPONENTS: Final[int] = 1
+MAX_MDN_COMPONENTS: Final[int] = 64
+# Hidden width of the MDN trunk.
+DEFAULT_MDN_HIDDEN_DIM: Final[int] = 128
+
 # ============================================================================
 # Network Configuration
 # ============================================================================
