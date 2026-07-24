@@ -727,9 +727,13 @@ class GraphBuilder:
         hrm_task = asyncio.create_task(self._node_retry("parallel_agents", _hrm_call, on_retry=_aggregate_attempts)())
         trm_task = asyncio.create_task(self._node_retry("parallel_agents", _trm_call, on_retry=_aggregate_attempts)())
 
-        # Await both results
-        hrm_result, trm_result = await asyncio.gather(hrm_task, trm_task)
-        set_node_attempts(attempts_box[0])
+        # Await both results. Publish the aggregated attempt count in `finally` so the trace event
+        # reports the real attempts even when a child errors after exhausting its retries — the
+        # success-only path would skip `set_node_attempts` and record the default count.
+        try:
+            hrm_result, trm_result = await asyncio.gather(hrm_task, trm_task)
+        finally:
+            set_node_attempts(attempts_box[0])
 
         # Combine outputs
         return {

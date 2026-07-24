@@ -48,13 +48,17 @@ def iter_jsonl(path: str | Path, *, tolerate_partial: bool = True) -> Iterator[d
     source = Path(path)
     if not source.exists():
         return
-    for raw in source.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        try:
-            yield json.loads(line)
-        except json.JSONDecodeError:
-            if tolerate_partial:
+    # Stream line-by-line rather than read_text().splitlines() so a large trace/result log is
+    # never fully materialized in memory; both callers consume the generator to exhaustion, so the
+    # context manager closes the handle deterministically.
+    with source.open(encoding="utf-8") as handle:
+        for raw in handle:
+            line = raw.strip()
+            if not line:
                 continue
-            raise
+            try:
+                yield json.loads(line)
+            except json.JSONDecodeError:
+                if tolerate_partial:
+                    continue
+                raise
