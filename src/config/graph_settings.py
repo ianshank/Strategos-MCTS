@@ -10,7 +10,7 @@ requires) never silently disable these features. All defaults and bounds come fr
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -95,7 +95,9 @@ class GraphHardeningSettings(BaseSettings):
     # after search returns per-candidate statistics. 'identity' preserves the engine's own
     # MAX_VISITS selection (behaviour-preserving default); 'value' re-ranks by mean value.
     GRAPH_MCTS_CANDIDATE_SCORER: Literal["identity", "value"] = Field(
-        default=DEFAULT_CANDIDATE_SCORER,  # the 'identity' literal (kept in constants)
+        # The default lives in constants.py (str-typed); cast narrows it to the field's Literal so
+        # `mypy src/` accepts it without a context-dependent type: ignore.
+        default=cast(Literal["identity", "value"], DEFAULT_CANDIDATE_SCORER),
         description=(
             "Candidate scorer for the MCTS node: 'identity' preserves the engine's MAX_VISITS "
             "selection (default); 'value' re-ranks candidates by mean value."
