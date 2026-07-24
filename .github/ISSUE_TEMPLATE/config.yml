@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or usage help
+    url: https://github.com/ianshank/Strategos-MCTS/discussions
+    about: Ask questions and get help in Discussions. See SUPPORT.md for pointers.
+  - name: Security vulnerability
+    url: https://github.com/ianshank/Strategos-MCTS/security/advisories/new
+    about: Report vulnerabilities privately. Do not open a public issue — see SECURITY.md.

@@ -1,0 +1,13 @@
+# Code owners for Strategos-MCTS
+# Each line maps a path pattern to the GitHub user(s)/team(s) that own review for it.
+# The last matching pattern takes precedence. See:
+# https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repository
+*                   @ianshank
+
+# High-signal areas that warrant explicit review
+/specs/             @ianshank
+/.claude/           @ianshank
+/.github/           @ianshank
+/pyproject.toml     @ianshank
