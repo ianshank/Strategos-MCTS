@@ -69,7 +69,14 @@ class CoarseTransitionAggregator:
 
     @staticmethod
     def output_dim(state_dim: int) -> int:
-        """Length of the coarse-transition vector for a given per-state dimension."""
+        """Length of the coarse-transition vector for a given per-state dimension.
+
+        Raises:
+            ValueError: If ``state_dim`` is not a positive integer (a non-positive dimension
+                would yield a zero/negative length and mask an invalid state representation).
+        """
+        if state_dim <= 0:
+            raise ValueError(f"state_dim must be a positive integer, got {state_dim}")
         return _COARSE_SUMMARY_PARTS * state_dim
 
     def aggregate(self, states: Sequence[Sequence[float]]) -> np.ndarray:
@@ -82,11 +89,12 @@ class CoarseTransitionAggregator:
             A float32 numpy array of length ``4 * state_dim``.
 
         Raises:
-            ValueError: If ``states`` is empty or not 2-D (ragged/scalar input).
+            ValueError: If ``states`` is empty, not 2-D (ragged/scalar input), or has a
+                zero-width state dimension (e.g. ``[[]]``, shape ``[1, 0]``).
         """
         arr = np.asarray(states, dtype=np.float64)
-        if arr.ndim != 2 or arr.shape[0] < 1:
-            raise ValueError("states must be a non-empty [T, state_dim] sequence")
+        if arr.ndim != 2 or arr.shape[0] < 1 or arr.shape[1] < 1:
+            raise ValueError("states must be a non-empty [T, state_dim] sequence with state_dim >= 1")
         window = arr[-self.window :]  # last `window` states (all of them if fewer)
         first = window[0]
         last = window[-1]
