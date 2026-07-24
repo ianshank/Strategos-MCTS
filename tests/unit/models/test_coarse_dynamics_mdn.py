@@ -56,6 +56,19 @@ def test_out_of_range_component_count_raises():  # AC-2
         CoarseDynamicsMDN(input_dim=8, num_components=0)
 
 
+@pytest.mark.parametrize(
+    "kwargs, field",
+    [
+        ({"input_dim": 0}, "input_dim"),
+        ({"input_dim": 8, "hidden_dim": 0}, "hidden_dim"),
+        ({"input_dim": 8, "output_dim": -1}, "output_dim"),
+    ],
+)
+def test_non_positive_dims_raise(kwargs, field):
+    with pytest.raises(ValueError, match=field):
+        CoarseDynamicsMDN(**kwargs)
+
+
 def test_factory_builds_module():
     mdn = create_coarse_dynamics_mdn(input_dim=8, num_components=5)
     assert isinstance(mdn, CoarseDynamicsMDN)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from src.config.constants import MIN_COARSE_WINDOW
+from src.config.constants import MAX_COARSE_WINDOW, MIN_COARSE_WINDOW
 from src.models.coarse_dynamics import CoarseTransitionAggregator
 
 
@@ -58,6 +58,10 @@ class TestValidation:
     def test_window_below_minimum_raises(self):
         with pytest.raises(ValueError, match="window must be"):
             CoarseTransitionAggregator(window=MIN_COARSE_WINDOW - 1)
+
+    def test_window_above_maximum_raises(self):
+        with pytest.raises(ValueError, match="window must be"):
+            CoarseTransitionAggregator(window=MAX_COARSE_WINDOW + 1)
 
     def test_empty_states_raise(self):
         with pytest.raises(ValueError, match="non-empty"):
