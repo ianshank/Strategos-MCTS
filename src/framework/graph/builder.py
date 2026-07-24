@@ -959,16 +959,19 @@ class GraphBuilder:
         # visit/value from the chosen candidate.
         best_action_visits = stats["best_action_visits"]
         best_action_value = stats["best_action_value"]
-        # ``action_stats`` is always present on real engine output; guard defensively so a
-        # stubbed/minimal stats dict (e.g. in unit tests) yields no candidates and the seam
-        # transparently preserves the engine's own selection.
-        action_stats = stats.get("action_stats", {})
+        # ``action_stats`` is always a mapping on real engine output; guard defensively so a
+        # stubbed/minimal/None stats value (e.g. in unit tests) yields no candidates and the
+        # seam transparently preserves the engine's own selection.
+        raw_action_stats = stats.get("action_stats")
+        action_stats = raw_action_stats if isinstance(raw_action_stats, dict) else {}
         scored_action = self.candidate_scorer.select_best(
             candidates_from_action_stats(action_stats),
             engine_choice=best_action,
         )
-        if scored_action is not None and scored_action != best_action:
-            chosen = action_stats.get(scored_action)
+        # Only honor an override that names a *known* candidate; a scorer returning an unknown
+        # id must not desync the emitted action from its stats/summary — keep the engine's choice.
+        if scored_action is not None and scored_action != best_action and scored_action in action_stats:
+            chosen = action_stats[scored_action]
             self.logger.debug(
                 "Candidate scorer re-ranked MCTS selection",
                 extra={
@@ -978,9 +981,8 @@ class GraphBuilder:
                 },
             )
             best_action = scored_action
-            if chosen is not None:
-                best_action_visits = chosen["visits"]
-                best_action_value = chosen["value"]
+            best_action_visits = chosen["visits"]
+            best_action_value = chosen["value"]
 
         end_time = time.perf_counter()
         execution_time_ms = (end_time - start_time) * 1000
