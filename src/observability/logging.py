@@ -44,6 +44,20 @@ def set_correlation_id(cid: str) -> None:
     _correlation_id.set(cid)
 
 
+def peek_correlation_id() -> str | None:
+    """Return the current correlation ID without generating one (None if unset).
+
+    Unlike :func:`get_correlation_id`, this never mutates the context — use it to snapshot
+    the prior value before overriding, so it can be restored afterwards.
+    """
+    return _correlation_id.get()
+
+
+def restore_correlation_id(cid: str | None) -> None:
+    """Restore a previously captured correlation ID (may be None to clear)."""
+    _correlation_id.set(cid)
+
+
 def set_request_metadata(metadata: dict) -> None:
     """Set request metadata for current context."""
     _request_metadata.set(metadata)

@@ -92,7 +92,7 @@ except ImportError:
 
 from src.observability.logging import get_logger
 
-from .retry import NodeRetryPolicy, with_node_retry
+from .retry import NodeRetryPolicy, set_node_attempts, with_node_retry
 from .schema import (
     GraphConstructionError,
     validate_graph_topology,
@@ -348,17 +348,23 @@ class GraphBuilder:
             return handler
         return make_traced_node(recorder, handler, name)
 
-    def _node_retry(self, node_name: str, fn: Callable[[], Any]) -> Callable[[], Any]:
+    def _node_retry(
+        self,
+        node_name: str,
+        fn: Callable[[], Any],
+        on_retry: Callable[[Exception, int], None] | None = None,
+    ) -> Callable[[], Any]:
         """Wrap a zero-arg node I/O callable with the configured retry policy.
 
         Returns ``fn`` unchanged when retries are disabled or the node is not retryable, so
         deterministic nodes and the default (injected-disabled) path carry no overhead.
         Tolerates a builder constructed via ``__new__`` (no policy attribute) by not retrying.
+        ``on_retry`` lets concurrent nodes aggregate attempt counts (see ``_parallel_agents_node``).
         """
         policy = getattr(self, "retry_policy", None)
         if policy is None:
             return fn
-        return with_node_retry(policy, node_name, fn)
+        return with_node_retry(policy, node_name, fn, on_retry=on_retry)
 
     def _entry_node(self, state: AgentState) -> dict:
         """Initialize state and parse query with validation."""
@@ -705,17 +711,25 @@ class GraphBuilder:
         self.logger.info("Executing HRM and TRM agents in parallel")
 
         # Run both agents concurrently, each with its own retry at the process() boundary.
+        # Each child runs in a copied context, so the retry attempt count is aggregated through a
+        # shared closure and published to the trace once both complete (max attempts of either).
+        attempts_box = [1]
+
+        def _aggregate_attempts(_exc: Exception, attempt: int) -> None:
+            attempts_box[0] = max(attempts_box[0], attempt + 1)
+
         async def _hrm_call() -> Any:
             return await self.hrm_agent.process(query=state["query"], rag_context=state.get("rag_context"))
 
         async def _trm_call() -> Any:
             return await self.trm_agent.process(query=state["query"], rag_context=state.get("rag_context"))
 
-        hrm_task = asyncio.create_task(self._node_retry("parallel_agents", _hrm_call)())
-        trm_task = asyncio.create_task(self._node_retry("parallel_agents", _trm_call)())
+        hrm_task = asyncio.create_task(self._node_retry("parallel_agents", _hrm_call, on_retry=_aggregate_attempts)())
+        trm_task = asyncio.create_task(self._node_retry("parallel_agents", _trm_call, on_retry=_aggregate_attempts)())
 
         # Await both results
         hrm_result, trm_result = await asyncio.gather(hrm_task, trm_task)
+        set_node_attempts(attempts_box[0])
 
         # Combine outputs
         return {

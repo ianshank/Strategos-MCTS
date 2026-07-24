@@ -62,6 +62,22 @@ class TestRequiredKeys:
 
         assert required_keys(Schema) == {"a", "c"}
 
+    def test_total_false_bare_fields_are_optional(self):
+        # In a total=False TypedDict a bare field is optional; only Required[...] is required.
+        class Schema(TypedDict, total=False):
+            a: int
+            b: Required[str]
+
+        assert required_keys(Schema) == {"b"}
+
+    def test_total_false_all_optional_accepts_empty_state(self):
+        class Schema(TypedDict, total=False):
+            a: int
+            b: str
+
+        assert required_keys(Schema) == set()
+        validate_initial_state({}, Schema)  # no required keys -> empty state is valid
+
 
 class TestValidateStateSchema:
     def test_agent_state_passes(self):

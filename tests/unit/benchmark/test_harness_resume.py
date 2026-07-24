@@ -112,6 +112,35 @@ async def test_full_resume_skips_all_cells(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_resume_without_incremental_persistence_raises(tmp_path):
+    settings = _settings(tmp_path)
+    settings._run = BenchmarkRunConfig(num_iterations=1, incremental_persistence=False, retry_on_failure=False)
+    harness = EvaluationHarness([RecordingAdapter()], _registry(), settings=settings)
+    with pytest.raises(ValueError, match="incremental_persistence"):
+        await harness.run(resume_run_id="whatever")
+
+
+@pytest.mark.asyncio
+async def test_resume_ignores_cells_outside_current_matrix(tmp_path):
+    settings = _settings(tmp_path)
+    registry = _registry()  # T1, T2
+
+    # Pre-seed the store with a completed T1 (in-matrix) and a stale T99 (not in this run's tasks).
+    store = BenchmarkRunStore(tmp_path / "runs" / "resume2", "resume2")
+    store.append_result(BenchmarkResult(task_id="T1", system="sys_a", iteration=0, raw_response="in-matrix"))
+    store.append_result(BenchmarkResult(task_id="T99", system="sys_a", iteration=0, raw_response="stale"))
+
+    adapter = RecordingAdapter()
+    harness = EvaluationHarness([adapter], registry, settings=settings)
+    results = await harness.run(resume_run_id="resume2")
+
+    # Only T2 re-runs; T1 is reused; the stale T99 does not leak into the result set.
+    assert adapter.execute_count == 1
+    assert _keys(results) == ["0:sys_a:T1", "0:sys_a:T2"]
+    assert all(r.task_id != "T99" for r in results)
+
+
+@pytest.mark.asyncio
 async def test_partial_resume_runs_only_missing(tmp_path):
     settings = _settings(tmp_path)
     registry = _registry()

@@ -22,6 +22,7 @@ from src.benchmark.evaluation.run_store import BenchmarkRunStore, JobKey
 from src.benchmark.evaluation.scorer import ScorerProtocol
 from src.benchmark.tasks.models import BenchmarkTask
 from src.benchmark.tasks.registry import BenchmarkTaskRegistry
+from src.config.constants import BENCHMARK_RUNS_SUBDIR
 from src.observability.logging import set_correlation_id
 
 
@@ -95,6 +96,12 @@ class EvaluationHarness:
         Returns:
             List of all BenchmarkResult instances
         """
+        if resume_run_id and not self._settings.run.incremental_persistence:
+            raise ValueError(
+                "resume_run_id requires incremental_persistence to be enabled; with it disabled "
+                "there is no durable run store to resume from and the sweep would silently re-run."
+            )
+
         self._run_id = resume_run_id or str(uuid.uuid4())[:8]
         set_correlation_id(f"benchmark-{self._run_id}")
 
@@ -125,14 +132,24 @@ class EvaluationHarness:
         # Execute benchmark
         run_config = self._settings.run
 
+        # The cells this run will cover: iteration x task x adapter. Used to skip completed cells
+        # on resume and to ignore any stored cells outside this matrix (e.g. a resume narrowed by
+        # --tasks or a different adapter set), so they never leak into the final result set.
+        matrix_keys = {
+            JobKey(task.task_id, adapter.name, iteration).key()
+            for iteration in range(run_config.num_iterations)
+            for task in tasks
+            for adapter in available_adapters
+        }
+
         # Durable, resumable result store (kill-safe). On resume, already-completed cells are
         # loaded and skipped so the sweep continues without re-running or losing prior work.
         run_store: BenchmarkRunStore | None = None
         completed: dict[str, BenchmarkResult] = {}
         if run_config.incremental_persistence:
-            run_dir = Path(self._settings.report.output_dir) / "runs" / self._run_id
+            run_dir = Path(self._settings.report.output_dir) / BENCHMARK_RUNS_SUBDIR / self._run_id
             run_store = BenchmarkRunStore(run_dir, self._run_id)
-            completed = run_store.load_completed()
+            completed = {key: result for key, result in run_store.load_completed().items() if key in matrix_keys}
             run_store.write_manifest(
                 self._settings,
                 [task.task_id for task in tasks],
@@ -140,17 +157,6 @@ class EvaluationHarness:
             )
             if completed:
                 self._logger.info("Resuming run %s: %d completed cells loaded", self._run_id, len(completed))
-
-        # Only keep completed results that match the current run matrix, so resuming with a filtered
-        # task list / adapter set doesn't leak stale cells into this run's results.
-        allowed_tasks = {task.task_id for task in tasks}
-        allowed_systems = {adapter.name for adapter in available_adapters}
-        allowed_iters = set(range(run_config.num_iterations))
-        completed = {
-            key: result
-            for key, result in completed.items()
-            if result.task_id in allowed_tasks and result.system in allowed_systems and result.iteration in allowed_iters
-        }
 
         self._results = list(completed.values())
         pending_flush: list[BenchmarkResult] = []

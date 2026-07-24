@@ -59,7 +59,8 @@ class TestAppendAndLoad:
         store = BenchmarkRunStore(tmp_path / "runs" / "run1", "run1")
         store.append_result(_result("T1", "sys_a", 0))
         # Simulate a hard kill mid-write.
-        store.results_path.open("a").write('{"task_id": "T2", partial')
+        with store.results_path.open("a") as handle:
+            handle.write('{"task_id": "T2", partial')
         completed = store.load_completed()
         assert set(completed) == {"0:sys_a:T1"}
 

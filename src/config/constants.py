@@ -73,6 +73,15 @@ DEFAULT_GRAPH_NODE_RETRY_EXCEPTIONS: Final[tuple[str, ...]] = (
 
 # Execution-trace logging for graph node transitions.
 DEFAULT_TRACE_DIGEST_HEX_CHARS: Final[int] = 16
+GRAPH_TRACE_LOGGER_NAME: Final[str] = "graph.trace"
+
+# Per-invocation run-id length (hex chars) used for graph trace correlation.
+GRAPH_RUN_ID_HEX_CHARS: Final[int] = 12
+
+# Benchmark run-store layout (kill-safe incremental persistence).
+BENCHMARK_RUNS_SUBDIR: Final[str] = "runs"
+BENCHMARK_RESULTS_LOG_FILENAME: Final[str] = "results.jsonl"
+BENCHMARK_RUN_MANIFEST_FILENAME: Final[str] = "run.json"
 
 # ============================================================================
 # Security Configuration

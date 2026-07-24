@@ -91,10 +91,25 @@ def required_keys(schema: type[Any]) -> set[str]:
     class-creation time the TypedDict machinery cannot see the ``NotRequired[...]`` wrapper
     and marks every key required. ``get_type_hints(..., include_extras=True)`` evaluates the
     strings and preserves ``Required``/``NotRequired``, so required-ness is computed from the
-    resolved hints instead: a key is optional iff its hint's origin is ``NotRequired``.
+    resolved hints instead, honoring the schema's ``total`` flag:
+
+    * ``Required[...]``  -> always required,
+    * ``NotRequired[...]`` -> always optional,
+    * bare field        -> required only when the TypedDict is ``total=True`` (the default);
+      for ``total=False`` schemas a bare field is optional.
     """
+    total = bool(getattr(schema, "__total__", True))
     hints = resolve_state_hints(schema)
-    return {key for key, hint in hints.items() if get_origin(hint) is not NotRequired}
+    required: set[str] = set()
+    for key, hint in hints.items():
+        origin = get_origin(hint)
+        if origin is Required:
+            required.add(key)
+        elif origin is NotRequired:
+            continue
+        elif total:
+            required.add(key)
+    return required
 
 
 def validate_state_schema(schema: type[Any]) -> None:
@@ -183,7 +198,7 @@ def _matches_type(value: Any, hint: Any) -> bool:
 
 def validate_initial_state(
     state: Mapping[str, Any],
-    schema: type[Any] = None,  # type: ignore[assignment]
+    schema: type[Any] | None = None,
     *,
     allow_extra_keys: bool = False,
 ) -> None:
