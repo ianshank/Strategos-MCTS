@@ -10,7 +10,7 @@ Pillow>=10.0.0  # Image processing
 # Note: CLIP requires transformers and torch (already in main requirements)
 
 # OCR (Optional, for text extraction from images)
-pytesseract>=0.3.10  # OCR engine wrapper
+pytesseract>=0.3.13  # OCR engine wrapper
 # easyocr>=1.7.0  # Alternative deep learning OCR
 
 # Code Analysis (Optional enhancements)
