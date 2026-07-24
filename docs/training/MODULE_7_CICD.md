@@ -25,7 +25,7 @@ By the end of this module, you will be able to:
 
 Before the session, review:
 - [.github/workflows/ci.yml](../../.github/workflows/ci.yml) - CI pipeline configuration
-- [DEPLOYMENT_REPORT.md](../DEPLOYMENT_REPORT.md) - Deployment best practices
+- [DEPLOYMENT_REPORT.md](../reports/DEPLOYMENT_REPORT.md) - Deployment best practices
 - GitHub Actions documentation: https://docs.github.com/en/actions
 
 ### Lecture: GitHub Actions Fundamentals (60 minutes)
@@ -359,7 +359,7 @@ jobs:
 
 ### Pre-Reading (30 minutes)
 
-- [DEPLOYMENT_REPORT.md](../DEPLOYMENT_REPORT.md) - Observability setup
+- [DEPLOYMENT_REPORT.md](../reports/DEPLOYMENT_REPORT.md) - Observability setup
 - OpenTelemetry documentation: https://opentelemetry.io/docs/
 - Prometheus documentation: https://prometheus.io/docs/
 
@@ -645,7 +645,7 @@ class ObservableAgent:
 ### Pre-Reading (30 minutes)
 
 - [scripts/production_readiness_check.py](../../scripts/production_readiness_check.py) - Readiness checks
-- [DEPLOYMENT_REPORT.md](../DEPLOYMENT_REPORT.md) - Production requirements
+- [DEPLOYMENT_REPORT.md](../reports/DEPLOYMENT_REPORT.md) - Production requirements
 
 ### Lecture: Production Checklist (60 minutes)
 
@@ -1171,7 +1171,7 @@ groups:
 
 ### Reading
 - [.github/workflows/ci.yml](../../.github/workflows/ci.yml) - CI configuration
-- [DEPLOYMENT_REPORT.md](../DEPLOYMENT_REPORT.md) - Deployment guide
+- [DEPLOYMENT_REPORT.md](../reports/DEPLOYMENT_REPORT.md) - Deployment guide
 - [scripts/production_readiness_check.py](../../scripts/production_readiness_check.py) - Readiness checks
 
 ### Tools

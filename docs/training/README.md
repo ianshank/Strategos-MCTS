@@ -166,7 +166,7 @@ Welcome to the comprehensive training program for the LangGraph Multi-Agent MCTS
 
 **Activities:**
 - Review [.github/workflows/ci.yml](../../.github/workflows/ci.yml)
-- Read [DEPLOYMENT_REPORT.md](../DEPLOYMENT_REPORT.md)
+- Read [DEPLOYMENT_REPORT.md](../reports/DEPLOYMENT_REPORT.md)
 - Attend Module 7 workshops (10 hours)
 - Complete Labs 7.1-7.2
 
@@ -296,7 +296,7 @@ Welcome to the comprehensive training program for the LangGraph Multi-Agent MCTS
 - **Module 4:** [tests/utils/langsmith_tracing.py](../../tests/utils/langsmith_tracing.py)
 - **Module 5:** [LANGSMITH_EXPERIMENTS.md](../LANGSMITH_EXPERIMENTS.md)
 - **Module 6:** [pyproject.toml](../../pyproject.toml)
-- **Module 7:** [.github/workflows/ci.yml](../../.github/workflows/ci.yml), [DEPLOYMENT_REPORT.md](../DEPLOYMENT_REPORT.md)
+- **Module 7:** [.github/workflows/ci.yml](../../.github/workflows/ci.yml), [DEPLOYMENT_REPORT.md](../reports/DEPLOYMENT_REPORT.md)
 
 ---
 
@@ -330,7 +330,7 @@ Welcome to the comprehensive training program for the LangGraph Multi-Agent MCTS
 **How to contribute:**
 - Submit feedback after completing modules
 - Create PRs to improve materials
-- Share lab solutions in [solutions/](solutions/) directory
+- Share lab solutions in a `solutions/` directory
 - Add troubleshooting entries
 - Suggest new labs or exercises
 
