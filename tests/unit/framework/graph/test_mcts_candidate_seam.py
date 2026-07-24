@@ -157,3 +157,15 @@ class TestOverridingScorer:
             1.0,
         )
         assert output["confidence"] == expected_conf
+
+    async def test_override_makes_emitted_stats_consistent(self, make_graph_builder, mcts_state):  # AC-2
+        # After an override, mcts_stats must describe the *chosen* action so downstream consumers
+        # (synthesis value blend, experiment tracker) don't read the engine's stale pick.
+        scorer = _FirstDifferentScorer()
+        builder = make_graph_builder(candidate_scorer=scorer)
+        result = await builder._mcts_simulator_node(mcts_state)
+        stats = result["mcts_stats"]
+        chosen = result["mcts_best_action"]
+        assert stats["best_action"] == chosen
+        assert stats["best_action_visits"] == stats["action_stats"][chosen]["visits"]
+        assert stats["best_action_value"] == stats["action_stats"][chosen]["value"]
