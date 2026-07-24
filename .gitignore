@@ -242,6 +242,10 @@ cache/
 checkpoints/
 reports/
 training/models/
+# docs/reports/ holds tracked project reports (gap analyses, coverage, etc.) and must
+# NOT be caught by the broad training-artifacts `reports/` rule above.
+!docs/reports/
+!docs/reports/**
 
 # Temporary files
 nul

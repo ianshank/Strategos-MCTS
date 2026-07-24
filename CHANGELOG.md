@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Uncertainty-Aware Subgoal Selection (S3 roadmap: seam + MDN + risk scorer)
+
+#### Added
+- **Pluggable candidate-scoring seam (Spec 1, `strategos_subgoal_scoring_seam`):**
+  - Added `src/framework/mcts/scoring.py` — `CandidateRecord`, a `CandidateScorer` protocol,
+    `IdentityCandidateScorer` (behaviour-preserving default), `ValueCandidateScorer`, the
+    `candidates_from_action_stats` bridge, and a registry-backed `create_candidate_scorer` factory.
+  - Wired the seam into `GraphBuilder._mcts_simulator_node` at a single injection point; the default
+    `IdentityCandidateScorer` returns the engine's own `MAX_VISITS` selection, so the graph MCTS node
+    is byte-for-byte unchanged unless a non-default scorer is selected.
+  - Added `GRAPH_MCTS_CANDIDATE_SCORER` (`identity`|`value`) to `GraphHardeningSettings`.
+- **Coarse-dynamics Mixture Density Network (Spec 2, `strategos_coarse_dynamics_mdn`):**
+  - Added `src/models/coarse_dynamics.py` — the torch-free `CoarseTransitionAggregator`
+    (`concat[first, last, mean, delta]`, length `4 * state_dim`), a numpy dispersion reference
+    `mixture_variance_trace` (law of total variance, non-negative), and the torch-guarded
+    diagonal-Gaussian `CoarseDynamicsMDN` (`dispersion()` = variance trace) behind the `neural` extra.
+  - Added MDN/window constants and bounds to `src/config/constants.py`.
+- **Risk-averse subgoal scorer (Spec 3, `strategos_risk_averse_subgoal_scorer`):**
+  - Added `src/framework/mcts/risk_scoring.py` — `RiskAverseSubgoalScorer`
+    (`score = value - lambda * dispersion`) with a pluggable `DispersionSource`
+    (`Zero`/`Metadata`/`Callable`, all clamping dispersion to `>= 0`).
+  - Added `ENABLE_UNCERTAINTY_SUBGOAL_PENALTY` (off by default) and bounded
+    `SUBGOAL_UNCERTAINTY_LAMBDA` to `GraphHardeningSettings`; when enabled the scorer is wired into
+    the graph in place of the identity default. Emits a one-time WARNING if active with no dispersion
+    signal (collapses to value ranking).
+  - Scaffolded four sequenced schema-v2 specs under `specs/` (seam, MDN, risk scorer, and the
+    Spec 4 benchmark A/B, still draft).
+
+#### Fixed
+- `docs/reports/` is no longer shadowed by the training-artifacts `reports/` gitignore rule
+  (added `!docs/reports/`), so project reports stay tracked.
+
 ### Multi-GPU DDP Scaling, Centralized Utilities & Deep Research Workflow
 
 #### Added

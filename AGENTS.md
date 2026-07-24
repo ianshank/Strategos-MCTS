@@ -67,6 +67,7 @@ python -m src.benchmark --systems langgraph_mcts --tasks A1
 | Existing agents | `src/agents/`, `src/framework/agents/base.py` |
 | LangGraph orchestration | `src/framework/graph/builder.py` |
 | MCTS engine | `src/framework/mcts/core.py` (baseline), `src/framework/mcts/neural_mcts.py` (AlphaZero-style; `single_agent` flag) |
+| Candidate scoring seam (S3) | `src/framework/mcts/scoring.py` (`CandidateScorer`, identity default, `GRAPH_MCTS_CANDIDATE_SCORER`), `src/framework/mcts/risk_scoring.py` (`RiskAverseSubgoalScorer`, `ENABLE_UNCERTAINTY_SUBGOAL_PENALTY`), `src/models/coarse_dynamics.py` (torch-guarded MDN dispersion) |
 | Gameplay domains | `src/games/chess/` (chess), `src/games/connect_four/` (connect_four), `src/games/othello/` (othello) (adversarial), `src/framework/mcts/single_agent_domains.py` (reasoning, planning) |
 | Neural self-play (M5) | `src/training/self_play_trainer.py` |
 | Training profiles | `src/training/training_config.py` (`smoke`/`dev`/`full` profiles) |
