@@ -2,7 +2,7 @@
 
 **A LangGraph multi-agent Neural MCTS / AlphaZero self-play framework** — production-quality components for
 a DeepMind-style AI system with Neural MCTS and Hierarchical Reasoning (pre-integration — see
-[Known Limitations](#-known-limitations)). Distributed on PyPI as `langgraph-multi-agent-mcts`.
+[Known Limitations](#known-limitations)). Distributed on PyPI as `langgraph-multi-agent-mcts`.
 
 [![CI](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml/badge.svg)](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen.svg)](docs/STATUS.md)
@@ -35,18 +35,18 @@ graph TB
 
 ## Table of Contents
 
-- [Known Limitations](#-known-limitations)
-- [Key Features](#-key-features)
-- [Installation](#-installation)
-- [Training Workflow](#-training-workflow)
-- [Testing](#-testing)
-- [Documentation](#-documentation)
-- [Security](#-security)
-- [Support](#-support)
-- [Contributing](#-contributing)
-- [License](#-license)
+- [Known Limitations](#known-limitations)
+- [Key Features](#key-features)
+- [Installation](#installation)
+- [Training Workflow](#training-workflow)
+- [Testing](#testing)
+- [Documentation](#documentation)
+- [Security](#security)
+- [Support](#support)
+- [Contributing](#contributing)
+- [License](#license)
 
-## ⚠️ Known Limitations
+## Known Limitations
 
 - **Mock/lightweight fallbacks are opt-in.** When the configured LLM or the full integrated
   framework can't initialize, the service fails loud by default rather than silently serving
@@ -62,7 +62,7 @@ graph TB
   (the source of truth) and **[`docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`](docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md)**
   for the active roadmap. (`docs/reports/GAP_ANALYSIS_REPORT.md` is retained for history but superseded.)
 
-## 🚀 Key Features
+## Key Features
 
 ### 🧠 Core Architecture
 - **HRM (Hierarchical Reasoning Module)**: DeBERTa-based agent for complex problem decomposition.
@@ -97,7 +97,7 @@ graph TB
 - **Policy-comparison benchmark** (`src/benchmark/policy_comparison.py`) with a domain-type-aware decision-quality lift metric and a **meta-controller learning loop** (`docs/META_CONTROLLER_TRAINING.md`).
 
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
 - Python 3.10+ (3.11+ recommended)
@@ -127,7 +127,7 @@ graph TB
 4. **Run Locally (No Docker):**
    See **[`docs/RUN_ALL_LOCALLY.md`](docs/RUN_ALL_LOCALLY.md)** for detailed instructions and PowerShell scripts (`scripts/run_all_local.ps1`) to run the entire framework directly on Windows or macOS.
 
-## 🏗️ Training Workflow
+## Training Workflow
 
 The framework supports a comprehensive training lifecycle:
 
@@ -149,7 +149,7 @@ The framework supports a comprehensive training lifecycle:
     bash scripts/run_production_training.sh
     ```
 
-## 🧪 Testing
+## Testing
 
 Run the comprehensive test suite to verify system integrity:
 
@@ -199,7 +199,7 @@ helper skills live in `.claude/skills/` (`quality-gate`, `validate-specs`, `cove
 the `.claude/` skills/agents against the tree). The `strategos-guide` agent (`.claude/agents/`) is the
 dispatchable counterpart of the primer. See `AGENTS.md` for the agent routing ledger.
 
-## 📚 Documentation
+## Documentation
 
 - **[Documentation Index](docs/README.md)**: Start here — the full map of guides, references, and explanations.
 - **[Project Status](docs/STATUS.md)**: Reproducible test/coverage baseline (source of truth).
@@ -214,22 +214,22 @@ dispatchable counterpart of the primer. See `AGENTS.md` for the agent routing le
   [`docs/plans/`](docs/plans/), and [`docs/quickstart/`](docs/quickstart/) (see
   [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md)).
 
-## 🔒 Security
+## Security
 
 Please report vulnerabilities privately — do **not** open a public issue. See our
 [Security Policy](.github/SECURITY.md) for the reporting process and supported versions.
 
-## 💬 Support
+## Support
 
 Need help? See [SUPPORT.md](.github/SUPPORT.md) for where to ask questions and how to file bug reports and
 feature requests, and the [Documentation Index](docs/README.md) for guides.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please read our [Contributing Guide](.github/CONTRIBUTING.md) for the development
 environment, the quality gate, and the spec-driven development workflow. All participants are expected to
 follow our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
 
-## 📜 License
+## License
 
 MIT License - see the [LICENSE](LICENSE) file for details.
