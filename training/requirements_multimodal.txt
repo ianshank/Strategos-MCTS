@@ -4,7 +4,7 @@
 # PDF Processing and Image Extraction
 PyMuPDF>=1.23.0  # Fast PDF processing and image extraction (fitz)
 pdf2image>=1.16.0  # Alternative PDF to image conversion (requires poppler)
-Pillow>=10.0.0  # Image processing
+Pillow>=12.3.0  # Image processing
 
 # Vision Models and Multi-Modal Embeddings
 # Note: CLIP requires transformers and torch (already in main requirements)
