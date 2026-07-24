@@ -97,8 +97,43 @@ class TestMinimalStatsRobustness:
         assert result["mcts_best_action"] == "A"
         assert "Recommended action: A" in result["agent_outputs"][0]["response"]
 
+    async def test_none_action_stats_preserves_engine_choice(self, make_graph_builder, mcts_state):  # AC-1
+        # A non-mapping/None action_stats must not break candidate construction.
+        builder = make_graph_builder()
+        builder.mcts_engine.search = AsyncMock(  # type: ignore[method-assign]
+            return_value=(
+                "A",
+                {
+                    "iterations": 1,
+                    "cache_hit_rate": 0.0,
+                    "best_action_visits": 1,
+                    "best_action_value": 0.5,
+                    "action_stats": None,
+                },
+            )
+        )
+        result = await builder._mcts_simulator_node(dict(mcts_state))
+        assert result["mcts_best_action"] == "A"
+
+
+class _UnknownIdScorer:
+    """A misbehaving scorer that returns a candidate_id not in the candidate set."""
+
+    name = "unknown-id"
+
+    def select_best(self, candidates, *, engine_choice):
+        return "does-not-exist"
+
 
 class TestOverridingScorer:
+    async def test_unknown_id_override_is_ignored(self, make_graph_builder, mcts_state):  # AC-1
+        # A scorer returning an id not among the candidates must not desync the emitted
+        # action from its stats; the node keeps the engine's own choice.
+        builder = make_graph_builder(candidate_scorer=_UnknownIdScorer())
+        result = await builder._mcts_simulator_node(mcts_state)
+        assert result["mcts_best_action"] in result["mcts_stats"]["action_stats"]
+        assert result["mcts_best_action"] != "does-not-exist"
+
     async def test_override_redirects_action_and_summary(self, make_graph_builder, mcts_state):  # AC-2
         scorer = _FirstDifferentScorer()
         builder = make_graph_builder(candidate_scorer=scorer)
