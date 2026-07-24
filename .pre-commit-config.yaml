@@ -31,7 +31,8 @@ repos:
 
   # Ruff - Fast Python linter (replaces black, flake8, isort)
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.5
+    # Keep in sync with the ruff pin in pyproject.toml [dev] (>=0.15.0,<0.16.0) for CI/local parity.
+    rev: v0.15.0
     hooks:
       # Run the linter with auto-fix
       - id: ruff
@@ -43,7 +44,8 @@ repos:
 
   # MyPy - Static type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    # Keep in sync with the mypy pin in pyproject.toml [dev] (>=1.19.0,<1.20.0) for CI/local parity.
+    rev: v1.19.0
     hooks:
       - id: mypy
         name: MyPy type checking

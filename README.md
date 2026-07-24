@@ -1,10 +1,50 @@
-# LangGraph Multi-Agent MCTS Framework
+# Strategos-MCTS
 
-**Production-quality components for a DeepMind-style AI system with Neural MCTS and Hierarchical Reasoning** (pre-integration — see [Known Limitations](#-known-limitations))
+**A LangGraph multi-agent Neural MCTS / AlphaZero self-play framework** — production-quality components for
+a DeepMind-style AI system with Neural MCTS and Hierarchical Reasoning (pre-integration — see
+[Known Limitations](#-known-limitations)). Distributed on PyPI as `langgraph-multi-agent-mcts`.
 
-![Architecture](docs/img/architecture_overview.png)
+[![CI](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml/badge.svg)](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen.svg)](docs/STATUS.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](pyproject.toml)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](pyproject.toml)
+[![Linter: ruff](https://img.shields.io/badge/linter-ruff-261230.svg)](pyproject.toml)
 
 This framework implements a multi-agent system combining hierarchical reasoning (HRM), iterative refinement (TRM), and Monte Carlo Tree Search (MCTS) guided by neural networks. It features a training pipeline, synthetic data generation, and RAG integration. The individual components are well-tested and engineered to a production standard; full end-to-end integration is still in progress.
+
+```mermaid
+graph TB
+  user["Developer / Operator"]
+  system["Strategos-MCTS Framework<br/>HRM · TRM · Neural MCTS · Meta-Controller"]
+  subgraph External["External Systems"]
+    llm["LLM Providers<br/>OpenAI · Anthropic · LM Studio"]
+    pinecone[("Pinecone Vector DB")]
+    tracking["Braintrust · Weights and Biases"]
+    s3[("S3 Object Storage")]
+  end
+  user -->|runs demos / tests / training| system
+  system -->|prompts / completions| llm
+  system -->|upsert / query vectors| pinecone
+  system -->|experiments / metrics| tracking
+  system -->|checkpoints / artifacts| s3
+```
+
+> Full C4 architecture diagrams: [`docs/C4_ARCHITECTURE.md`](docs/C4_ARCHITECTURE.md) · rendered gallery in
+> [`docs/diagrams/`](docs/diagrams/).
+
+## Table of Contents
+
+- [Known Limitations](#-known-limitations)
+- [Key Features](#-key-features)
+- [Installation](#-installation)
+- [Training Workflow](#-training-workflow)
+- [Testing](#-testing)
+- [Documentation](#-documentation)
+- [Security](#-security)
+- [Support](#-support)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ## ⚠️ Known Limitations
 
@@ -68,8 +108,8 @@ This framework implements a multi-agent system combining hierarchical reasoning 
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/ianshank/langgraph_multi_agent_mcts.git
-   cd langgraph_multi_agent_mcts
+   git clone https://github.com/ianshank/Strategos-MCTS.git
+   cd Strategos-MCTS
    ```
 
 2. **Set up environment variables:**
@@ -161,6 +201,7 @@ dispatchable counterpart of the primer. See `AGENTS.md` for the agent routing le
 
 ## 📚 Documentation
 
+- **[Documentation Index](docs/README.md)**: Start here — the full map of guides, references, and explanations.
 - **[Project Status](docs/STATUS.md)**: Reproducible test/coverage baseline (source of truth).
 - **[Active Roadmap](docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md)**: Current implementation plan.
 - **[Architecture Guide](docs/C4_ARCHITECTURE.md)**: Detailed C4 diagrams of system components.
@@ -173,9 +214,21 @@ dispatchable counterpart of the primer. See `AGENTS.md` for the agent routing le
   [`docs/plans/`](docs/plans/), and [`docs/quickstart/`](docs/quickstart/) (see
   [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md)).
 
+## 🔒 Security
+
+Please report vulnerabilities privately — do **not** open a public issue. See our
+[Security Policy](.github/SECURITY.md) for the reporting process and supported versions.
+
+## 💬 Support
+
+Need help? See [SUPPORT.md](.github/SUPPORT.md) for where to ask questions and how to file bug reports and
+feature requests, and the [Documentation Index](docs/README.md) for guides.
+
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and development process.
+Contributions are welcome! Please read our [Contributing Guide](.github/CONTRIBUTING.md) for the development
+environment, the quality gate, and the spec-driven development workflow. All participants are expected to
+follow our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
 
 ## 📜 License
 
