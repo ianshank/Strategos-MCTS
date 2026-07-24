@@ -35,7 +35,7 @@ Trigger on language that signals structured ideation rather than simple listing:
    - Tag each idea with a one-line rationale or expected impact.
 
 5. **Evaluate and prune**  
-   After expansion, score every leaf idea on two axes (relevance to root × feasibility or novelty).  
+   After expansion, score every leaf idea on two axes — by default relevance to root × feasibility (use user-supplied criteria such as novelty instead when given; see Constraints).  
    Drop the bottom quartile. Promote only the strongest ideas.  
    If a branch is empty after pruning, collapse it.
 
