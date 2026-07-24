@@ -37,7 +37,8 @@ from src.observability.logging import peek_correlation_id, restore_correlation_i
 
 from ..mcts.config import MCTSConfig
 from ..mcts.experiments import ExperimentTracker
-from ..mcts.scoring import create_candidate_scorer
+from ..mcts.risk_scoring import MetadataDispersionSource, RiskAverseSubgoalScorer
+from ..mcts.scoring import CandidateScorer, create_candidate_scorer
 from .builder import GraphBuilder
 from .retry import policy_from_settings
 from .schema import GraphConstructionError, validate_initial_state
@@ -130,10 +131,18 @@ class IntegratedFramework:
         # Resolve the checkpointer: an injected saver wins; otherwise select by backend.
         resolved_checkpointer = self._resolve_checkpointer(graph_settings, checkpointer)
 
-        # Candidate scorer for the MCTS node's selection seam. The factory validates the
-        # settings-selected name at construction (unknown => ValueError, no silent fallback);
-        # the default 'identity' preserves the engine's own selection.
-        candidate_scorer = create_candidate_scorer(graph_settings.GRAPH_MCTS_CANDIDATE_SCORER)
+        # Candidate scorer for the MCTS node's selection seam. When the risk-averse penalty is
+        # enabled it overrides the configured scorer with a RiskAverseSubgoalScorer
+        # (value - lambda*dispersion); otherwise the settings-selected scorer (default 'identity'
+        # => byte-for-byte baseline). The factory fails loud on an unknown name.
+        candidate_scorer: CandidateScorer
+        if graph_settings.ENABLE_UNCERTAINTY_SUBGOAL_PENALTY:
+            candidate_scorer = RiskAverseSubgoalScorer(
+                lambda_weight=graph_settings.SUBGOAL_UNCERTAINTY_LAMBDA,
+                dispersion_source=MetadataDispersionSource(),
+            )
+        else:
+            candidate_scorer = create_candidate_scorer(graph_settings.GRAPH_MCTS_CANDIDATE_SCORER)
 
         # Build graph
         self.graph_builder = GraphBuilder(

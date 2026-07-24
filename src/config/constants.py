@@ -33,6 +33,15 @@ CANDIDATE_SCORER_VALUE: Final[str] = "value"
 CANDIDATE_SCORER_NAMES: Final[tuple[str, ...]] = (CANDIDATE_SCORER_IDENTITY, CANDIDATE_SCORER_VALUE)
 DEFAULT_CANDIDATE_SCORER: Final[str] = CANDIDATE_SCORER_IDENTITY
 
+# Risk-averse subgoal scoring: score = value - lambda * dispersion (off by default).
+# lambda is the dispersion-penalty weight (>= 0); dispersion is read from candidate
+# metadata under this key (populated by the coarse-dynamics MDN once integrated).
+CANDIDATE_SCORER_RISK_AVERSE: Final[str] = "risk_averse"
+DEFAULT_SUBGOAL_UNCERTAINTY_LAMBDA: Final[float] = 1.0
+MIN_SUBGOAL_UNCERTAINTY_LAMBDA: Final[float] = 0.0
+MAX_SUBGOAL_UNCERTAINTY_LAMBDA: Final[float] = 100.0
+RISK_DISPERSION_METADATA_KEY: Final[str] = "dispersion"
+
 # Default seed for reproducibility
 DEFAULT_SEED: Final[int] = 42
 
