@@ -983,6 +983,16 @@ class GraphBuilder:
             best_action = scored_action
             best_action_visits = chosen["visits"]
             best_action_value = chosen["value"]
+            # Keep the emitted stats consistent with the re-ranked selection so downstream consumers
+            # (the synthesis value blend, the experiment tracker) see the chosen action's stats, not
+            # the engine's MAX_VISITS pick. A shallow copy leaves the default (no-override) path — and
+            # its byte-for-byte guarantee — untouched.
+            stats = {
+                **stats,
+                "best_action": best_action,
+                "best_action_visits": best_action_visits,
+                "best_action_value": best_action_value,
+            }
 
         end_time = time.perf_counter()
         execution_time_ms = (end_time - start_time) * 1000
