@@ -14,6 +14,11 @@ class TestOutputDim:
         assert CoarseTransitionAggregator.output_dim(3) == 12
         assert CoarseTransitionAggregator.output_dim(1) == 4
 
+    @pytest.mark.parametrize("state_dim", [0, -1, -8])
+    def test_output_dim_rejects_non_positive_state_dim(self, state_dim):
+        with pytest.raises(ValueError, match="state_dim must be a positive integer"):
+            CoarseTransitionAggregator.output_dim(state_dim)
+
 
 class TestAggregate:
     def test_shape_is_four_times_state_dim(self):  # AC-1
@@ -70,3 +75,8 @@ class TestValidation:
     def test_one_dimensional_input_raises(self):
         with pytest.raises(ValueError, match="non-empty"):
             CoarseTransitionAggregator().aggregate([1.0, 2.0])  # 1-D, not [T, state_dim]
+
+    def test_zero_width_state_dim_raises(self):
+        # states=[[]] has shape [1, 0]: a row exists but state_dim==0 -> reject, don't return an empty vector.
+        with pytest.raises(ValueError, match="state_dim >= 1"):
+            CoarseTransitionAggregator().aggregate([[]])
