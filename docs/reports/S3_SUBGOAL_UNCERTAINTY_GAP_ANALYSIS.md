@@ -66,8 +66,9 @@ their source branch with tests and merged up the stack:
 | A6 | #96 | Commented `CANDIDATE_SCORER_RISK_AVERSE` to explain it is intentionally excluded from the name registry / enum (needs `lambda` + a dispersion source, so it is flag-gated and wired directly). |
 | A7 | #96 | Crossover-boundary test at `lambda* = 0.625` (just below → higher-value B; just above → safer A; exactly → equal scores, first-wins → A). |
 
-The gitignore `reports/` rule (training-artifacts intent) was also un-shadowing `docs/reports/`;
-this consolidation adds `!docs/reports/` so project reports (including this one) stay tracked.
+The gitignore `reports/` rule (training-artifacts intent) was also shadowing the tracked
+`docs/reports/` directory; this consolidation adds `!docs/reports/` to un-shadow it so project
+reports (including this one) stay tracked.
 
 ## 4. Test / AQA coverage
 
