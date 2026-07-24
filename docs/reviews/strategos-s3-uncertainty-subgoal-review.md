@@ -28,7 +28,7 @@ The proposal is explicitly built on two assumptions (its "Assumptions and Unknow
 ### 2.1 There is no hierarchical / subgoal subsystem — at all
 
 - `src/agents/hierarchical/` — **does not exist**. The assumed files `subgoal_selector.py` and `high_level_policy.py` — **do not exist**.
-- `grep -ri "subgoal|sub_goal|high_level_policy|subgoal_selector" src/` → **zero hits**. Same across `tests/` → **zero hits**.
+- `grep -rEi "subgoal|sub_goal|high_level_policy|subgoal_selector" src/` → **zero hits**. Same across `tests/` → **zero hits**. (`-E` for the alternation; the underlying searches were run with ripgrep, which alternates by default.)
 - The only appearance of "subgoal" anywhere in the repo is an **illustrative tutorial snippet** in `docs/training/MODULE_8_ADVANCED_MCTS.md` (`_generate_subgoals`, `_concretize_subgoal`, `high_level_plan`) — pedagogical markdown, not code in `src/`.
 - The nearest real concept is HRM's `SubProblem` dataclass + `decompose()` (`src/agents/hrm_agent.py:28-37`). But `HRMAgent` is a `torch.nn.Module` (`hrm_agent.py:223`) emitting latent decomposition tensors — it performs **no candidate ranking** and its `SubProblem`s are never fed to MCTS or value-ranked. Do not let the proposal conflate "subproblem decomposition" with a "subgoal-value interface."
 
@@ -63,7 +63,7 @@ So the AlphaZero-style value head the proposal likely imagines (`NeuralMCTS`) is
 
 ### 2.4 There is no MDN and no "coarse dynamics" object
 
-- `grep -ri "MixtureDensity|mixture_density|GaussianMixture|MDN|dispersion|predictive_variance" src/` → **zero hits** (only unrelated SVG diagrams match "mixture"/"coarse").
+- `grep -rEi "MixtureDensity|mixture_density|GaussianMixture|MDN|dispersion|predictive_variance" src/` → **zero hits** (only unrelated SVG diagrams match "mixture"/"coarse"). (`-E` for the alternation.)
 - No multi-step aggregated ("coarse") transition object exists — transitions are single-string concatenations (§2.2). The MDN's declared *input* does not exist as a code object either.
 - The **one partial hook**: `src/models/value_network.py` has an *optional* single-scalar epistemic-uncertainty head — `estimate_uncertainty: bool = False` → `Linear→ReLU→Linear(→1)→Softplus` (`value_network.py:58, 85-92`), surfaced as `ValueOutput.uncertainty`. This is a **heteroscedastic scalar**, **not** a mixture density (no mixing weights, no multi-component means/variances). It is a hook to build *near*, not the requested estimator.
 
@@ -159,20 +159,21 @@ This is the strongest part of the proposal (it demands *skip computation entirel
 
 ---
 
-## Appendix A — Repository & PR state (as of 2026-07-23)
+## Appendix A — Repository & PR state (as of 2026-07-24)
 
-**Two PRs are currently OPEN and both are RED on CI — for the same trivial, fixable reason: `black --check` formatting drift** (CI pins `black 26.3.1`, `ruff 0.15.22`). Every other check (MyPy, Spec Validation & Secret Scan, Bandit, Security) is green; the pytest job is **skipped** because the lint gate blocks the run.
+CI installs `.[dev]`, which **caps the formatter minor ranges** (`black>=26.3.0,<26.4.0`, `ruff>=0.15.0,<0.16.0` in `pyproject.toml:66,70`) — currently **resolving to** `black 26.3.1` / `ruff 0.15.22`. Under that black, `main` was briefly **not** clean: a whole-tree `black src/ tests/ --check` reformatted **5 files**, so the `Lint & Format` job failed for **every** PR against `main` until they were reformatted (MyPy, Spec Validation & Secret Scan, Bandit, Security all passed; the pytest job was skipped behind the lint gate). This was fixed on `main` by **PR #93** (`style: black-format pre-existing formatting drift to unblock CI lint`):
 
-| PR | Title | State | CI blocker |
-|---|---|---|---|
-| **#91** | harden LangGraph orchestration (typed state, retry, tracing, checkpoint/resume) | open | `Lint & Format` fails — 1 file: `src/benchmark/evaluation/harness.py` would be reformatted |
-| **#87** | DDP distributed training + `/deep-research` workflow | open | `Lint & Format` fails — 4 files: `src/framework/harness/intent/spec_scaffold.py`, `src/framework/mcts/llm_guided/rag/prompts.py`, `src/games/chess/ui.py`, `tests/components/test_hrm_agent_traced.py` |
+| File | Landed via |
+|---|---|
+| `src/benchmark/evaluation/harness.py` | #91 (merged) |
+| `src/framework/harness/intent/spec_scaffold.py` | #87 (merged) |
+| `src/framework/mcts/llm_guided/rag/prompts.py` | #87 (merged) |
+| `src/games/chess/ui.py` | #87 (merged) |
+| `tests/components/test_hrm_agent_traced.py` | #87 (merged) |
 
-- **#91** was previously "gated on #90"; **#90 is now merged** (its base is the #90 merge commit `c543475`), so the spec-trace gate is satisfied — **black is the only remaining blocker.**
-- Both PR bodies claim "black/ruff/mypy clean locally," which conflicts with CI. Most likely a **local↔CI black version mismatch** (CLAUDE.md warns tooling is pinned in the `[dev]` extra for exactly this parity reason). Fix: run `black src/ tests/ --line-length 120` with the pinned `[dev]` black and push.
-- **Recently merged (context):** #90/#89 (LangGraph hardening spec approve/draft), #88 (negamax value-sign fix in `NeuralMCTS`), #86/#84 (M5 policy-lift arena scoring + self-play convergence driver), #85 (GPU training + Connect Four/Othello domains), #83/#82 (tech-debt + quality gates), #81 (strategos-primer skill/agent).
-
-> Note: fixing #87/#91 was **not** requested here and would require pushing to their branches; flagged for the author to action (or ask and I can prepare the formatting-only fixes).
+- **#87 and #91 have since merged** into `main` — their own `Lint & Format` was red on these files at merge time, so the drift now sits on `main`. The likely cause is a **local↔CI black mismatch**: a local black older than the `[dev]`-resolved 26.3.1 leaves these files "clean" locally while CI reformats them (CLAUDE.md warns about exactly this parity risk).
+- **Resolved on `main` by PR #93**, which ran `black src/ tests/` over the same drift. This review PR was rebased onto that merge, so it carries **no formatting change** — its diff is docs + specs only, and `black --check src/ tests/` is clean on the rebased tree.
+- **Recently merged (context):** #91/#90/#89 (LangGraph hardening spec + implementation), #88 (negamax value-sign fix in `NeuralMCTS`), #86/#84 (M5 policy-lift arena scoring + self-play convergence driver), #85 (GPU training + Connect Four/Othello domains), #83/#82 (tech-debt + quality gates), #81 (strategos-primer skill/agent).
 
 ---
 
