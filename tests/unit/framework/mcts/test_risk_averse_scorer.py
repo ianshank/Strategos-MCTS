@@ -52,6 +52,23 @@ class TestRanking:
             RiskAverseSubgoalScorer(2.0, MetadataDispersionSource()).select_best(candidates, engine_choice="A") == "A"
         )  # large penalty flips to the safer A
 
+    def test_crossover_boundary_selection(self):  # AC-1
+        # A=(value 1.0, disp 0.1), B=(value 1.5, disp 0.9). score(A)==score(B) when
+        # 1.0 - 0.1*lam == 1.5 - 0.9*lam  ->  lam* = 0.5/0.8 = 0.625.
+        candidates = [_rec("A", 1.0, 0.1), _rec("B", 1.5, 0.9)]
+        # Just below the crossover: higher-value B still wins.
+        assert (
+            RiskAverseSubgoalScorer(0.624, MetadataDispersionSource()).select_best(candidates, engine_choice="A") == "B"
+        )
+        # Just above the crossover: the safer A wins.
+        assert (
+            RiskAverseSubgoalScorer(0.626, MetadataDispersionSource()).select_best(candidates, engine_choice="A") == "A"
+        )
+        # Exactly at the crossover: equal scores -> first-wins tie-break -> A.
+        scorer_at = RiskAverseSubgoalScorer(0.625, MetadataDispersionSource())
+        assert scorer_at.score(candidates[0]) == pytest.approx(scorer_at.score(candidates[1]))
+        assert scorer_at.select_best(candidates, engine_choice="A") == "A"
+
     def test_tie_breaks_first_wins(self):  # AC-1
         # Equal risk-adjusted score -> first candidate in order wins (matches max()).
         candidates = [_rec("A", 1.0, 0.5), _rec("B", 1.0, 0.5)]
@@ -110,3 +127,32 @@ class TestDispersionSources:
         scorer = RiskAverseSubgoalScorer(lambda_weight=10.0, dispersion_source=MetadataDispersionSource())
         # metadata dispersion = -0.5 clamps to 0 -> score == value (never > value).
         assert scorer.score(_rec("a", 1.0, -0.5)) == pytest.approx(1.0)
+
+
+class TestMisconfigurationWarning:
+    """A2: warn once when the penalty is active (lambda > 0) but no dispersion signal exists."""
+
+    def test_warns_once_when_all_dispersions_zero(self, caplog):
+        scorer = RiskAverseSubgoalScorer(lambda_weight=1.0, dispersion_source=ZeroDispersionSource())
+        candidates = [_rec("A", 1.0, 0.0), _rec("B", 0.9, 0.0)]
+        with caplog.at_level("WARNING", logger="src.framework.mcts.risk_scoring"):
+            scorer.select_best(candidates, engine_choice="A")
+            scorer.select_best(candidates, engine_choice="A")  # second call must not re-warn
+        warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+        assert len(warnings) == 1
+        assert "pure value ranking" in warnings[0].getMessage()
+
+    def test_no_warning_when_dispersion_present(self, caplog):
+        scorer = RiskAverseSubgoalScorer(lambda_weight=1.0, dispersion_source=MetadataDispersionSource())
+        candidates = [_rec("A", 1.0, 0.0), _rec("B", 0.9, 0.5)]  # B carries real dispersion
+        with caplog.at_level("WARNING", logger="src.framework.mcts.risk_scoring"):
+            scorer.select_best(candidates, engine_choice="A")
+        assert not [r for r in caplog.records if r.levelname == "WARNING"]
+
+    def test_no_warning_when_lambda_zero(self, caplog):
+        # lambda == 0 is a legitimate pure-value config, not a misconfiguration.
+        scorer = RiskAverseSubgoalScorer(lambda_weight=0.0, dispersion_source=ZeroDispersionSource())
+        candidates = [_rec("A", 1.0, 0.0), _rec("B", 0.9, 0.0)]
+        with caplog.at_level("WARNING", logger="src.framework.mcts.risk_scoring"):
+            scorer.select_best(candidates, engine_choice="A")
+        assert not [r for r in caplog.records if r.levelname == "WARNING"]

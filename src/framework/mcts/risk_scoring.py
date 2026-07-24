@@ -89,10 +89,32 @@ class RiskAverseSubgoalScorer:
             raise ValueError(f"lambda_weight must be >= 0, got {lambda_weight}")
         self.lambda_weight = lambda_weight
         self.dispersion_source: DispersionSource = dispersion_source or MetadataDispersionSource()
+        # One-shot latch for the "active but no dispersion signal" misconfiguration warning.
+        self._warned_all_zero_dispersion = False
 
     def score(self, candidate: CandidateRecord) -> float:
         """Risk-adjusted score for a single candidate: ``value - lambda * dispersion``."""
         return candidate.value - self.lambda_weight * self.dispersion_source.dispersion_for(candidate)
+
+    def _warn_if_no_dispersion_signal(self, candidates: Sequence[CandidateRecord]) -> None:
+        """Warn once if the penalty is active (lambda > 0) yet every dispersion is 0.
+
+        In that case ``score == value`` for all candidates and the risk scorer silently
+        collapses to a pure value ranking — a no-op that usually means the coarse-dynamics
+        dispersion was never wired onto candidate metadata. Logged once per scorer instance
+        so a hot loop does not spam, and only when it could plausibly matter.
+        """
+        if self._warned_all_zero_dispersion or self.lambda_weight <= 0:
+            return
+        if all(self.dispersion_source.dispersion_for(c) <= 0.0 for c in candidates):
+            self._warned_all_zero_dispersion = True
+            logger.warning(
+                "RiskAverseSubgoalScorer active (lambda_weight=%s) but all candidate dispersions "
+                "are 0 -> scoring collapses to pure value ranking (no uncertainty penalty applied). "
+                "Ensure the coarse-dynamics dispersion is attached to candidate metadata[%r].",
+                self.lambda_weight,
+                getattr(self.dispersion_source, "key", RISK_DISPERSION_METADATA_KEY),
+            )
 
     def select_best(
         self,
@@ -102,6 +124,7 @@ class RiskAverseSubgoalScorer:
     ) -> str | None:
         if not candidates:
             return engine_choice
+        self._warn_if_no_dispersion_signal(candidates)
         best = max(candidates, key=self.score)
         if best.candidate_id != engine_choice:
             logger.debug(

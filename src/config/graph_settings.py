@@ -114,7 +114,11 @@ class GraphHardeningSettings(BaseSettings):
         default=False,
         description=(
             "Use the risk-averse subgoal scorer (value - lambda*dispersion), overriding "
-            "GRAPH_MCTS_CANDIDATE_SCORER. Off by default (byte-for-byte baseline)."
+            "GRAPH_MCTS_CANDIDATE_SCORER. Off by default (byte-for-byte baseline). "
+            "NOTE: with today's placeholder graph candidates no coarse-dynamics dispersion "
+            "is attached, so the scorer is a value-ranking no-op at the graph node until a "
+            "follow-up wires real dispersion onto candidate metadata; it logs a one-time "
+            "warning in that case."
         ),
     )
     SUBGOAL_UNCERTAINTY_LAMBDA: float = Field(
