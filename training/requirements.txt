@@ -15,7 +15,7 @@ torch~=2.0.0
 
 # Hugging Face Transformers - Pre-trained models and training utilities
 # Pin to 4.30+ for latest model architectures and training improvements
-transformers~=4.30.0
+transformers>=4.30,<5.15
 
 # Hugging Face Datasets - Efficient data loading and processing
 datasets~=2.14.0
