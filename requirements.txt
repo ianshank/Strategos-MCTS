@@ -15,7 +15,7 @@ numpy>=1.24.0,<2.0.0
 # Newer peft versions (0.14+) require transformers>=4.46 for modeling_layers module
 torch>=2.1.0
 transformers>=4.40.0,<4.46.0
-peft==0.10.0
+peft==0.19.1
 accelerate>=0.26.0
 sentence-transformers>=2.2.0
 
