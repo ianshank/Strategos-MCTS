@@ -15,7 +15,7 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 # or use local LM Studio (no key needed)
 
 # 3. Verify installation
-python scripts/verify_synthetic_generator.py
+python scripts/verification/verify_synthetic_generator.py
 ```
 
 ## Generate Your First 10 Samples (5 minutes)
@@ -242,7 +242,7 @@ python scripts/generate_synthetic_training_data.py \
 
 ```bash
 # Run verification
-python scripts/verify_synthetic_generator.py
+python scripts/verification/verify_synthetic_generator.py
 
 # Run examples
 python examples/synthetic_data_generation_example.py

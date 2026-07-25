@@ -66,15 +66,14 @@ langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 │
 ├── scripts/                     # Automation and utility scripts
 │   ├── smoke_test.sh                   # Docker deployment smoke tests
-│   ├── verify_setup.py                 # Setup verification
-│   ├── verify_all_integrations.py      # Full integration check
-│   ├── verify_pinecone_integration.py  # Pinecone connectivity
-│   ├── verify_braintrust_wandb_integration.py  # Experiment tracking
-│   ├── test_api_integrations.py        # API integration tests
-│   ├── test_lmstudio_connection.py     # LM Studio connection
+│   ├── verify_external_services.py     # Service connectivity (test-imported)
 │   ├── export_architecture_diagrams.py # Export Mermaid diagrams
 │   ├── production_readiness_check.py   # Pre-production validation
-│   └── security_audit.py               # Security scanning
+│   ├── security_audit.py               # Security scanning
+│   └── verification/                   # One-off setup/integration checkers
+│       ├── verify_setup.py             # Setup verification
+│       ├── verify_all_integrations.py  # Full integration check
+│       └── ...                         # Pinecone/LangSmith/W&B/LMStudio checks
 │
 ├── tests/                       # Test suite
 │   ├── unit/                    # Unit tests

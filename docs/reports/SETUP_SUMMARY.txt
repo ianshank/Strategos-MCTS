@@ -86,9 +86,9 @@ Development Tools:
   Status: Configured for Windows with correct paths
   To use: Configure in your MCP-compatible IDE/tool
 
-✓ verify_setup.py
+✓ scripts/verification/verify_setup.py
   Purpose: Verification script to test all imports
-  Run: python verify_setup.py
+  Run: python scripts/verification/verify_setup.py
 
 ✓ SETUP_COMPLETE.md
   Purpose: Detailed setup documentation
@@ -105,7 +105,7 @@ Development Tools:
    notepad .env  (Edit with your API keys)
 
 3. Verify Setup:
-   python verify_setup.py
+   python scripts/verification/verify_setup.py
 
 4. Run Tests:
    pytest tests/ -v --cov=src

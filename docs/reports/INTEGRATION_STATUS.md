@@ -76,4 +76,4 @@ All required API keys have been configured in the current session:
    - Training visualization and monitoring
 
 ## Verification
-Run `python verify_all_integrations.py` anytime to check the status of all integrations.
+Run `python scripts/verification/verify_all_integrations.py` anytime to check the status of all integrations.

@@ -314,7 +314,7 @@ pytest tests/components/test_hrm_agent_traced.py -v
 
 ### Verification Script
 
-**File:** `scripts/verify_langsmith_setup.py`
+**File:** `scripts/verification/verify_langsmith_setup.py`
 
 ```python
 """
@@ -458,7 +458,7 @@ if __name__ == "__main__":
 
 **Usage:**
 ```bash
-python scripts/verify_langsmith_setup.py
+python scripts/verification/verify_langsmith_setup.py
 ```
 
 **Expected Output:**
@@ -670,7 +670,7 @@ Organization: YourCompany-Training
 python scripts/setup_langsmith_projects.py
 
 # Verify
-python scripts/verify_langsmith_setup.py
+python scripts/verification/verify_langsmith_setup.py
 
 # Set module
 ./scripts/set_training_module.sh 1

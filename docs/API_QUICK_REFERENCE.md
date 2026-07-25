@@ -48,7 +48,7 @@ export LLM_PROVIDER=openai
 
 ### Test Connections
 ```bash
-python test_api_integrations.py
+python scripts/verification/test_api_integrations.py
 ```
 
 ### Create/Update .env

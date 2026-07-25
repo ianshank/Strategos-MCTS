@@ -14,7 +14,7 @@ import traceback
 from pathlib import Path
 
 # Add project root to path before local imports
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
 from tests.utils.langsmith_tracing import get_langsmith_client  # noqa: E402

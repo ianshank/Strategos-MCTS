@@ -278,7 +278,7 @@ Total: 123+ KB of new training materials
 1. **Start with Prerequisites**
    ```bash
    # Verify setup
-   python scripts/verify_setup.py
+   python scripts/verification/verify_setup.py
 
    # Read foundational docs
    cat docs/architecture.md

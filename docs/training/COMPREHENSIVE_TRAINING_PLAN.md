@@ -130,7 +130,7 @@ Before starting the training, ensure you have:
    ```bash
    git clone <repository-url>
    cd langgraph_multi_agent_mcts
-   python scripts/verify_setup.py
+   python scripts/verification/verify_setup.py
    ```
 
 ### Recommended Reading (Pre-Work)
@@ -579,7 +579,7 @@ All training materials build on existing documentation:
 
 | Script | Purpose | When to Use |
 |--------|---------|-------------|
-| [verify_setup.py](../../scripts/verify_setup.py) | Setup validation | Before training |
+| [verify_setup.py](../../scripts/verification/verify_setup.py) | Setup validation | Before training |
 | [create_langsmith_datasets.py](../../scripts/create_langsmith_datasets.py) | Dataset creation | Module 5 |
 | [run_langsmith_experiments.py](../../scripts/run_langsmith_experiments.py) | Run experiments | Module 5 |
 | [production_readiness_check.py](../../scripts/production_readiness_check.py) | Pre-deployment check | Module 7 |
