@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Module 6 Completion Summary
 
 ## 2025 Python Coding & Testing Practices

@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Hugging Face Space Deployment Status
 
 ## Deployment Completed Successfully

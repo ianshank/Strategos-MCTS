@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Next Steps Investigation Report
 
 > **⚠️ SUPERSEDED (2026-06-30).** Superseded by `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`

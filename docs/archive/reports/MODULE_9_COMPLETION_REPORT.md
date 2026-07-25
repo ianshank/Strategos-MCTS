@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Module 9: Neural Network Integration - Completion Report
 
 **Project**: LangGraph Multi-Agent MCTS Framework

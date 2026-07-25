@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Project: Strategos-MCTS PR #85 GPU/Gameplay Hardening
 
 ## Architecture

@@ -1,3 +1,5 @@
+> Historical planning document — metrics herein are superseded; see docs/STATUS.md for the current baseline.
+
 # Comprehensive Implementation Plan - LangGraph Multi-Agent MCTS
 
 > **⚠️ Superseded / historical (Jan 2026).** Current test/coverage status lives in

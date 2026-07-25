@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Continual Learning System - Implementation Summary
 
 ## Overview

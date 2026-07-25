@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Cutting-Edge Ensemble Implementation - Complete Summary
 
 **Date:** 2025-11-20

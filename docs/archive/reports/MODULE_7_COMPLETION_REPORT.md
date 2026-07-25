@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Module 7 Completion Report: CI/CD & Observability Integration
 
 **Date**: 2025-11-19

@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Agent-Specific LangSmith Tracing - Implementation Summary
 
 ## Overview

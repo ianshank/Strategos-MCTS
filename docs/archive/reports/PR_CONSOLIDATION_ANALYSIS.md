@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Pull Request Consolidation Analysis
 
 **Date:** 2025-11-20

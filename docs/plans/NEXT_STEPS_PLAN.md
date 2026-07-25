@@ -1,3 +1,5 @@
+> Historical planning document — metrics herein are superseded; see docs/STATUS.md for the current baseline.
+
 # LangGraph Multi-Agent MCTS: Next Steps Plan
 
 > ⚠️ **SUPERSEDED (2026-06-30).** This v1.0 plan is retained for history but several of its

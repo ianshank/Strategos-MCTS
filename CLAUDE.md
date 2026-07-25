@@ -2,7 +2,7 @@
 
 > Quick reference for Claude Code and other AI assistants working on this codebase.
 > For the implementation template, see:
-> - `MULTI_AGENT_MCTS_TEMPLATE.md` - Comprehensive template with C4 architecture (v2.0)
+> - `docs/templates/MULTI_AGENT_MCTS_TEMPLATE.md` - Comprehensive template with C4 architecture (v2.0)
 
 ---
 
@@ -297,7 +297,7 @@ harness run --spec spec.md --ralph # outer Ralph loop
 
 ## Getting Help
 
-- **Template (v2.0)**: See `MULTI_AGENT_MCTS_TEMPLATE.md` for comprehensive template with:
+- **Template (v2.0)**: See `docs/templates/MULTI_AGENT_MCTS_TEMPLATE.md` for comprehensive template with:
   - Full C4 architecture diagrams
   - All sub-agent specifications (HRM, TRM, Meta-Controller, MCTS)
   - Dynamic component patterns and factories
@@ -306,7 +306,7 @@ harness run --spec spec.md --ralph # outer Ralph loop
 - **Architecture**: See `docs/C4_ARCHITECTURE.md` for system diagrams
 - **Training**: See `docs/LOCAL_TRAINING_GUIDE.md` for ML pipeline
 - **Deployment**: See `docs/DOCKER_DEPLOYMENT.md` for the deployment guide and `docs/STATUS.md` for
-  current status (the historical `docs/reports/DEPLOYMENT_REPORT.md` is retained for reference)
+  current status (the historical `docs/archive/reports/DEPLOYMENT_REPORT.md` is retained for reference)
 - **Current status (source of truth)**: See `docs/STATUS.md` for the reproducible test/coverage
   baseline, and `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md` for the active roadmap.
 

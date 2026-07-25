@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Neural Meta-Controller Training Summary
 
 ## Training Results

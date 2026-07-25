@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Sprint 2: Meta-Controller Assembly Enhancement
 
 **Status**: ✅ Complete

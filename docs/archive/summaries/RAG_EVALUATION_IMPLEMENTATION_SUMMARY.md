@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # RAG Evaluation CI/CD Implementation Summary
 
 **Date**: November 19, 2025

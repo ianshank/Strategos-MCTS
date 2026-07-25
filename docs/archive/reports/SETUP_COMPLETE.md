@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Setup Complete ✓
 
 Your LangGraph Multi-Agent MCTS framework has been successfully configured and ready to use!

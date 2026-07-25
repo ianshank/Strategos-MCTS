@@ -132,6 +132,6 @@ Fixtures: `tests/fixtures/harness_fixtures.py` (helpers), `tests/integration/har
 - Deep Research: `/deep-research` command (`.claude/commands/`), orchestrated by `research-planner`, 
   `research-fetcher`, `research-critic`, and `research-synthesizer` agents (`.claude/agents/`) with 
   reports output to `docs/reports/` using the `deep-research` skill (`.claude/skills/`).
-- Implementation template: `MULTI_AGENT_MCTS_TEMPLATE.md`
+- Implementation template: `docs/templates/MULTI_AGENT_MCTS_TEMPLATE.md`
 - Architecture: `docs/C4_ARCHITECTURE.md`
 - This file is a routing ledger, not an encyclopedia. Drill into a path above for detail.

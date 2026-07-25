@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Security Audit Report: LangGraph Multi-Agent MCTS Framework
 
 **Date:** 2024-01-15

@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # LangSmith E2E Workflow Tracing - Implementation Summary
 
 ## Overview

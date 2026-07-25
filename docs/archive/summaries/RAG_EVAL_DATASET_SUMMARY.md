@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # LangSmith RAG Evaluation Dataset Summary
 
 ## Overview

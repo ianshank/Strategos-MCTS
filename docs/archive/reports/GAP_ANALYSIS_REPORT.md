@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Gap Analysis Report: LangGraph Multi-Agent MCTS Framework
 
 > **⚠️ SUPERSEDED (2026-06-30).** Status figures in this report (e.g. REST API "40%", domain

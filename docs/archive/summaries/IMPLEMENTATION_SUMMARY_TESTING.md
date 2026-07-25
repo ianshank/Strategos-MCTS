@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Implementation Summary: Dynamic Modular Reusable Components and Testing Best Practices
 
 ## Overview

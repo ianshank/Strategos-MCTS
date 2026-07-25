@@ -146,7 +146,7 @@ Full detail: `CLAUDE.md` → "Spec-Driven Development", and `docs/plans/SDD_PLUG
 |------|------|
 | **Current reality — what passes, coverage, gaps** (source of truth) | `docs/STATUS.md` |
 | Architecture diagrams | `docs/C4_ARCHITECTURE.md`, `docs/C4_MERMAID_ARCHITECTURE.md` |
-| Comprehensive implementation template (C4 + all sub-agents) | `MULTI_AGENT_MCTS_TEMPLATE.md` |
+| Comprehensive implementation template (C4 + all sub-agents) | `docs/templates/MULTI_AGENT_MCTS_TEMPLATE.md` |
 | Active roadmap | `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md` |
 | Autonomous-agent routing ledger | `AGENTS.md` |
 | Repo layout in depth | `PROJECT_STRUCTURE.md` |

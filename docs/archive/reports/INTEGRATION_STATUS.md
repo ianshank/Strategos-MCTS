@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Integration Status Report
 
 **Date**: November 15, 2025  

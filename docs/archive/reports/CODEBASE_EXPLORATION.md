@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # LangGraph Multi-Agent MCTS Framework - Complete Codebase Exploration
 
 ## Executive Summary

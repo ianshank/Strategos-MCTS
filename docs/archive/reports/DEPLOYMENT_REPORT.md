@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Docker Deployment Report
 
 **Date**: 2025-11-16

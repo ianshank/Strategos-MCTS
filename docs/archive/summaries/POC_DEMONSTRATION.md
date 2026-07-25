@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # LangGraph Multi-Agent MCTS: Proof of Concept Demonstration
 
 > **Version**: 2.0 | **Last Updated**: January 28, 2026

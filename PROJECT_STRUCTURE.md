@@ -44,9 +44,9 @@ langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 │   ├── MCP_SERVER_GUIDE.md             # MCP server setup
 │   ├── STATUS.md                # Reproducible test/coverage baseline (source of truth)
 │   ├── NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md  # Active roadmap
-│   ├── reports/                 # Analyses, status snapshots & completion reports
-│   │                            #   (DEPLOYMENT_REPORT, INTEGRATION_STATUS, SCALABILITY_ANALYSIS, …)
-│   ├── summaries/               # Feature/module implementation summaries
+│   ├── reports/                 # Live output sink for /deep-research reports
+│   ├── archive/                 # Frozen historical docs (reports/, summaries/)
+│   ├── templates/               # Implementation/subagent reference templates
 │   ├── plans/                   # Roadmaps, implementation plans, PR descriptions
 │   ├── quickstart/              # Quickstart guides (Docker, synthetic generation)
 │   ├── diagrams/                # Rendered architecture SVGs
@@ -55,6 +55,7 @@ langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 │   └── testing/                 # Test documentation
 │
 ├── examples/                    # Example scripts and demos
+│   ├── google_adk/              # Google ADK integration examples
 │   ├── langgraph_multi_agent_mcts.py   # Main framework demo
 │   ├── lmstudio_mcp_demo.py            # LM Studio MCP integration
 │   ├── mcp_usage_example.py            # MCP usage patterns
@@ -173,4 +174,4 @@ would break import contracts, Docker build context, or fresh-clone tests:
 - **Examples**: Browse `examples/` directory
 - **Configuration**: See `config/README.md`
 - **Deployment**: See `docs/DOCKER_DEPLOYMENT.md` (status: `docs/STATUS.md`; historical report:
-  `docs/reports/DEPLOYMENT_REPORT.md`)
+  `docs/archive/reports/DEPLOYMENT_REPORT.md`)

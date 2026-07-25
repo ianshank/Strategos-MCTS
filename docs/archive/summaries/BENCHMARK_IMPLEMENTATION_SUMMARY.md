@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # Benchmark Suite Implementation Summary
 
 ## Overview

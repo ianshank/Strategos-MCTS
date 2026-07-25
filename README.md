@@ -60,7 +60,7 @@ graph TB
   logic and certain training loops ship as overridable defaults, not finished implementations.
 - See **[`docs/STATUS.md`](docs/STATUS.md)** for the current, reproducible test/coverage status
   (the source of truth) and **[`docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`](docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md)**
-  for the active roadmap. (`docs/reports/GAP_ANALYSIS_REPORT.md` is retained for history but superseded.)
+  for the active roadmap. (`docs/archive/reports/GAP_ANALYSIS_REPORT.md` is retained for history but superseded.)
 
 ## Key Features
 
@@ -210,7 +210,7 @@ dispatchable counterpart of the primer. See `AGENTS.md` for the agent routing le
 - **[Training Guide](docs/LOCAL_TRAINING_GUIDE.md)**: How to train models locally or in the cloud.
 - **[Synthetic Data](training/SYNTHETIC_DATA_GENERATION_GUIDE.md)**: Guide to generating training data.
 - **Reference archives**: implementation summaries, analysis reports, historical roadmaps, and quickstarts
-  are organized under [`docs/summaries/`](docs/summaries/), [`docs/reports/`](docs/reports/),
+  are organized under [`docs/archive/summaries/`](docs/archive/summaries/), [`docs/archive/reports/`](docs/archive/reports/),
   [`docs/plans/`](docs/plans/), and [`docs/quickstart/`](docs/quickstart/) (see
   [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md)).
 

@@ -1,3 +1,5 @@
+> Historical snapshot — see docs/STATUS.md for current metrics.
+
 # AlphaZero-Style Self-Play Training Pipeline - Implementation Summary
 
 ## Overview
