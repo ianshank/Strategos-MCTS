@@ -65,7 +65,7 @@ rank-bm25~=0.2.2  # BM25 ranking algorithm
 
 # LangSmith - Production tracing and logging for LLM applications
 # Required for continual learning production interaction logging
-langsmith>=0.0.77,<0.1.0
+langsmith>=0.10.10,<0.11.0
 
 # Experiment Tracking
 wandb~=0.15.0  # Weights & Biases for experiment tracking
