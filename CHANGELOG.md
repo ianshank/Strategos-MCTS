@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### M5 Execution Plan & Peer Review
+
+#### Added
+- **M5 execution plan (v2 rewrite):** `docs/plans/2026-07-24-execute-m5.md` — re-targets P0 to the
+  approved chess policy-lift gate (`specs/m5_policy_lift.SPEC.md`), preserves the publish-either-outcome
+  decision tree, adds statistical-reality and provenance sections, and defers the MCTS-vs-single-shot
+  LLM benchmark out of M5 with named building blocks.
+- **Peer review:** `docs/reviews/2026-07-25-execute-m5-plan-review.md` — claim-by-claim verification of
+  the 2026-07-24 draft; headline finding: the draft routed `training/benchmark_config.yaml` domains into
+  the `policy-lift` entrypoint, which cannot run them.
+
+#### Fixed
+- `docs/STATUS.md`: corrected a stale `93.65%` coverage remnant to the current `93.35%` baseline, and
+  completed the operator-runbook `harness spec-trace` example with its required `--branch` argument.
+
 ### Enterprise Documentation, Governance & Repository Organization
 
 #### Added

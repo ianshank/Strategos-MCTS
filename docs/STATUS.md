@@ -178,7 +178,7 @@ python -m src.benchmark.policy_lift --domain chess \
 # 3. Commit benchmarks/results/m5_policy_lift.json  ->  satisfies AC-3 (un-skips the artifact test).
 # 4. If meets_target is true: a specs+tests-only PR (no src/) in which a HUMAN flips
 #    specs/m5_policy_lift.SPEC.md status -> verified. The four AC mappings already exist under tests/;
-#    validate with `harness spec-trace --base-ref origin/main --head-ref HEAD`.
+#    validate with `harness spec-trace --base-ref origin/main --head-ref HEAD --branch <flip-pr-branch>`.
 ```
 
 Run the full suite with `--ignore=tests/games/chess/unit` when the chess extra is installed — that
@@ -186,7 +186,7 @@ directory targets a pre-refactor API and is excluded from CI as well.
 
 ## Implications for the plan
 
-- **Phase 2 is largely satisfied at the gate level** (93.65% ≥ 85%). Remaining work is opportunistic,
+- **Phase 2 is largely satisfied at the gate level** (93.35% ≥ 85%). Remaining work is opportunistic,
   targeting category B above — highest value: `data_science.py` (closes the last ADK agent), plus
   `api/auth.py` rising naturally from Phase 3.2.
 - Category A (chess) is gated on `python-chess`; raising it is a separate decision about adding the
