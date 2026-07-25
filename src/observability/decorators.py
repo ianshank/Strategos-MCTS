@@ -357,7 +357,8 @@ def retry(
                     time.sleep(delay)
                     delay *= backoff_factor
 
-            raise last_exception  # type: ignore
+            assert last_exception is not None
+            raise last_exception
 
         @functools.wraps(func)
         async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
@@ -383,7 +384,8 @@ def retry(
                     await asyncio.sleep(delay)
                     delay *= backoff_factor
 
-            raise last_exception  # type: ignore
+            assert last_exception is not None
+            raise last_exception
 
         if is_async:
             return async_wrapper  # type: ignore

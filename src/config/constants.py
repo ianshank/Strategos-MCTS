@@ -239,6 +239,11 @@ DEFAULT_ANTHROPIC_MODEL: Final[str] = "claude-3-5-sonnet-20241022"
 DEFAULT_LMSTUDIO_MODEL: Final[str] = "local-model"
 DEFAULT_GOOGLE_GEMINI_MODEL: Final[str] = "gemini-2.0-flash-001"
 
+# LLM-guided MCTS provider defaults (distinct from the adapter defaults above;
+# tests pin these exact values)
+DEFAULT_LLM_MCTS_OPENAI_MODEL: Final[str] = "gpt-4o-mini"
+DEFAULT_LLM_MCTS_ANTHROPIC_MODEL: Final[str] = "claude-sonnet-4-20250514"
+
 # Anthropic Messages API version header (``anthropic-version``). Centralized
 # here so the REST adapter and the LLM-guided MCTS provider config stay in
 # lockstep instead of duplicating the literal.
