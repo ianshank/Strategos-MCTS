@@ -1,3 +1,6 @@
+# NOTE: Standalone environment manifest with no in-tree consumer (nothing in
+# Dockerfiles or CI installs it); kept for manual experiment setups. Not
+# co-installable with the pyproject package.
 # Advanced Embeddings Requirements
 # Install with: pip install -r training/requirements_embeddings.txt
 
@@ -20,7 +23,7 @@ cohere>=4.0.0
 openai>=1.0.0
 
 # Vector database (required for RAG)
-pinecone-client>=3.0.0
+pinecone>=3.0.0  # renamed distribution; the old pinecone-client package collides with it
 
 # Optional: For hybrid search
 rank-bm25>=0.2.2
