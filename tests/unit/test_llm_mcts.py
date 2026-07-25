@@ -529,6 +529,17 @@ class TestStdlibLLMClientConfig:
         assert client.provider == "anthropic"
         assert "anthropic.com" in client.base_url
 
+    def test_provider_defaults_come_from_config_constants(self):
+        """PROVIDER_CONFIG must stay wired to the config-layer constants, and the
+        constants must keep the exact model values existing behavior depends on."""
+        from src.config.constants import DEFAULT_LLM_MCTS_ANTHROPIC_MODEL, DEFAULT_LLM_MCTS_OPENAI_MODEL
+        from src.framework.mcts.llm_mcts import PROVIDER_CONFIG
+
+        assert PROVIDER_CONFIG["openai"]["default_model"] == DEFAULT_LLM_MCTS_OPENAI_MODEL
+        assert PROVIDER_CONFIG["anthropic"]["default_model"] == DEFAULT_LLM_MCTS_ANTHROPIC_MODEL
+        assert DEFAULT_LLM_MCTS_OPENAI_MODEL == "gpt-4o-mini"
+        assert DEFAULT_LLM_MCTS_ANTHROPIC_MODEL == "claude-sonnet-4-20250514"
+
     def test_custom_model_override(self):
         client = StdlibLLMClient(provider="openai", api_key="sk-test", model="gpt-4")
         assert client.model == "gpt-4"

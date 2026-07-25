@@ -357,7 +357,8 @@ def retry(
                     time.sleep(delay)
                     delay *= backoff_factor
 
-            assert last_exception is not None
+            if last_exception is None:  # pragma: no cover - unreachable: loop always raises or records
+                raise RuntimeError(f"retry exhausted for {func.__name__} without capturing an exception")
             raise last_exception
 
         @functools.wraps(func)
@@ -384,7 +385,8 @@ def retry(
                     await asyncio.sleep(delay)
                     delay *= backoff_factor
 
-            assert last_exception is not None
+            if last_exception is None:  # pragma: no cover - unreachable: loop always raises or records
+                raise RuntimeError(f"retry exhausted for {func.__name__} without capturing an exception")
             raise last_exception
 
         if is_async:

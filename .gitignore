@@ -241,6 +241,9 @@ ruff_non_adapters.txt
 cache/
 checkpoints/
 reports/
+# ... but the documentation trees are tracked content, not artifacts:
+!docs/reports/
+!docs/archive/reports/
 training/models/
 
 # Temporary files

@@ -213,7 +213,7 @@ class TestMCTSDeterminism:
             patch("examples.langgraph_multi_agent_mcts.TRMAgent"),
             patch("examples.langgraph_multi_agent_mcts.OpenAIEmbeddings"),
         ):
-            return LangGraphMultiAgentFramework(  # noqa: F821
+            return LangGraphMultiAgentFramework(
                 model_adapter=mock_adapter,
                 logger=mock_logger,
                 mcts_iterations=5,
