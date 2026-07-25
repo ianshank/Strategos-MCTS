@@ -20,8 +20,7 @@ $demos_tier1 = @(
     "demo.py",
     "chess_demo.py",
     "healthcheck.py",
-    "examples/mcp_usage_example.py",
-    "huggingface_space/app_minimal_fallback.py"
+    "examples/mcp_usage_example.py"
 )
 
 foreach ($script in $demos_tier1) {
@@ -68,7 +67,7 @@ if (-not $SkipServers) {
     Write-Host "Note: Servers run indefinitely. Press Ctrl+C to terminate them." -ForegroundColor Gray
     
     Write-Host " -> To run REST API: python src/api/rest_server.py"
-    Write-Host " -> To run Gradio UI: python huggingface_space/app.py"
+    Write-Host " -> To run Gradio UI: python app.py"
 }
 
 Write-Host "`n============================================================" -ForegroundColor Cyan

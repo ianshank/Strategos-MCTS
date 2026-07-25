@@ -34,8 +34,8 @@ Every change must pass the full local gate before it is pushed. Run the `quality
 commands it wraps:
 
 ```bash
-black src/ tests/ --check --line-length 120
-ruff check src/ tests/
+black . --check --line-length 120
+ruff check .
 mypy src/
 pytest tests/unit/ --cov=src --cov-fail-under=85    # 85% branch-coverage gate (CI enforces this)
 ```

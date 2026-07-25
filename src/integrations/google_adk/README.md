@@ -380,17 +380,15 @@ class ADKAgentResponse:
 
 ## Examples
 
-See `examples/` directory for comprehensive examples:
+See the repo-level `examples/google_adk/` directory for comprehensive examples:
 
 - `example_ml_engineering.py` - Model training workflows
 - `example_data_science.py` - Data analysis and BQML
 - `example_academic_research.py` - Paper analysis and corpus building
-- `example_data_engineering.py` - Pipeline development
-- `example_deep_search.py` - Research synthesis
 
 Run examples:
 ```bash
-python -m src.integrations.google_adk.examples.example_ml_engineering
+python -m examples.google_adk.example_ml_engineering
 ```
 
 ## Testing
@@ -440,7 +438,7 @@ To extend the integration:
 - [ADK Samples Repository](https://github.com/google/adk-samples)
 - [Vertex AI Documentation](https://cloud.google.com/vertex-ai/docs)
 - [Configuration Guide](config/README.md)
-- [Examples](examples/README.md)
+- [Examples](../../../examples/google_adk/README.md)
 
 ## License
 

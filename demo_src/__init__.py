@@ -1,1 +1,1 @@
-# Demo source modules for Hugging Face Spaces
+# Demo support package consumed by scripts/run_e2e_workflow.py

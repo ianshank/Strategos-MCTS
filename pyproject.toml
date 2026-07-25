@@ -38,7 +38,6 @@ dependencies = [
     "psutil>=5.9.0,<8.0.0",
     "aioboto3>=12.0.0,<16.0.0",
     "tenacity>=8.2.0,<10.0.0",
-    "rich>=13.0.0,<15.0.0",
     "networkx>=3.0,<4.0",
     "opentelemetry-api>=1.20.0,<2.0.0",
     "opentelemetry-sdk>=1.20.0,<2.0.0",
@@ -71,6 +70,10 @@ dev = [
     "pre-commit>=3.6.0",
     "bandit[toml]>=1.7.0",
     "pip-audit>=2.6.0",
+    # rich is not imported anywhere in src/ — it serves training/cli.py, the
+    # scripts/ utilities, and tests, so it lives here rather than in core deps
+    # (docker-deployment.yml installs it explicitly for its sanity scripts).
+    "rich>=13.0.0,<15.0.0",
 ]
 prometheus = [
     "prometheus-client>=0.18.0",
@@ -159,6 +162,10 @@ include = ["src*"]
 target-version = "py311"
 line-length = 120
 indent-width = 4
+# Notebooks are out of lint scope by policy; force-exclude keeps this true even
+# when pre-commit passes explicit filenames.
+extend-exclude = ["**/*.ipynb"]
+force-exclude = true
 
 [tool.ruff.lint]
 select = [
@@ -189,12 +196,6 @@ ignore = [
     "UP042",  # str+Enum -> StrEnum; project supports Python 3.10 which lacks StrEnum
 ]
 
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"
-
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
 
@@ -203,13 +204,15 @@ known-first-party = ["src"]
 "tests/*" = ["ARG002", "E402"]  # Unused method argument - pytest fixtures; E402 for importorskip guards
 "training/tests/*" = ["ARG002", "E402"]  # Unused method argument - pytest fixtures; E402 for importorskip guards
 "tools/*" = ["ARG002"]  # Unused method argument - API handlers with required signatures
-"training/*" = ["ARG002", "SIM108"]  # Training modules have complex patterns
+"training/*" = ["ARG002", "ARG004", "SIM108"]  # Training modules have complex patterns; ARG004: pass_at_k's k is a documented placeholder kept for keyword callers
 "src/**/__init__.py" = ["E402"]  # Module-level imports after conditional torch/dependency checks
 
 [tool.black]
 line-length = 120
 target-version = ["py311"]
 skip-string-normalization = false
+# Keep notebooks out of scope even if black[jupyter] deps get installed later.
+extend-exclude = '\.ipynb$'
 
 [tool.mypy]
 python_version = "3.11"

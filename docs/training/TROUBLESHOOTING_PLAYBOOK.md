@@ -51,7 +51,7 @@ python -c "import langchain; print(langchain.__version__)"
 
 **Prevention:**
 - Always use a virtual environment
-- Run `python scripts/verify_setup.py` before starting work
+- Run `python scripts/verification/verify_setup.py` before starting work
 
 ---
 

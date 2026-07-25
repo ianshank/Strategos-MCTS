@@ -31,7 +31,7 @@ A PowerShell script is provided to sequentially execute all demos and training l
 - Temporarily sets `CUDA_VISIBLE_DEVICES="-1"` to force PyTorch to use the CPU. This acts as a reliable fallback if there are CUDA binary compatibility mismatches on your local GPU (e.g., RTX 50-series and older `torch` versions).
 
 ### Modules Run in the Suite:
-- **Tier 1 (Core)**: `demo.py`, `chess_demo.py`, `healthcheck.py`, `huggingface_space/app_minimal_fallback.py`
+- **Tier 1 (Core)**: `demo.py`, `chess_demo.py`, `healthcheck.py`
 - **Tier 2 (Neural & MCTS)**: `train_rnn.py`, `train_bert_lora.py`, `mcts_determinism_demo.py`, `neural_training_demo.py`, `deepmind_style_training.py`, `advanced_mcts_demo.py`, `hybrid_agent_demo.py`, `chess_alphazero_training.py`
 - **Tier 3 (Benchmarks & Evaluation)**: `src.benchmark --dry-run`, `src.framework.harness.cli validate-spec`
 
@@ -47,5 +47,5 @@ python src/api/rest_server.py
 **Gradio UI:**
 ```powershell
 $env:PYTHONPATH="."
-python huggingface_space/app.py
+python app.py
 ```

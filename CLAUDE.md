@@ -2,7 +2,7 @@
 
 > Quick reference for Claude Code and other AI assistants working on this codebase.
 > For the implementation template, see:
-> - `MULTI_AGENT_MCTS_TEMPLATE.md` - Comprehensive template with C4 architecture (v2.0)
+> - `docs/templates/MULTI_AGENT_MCTS_TEMPLATE.md` - Comprehensive template with C4 architecture (v2.0)
 
 ---
 
@@ -35,9 +35,9 @@ pytest tests/unit -v --tb=short -q
 | `pip install -e ".[dev]"` | Install with dev dependencies |
 | `pip install -e ".[dev,benchmark]"` | Include benchmark framework |
 | `pip install -e ".[dev,neural]"` | Include PyTorch for neural MCTS |
-| `black src/ tests/ --line-length 120` | Format code |
-| `isort src/ tests/ --profile black` | Sort imports |
-| `ruff check src/ tests/ --fix` | Lint with auto-fix |
+| `black . --line-length 120` | Format code |
+| `ruff check . --select I --fix` | Sort imports (ruff owns isort rules) |
+| `ruff check . --fix` | Lint with auto-fix |
 | `mypy src/ --strict` | Type check |
 
 > **Tooling is pinned for CI/local parity.** `ruff` and `mypy` are pinned to a validated
@@ -253,10 +253,10 @@ Before committing, verify:
 
 ```bash
 # 1. Format
-black src/ tests/ --check
+black . --check
 
 # 2. Lint
-ruff check src/ tests/
+ruff check .
 
 # 3. Types
 mypy src/
@@ -297,7 +297,7 @@ harness run --spec spec.md --ralph # outer Ralph loop
 
 ## Getting Help
 
-- **Template (v2.0)**: See `MULTI_AGENT_MCTS_TEMPLATE.md` for comprehensive template with:
+- **Template (v2.0)**: See `docs/templates/MULTI_AGENT_MCTS_TEMPLATE.md` for comprehensive template with:
   - Full C4 architecture diagrams
   - All sub-agent specifications (HRM, TRM, Meta-Controller, MCTS)
   - Dynamic component patterns and factories
@@ -306,7 +306,7 @@ harness run --spec spec.md --ralph # outer Ralph loop
 - **Architecture**: See `docs/C4_ARCHITECTURE.md` for system diagrams
 - **Training**: See `docs/LOCAL_TRAINING_GUIDE.md` for ML pipeline
 - **Deployment**: See `docs/DOCKER_DEPLOYMENT.md` for the deployment guide and `docs/STATUS.md` for
-  current status (the historical `docs/reports/DEPLOYMENT_REPORT.md` is retained for reference)
+  current status (the historical `docs/archive/reports/DEPLOYMENT_REPORT.md` is retained for reference)
 - **Current status (source of truth)**: See `docs/STATUS.md` for the reproducible test/coverage
   baseline, and `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md` for the active roadmap.
 

@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Code Hygiene: Fork Removal, Repo-Wide Lint Gates & Formatter Unification
+
+#### Removed
+- **`huggingface_space/` fork** (77 Python files, ~26,760 lines): a near-complete copy of `src/` with
+  51 silently diverged files (settings, MCTS core, all LLM adapters). Verified strictly behind `src/`
+  before deletion; nothing in `src/`, `tests/`, CI, or Docker referenced it. The orphaned
+  `demo_src/{llm_mock,mcts_demo,wandb_tracker}.py` (731 lines) went with it.
+- Dead tests: the never-implemented `TestMCTSFrameworkIntegration` skip-class in
+  `tests/unit/test_mcts_core.py` and the module-skipped standalone `tests/test_e2e_providers.py`.
+
+#### Changed
+- **CI lint scope is now repo-wide**: the lint job runs `black . --check` and `ruff check .` over every
+  tracked Python file (previously `src/ tests/` only — 171 latent violations lived in unlinted paths).
+  Notebooks are excluded by policy in both tools' pyproject config.
+- **Black is the single formatter**: pre-commit's ruff-format hook replaced with the black mirror hook,
+  `scripts/lint_and_format.py` now drives black, the dead `[tool.ruff.format]` table is gone, and hook
+  revs track the pyproject `[dev]` ranges (docformatter bumped to v1.7.8 to fix config loading on
+  pre-commit ≥ 4).
+- Twelve one-off `verify_*`/`test_*` scripts moved to `scripts/verification/`; Google ADK example
+  scripts moved from `src/integrations/google_adk/examples/` to `examples/google_adk/`; the two root
+  template documents moved to `docs/templates/`.
+- **Docs archival convention**: `docs/archive/{reports,summaries}/` now holds the 37 frozen point-in-time
+  documents (each carrying a historical-snapshot banner); `docs/reports/` remains the live
+  `/deep-research` output sink. Stale-baseline banners added to the four legacy planning docs.
+- Dependency manifests reconciled with their real consumers: `rich` moved from core deps to `[dev]`,
+  `pinecone-client` → `pinecone` in the embeddings manifest, consumer headers on all standalone
+  `requirements*.txt`, gradio ceiling aligned with the `[ui]` extra.
+- The advisory `rag-eval` CI job no longer runs on every PR (workflow_dispatch/schedule only).
+- LLM-guided MCTS default model names extracted to `src/config/constants.py`
+  (`DEFAULT_LLM_MCTS_OPENAI_MODEL` / `DEFAULT_LLM_MCTS_ANTHROPIC_MODEL`); values unchanged and now
+  pinned by a regression test.
+
+#### Fixed (post-review audit of the hygiene pass)
+- `.gitignore`: the unanchored `reports/` training-artifact pattern silently ignored the new
+  `docs/reports/` deep-research sink (and `docs/archive/reports/`) — negations added and the sink
+  README actually committed.
+- Eleven `../reports/…` relative links in `docs/training/` repointed to `docs/archive/reports/`.
+- Lint-scope commands modernized to the repo-wide gate (`black . --check` / `ruff check .`) in
+  `CLAUDE.md`, `AGENTS.md`, `README.md`, `CONTRIBUTING.md`, `docs/STATUS.md`,
+  `docker-compose.test.yml`, and the planning epics; `docs/LINTING_SETUP.md` no longer describes a
+  nonexistent auto-fixing CI.
+- Retry decorators: exhausted-retry raise path no longer relies on `assert` (stripped under
+  `python -O`); explicit `RuntimeError` guard instead.
+- `docs/STATUS.md` baseline re-measured post-hygiene (90.15% branch coverage, 327 mypy-clean source
+  files, `[dev,neural]` environment documented); propagated to `AGENTS.md` and
+  `planning/milestones.yaml`.
+- Stale `pinecone-client` install advice and a nonexistent script reference fixed in
+  `docs/PINECONE_INTEGRATION.md`; pre-commit ruff hook rev aligned to the resolved 0.15.22.
+
 ### M5 Execution Plan & Peer Review
 
 #### Added

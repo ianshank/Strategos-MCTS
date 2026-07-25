@@ -84,11 +84,11 @@ if CHESS_AVAILABLE:
 else:
     # Fallback with integer piece type constants (1=PAWN, 2=KNIGHT, etc.)
     PIECE_VALUES = {
-        1: 100,    # PAWN
-        2: 320,    # KNIGHT
-        3: 330,    # BISHOP
-        4: 500,    # ROOK
-        5: 900,    # QUEEN
+        1: 100,  # PAWN
+        2: 320,  # KNIGHT
+        3: 330,  # BISHOP
+        4: 500,  # ROOK
+        5: 900,  # QUEEN
         6: 20000,  # KING
     }
 

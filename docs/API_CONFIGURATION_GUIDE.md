@@ -14,7 +14,7 @@ This guide covers the configuration of external API providers for the Multi-Agen
 
 2. **Default Provider**: Set in `.env` as `LLM_PROVIDER=openai`
 
-3. **Test Connections**: Run `python test_api_integrations.py`
+3. **Test Connections**: Run `python scripts/verification/test_api_integrations.py`
 
 ## Supported Providers
 
@@ -257,7 +257,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 ## Next Steps
 
-1. Test your configuration: `python test_api_integrations.py`
+1. Test your configuration: `python scripts/verification/test_api_integrations.py`
 2. Try different providers in your workflows
 3. Set up Weights & Biases experiment tracking
 4. Configure cost monitoring and alerts

@@ -1,17 +1,14 @@
 """
 Chess Metrics Collector.
 
-Provides metrics collection for chess verification and gameplay,
-extending the base MetricsCollector with chess-specific metrics.
+Provides a standalone metrics collector for chess verification and gameplay
+(chess-specific counters; independent of src.observability.metrics).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    pass
+from typing import Any
 
 
 @dataclass

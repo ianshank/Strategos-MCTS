@@ -312,7 +312,7 @@ docker-compose -f docker-compose.test.yml up component-tests
    - Results aggregation
    - Error handling
 
-2. `scripts/verify_langsmith_minimal.py` (169 lines)
+2. `scripts/verification/verify_langsmith_minimal.py` (169 lines)
    - Connectivity verification
    - Environment validation
    - Traced function testing
@@ -570,7 +570,7 @@ docker-compose -f docker-compose.test.yml up test-runner
 
 **Verify LangSmith:**
 ```bash
-python scripts/verify_langsmith_minimal.py
+python scripts/verification/verify_langsmith_minimal.py
 ```
 
 **Create Datasets:**

@@ -427,8 +427,7 @@ def custom_provider_registration():
     # client = create_client("azure", deployment_name="my-gpt4")
 
     print("To register a custom provider:")
-    print(
-        """
+    print("""
     from src.adapters.llm import register_provider
 
     register_provider(
@@ -439,8 +438,7 @@ def custom_provider_registration():
 
     # Now you can use it:
     client = create_client("azure", deployment_name="my-deployment")
-    """
-    )
+    """)
 
     print(f"Currently available: {list_providers()}")
 

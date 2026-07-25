@@ -432,8 +432,8 @@ app = graph.compile()
 ## Post-Session Resources
 
 ### Additional Reading
-- [SCALABILITY_ANALYSIS.md](../reports/SCALABILITY_ANALYSIS.md) - Performance characteristics
-- [DEPLOYMENT_REPORT.md](../reports/DEPLOYMENT_REPORT.md) - Production deployment patterns
+- [SCALABILITY_ANALYSIS.md](../archive/reports/SCALABILITY_ANALYSIS.md) - Performance characteristics
+- [DEPLOYMENT_REPORT.md](../archive/reports/DEPLOYMENT_REPORT.md) - Production deployment patterns
 
 ### Video Recordings
 - Architecture walkthrough (to be recorded)

@@ -76,6 +76,6 @@ validation:
     - pytest tests/unit/test_validation_config.py -v
   commands:
     - pip install -e ".[dev]"
-    - black --check src/ tests/
-    - ruff check src/ tests/
+    - black --check .
+    - ruff check .
     - mypy src/

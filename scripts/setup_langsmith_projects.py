@@ -117,7 +117,7 @@ def setup_training_projects() -> None:
     print("2. Enable tracing:")
     print("   export LANGSMITH_TRACING_ENABLED='true'")
     print("3. Run verification:")
-    print("   python scripts/verify_langsmith_setup.py")
+    print("   python scripts/verification/verify_langsmith_setup.py")
     print("4. Start Module 1:")
     print("   cat docs/training/MODULE_1_ARCHITECTURE.md")
 

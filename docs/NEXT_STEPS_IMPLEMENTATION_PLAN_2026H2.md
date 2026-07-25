@@ -1,7 +1,7 @@
 # Next-Steps Implementation Plan — 2026 H2
 
 > **Implementation Progress (Updated 2026-07-23):**
-> Phases 0–5 from the early H2 roadmap (tech debt cleanup, coverage baselining, Gradio UI, single-node GPU training, and ADK integration) have been **successfully implemented and merged**. The test suite stands at 10,142+ passing with 93.36% coverage. The `SelfPlayTrainer` and `UnifiedTrainingOrchestrator` are stable on single-GPU (AMP, `torch.compile`). 
+> Phases 0–5 from the early H2 roadmap (tech debt cleanup, coverage baselining, Gradio UI, single-node GPU training, and ADK integration) have been **successfully implemented and merged**. For current test/coverage figures see `docs/STATUS.md` (the source of truth; re-measured 2026-07-25 after the code-hygiene pass). The `SelfPlayTrainer` and `UnifiedTrainingOrchestrator` are stable on single-GPU (AMP, `torch.compile`). 
 > 
 > **The roadmap below defines the new frontier for the remainder of H2 2026: Scaling, Advanced Architectures, and Enterprise Developer Experience.**
 

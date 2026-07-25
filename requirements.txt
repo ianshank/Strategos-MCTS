@@ -1,8 +1,11 @@
-# LangGraph Multi-Agent MCTS Demo - Dependencies
-# Optimized for Hugging Face Spaces deployment with trained models
+# Demo/E2E dependency manifest.
+# Consumers: .github/workflows/docker-deployment.yml (installed unguarded after
+# pip install -e ., deliberately capping numpy < 2 for the sanity checks) and
+# e2e_with_langsmith.yml (guarded install). Not an extras replacement — several
+# pins here (selenium, webdriver-manager, wandb) have no pyproject extra home.
 
 # Core UI Framework
-gradio>=4.0.0,<5.0.0
+gradio>=4.0.0,<5.0.0  # pinned to the major app.py is exercised against; pyproject [ui] allows <6 for new work
 
 # Numerical computation
 numpy>=1.24.0,<2.0.0

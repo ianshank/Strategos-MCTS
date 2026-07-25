@@ -32,6 +32,8 @@ from typing import Any
 from src.config.constants import (
     DEFAULT_ANTHROPIC_API_VERSION,
     DEFAULT_ANTHROPIC_BASE_URL,
+    DEFAULT_LLM_MCTS_ANTHROPIC_MODEL,
+    DEFAULT_LLM_MCTS_OPENAI_MODEL,
     DEFAULT_LLM_TEMPERATURE,
     DEFAULT_OPENAI_BASE_URL,
 )
@@ -141,12 +143,12 @@ STRUCTURAL_MARKERS: list[str] = ["**", "##", "- ", "1.", "2.", "3.", "\n\n"]
 PROVIDER_CONFIG: dict[str, dict[str, str]] = {
     "openai": {
         "env_key": "OPENAI_API_KEY",
-        "default_model": "gpt-4o-mini",
+        "default_model": DEFAULT_LLM_MCTS_OPENAI_MODEL,
         "base_url": f"{DEFAULT_OPENAI_BASE_URL}/chat/completions",
     },
     "anthropic": {
         "env_key": "ANTHROPIC_API_KEY",
-        "default_model": "claude-sonnet-4-20250514",
+        "default_model": DEFAULT_LLM_MCTS_ANTHROPIC_MODEL,
         "base_url": f"{DEFAULT_ANTHROPIC_BASE_URL}/v1/messages",
         "api_version": DEFAULT_ANTHROPIC_API_VERSION,
     },

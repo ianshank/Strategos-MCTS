@@ -44,9 +44,9 @@ langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 │   ├── MCP_SERVER_GUIDE.md             # MCP server setup
 │   ├── STATUS.md                # Reproducible test/coverage baseline (source of truth)
 │   ├── NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md  # Active roadmap
-│   ├── reports/                 # Analyses, status snapshots & completion reports
-│   │                            #   (DEPLOYMENT_REPORT, INTEGRATION_STATUS, SCALABILITY_ANALYSIS, …)
-│   ├── summaries/               # Feature/module implementation summaries
+│   ├── reports/                 # Live output sink for /deep-research reports
+│   ├── archive/                 # Frozen historical docs (reports/, summaries/)
+│   ├── templates/               # Implementation/subagent reference templates
 │   ├── plans/                   # Roadmaps, implementation plans, PR descriptions
 │   ├── quickstart/              # Quickstart guides (Docker, synthetic generation)
 │   ├── diagrams/                # Rendered architecture SVGs
@@ -55,6 +55,7 @@ langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 │   └── testing/                 # Test documentation
 │
 ├── examples/                    # Example scripts and demos
+│   ├── google_adk/              # Google ADK integration examples
 │   ├── langgraph_multi_agent_mcts.py   # Main framework demo
 │   ├── lmstudio_mcp_demo.py            # LM Studio MCP integration
 │   ├── mcp_usage_example.py            # MCP usage patterns
@@ -66,15 +67,14 @@ langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 │
 ├── scripts/                     # Automation and utility scripts
 │   ├── smoke_test.sh                   # Docker deployment smoke tests
-│   ├── verify_setup.py                 # Setup verification
-│   ├── verify_all_integrations.py      # Full integration check
-│   ├── verify_pinecone_integration.py  # Pinecone connectivity
-│   ├── verify_braintrust_wandb_integration.py  # Experiment tracking
-│   ├── test_api_integrations.py        # API integration tests
-│   ├── test_lmstudio_connection.py     # LM Studio connection
+│   ├── verify_external_services.py     # Service connectivity (test-imported)
 │   ├── export_architecture_diagrams.py # Export Mermaid diagrams
 │   ├── production_readiness_check.py   # Pre-production validation
-│   └── security_audit.py               # Security scanning
+│   ├── security_audit.py               # Security scanning
+│   └── verification/                   # One-off setup/integration checkers
+│       ├── verify_setup.py             # Setup verification
+│       ├── verify_all_integrations.py  # Full integration check
+│       └── ...                         # Pinecone/LangSmith/W&B/LMStudio checks
 │
 ├── tests/                       # Test suite
 │   ├── unit/                    # Unit tests
@@ -89,17 +89,6 @@ langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 ├── tools/                       # Development tools
 │   ├── cli/                     # Command-line tools
 │   └── mcp/                     # MCP server implementation
-│
-├── huggingface_space/           # HuggingFace Spaces deployment
-│   ├── app.py                   # Gradio demo application
-│   ├── requirements.txt         # Space dependencies
-│   ├── README.md                # Space metadata
-│   ├── DEPLOYMENT_GUIDE.md      # Deployment instructions
-│   └── demo_src/                # Demo source modules
-│       ├── agents_demo.py       # Agent implementations
-│       ├── mcts_demo.py         # MCTS implementation
-│       ├── llm_mock.py          # Mock LLM client
-│       └── wandb_tracker.py     # W&B integration
 │
 ├── kubernetes/                  # Kubernetes deployment
 │   └── deployment.yaml          # K8s manifests (HPA, PDB, Ingress)
@@ -148,7 +137,6 @@ langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 | `scripts/` | Automation, verification, and utility scripts |
 | `tests/` | Comprehensive test suite |
 | `tools/` | Development and debugging tools |
-| `huggingface_space/` | HuggingFace Spaces POC deployment |
 | `kubernetes/` | Container orchestration manifests |
 | `monitoring/` | Observability stack configuration |
 | `training/` | Advanced ML training pipeline (docs, examples, and its own `training/tests/`) |
@@ -169,7 +157,8 @@ would break import contracts, Docker build context, or fresh-clone tests:
   - `examples/` — library-usage scripts; kept **without** a root `__init__.py` so the chaos/perf suites can
     `import langgraph_multi_agent_mcts` as a bare module (`COPY`-ed by `Dockerfile`/`Dockerfile.test`).
   - `demo_src/` — an importable support package (`from demo_src.agents_demo import ...`) consumed by
-    `huggingface_space/app_mock.py` and `scripts/run_e2e_workflow.py`; it must stay top-level.
+    `scripts/run_e2e_workflow.py`; it must stay top-level. Only `agents_demo.py` remains — the other
+    demo modules were removed with the HuggingFace Space fork (2026-07).
   - `demo.py` / `chess_demo.py` — root CLI entry points (`python demo.py`); `demo.py` is import-tested by
     `tests/unit/test_llm_mcts.py` and its A/B logic lives in `src/api/comparison_service.py`.
   - `demos/` — standalone demonstration scripts (e.g. `neural_meta_controller_demo.py`).
@@ -186,4 +175,4 @@ would break import contracts, Docker build context, or fresh-clone tests:
 - **Examples**: Browse `examples/` directory
 - **Configuration**: See `config/README.md`
 - **Deployment**: See `docs/DOCKER_DEPLOYMENT.md` (status: `docs/STATUS.md`; historical report:
-  `docs/reports/DEPLOYMENT_REPORT.md`)
+  `docs/archive/reports/DEPLOYMENT_REPORT.md`)

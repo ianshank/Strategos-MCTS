@@ -1,3 +1,6 @@
+# NOTE: Standalone environment manifest with no in-tree consumer (nothing in
+# Dockerfiles or CI installs it); kept for manual experiment setups. Not
+# co-installable with the pyproject package.
 # Multi-Modal Knowledge Base Requirements
 # Additional dependencies for image/code extraction and multi-modal RAG
 

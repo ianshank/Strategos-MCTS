@@ -62,10 +62,13 @@ Start with the [project README](../README.md) for installation and a feature ove
 
 Historical, point-in-time material — read for context, not as current status.
 
-- [`reports/`](reports/) — analyses, status snapshots, and completion reports (deployment, integration,
-  scalability, coverage, gap analysis, …).
-- [`summaries/`](summaries/) — feature/module implementation summaries.
+- [`reports/`](reports/) — live output sink for `/deep-research` reports.
+- [`archive/`](archive/) — frozen point-in-time documents: [`archive/reports/`](archive/reports/)
+  (completion reports, gap analyses, setup records) and [`archive/summaries/`](archive/summaries/)
+  (feature/module implementation summaries). Each carries a historical-snapshot banner.
 - [`plans/`](plans/) — roadmaps, implementation plans, and PR descriptions.
+- [`templates/`](templates/) — implementation/subagent reference templates
+  (`MULTI_AGENT_MCTS_TEMPLATE.md`, `CLAUDE_CODE_SUBAGENT_TEMPLATE.md`).
 - [`reviews/`](reviews/) — peer/design reviews.
 - [`testing/`](testing/) — test plan documentation.
 - [`training/`](training/) — the developer training curriculum (modules, labs, assessments).

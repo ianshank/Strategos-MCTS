@@ -34,7 +34,7 @@ files into `docs/`, stop tracking model binaries, collapse overlapping demo tree
 
 - `models/*.pt` + LoRA adapter (~0.4 MB) are consumed by `tests/integration/test_deployed_models.py`;
   untracking them breaks fresh-clone/CI tests and there is no retrieval mechanism — keep tracked.
-- `demo_src/` is imported as a bare top-level package by `huggingface_space/app_mock.py` and
+- `demo_src/` is imported as a bare top-level package by `huggingface_space/app_mock.py` (removed 2026-07 with the HF Space fork; `scripts/run_e2e_workflow.py` is now the sole consumer) and
   `scripts/run_e2e_workflow.py`; `demo.py` is import-tested by `tests/unit/test_llm_mcts.py`; `examples/`
   is intentionally kept without a root `__init__.py`. Merging these breaks those import contracts.
 - `config/` is `COPY`-ed by `Dockerfile`; renaming needs Docker + loader changes for no functional gain.

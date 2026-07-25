@@ -198,8 +198,8 @@ services:
     command: >
       sh -c "
         echo 'Running code quality checks...' &&
-        ruff check src/ tests/ > /app/reports/ruff-report.txt 2>&1;
-        black --check src/ tests/ > /app/reports/black-report.txt 2>&1;
+        ruff check . > /app/reports/ruff-report.txt 2>&1;
+        black --check . > /app/reports/black-report.txt 2>&1;
         mypy src/ > /app/reports/mypy-report.txt 2>&1;
         bandit -r src/ -f json -o /app/reports/bandit-report.json;
         echo 'Code quality checks complete'

@@ -118,13 +118,13 @@ PINECONE_HOST=https://your-index.svc.environment.pinecone.io
 Run the verification script:
 
 ```bash
-python verify_pinecone_integration.py
+python scripts/verification/verify_pinecone_integration.py
 ```
 
 Or test with your credentials:
 
 ```bash
-python test_pinecone_with_credentials.py
+python scripts/verification/verify_pinecone_integration.py
 ```
 
 ## Usage Examples
@@ -219,7 +219,7 @@ meta_config = {
 ### Common Issues
 
 1. **"pinecone-client not installed"**
-   - Solution: `pip install pinecone-client`
+   - Solution: `pip install pinecone`
 
 2. **"Pinecone not configured"**
    - Solution: Set `PINECONE_API_KEY` and `PINECONE_HOST` environment variables
@@ -234,13 +234,13 @@ meta_config = {
 
 ```bash
 # Check if package is installed
-pip show pinecone-client
+pip show pinecone
 
 # Test connection
 python -c "from src.storage.pinecone_store import PineconeVectorStore; print(PineconeVectorStore().is_available)"
 
 # Run full verification
-python verify_pinecone_integration.py
+python scripts/verification/verify_pinecone_integration.py
 ```
 
 ## Performance Considerations

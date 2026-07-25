@@ -1,6 +1,6 @@
 # Project Status — Evidence-Backed Baseline
 
-> **Date:** 2026-07-23 · **Status:** Authoritative baseline (Phase 0.2 — test hardening & CI Hardening)
+> **Date:** 2026-07-25 · **Status:** Authoritative baseline (post code-hygiene pass — fork removal, repo-wide lint gates)
 > **Supersedes** the stale `88.4% / 44 failures` figures in `planning/milestones.yaml`,
 > `docs/plans/IMPLEMENTATION_ROADMAP.md`, and `docs/plans/IMPLEMENTATION_PLAN_COMPREHENSIVE.md`.
 >
@@ -15,16 +15,26 @@
 
 | Metric | Value |
 |---|---|
-| Full test suite | **10,136+ passed, 0 failed, 66 skipped** (excludes `slow` marker) |
-| Unit tests (`tests/unit/`) | **8,690 passed, 0 failed** |
-| Overall branch coverage (`src/`) | **93.35%** (gate: `fail_under = 85.0`) ✅ |
-| `ruff check src/ tests/` | **clean** — 0 issues ✅ |
-| `black src/ tests/ --check --line-length 120` | **clean** ✅ |
-| `mypy src/` (strict pins) | **clean** — no issues in 320 source files ✅ |
-| Wall time (full non-slow suite) | ~253s (4m 13s) |
+| Full test suite | **9,526 passed, 209 skipped** (excludes `slow`; `[dev,neural]` env — see note) |
+| Unit tests (`tests/unit/`, CI gate scope) | **8,445 passed, 0 failed** |
+| Overall branch coverage (`src/`, full suite) | **90.15%** (gate: `fail_under = 85.0`) ✅ |
+| `ruff check .` (repo-wide) | **clean** — 0 issues ✅ |
+| `black . --check --line-length 120` (repo-wide) | **clean** ✅ |
+| `mypy src/` (strict pins) | **clean** — no issues in 327 source files ✅ |
+| Wall time (full non-slow suite) | ~339s (5m 39s) |
 
-The gate-enforcing total (93.35%) is well above 85%. This reflects Phases 0–5 (through the M5
-self-play stack), the July 2026 test hardening pass, and the GPU training & gameplay domain extensions (Connect Four, Othello, GPU hardware utils, and training profiles).
+The gate-enforcing total (90.15%) is well above 85%. This reflects Phases 0–5 (through the M5
+self-play stack), the July 2026 test hardening pass, the GPU training & gameplay domain extensions
+(Connect Four, Othello, GPU hardware utils, training profiles), and the 2026-07-25 code-hygiene pass
+(huggingface_space fork removal, dead-test deletion, repo-wide lint gates).
+
+> **Environment note:** this baseline was measured under exactly `pip install -e ".[dev,neural]"`
+> (the CI test-job dependency set). In that environment the full sweep also shows ~29
+> environment-dependent failures outside the CI gate scope — `tests/e2e/test_ui_e2e.py` (needs a
+> live Gradio/selenium environment), LFS-pointer model weights, offline HF hub. These were verified
+> **identical on `main`** (same failure set on base commit `5cf5708`) — they are properties of the
+> environment, not regressions, and do not affect the gate (`tests/unit/`), which is fully green.
+> Earlier baselines reporting "0 failed" for the full sweep were measured in a fuller environment.
 
 
 
@@ -64,25 +74,21 @@ genuinely under-tested vs. low only because an optional dependency is absent.
 ### B. Genuine, movable gaps (Phase 2 candidates — pick by value)
 | Module | Cover | Miss | Note |
 |---|---|---|---|
-| `src/framework/harness/cli.py` | 53.7% | 41 | CLI subcommands lightly tested |
-| `src/benchmark/adapters/adk_adapter.py` | 63.1% | 40 | testable with mocked ADK |
-| `src/agents/meta_controller/hybrid_controller.py` | 70.3% | 37 | |
-| `src/framework/mcts/llm_guided/rag/prompts.py` | 71.3% | 20 | |
-| `src/framework/harness/factories.py` | 72.3% | 25 | |
-| `src/framework/mcts/llm_guided/benchmark/runner.py` | 74.4% | 47 | |
+| `src/framework/mcts/llm_guided/benchmark/runner.py` | 74.4% | 47 | largest absolute gap |
 | `src/framework/mcts/llm_guided/rag/context.py` | 78.3% | 37 | |
-| `src/integrations/google_adk/agents/data_science.py` | 78.7% | 15 | only ADK agent <85% |
-| `src/training/neural_trainer.py` | 79.9% | 39 | |
-| `src/framework/assembly/concept_extractor.py` | 80.0% | 34 | |
+| `src/api/auth.py` | 81.9% | 29 | will rise with Phase 3.2 JWT tests |
 | `src/api/health.py` | 81.9% | 21 | |
-| `src/training/meta_controller_trainer.py` | 82.4% | 38 | |
+| `src/framework/assembly/concept_extractor.py` | 82.1% | 32 | |
+| `src/training/meta_controller_trainer.py` | 82.5% | 38 | |
+| `src/benchmark/adapters/adk_adapter.py` | 83.4% | 20 | testable with mocked ADK |
 | `src/adapters/llm/openai_client.py` | 83.7% | 23 | |
-| `src/api/auth.py` | 84.9% | 23 | will rise with Phase 3.2 JWT tests |
 
-### C. Already ≥85% (for context)
-Google ADK agents other than `data_science` are already ≥85% (academic_research 85.9, deep_search
-85.4, ml_engineering 86.3, data_engineering 89.4, base 87.0) — **no greenfield ADK test fan-out
-needed**, contrary to older plans.
+### C. Already ≥85% (for context — big movers since the 2026-07-23 baseline)
+Former worst offenders have been closed: `framework/harness/cli.py` 53.7 → **98.6%**,
+`framework/harness/factories.py` 72.3 → **97.3%**, `agents/meta_controller/hybrid_controller.py`
+70.3 → **96.6%**, `llm_guided/rag/prompts.py` 71.3 → **96.9%**, `google_adk/agents/data_science.py`
+78.7 → **100%**, `training/neural_trainer.py` 79.9 → **91.5%**. All Google ADK agents are now ≥85% —
+**no greenfield ADK test fan-out needed**, contrary to older plans.
 
 ## M5 measurement (policy-lift gate)
 

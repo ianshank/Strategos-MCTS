@@ -1,3 +1,6 @@
+# NOTE: Standalone manifest for the training image — installed alone by
+# Dockerfile.train (COPY training/requirements.txt + pip install -r); it is NOT
+# co-installable with the pyproject package (pins are independent by design).
 # Multi-Agent MCTS Training Pipeline Requirements
 # Updated: 2025
 # Version pinning strategy: Use ~= for minor version updates to maintain compatibility

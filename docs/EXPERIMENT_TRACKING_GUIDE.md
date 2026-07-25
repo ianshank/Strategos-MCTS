@@ -237,7 +237,7 @@ Either platform works well. Choose based on:
 Run the verification script to check your setup:
 
 ```bash
-python verify_braintrust_wandb_integration.py
+python scripts/verification/verify_braintrust_wandb_integration.py
 ```
 
 This will:
