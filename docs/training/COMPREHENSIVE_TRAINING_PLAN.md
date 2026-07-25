@@ -529,7 +529,7 @@ Before Week 1, review these documents:
 #### Key Resources
 
 - [.github/workflows/ci.yml](../../.github/workflows/ci.yml)
-- [DEPLOYMENT_REPORT.md](../reports/DEPLOYMENT_REPORT.md)
+- [DEPLOYMENT_REPORT.md](../archive/reports/DEPLOYMENT_REPORT.md)
 - [scripts/production_readiness_check.py](../../scripts/production_readiness_check.py)
 - [scripts/security_audit.py](../../scripts/security_audit.py)
 
@@ -554,7 +554,7 @@ All training materials build on existing documentation:
 | **LangSmith** | [LANGSMITH_E2E.md](../LANGSMITH_E2E.md), [LANGSMITH_EXPERIMENTS.md](../LANGSMITH_EXPERIMENTS.md) | Observability |
 | **Testing** | [docs/testing/TEST_PLAN.md](../testing/TEST_PLAN.md) | Quality assurance |
 | **Training** | [training/README.md](../../training/README.md) | Neural training |
-| **Deployment** | [DEPLOYMENT_REPORT.md](../reports/DEPLOYMENT_REPORT.md), [SLA.md](../SLA.md) | Production ops |
+| **Deployment** | [DEPLOYMENT_REPORT.md](../archive/reports/DEPLOYMENT_REPORT.md), [SLA.md](../SLA.md) | Production ops |
 
 ### Code Examples
 

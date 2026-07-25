@@ -35,9 +35,9 @@ pytest tests/unit -v --tb=short -q
 | `pip install -e ".[dev]"` | Install with dev dependencies |
 | `pip install -e ".[dev,benchmark]"` | Include benchmark framework |
 | `pip install -e ".[dev,neural]"` | Include PyTorch for neural MCTS |
-| `black src/ tests/ --line-length 120` | Format code |
-| `isort src/ tests/ --profile black` | Sort imports |
-| `ruff check src/ tests/ --fix` | Lint with auto-fix |
+| `black . --line-length 120` | Format code |
+| `ruff check . --select I --fix` | Sort imports (ruff owns isort rules) |
+| `ruff check . --fix` | Lint with auto-fix |
 | `mypy src/ --strict` | Type check |
 
 > **Tooling is pinned for CI/local parity.** `ruff` and `mypy` are pinned to a validated
@@ -253,10 +253,10 @@ Before committing, verify:
 
 ```bash
 # 1. Format
-black src/ tests/ --check
+black . --check
 
 # 2. Lint
-ruff check src/ tests/
+ruff check .
 
 # 3. Types
 mypy src/

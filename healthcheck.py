@@ -529,7 +529,7 @@ class HealthChecker:
             ),
         ]
 
-        # Run all checks concurrently
+        # Run all checks sequentially (each awaited in turn)
         check_results = []
         for _name, check_coro, _critical, _timeout in checks_to_run:
             result = await check_coro

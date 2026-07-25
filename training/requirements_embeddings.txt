@@ -23,7 +23,7 @@ cohere>=4.0.0
 openai>=1.0.0
 
 # Vector database (required for RAG)
-pinecone>=3.0.0  # renamed distribution; the old pinecone-client package collides with it
+pinecone>=7.0.0  # renamed distribution (old pinecone-client collides); floor matches pyproject [vectordb]
 
 # Optional: For hybrid search
 rank-bm25>=0.2.2

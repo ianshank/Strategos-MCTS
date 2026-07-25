@@ -33,7 +33,7 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Tracks the currently-resolved version inside the pyproject [dev] range
     # (>=0.15.0,<0.16.0); bump when the resolved version moves.
-    rev: v0.15.8
+    rev: v0.15.22
     hooks:
       # Run the linter with auto-fix
       - id: ruff
@@ -109,7 +109,7 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        stages: [commit]
+        stages: [pre-commit]
 
 # Configuration for specific hooks
 default_language_version:

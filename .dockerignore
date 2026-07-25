@@ -125,6 +125,7 @@ docker-compose*
 scripts/export_architecture_diagrams.py
 scripts/validate_context_docs.py
 scripts/*.ps1
+scripts/verification/
 
 # Secrets (never include in image!)
 .env

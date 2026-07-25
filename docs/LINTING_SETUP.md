@@ -26,10 +26,10 @@ pip install -e ".[dev]"
 
 ### Option 1: Automatic (Recommended)
 
-The **pre-push hook** automatically formats your code before pushing:
+Install the pre-commit hooks once; they format (black) and lint (ruff) each commit:
 
 ```bash
-git push  # Auto-formats and fixes linting issues
+pre-commit install
 ```
 
 ### Option 2: Manual
@@ -87,21 +87,20 @@ The following rules are **disabled** to reduce friction:
 
 ## 🔄 CI Workflow
 
-### Automatic Formatting in CI
+### Formatting checks in CI
 
-The CI pipeline now **automatically fixes** formatting and linting issues:
+CI checks only — it never rewrites your code. The lint job installs `.[dev]` and runs,
+repo-wide:
 
-1. **Auto-format** code with `black`
-2. **Auto-fix** linting issues with `ruff check --fix`
-3. **Auto-commit** changes (if any) with `[skip ci]` tag
-4. **Check** for remaining errors
+1. `black . --check --line-length 120`
+2. `ruff check .`
 
 ### What This Means
 
-- Push your code without worrying about formatting
-- CI will auto-fix most issues and push them back
-- Only critical errors (that can't be auto-fixed) will fail CI
-- Pull the auto-fixes with: `git pull`
+- Format and lint locally before pushing (`python scripts/lint_and_format.py`, the
+  `quality-gate` skill, or the pre-commit hooks)
+- A formatting or lint violation anywhere in the tracked tree fails the lint job
+- Notebooks are excluded by policy (see `pyproject.toml` `[tool.ruff]`/`[tool.black]`)
 
 ---
 
@@ -149,19 +148,16 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "C4", "UP", "ARG", "SIM"]
 ignore = ["ARG002", "SIM117", "F541", "B905", ...]  # Relaxed rules
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
 ```
+
+(Formatting is black's job — there is deliberately no `[tool.ruff.format]` table.)
 
 ### CI Workflow (`.github/workflows/ci.yml`)
 
-The lint job now:
-1. Auto-formats code
-2. Auto-fixes linting issues
-3. Commits and pushes fixes automatically
-4. Only fails on unfixable errors
+The lint job:
+1. Installs `.[dev]` (pinned black/ruff versions)
+2. Runs `black . --check --line-length 120` and `ruff check .` over the whole tree
+3. Fails on any violation; fixes are always made locally, never by CI
 
 ---
 

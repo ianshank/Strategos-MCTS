@@ -73,9 +73,9 @@ dependencies:
 
 ci_checks:
   - name: lint
-    command: ruff check src/ tests/
+    command: ruff check .
   - name: format
-    command: black --check src/ tests/
+    command: black --check .
   - name: typecheck
     command: mypy src/
   - name: test-unit

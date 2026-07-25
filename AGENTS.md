@@ -13,8 +13,8 @@ cp .env.example .env  # then add OPENAI_API_KEY or ANTHROPIC_API_KEY
 ## Build / lint / type / test commands
 
 ```bash
-black src/ tests/ --check --line-length 120
-ruff check src/ tests/
+black . --check --line-length 120
+ruff check .
 mypy src/
 pytest tests/unit -v
 pytest tests/integration -v
@@ -25,7 +25,8 @@ python scripts/validate_context_docs.py  # deterministic check: .claude skills/a
 
 `ruff`/`mypy` are pinned in the `[dev]` extra (CI lint job installs `.[dev]`) for CI/local
 parity — bump deliberately and re-validate. Coverage gate: 85% (`--cov-fail-under=85`).
-Achieved: **93.35%** (full suite, 2026-07-22). `mypy src/` must remain clean (320 files).
+Achieved: **90.15%** (full suite, 2026-07-25, `[dev,neural]` env — see `docs/STATUS.md`).
+`mypy src/` must remain clean (327 files).
 Async tests must use `@pytest.mark.asyncio` + `await` — never `asyncio.get_event_loop()`.
 
 ## Harness CLI

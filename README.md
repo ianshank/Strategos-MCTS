@@ -171,7 +171,7 @@ the coverage gate:
 
 ```bash
 pip install -e ".[dev,neural]"
-ruff check src/ tests/ && black src/ tests/ --check --line-length 120 && mypy src/
+ruff check . && black . --check --line-length 120 && mypy src/
 pytest tests/unit/ --cov=src --cov-fail-under=85
 ```
 

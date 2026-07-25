@@ -30,7 +30,6 @@ def run_command(cmd: list[str], check: bool = True) -> tuple[int, str, str]:
 def main():
     """Main linting and formatting workflow."""
     check_only = "--check" in sys.argv
-    root = Path(__file__).parent.parent
 
     print("🔍 Comprehensive Code Quality Check")
     print("=" * 60)
@@ -43,7 +42,8 @@ def main():
         returncode, stdout, stderr = run_command(["black", "--check", "--line-length", "120", "."])
         if returncode != 0:
             errors.append("Formatting check failed (run without --check to fix)")
-            print(f"❌ {len(stderr.splitlines())} files need formatting")
+            dirty = [line for line in stderr.splitlines() if line.startswith("would reformat")]
+            print(f"❌ {len(dirty)} files need formatting")
         else:
             print("✅ All files properly formatted")
     else:
@@ -71,7 +71,7 @@ def main():
 
     # 3. Python Syntax Check
     print("\n🐍 Step 3: Python Syntax Validation")
-    python_files = list(root.rglob("*.py"))
+    python_files = list(ROOT.rglob("*.py"))
     syntax_errors = []
 
     for py_file in python_files:

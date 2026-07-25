@@ -1,5 +1,5 @@
 """
-Simplified agent implementations for Hugging Face Spaces demo.
+Simplified agent implementations for the e2e workflow demo (scripts/run_e2e_workflow.py).
 """
 
 import asyncio
@@ -13,7 +13,7 @@ class HRMAgent:
         """Initialize with an LLM client.
 
         Args:
-            llm_client: LLM client (MockLLMClient or HuggingFaceClient)
+            llm_client: LLM client (mock or real, duck-typed: needs an async generate())
         """
         self.llm_client = llm_client
         self.name = "HRM (Hierarchical Reasoning)"
@@ -132,7 +132,7 @@ class TRMAgent:
         """Initialize with an LLM client.
 
         Args:
-            llm_client: LLM client (MockLLMClient or HuggingFaceClient)
+            llm_client: LLM client (mock or real, duck-typed: needs an async generate())
         """
         self.llm_client = llm_client
         self.name = "TRM (Iterative Refinement)"

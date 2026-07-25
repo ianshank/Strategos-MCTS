@@ -29,8 +29,8 @@ stories:
     artifacts:
       - .github/workflows/ci.yaml (linting steps)
     validation_commands:
-      - black src/ tests/ --check
-      - ruff check src/ tests/
+      - black . --check
+      - ruff check .
       - mypy src/
 
   - id: S3.1.2

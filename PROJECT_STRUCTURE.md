@@ -157,7 +157,8 @@ would break import contracts, Docker build context, or fresh-clone tests:
   - `examples/` — library-usage scripts; kept **without** a root `__init__.py` so the chaos/perf suites can
     `import langgraph_multi_agent_mcts` as a bare module (`COPY`-ed by `Dockerfile`/`Dockerfile.test`).
   - `demo_src/` — an importable support package (`from demo_src.agents_demo import ...`) consumed by
-    `scripts/run_e2e_workflow.py`; it must stay top-level.
+    `scripts/run_e2e_workflow.py`; it must stay top-level. Only `agents_demo.py` remains — the other
+    demo modules were removed with the HuggingFace Space fork (2026-07).
   - `demo.py` / `chess_demo.py` — root CLI entry points (`python demo.py`); `demo.py` is import-tested by
     `tests/unit/test_llm_mcts.py` and its A/B logic lives in `src/api/comparison_service.py`.
   - `demos/` — standalone demonstration scripts (e.g. `neural_meta_controller_demo.py`).

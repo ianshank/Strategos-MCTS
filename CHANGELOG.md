@@ -36,7 +36,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `requirements*.txt`, gradio ceiling aligned with the `[ui]` extra.
 - The advisory `rag-eval` CI job no longer runs on every PR (workflow_dispatch/schedule only).
 - LLM-guided MCTS default model names extracted to `src/config/constants.py`
-  (`DEFAULT_LLM_MCTS_OPENAI_MODEL` / `DEFAULT_LLM_MCTS_ANTHROPIC_MODEL`); values unchanged.
+  (`DEFAULT_LLM_MCTS_OPENAI_MODEL` / `DEFAULT_LLM_MCTS_ANTHROPIC_MODEL`); values unchanged and now
+  pinned by a regression test.
+
+#### Fixed (post-review audit of the hygiene pass)
+- `.gitignore`: the unanchored `reports/` training-artifact pattern silently ignored the new
+  `docs/reports/` deep-research sink (and `docs/archive/reports/`) — negations added and the sink
+  README actually committed.
+- Eleven `../reports/…` relative links in `docs/training/` repointed to `docs/archive/reports/`.
+- Lint-scope commands modernized to the repo-wide gate (`black . --check` / `ruff check .`) in
+  `CLAUDE.md`, `AGENTS.md`, `README.md`, `CONTRIBUTING.md`, `docs/STATUS.md`,
+  `docker-compose.test.yml`, and the planning epics; `docs/LINTING_SETUP.md` no longer describes a
+  nonexistent auto-fixing CI.
+- Retry decorators: exhausted-retry raise path no longer relies on `assert` (stripped under
+  `python -O`); explicit `RuntimeError` guard instead.
+- `docs/STATUS.md` baseline re-measured post-hygiene (90.15% branch coverage, 327 mypy-clean source
+  files, `[dev,neural]` environment documented); propagated to `AGENTS.md` and
+  `planning/milestones.yaml`.
+- Stale `pinecone-client` install advice and a nonexistent script reference fixed in
+  `docs/PINECONE_INTEGRATION.md`; pre-commit ruff hook rev aligned to the resolved 0.15.22.
 
 ### M5 Execution Plan & Peer Review
 
