@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Get global settings
 from src.config.settings import get_settings
+
 _settings = get_settings()
 
 # Debug marker
@@ -243,7 +244,7 @@ class IntegratedFramework:
             rnn_model_path = Path(_settings.RNN_MODEL_PATH)
         else:
             rnn_model_path = Path(__file__).parent / "models" / "rnn_meta_controller.pt"
-            
+
         if rnn_model_path.exists():
             checkpoint = torch.load(rnn_model_path, map_location=self.device, weights_only=True)
             self.rnn_controller.model.load_state_dict(checkpoint)
@@ -264,7 +265,7 @@ class IntegratedFramework:
             bert_model_path = Path(_settings.BERT_MODEL_PATH)
         else:
             bert_model_path = Path(__file__).parent / "models" / "bert_lora" / "final_model"
-            
+
         if bert_model_path.exists():
             try:
                 self.bert_controller.load_model(str(bert_model_path))
@@ -437,6 +438,7 @@ def process_query_sync(
 
     # Sanitize input to prevent XSS and pass input validation tests
     import html
+
     query = html.escape(query)
 
     # Run async function

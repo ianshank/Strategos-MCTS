@@ -227,8 +227,7 @@ async def demonstrate_deterministic_mcts():
     print("\n" + "=" * 70)
     print("CODE SNIPPET: Running MCTS with Seed")
     print("=" * 70)
-    print(
-        """
+    print("""
 from src.framework.mcts.core import MCTSEngine, MCTSNode, MCTSState
 from src.framework.mcts.config import MCTSConfig
 from src.framework.mcts.policies import HybridRolloutPolicy, SelectionPolicy
@@ -258,8 +257,7 @@ best_action, stats = await engine.search(
 # Results are deterministic for same seed
 print(f"Best Action: {best_action}")
 print(f"Statistics: {stats}")
-"""
-    )
+""")
 
     print("=" * 70)
     print("DEMONSTRATION COMPLETE")

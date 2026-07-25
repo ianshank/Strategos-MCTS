@@ -154,12 +154,15 @@ def ai_move():
         state = ChessState.from_fen(fen)
 
         if state.is_terminal():
-            return jsonify(
-                {
-                    "error": "Game is over",
-                    "result": state.board.result(),
-                }
-            ), 400
+            return (
+                jsonify(
+                    {
+                        "error": "Game is over",
+                        "result": state.board.result(),
+                    }
+                ),
+                400,
+            )
 
         # Run ensemble asynchronously
         loop = asyncio.new_event_loop()

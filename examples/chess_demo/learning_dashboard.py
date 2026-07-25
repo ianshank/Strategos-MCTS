@@ -524,10 +524,7 @@ class LearningDashboard:
             "summary": self.get_summary(),
             "agent_comparison": self.get_agent_comparison(),
             "confidence_trend": self.get_confidence_trend(),
-            "games": {
-                gid: self.get_game_details(gid)
-                for gid in list(self._game_stats.keys())[-10:]  # Last 10 games
-            },
+            "games": {gid: self.get_game_details(gid) for gid in list(self._game_stats.keys())[-10:]},  # Last 10 games
         }
 
         with open(path, "w") as f:

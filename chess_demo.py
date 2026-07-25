@@ -95,8 +95,18 @@ def bar(value: float, width: int = 20) -> str:
 INITIAL_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 PIECE_SYMBOLS = {
-    "K": "\u2654", "Q": "\u2655", "R": "\u2656", "B": "\u2657", "N": "\u2658", "P": "\u2659",
-    "k": "\u265a", "q": "\u265b", "r": "\u265c", "b": "\u265d", "n": "\u265e", "p": "\u265f",
+    "K": "\u2654",
+    "Q": "\u2655",
+    "R": "\u2656",
+    "B": "\u2657",
+    "N": "\u2658",
+    "P": "\u2659",
+    "k": "\u265a",
+    "q": "\u265b",
+    "r": "\u265c",
+    "b": "\u265d",
+    "n": "\u265e",
+    "p": "\u265f",
 }
 
 
@@ -177,8 +187,7 @@ def print_routing(routing):
 def print_agent_results(agent_results: dict):
     print(c("--- Agent Results ---", BOLD))
     for name, result in agent_results.items():
-        print(f"  {c(name.upper(), YELLOW)}: move={c(result.move, GREEN)} "
-              f"score={result.confidence:.2f}")
+        print(f"  {c(name.upper(), YELLOW)}: move={c(result.move, GREEN)} " f"score={result.confidence:.2f}")
         if result.reasoning:
             # Truncate reasoning for display
             short = result.reasoning[:120].replace("\n", " ")
@@ -215,9 +224,7 @@ class ChessMockLLMAdapter:
     def __init__(self):
         self.call_count = 0
 
-    async def generate(
-        self, *, messages=None, prompt=None, temperature=0.7, max_tokens=None, **kwargs
-    ):
+    async def generate(self, *, messages=None, prompt=None, temperature=0.7, max_tokens=None, **kwargs):
         self.call_count += 1
         prompt_text = prompt or ""
 
@@ -279,11 +286,7 @@ class ChessMockLLMAdapter:
                 "**Reasoning:** All agents converge on central play.\n"
             )
         else:
-            text = (
-                f"**Move:** {move}\n"
-                "**Score:** 0.65\n"
-                "**Reasoning:** Solid developing move.\n"
-            )
+            text = f"**Move:** {move}\n" "**Score:** 0.65\n" "**Reasoning:** Solid developing move.\n"
 
         # Return mock response compatible with LLMClient protocol
         class _Resp:
@@ -340,8 +343,7 @@ def analyze_position_cmd(args):
             "best_move": analysis.best_move,
             "consensus_move": analysis.consensus_move,
             "candidates": [
-                {"move": cm.move, "score": cm.score, "agent": cm.agent_name}
-                for cm in analysis.candidate_moves
+                {"move": cm.move, "score": cm.score, "agent": cm.agent_name} for cm in analysis.candidate_moves
             ],
             "routing": {
                 "primary": analysis.routing_decision.primary_agent,
@@ -373,6 +375,7 @@ def self_play_cmd(args):
 
     try:
         import chess as _chess_lib
+
         board = _chess_lib.Board(current_fen)
         use_chess_lib = True
     except ImportError:
@@ -387,9 +390,7 @@ def self_play_cmd(args):
             side = fen_side_to_move(current_fen)
             print(f"  Move {move_idx + 1} ({side})...", end=" ", flush=True)
 
-        analysis = asyncio.get_event_loop().run_until_complete(
-            engine.analyze_position(current_fen)
-        )
+        analysis = asyncio.get_event_loop().run_until_complete(engine.analyze_position(current_fen))
         move = analysis.best_move
         moves_played.append(move)
 
@@ -438,11 +439,7 @@ def self_play_cmd(args):
         if use_chess_lib and board is not None and board.is_game_over():
             outcome = board.outcome()
             if outcome:
-                result["winner"] = (
-                    "white" if outcome.winner is True
-                    else "black" if outcome.winner is False
-                    else "draw"
-                )
+                result["winner"] = "white" if outcome.winner is True else "black" if outcome.winner is False else "draw"
         print(json.dumps(result, indent=2))
 
 
@@ -499,9 +496,7 @@ def interactive_cmd(args):
         else:
             # Engine move
             print(c("  Engine thinking...", DIM))
-            analysis = asyncio.get_event_loop().run_until_complete(
-                engine.analyze_position(board.fen())
-            )
+            analysis = asyncio.get_event_loop().run_until_complete(engine.analyze_position(board.fen()))
             move_uci = analysis.best_move
             try:
                 move = _chess_lib.Move.from_uci(move_uci)
@@ -584,19 +579,30 @@ def main():
               python chess_demo.py --mcp-tools                      # List MCP tools
         """),
     )
-    parser.add_argument("--provider", default="mock", choices=["mock", "openai", "anthropic"],
-                        help="LLM provider (default: mock)")
+    parser.add_argument(
+        "--provider", default="mock", choices=["mock", "openai", "anthropic"], help="LLM provider (default: mock)"
+    )
     parser.add_argument("--api-key", default=None, help="API key (or set env var)")
     parser.add_argument("--model", default=None, help="Model name override")
     parser.add_argument("--fen", default=None, help="FEN string for position")
-    parser.add_argument("--depth", type=int, default=DEFAULT_DEPTH,
-                        help=f"MCTS depth / iterations (default: {DEFAULT_DEPTH})")
-    parser.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE,
-                        help=f"LLM temperature (default: {DEFAULT_TEMPERATURE})")
-    parser.add_argument("--color", default="white", choices=["white", "black"],
-                        help="Your color in interactive mode (default: white)")
-    parser.add_argument("--max-moves", type=int, default=DEFAULT_MAX_MOVES,
-                        help=f"Max moves in self-play (default: {DEFAULT_MAX_MOVES})")
+    parser.add_argument(
+        "--depth", type=int, default=DEFAULT_DEPTH, help=f"MCTS depth / iterations (default: {DEFAULT_DEPTH})"
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=DEFAULT_TEMPERATURE,
+        help=f"LLM temperature (default: {DEFAULT_TEMPERATURE})",
+    )
+    parser.add_argument(
+        "--color", default="white", choices=["white", "black"], help="Your color in interactive mode (default: white)"
+    )
+    parser.add_argument(
+        "--max-moves",
+        type=int,
+        default=DEFAULT_MAX_MOVES,
+        help=f"Max moves in self-play (default: {DEFAULT_MAX_MOVES})",
+    )
 
     # Mode flags
     mode = parser.add_mutually_exclusive_group()

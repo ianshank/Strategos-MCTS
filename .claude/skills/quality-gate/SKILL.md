@@ -12,11 +12,11 @@ Run the repo's CI-equivalent gate locally, in order. Stop at the first failure a
 continuing. Mirrors `.github/workflows/ci.yml` so green locally means green in CI.
 
 ```bash
-# 1. Format (check only; run without --check to auto-fix)
-black src/ tests/ --check --line-length 120
+# 1. Format (check only; run without --check to auto-fix) — repo-wide, matching CI
+black . --check --line-length 120
 
-# 2. Lint
-ruff check src/ tests/
+# 2. Lint — repo-wide, matching CI (notebooks are excluded via pyproject)
+ruff check .
 
 # 3. Types (pinned mypy; see [dev] extra)
 mypy src/

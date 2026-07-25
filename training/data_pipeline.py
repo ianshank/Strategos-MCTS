@@ -7,9 +7,9 @@ Handles dataset loading, preprocessing, and data orchestration for:
 - PRIMUS-Instruct instruction samples
 """
 
+import hashlib
 import json
 import logging
-import hashlib
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -152,7 +152,7 @@ class DABStepLoader:
                 if json_file.name.endswith("_stats.json") or json_file.name.endswith("_checkpoint.json"):
                     continue
 
-                with open(json_file, "r") as f:
+                with open(json_file) as f:
                     data = json.load(f)
 
                 # Handle list of records
@@ -168,7 +168,7 @@ class DABStepLoader:
                 else:
                     logger.warning(f"Unexpected data type in {json_file}: {type(data).__name__}. Skipping file.")
 
-            except (json.JSONDecodeError, IOError) as e:
+            except (OSError, json.JSONDecodeError) as e:
                 logger.warning(f"Failed to load synthetic data file {json_file}: {e}")
             except Exception as e:
                 logger.warning(f"Unexpected error loading {json_file}: {e}")

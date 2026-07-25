@@ -8,7 +8,6 @@ Handles model loading, hot-swapping, configuration management, and rollback.
 import json
 import logging
 import shutil
-import numpy as np
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -17,6 +16,7 @@ import yaml
 
 try:
     import torch
+
     from training.utils.checkpoint_loader import load_checkpoint_safe
 
     HAS_TORCH = True

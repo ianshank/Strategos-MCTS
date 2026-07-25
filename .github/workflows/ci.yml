@@ -37,10 +37,10 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Check formatting with black
-        run: black src/ tests/ --check --line-length 120
+        run: black . --check --line-length 120
 
       - name: Check linting with ruff
-        run: ruff check src/ tests/ --output-format=github
+        run: ruff check . --output-format=github
 
   spec-validate:
     name: Spec Validation & Secret Scan

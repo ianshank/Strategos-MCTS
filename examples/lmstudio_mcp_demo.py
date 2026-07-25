@@ -109,8 +109,7 @@ async def demo_mcp_with_lmstudio():
     # Show example of actual execution
     print("\nExample execution code:")
     print("-" * 40)
-    print(
-        """
+    print("""
 # Python example
 process = subprocess.Popen(
     ['python', 'tools/mcp/server.py'],
@@ -126,8 +125,7 @@ process.stdin.flush()
 # Read response
 response = process.stdout.readline()
 result = json.loads(response)
-"""
-    )
+""")
 
     print("\n" + "=" * 60)
     print("Configuration verified and ready for use!")
