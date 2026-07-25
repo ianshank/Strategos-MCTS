@@ -19,7 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the `policy-lift` entrypoint, which cannot run them.
 
 #### Fixed
-- `docs/STATUS.md`: corrected a stale `93.65%` coverage remnant to the current `93.35%` baseline.
+- `docs/STATUS.md`: corrected a stale `93.65%` coverage remnant to the current `93.35%` baseline, and
+  completed the operator-runbook `harness spec-trace` example with its required `--branch` argument.
 
 ### Enterprise Documentation, Governance & Repository Organization
 
