@@ -10,7 +10,7 @@ within your LangGraph multi-agent MCTS framework.
 Demonstrates model training, code refinement, and integration with your training pipeline:
 
 ```bash
-python -m src.integrations.google_adk.examples.example_ml_engineering
+python -m examples.google_adk.example_ml_engineering
 ```
 
 **Use Cases:**
@@ -24,7 +24,7 @@ python -m src.integrations.google_adk.examples.example_ml_engineering
 Shows NL2SQL, data analysis, and BigQuery ML capabilities:
 
 ```bash
-python -m src.integrations.google_adk.examples.example_data_science
+python -m examples.google_adk.example_data_science
 ```
 
 **Use Cases:**
@@ -38,7 +38,7 @@ python -m src.integrations.google_adk.examples.example_data_science
 Demonstrates paper analysis, citation discovery, and corpus building:
 
 ```bash
-python -m src.integrations.google_adk.examples.example_academic_research
+python -m examples.google_adk.example_academic_research
 ```
 
 **Use Cases:**
@@ -46,34 +46,6 @@ python -m src.integrations.google_adk.examples.example_academic_research
 - Keep agents updated with state-of-the-art techniques
 - Discover new MCTS algorithms and optimizations
 - Track developments in hierarchical reasoning
-
-### 4. Data Engineering Agent (`example_data_engineering.py`)
-
-Shows Dataform pipeline development and data quality management:
-
-```bash
-python -m src.integrations.google_adk.examples.example_data_engineering
-```
-
-**Use Cases:**
-- Build data pipelines for agent training data
-- Transform and clean MCTS trajectory data
-- Manage training dataset schemas
-- Ensure data quality for agent development
-
-### 5. Deep Search Agent (`example_deep_search.py`)
-
-Demonstrates production-ready research with human-in-the-loop:
-
-```bash
-python -m src.integrations.google_adk.examples.example_deep_search
-```
-
-**Use Cases:**
-- Research best practices for agent architectures
-- Deep dive into MCTS optimization techniques
-- Compile comprehensive reports on ML frameworks
-- Investigate specific agent behavior patterns
 
 ## Running Examples
 
