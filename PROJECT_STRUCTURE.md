@@ -90,17 +90,6 @@ langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 │   ├── cli/                     # Command-line tools
 │   └── mcp/                     # MCP server implementation
 │
-├── huggingface_space/           # HuggingFace Spaces deployment
-│   ├── app.py                   # Gradio demo application
-│   ├── requirements.txt         # Space dependencies
-│   ├── README.md                # Space metadata
-│   ├── DEPLOYMENT_GUIDE.md      # Deployment instructions
-│   └── demo_src/                # Demo source modules
-│       ├── agents_demo.py       # Agent implementations
-│       ├── mcts_demo.py         # MCTS implementation
-│       ├── llm_mock.py          # Mock LLM client
-│       └── wandb_tracker.py     # W&B integration
-│
 ├── kubernetes/                  # Kubernetes deployment
 │   └── deployment.yaml          # K8s manifests (HPA, PDB, Ingress)
 │
@@ -148,7 +137,6 @@ langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 | `scripts/` | Automation, verification, and utility scripts |
 | `tests/` | Comprehensive test suite |
 | `tools/` | Development and debugging tools |
-| `huggingface_space/` | HuggingFace Spaces POC deployment |
 | `kubernetes/` | Container orchestration manifests |
 | `monitoring/` | Observability stack configuration |
 | `training/` | Advanced ML training pipeline (docs, examples, and its own `training/tests/`) |
@@ -169,7 +157,7 @@ would break import contracts, Docker build context, or fresh-clone tests:
   - `examples/` — library-usage scripts; kept **without** a root `__init__.py` so the chaos/perf suites can
     `import langgraph_multi_agent_mcts` as a bare module (`COPY`-ed by `Dockerfile`/`Dockerfile.test`).
   - `demo_src/` — an importable support package (`from demo_src.agents_demo import ...`) consumed by
-    `huggingface_space/app_mock.py` and `scripts/run_e2e_workflow.py`; it must stay top-level.
+    `scripts/run_e2e_workflow.py`; it must stay top-level.
   - `demo.py` / `chess_demo.py` — root CLI entry points (`python demo.py`); `demo.py` is import-tested by
     `tests/unit/test_llm_mcts.py` and its A/B logic lives in `src/api/comparison_service.py`.
   - `demos/` — standalone demonstration scripts (e.g. `neural_meta_controller_demo.py`).

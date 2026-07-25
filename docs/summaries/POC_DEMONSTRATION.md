@@ -924,9 +924,8 @@ kubectl apply -f kubernetes/
 
 ### Option 5: HuggingFace Spaces (Demo)
 
-- Deploy using the `huggingface_space/` directory
-- Gradio interface with trained models
-- See `huggingface_space/README.md` for deployment instructions
+- The HuggingFace Space deployment directory was removed from this repository in 2026-07
+- Gradio interface with trained models remains available via the root `app.py`
 
 ---
 
