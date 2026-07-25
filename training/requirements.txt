@@ -68,7 +68,7 @@ rank-bm25~=0.2.2  # BM25 ranking algorithm
 langsmith>=0.0.77,<0.1.0
 
 # Experiment Tracking
-wandb~=0.15.0  # Weights & Biases for experiment tracking
+wandb~=0.28.1  # Weights & Biases for experiment tracking
 mlflow~=2.5.0  # MLflow for model versioning and tracking
 
 # System Monitoring

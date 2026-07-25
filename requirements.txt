@@ -23,7 +23,7 @@ sentence-transformers>=2.2.0
 pyyaml>=6.0
 
 # Experiment Tracking
-wandb>=0.16.0
+wandb>=0.28.1
 
 # Required for Gradio OAuth and model loading
 huggingface_hub>=0.20.0,<0.30.0
