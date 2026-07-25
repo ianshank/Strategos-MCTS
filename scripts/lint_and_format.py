@@ -12,14 +12,17 @@ import subprocess
 import sys
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 def run_command(cmd: list[str], check: bool = True) -> tuple[int, str, str]:
-    """Run a command and return exit code, stdout, stderr."""
+    """Run a command from the repo root and return exit code, stdout, stderr."""
     result = subprocess.run(
         cmd,
         capture_output=True,
         text=True,
         check=False,
+        cwd=ROOT,
     )
     return result.returncode, result.stdout, result.stderr
 
@@ -34,17 +37,17 @@ def main():
 
     errors = []
 
-    # 1. Ruff Format
-    print("\n📝 Step 1: Formatting with Ruff")
+    # 1. Black Format (the project formatter; matches the CI lint job)
+    print("\n📝 Step 1: Formatting with Black")
     if check_only:
-        returncode, stdout, stderr = run_command(["ruff", "format", "--check", "."])
+        returncode, stdout, stderr = run_command(["black", "--check", "--line-length", "120", "."])
         if returncode != 0:
             errors.append("Formatting check failed (run without --check to fix)")
-            print(f"❌ {len(stdout.splitlines())} files need formatting")
+            print(f"❌ {len(stderr.splitlines())} files need formatting")
         else:
             print("✅ All files properly formatted")
     else:
-        returncode, stdout, stderr = run_command(["ruff", "format", "."])
+        returncode, stdout, stderr = run_command(["black", "--line-length", "120", "."])
         if returncode == 0:
             print("✅ Auto-formatted all files")
         else:

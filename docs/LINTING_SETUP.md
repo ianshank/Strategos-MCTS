@@ -48,7 +48,7 @@ python scripts/lint_and_format.py --check
 
 ```bash
 # Format code
-ruff format .
+black . --line-length 120
 
 # Fix linting issues
 ruff check . --fix
@@ -91,7 +91,7 @@ The following rules are **disabled** to reduce friction:
 
 The CI pipeline now **automatically fixes** formatting and linting issues:
 
-1. **Auto-format** code with `ruff format`
+1. **Auto-format** code with `black`
 2. **Auto-fix** linting issues with `ruff check --fix`
 3. **Auto-commit** changes (if any) with `[skip ci]` tag
 4. **Check** for remaining errors

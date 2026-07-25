@@ -29,23 +29,31 @@ repos:
       - id: check-ast
         name: Check Python AST
 
-  # Ruff - Fast Python linter (replaces black, flake8, isort)
+  # Ruff - Fast Python linter (replaces flake8, isort; formatting is black)
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Keep in sync with the ruff pin in pyproject.toml [dev] (>=0.15.0,<0.16.0) for CI/local parity.
-    rev: v0.15.0
+    # Tracks the currently-resolved version inside the pyproject [dev] range
+    # (>=0.15.0,<0.16.0); bump when the resolved version moves.
+    rev: v0.15.8
     hooks:
       # Run the linter with auto-fix
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
         types_or: [python, pyi]
-      # Run the formatter (replaces black)
-      - id: ruff-format
-        types_or: [python, pyi]
+
+  # Black - the project formatter (matches the CI lint job)
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    # Tracks the currently-resolved version inside the pyproject [dev] range
+    # (>=26.3.0,<26.4.0); bump when the resolved version moves.
+    rev: 26.3.1
+    hooks:
+      - id: black
+        args: [--line-length=120]
 
   # MyPy - Static type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
-    # Keep in sync with the mypy pin in pyproject.toml [dev] (>=1.19.0,<1.20.0) for CI/local parity.
-    rev: v1.19.0
+    # Tracks the currently-resolved version inside the pyproject [dev] range
+    # (>=1.19.0,<1.20.0); bump when the resolved version moves.
+    rev: v1.19.1
     hooks:
       - id: mypy
         name: MyPy type checking
@@ -81,7 +89,9 @@ repos:
 
   # Docstring formatting
   - repo: https://github.com/PyCQA/docformatter
-    rev: v1.7.5
+    # v1.7.5's hook metadata used the removed 'python_venv' language, which
+    # breaks config loading on pre-commit >= 4; v1.7.8 fixed it.
+    rev: v1.7.8
     hooks:
       - id: docformatter
         name: Docformatter

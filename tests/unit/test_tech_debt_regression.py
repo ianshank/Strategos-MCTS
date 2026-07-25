@@ -1,4 +1,4 @@
-﻿"""
+"""
 Regression tests for tech debt and code hardening fixes (2026-07-20).
 """
 
