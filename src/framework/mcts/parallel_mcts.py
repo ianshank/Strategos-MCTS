@@ -32,6 +32,7 @@ from typing import Any, cast
 
 import numpy as np
 
+from src.config.settings import get_settings
 from src.observability.logging import get_logger
 
 from .core import MCTSNode, MCTSState
@@ -321,6 +322,7 @@ class ParallelMCTSEngine:
                 adaptive_virtual_loss=adaptive_virtual_loss if adaptive_virtual_loss is not None else True,
                 exploration_weight=exploration_weight if exploration_weight is not None else 1.414,
                 seed=seed if seed is not None else 42,
+                two_player=get_settings().MCTS_TWO_PLAYER,
             )
 
         # Validate config to catch invalid values early

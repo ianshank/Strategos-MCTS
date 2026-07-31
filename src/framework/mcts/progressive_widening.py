@@ -33,6 +33,7 @@ from typing import Any, cast
 
 import numpy as np
 
+from src.config.settings import get_settings
 from src.observability.logging import get_logger
 
 from .core import MCTSNode, MCTSState
@@ -278,7 +279,8 @@ class ProgressiveWideningEngine:
         rave_config: RAVEConfig | None = None,
         exploration_weight: float = 1.414,
         seed: int = 42,
-        two_player: bool = True,
+        *,
+        two_player: bool | None = None,
     ):
         """
         Initialize progressive widening MCTS engine.
@@ -293,12 +295,13 @@ class ProgressiveWideningEngine:
                 (``select_child_rave`` via :meth:`select`) negates the child's UCB and
                 RAVE/AMAF values to read them from the parent's perspective. Set False for
                 single-agent search, where values are absolute and neither phase flips sign.
+                Defaults to ``Settings.MCTS_TWO_PLAYER``.
         """
         self.pw_config = pw_config or ProgressiveWideningConfig()
         self.rave_config = rave_config or RAVEConfig()
         self.exploration_weight = exploration_weight
         self.seed = seed
-        self.two_player = two_player
+        self.two_player = two_player if two_player is not None else get_settings().MCTS_TWO_PLAYER
         self.rng = np.random.default_rng(seed)
 
         # Adaptive PW state

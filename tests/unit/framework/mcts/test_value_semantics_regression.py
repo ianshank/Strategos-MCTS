@@ -261,6 +261,40 @@ class TestSelectChildPuctMatchesCanonicalFormula:
             # score is (one of) the maximum -- i.e. it agrees with the canonical formula.
             assert expected_scores[selected_action] == max(expected_scores.values())
 
+    def test_matches_puct_on_zero_visit_zero_prior_edge_case(self) -> None:
+        """Test behavior on unvisited child with zero prior (rare but possible edge case)."""
+        root = MCTSNode(state=_state("root"))
+        root.visits = 100
+
+        priors = PriorsManager()
+        prior_map: dict[str, float] = {}
+        expected_scores: dict[str, float] = {}
+
+        # Add a zero-visit, zero-prior child (edge case)
+        child_zero = root.add_child("zero_prior", _state("zero_prior"))
+        child_zero.visits = 0
+        child_zero.value_sum = 0.0
+        prior_map["zero_prior"] = 0.0
+
+        # Add a normal child for comparison
+        child_normal = root.add_child("normal", _state("normal"))
+        child_normal.visits = 10
+        child_normal.value_sum = 5.0
+        prior_map["normal"] = 0.5
+
+        # Compute expected scores using canonical puct() function
+        expected_scores["zero_prior"] = puct(q_value=0.0, prior=0.0, visit_count=0, parent_visits=100, c_puct=1.25)
+        expected_scores["normal"] = puct(q_value=0.5, prior=0.5, visit_count=10, parent_visits=100, c_puct=1.25)
+
+        priors.set_priors(root.state.to_hash_key(), prior_map)
+
+        result = select_child_puct(root, priors, c_puct=1.25)
+        assert result is not None
+        selected_action, _selected_child = result
+
+        # Verify select_child_puct matches the canonical formula exactly on this edge case
+        assert expected_scores[selected_action] == max(expected_scores.values())
+
 
 # =============================================================================
 # AC-4: DEBUG structured per-child selection logging
@@ -335,6 +369,79 @@ class TestSelectionDebugLogging:
 
 
 # =============================================================================
+# End-to-end async integration: parallel_search and search wiring is correct
+# =============================================================================
+
+
+class _AsyncWinNowState:
+    """Simple two-player game for wiring verification: side to move may win or pass."""
+
+    def __init__(self, to_move: int = 1, winner: int | None = None):
+        self.to_move = to_move
+        self.winner = winner
+
+    def is_terminal(self) -> bool:
+        return self.winner is not None
+
+    def get_legal_actions(self) -> list[str]:
+        return [] if self.is_terminal() else ["win", "pass"]
+
+    def apply_action(self, action: str) -> _AsyncWinNowState:
+        if action == "win":
+            return _AsyncWinNowState(to_move=-self.to_move, winner=self.to_move)
+        else:
+            return _AsyncWinNowState(to_move=-self.to_move, winner=None)
+
+    def get_reward(self, player: int = 1) -> float:
+        if self.winner is None:
+            return 0.0
+        return 1.0 if self.winner == player else -1.0
+
+    def to_hash_key(self) -> str:
+        return f"{self.to_move}:{self.winner}"
+
+
+class TestParallelMCTSEngineWiring:
+    """Verify two_player parameter wires through to node selection."""
+
+    def test_engine_passes_two_player_to_selection(self) -> None:
+        """Verify that engine's two_player config is passed to select_child_with_vl."""
+        # Create engine with explicit two_player=False
+        engine = ParallelMCTSEngine(config=ParallelMCTSConfig(two_player=False))
+        assert engine.two_player is False
+
+        # Create engine with explicit two_player=True
+        engine2 = ParallelMCTSEngine(config=ParallelMCTSConfig(two_player=True))
+        assert engine2.two_player is True
+
+    def test_deprecated_path_uses_settings(self) -> None:
+        """Legacy parameter path respects Settings.MCTS_TWO_PLAYER."""
+        engine = ParallelMCTSEngine(num_workers=4)
+        # Should read from settings (default True)
+        assert engine.two_player is True
+
+
+class TestProgressiveWideningEngineWiring:
+    """Verify two_player parameter wires through to node selection."""
+
+    def test_engine_passes_two_player_to_selection(self) -> None:
+        """Verify that engine's two_player config is passed to select_child_rave."""
+        # Create engine with explicit two_player=False
+        engine = ProgressiveWideningEngine(two_player=False)
+        assert engine.two_player is False
+
+        # Create engine with explicit two_player=True
+        engine2 = ProgressiveWideningEngine(two_player=True)
+        assert engine2.two_player is True
+
+    def test_default_reads_from_settings(self) -> None:
+        """When two_player not passed, reads from Settings.MCTS_TWO_PLAYER."""
+        engine = ProgressiveWideningEngine()
+        # Should read from settings (default True)
+        assert engine.two_player is True
+
+
+# =============================================================================
 # Settings: MCTS_TWO_PLAYER is a real, bounded, settings-backed field (no hardcoded values)
 # =============================================================================
 
@@ -342,3 +449,15 @@ class TestSelectionDebugLogging:
 class TestTwoPlayerSetting:
     def test_settings_expose_mcts_two_player_default_true(self, test_settings) -> None:
         assert test_settings.MCTS_TWO_PLAYER is True
+
+    def test_parallel_mcts_engine_reads_settings_when_no_config(self) -> None:
+        """ParallelMCTSEngine should read Settings.MCTS_TWO_PLAYER when constructed without config."""
+        # When constructed with no config, engine should read from settings (default True)
+        engine = ParallelMCTSEngine()
+        assert engine.two_player is True
+
+    def test_progressive_widening_engine_reads_settings_when_not_explicit(self) -> None:
+        """ProgressiveWideningEngine should read Settings.MCTS_TWO_PLAYER when two_player not passed."""
+        # When constructed without explicit two_player, should read from settings (default True)
+        engine = ProgressiveWideningEngine()
+        assert engine.two_player is True

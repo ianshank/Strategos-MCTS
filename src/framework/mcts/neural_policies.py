@@ -28,6 +28,8 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import numpy as np
 
+from src.observability.logging import get_logger
+
 if TYPE_CHECKING:
     from .core import MCTSNode, MCTSState
 
@@ -42,7 +44,7 @@ except ImportError:
     torch = None  # type: ignore[assignment,unused-ignore]
     nn = None  # type: ignore[assignment,unused-ignore]
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger(__name__)
 
 
 def is_torch_available() -> bool:
