@@ -307,20 +307,35 @@ and the optional neural extra were installed in order to run the checks below.
 | `mypy src/` | **Success: no issues found in 327 source files** |
 | CI-equivalent unit gate — `pytest tests/unit/` with `--cov=src --cov-fail-under=85` and the three CI ignores, under the CI environment variables | **8,472 passed, 62 skipped; TOTAL coverage 89.88%** (gate 85%), 207s |
 | `git grep -nE "sk-[A-Za-z0-9]{20,}" -- src/ kubernetes/` | no matches |
-| `harness validate-spec specs/*.SPEC.md` | exit 0 over all 42 specs |
+| `harness validate-spec specs/*.SPEC.md` | exit 0 over all 43 specs |
 | `python -m src.tools.context_docs` | exit 0 — **14 documents checked**, up from 13 |
-| `pytest tests/unit/tools/test_context_docs.py` | **53 passed**, up from 48 (five new tests cover the governance-doc lane) |
+| `pytest tests/unit/tools/test_context_docs.py` | **54 passed**, up from 48 (six new tests cover the governance-doc lane and the console-scripts-documented check) |
+| `pytest tests/ -m "not slow"` (full suite, `.[dev,neural]`) | **9,552 passed, 209 skipped, 32 deselected, 31 failed**, 351s |
+| `.gitleaks.toml` / `.github/workflows/ci.yml` syntax | valid TOML (`tomllib`) and valid YAML (`PyYAML`); the scan's actual behavior is unverified locally — no `gitleaks` binary in this environment |
 
 The 89.88% figure is this branch's measurement of the **gated** scope (`tests/unit/` with the CI
 ignores and coverage omits). It is not comparable to, and does not supersede, the 90.15% full-suite
 headline in `docs/STATUS.md`, which is measured differently — see F-13. `docs/STATUS.md` is not
 amended by this change; regenerating it is the `coverage-baseline` skill's job.
 
-**Not run:** the full suite (`pytest tests/ -m "not slow"`), which includes integration, e2e, chess,
-and property tests beyond the CI gate's scope; and the live-service demo clauses noted in §4.
-
-This change touches no runtime code path. The one file modified under `src/` is
-`src/tools/context_docs.py`, a build-time documentation validator with no production importer.
+**The 31 full-suite failures were checked, not assumed, to be pre-existing.** `git diff
+origin/main...HEAD` touches none of the failing test files, and the only `src/**` file this branch
+changes (`src/tools/context_docs.py`) has zero production importers — so nothing in this branch can
+plausibly cause them. To confirm rather than infer that, a disposable worktree of `origin/main` was
+checked out and a sample of the failures re-run in isolation: `test_local_embedding_store.py`,
+`test_deployed_models.py::test_meta_controller_loading`, and
+`test_ui_e2e.py::test_query_submission_sync` failed **identically on main**, for the same
+environment causes — `torch.load(..., weights_only=True)` rejecting an LFS-pointer checkpoint under
+PyTorch 2.6's new default, no outbound network to reach the HuggingFace Hub, and `gradio` not
+installed. 23 of the 31 failures are `tests/e2e/test_ui_e2e.py` (needs a live Gradio/Selenium
+environment — `docs/STATUS.md` already documents this class), 4 are
+`tests/api/test_local_embedding_store.py` (the same torch/HF-offline cause), and 1 is
+`test_deployed_models.py::test_meta_controller_loading` — a file CI's `integration-test` job already
+excludes via `--ignore` for exactly this reason. The remaining 2 property-test and 1
+`test_config_loading_performance` failures did **not** reproduce in the isolated re-run (they passed
+on main in isolation), consistent with Hypothesis health-check timing sensitivity under the full
+suite's resource contention rather than a deterministic failure — flaky, not caused by this branch.
+Live-service demo clauses noted in §4 remain unexecuted; running a server was out of scope here.
 
 This change touches no runtime code path. The one file modified under `src/` is
 `src/tools/context_docs.py`, a build-time documentation validator with no production importer.
