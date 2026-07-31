@@ -22,7 +22,7 @@ tree-sitter>=0.20.0  # Advanced code parsing (optional)
 
 # HTTP Client (for LLM API calls)
 httpx>=0.24.0  # Async HTTP client
-tenacity>=8.2.0  # Retry logic
+tenacity>=9.1.4  # Retry logic
 
 # Already in main requirements but needed for multimodal:
 # - transformers>=4.30.0 (for CLIP)
