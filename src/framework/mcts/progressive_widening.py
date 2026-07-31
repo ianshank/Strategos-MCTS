@@ -33,8 +33,13 @@ from typing import Any, cast
 
 import numpy as np
 
+from src.config.settings import get_settings
+from src.observability.logging import get_logger
+
 from .core import MCTSNode, MCTSState
 from .policies import RolloutPolicy
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -188,6 +193,8 @@ class RAVENode(MCTSNode):
         self,
         rave_config: RAVEConfig,
         exploration_weight: float = 1.414,
+        *,
+        negate_child_value: bool = False,
     ) -> RAVENode:
         """
         Select child using hybrid UCB + RAVE.
@@ -195,6 +202,13 @@ class RAVENode(MCTSNode):
         Args:
             rave_config: RAVE configuration
             exploration_weight: UCB exploration constant
+            negate_child_value: Negate the child's UCB and RAVE/AMAF values for two-player
+                (negamax) search. Under the negamax backup in
+                ``ProgressiveWideningEngine.backpropagate_with_rave``, both ``value_sum`` and
+                the RAVE/AMAF statistics are recorded from the perspective of the side to
+                move AT the node — i.e. the parent's opponent — so the parent must select on
+                the negated child value AND negated RAVE value. Single-agent search stores
+                absolute values and keeps the default (no negation).
 
         Returns:
             Selected child node
@@ -211,21 +225,35 @@ class RAVENode(MCTSNode):
             if rave_child.visits == 0:
                 return rave_child
 
-            # Standard UCB score
-            ucb_exploitation = rave_child.value
+            # value and RAVE/AMAF stats are stored from the child's own perspective; negate
+            # both to read them from the parent's perspective under the negamax convention.
+            ucb_exploitation = -rave_child.value if negate_child_value else rave_child.value
             ucb_exploration = exploration_weight * math.sqrt(math.log(self.visits) / rave_child.visits)
             ucb_score = ucb_exploitation + ucb_exploration
 
             # RAVE score
             child_action = rave_child.action or ""
             rave_visits = self.get_rave_visits(child_action)
-            rave_value = self.get_rave_value(child_action)
+            raw_rave_value = self.get_rave_value(child_action)
+            rave_value = -raw_rave_value if negate_child_value else raw_rave_value
 
             # Compute β mixing parameter
             beta = rave_config.compute_beta(rave_child.visits, rave_visits)
 
             # Hybrid score: (1-β)*UCB + β*RAVE
             score = (1 - beta) * ucb_score + beta * rave_value
+
+            logger.debug(
+                "select_child_rave candidate: action=%s visits=%d value=%.4f rave_value=%.4f "
+                "beta=%.4f score=%.4f negate=%s",
+                child_action,
+                rave_child.visits,
+                rave_child.value,
+                raw_rave_value,
+                beta,
+                score,
+                negate_child_value,
+            )
 
             if score > best_score:
                 best_score = score
@@ -251,6 +279,8 @@ class ProgressiveWideningEngine:
         rave_config: RAVEConfig | None = None,
         exploration_weight: float = 1.414,
         seed: int = 42,
+        *,
+        two_player: bool | None = None,
     ):
         """
         Initialize progressive widening MCTS engine.
@@ -260,11 +290,18 @@ class ProgressiveWideningEngine:
             rave_config: RAVE configuration
             exploration_weight: UCB1 exploration constant
             seed: Random seed for deterministic behavior
+            two_player: Treat search as two-player zero-sum (negamax): backpropagation in
+                ``backpropagate_with_rave`` flips the value sign per ply, and selection
+                (``select_child_rave`` via :meth:`select`) negates the child's UCB and
+                RAVE/AMAF values to read them from the parent's perspective. Set False for
+                single-agent search, where values are absolute and neither phase flips sign.
+                Defaults to ``Settings.MCTS_TWO_PLAYER``.
         """
         self.pw_config = pw_config or ProgressiveWideningConfig()
         self.rave_config = rave_config or RAVEConfig()
         self.exploration_weight = exploration_weight
         self.seed = seed
+        self.two_player = two_player if two_player is not None else get_settings().MCTS_TWO_PLAYER
         self.rng = np.random.default_rng(seed)
 
         # Adaptive PW state
@@ -307,7 +344,11 @@ class ProgressiveWideningEngine:
                 break
 
             # Select child using RAVE-enhanced UCB
-            node = node.select_child_rave(self.rave_config, self.exploration_weight)
+            node = node.select_child_rave(
+                self.rave_config,
+                self.exploration_weight,
+                negate_child_value=self.two_player,
+            )
 
         return node
 

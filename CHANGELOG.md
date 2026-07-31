@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Code Hygiene & Modularity Program — Phase 1: MCTS Value-Semantics Correctness
+
+Landed on `claude/code-hygiene-modularity-skvtl6`. Program plan:
+`docs/plans/2026-07-30-code-hygiene-modularity.md`. Spec: `specs/hygiene_mcts_value_semantics.SPEC.md`
+(schema v2 draft; implemented under a documented `No-Spec` exception — see the plan's Program
+charter §2 — because it is a proven-bug fix that must precede the open, approved
+`strategos_risk_averse_subgoal_scorer` spec's implementation).
+
+#### Fixed
+- **PUCT double-division** in `src/framework/mcts/neural_policies.select_child_puct`: Q was
+  divided by visits a second time even though `MCTSNode.value` is already the mean, collapsing
+  PUCT into a near-pure exploration bandit on well-visited trees. Now delegates directly to the
+  canonical `puct()` formula.
+- **Negamax selection sign mismatch** in `ParallelMCTSEngine`/`VirtualLossNode.select_child_with_vl`
+  and `ProgressiveWideningEngine`/`RAVENode.select_child_rave` (including the RAVE/AMAF mixing
+  term): backpropagation flips the value sign per ply, but selection read the child's value
+  without negating it — selecting the move best for the *opponent*. Fixed by porting the
+  `negate_child_value` pattern already proven correct in `neural_mcts.NeuralMCTSNode.select_child`.
+  See `docs/MIGRATION_NOTES.md` for the full behavioral-impact writeup.
+
+#### Added
+- `Settings.MCTS_TWO_PLAYER` (default `True`): settings-backed negamax/single-agent toggle for
+  the two classical MCTS engines, mirrored by `ParallelMCTSConfig.two_player` and
+  `ProgressiveWideningEngine(two_player=...)`.
+- DEBUG-level structured per-child selection logging (visits, value, exploration term) in all
+  three fixed selection paths, via the project's `get_logger`.
+- `tests/unit/framework/mcts/test_value_semantics_regression.py`: regression suite reproducing
+  the three proven bugs, a cross-engine single-agent parity test, a 1,000-seeded-scenario
+  property test proving `select_child_puct` agrees with canonical `puct()`, and logging-emission
+  tests. Verified zero regressions against the full pre-existing unit suite.
+- `docs/plans/2026-07-30-code-hygiene-modularity.md` and 25 draft phase specs under `specs/`
+  (`hygiene_*`) for the broader code-hygiene & modularity program this phase opens.
+
 ### Code Hygiene: Fork Removal, Repo-Wide Lint Gates & Formatter Unification
 
 #### Removed

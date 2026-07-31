@@ -5,6 +5,66 @@ Newest first.
 
 ---
 
+## 2026-07-31 — MCTS negamax value-semantics fix (`hygiene_mcts_value_semantics`)
+
+Fixes three proven, executable-proof-verified selection bugs in
+`src/framework/mcts/{neural_policies,parallel_mcts,progressive_widening}.py`. **There is no
+escape hatch back to the old behavior** — it was never correct, so this is not a configurable
+change, it is a correction.
+
+### `select_child_puct` no longer double-divides Q
+
+`neural_policies.select_child_puct` computed `q_value = child.value / child.visits`, but
+`MCTSNode.value` is already the mean (`value_sum / visits`), so Q was silently divided by
+visits a second time — collapsing toward 0 as visits grew and turning PUCT into a near-pure
+exploration bandit. It now delegates directly to the canonical `puct()` formula (same file),
+so it cannot drift from it again. **Impact:** any caller of `select_child_puct` will see
+different (correct) selections, particularly on well-visited trees where the old bug was most
+severe.
+
+### `ParallelMCTSEngine` and `ProgressiveWideningEngine` now select on the correct perspective
+
+Both engines flip the backpropagated value's sign per ply (negamax), but selection
+(`VirtualLossNode.select_child_with_vl`, `RAVENode.select_child_rave`) read the child's stored
+value without negating it — selecting the move that is best **for the opponent**, not the
+root. This mirrors a bug already found and fixed in `neural_mcts.NeuralMCTSNode.select_child`
+(the `negate_child_value` parameter), which was never ported to these two engines.
+
+Both selection methods now accept a `negate_child_value: bool = False` parameter (RAVE also
+negates the RAVE/AMAF mixing term, which was equally unnegated). Both engines gained a
+`two_player: bool` field/parameter (`ParallelMCTSConfig.two_player`,
+`ProgressiveWideningEngine(..., two_player=...)`), **defaulting to `True`**, wired through to
+selection as `negate_child_value=self.two_player`. A new settings field,
+`Settings.MCTS_TWO_PLAYER` (default `True`), is the project-wide override for callers that
+construct engines without an explicit config.
+
+**Impact:** with the default (`two_player=True`), root action selection for adversarial
+two-player search changes — this is the fix. Callers that were relying on the old (broken)
+selection can set `two_player=False`, but that also disables the (now-correct) backprop-vs-
+selection consistency and should only be used for genuinely single-agent, non-adversarial
+search, matching `core.MCTSEngine`'s untouched, always-unflipped convention (see
+`tests/unit/framework/mcts/test_value_semantics_regression.py::TestCrossEngineSingleAgentParity`
+for the formal parity guarantee at `two_player=False`).
+
+### `core.MCTSEngine` / `core.MCTSNode` are unchanged
+
+Neither backpropagation nor selection in `core.py` ever flipped sign, so the two were already
+mutually consistent; this phase does not touch its numerics. This preserves the bit-for-bit
+baseline the (approved, not yet implemented) `strategos_risk_averse_subgoal_scorer` spec
+depends on — this fix lands first and becomes part of that spec's baseline going forward.
+
+### Benchmarks and the M5 policy-lift gate
+
+No stored benchmark artifact currently depends on `ParallelMCTSEngine` or
+`ProgressiveWideningEngine` output (`benchmarks/results/reasoning_smoke_lift.json` does not use
+either engine, and `docs/STATUS.md`'s M5 section already states no `≥20%` lift claim exists
+yet). **Flag for the `m5_policy_lift` spec thread:** if any future chess self-play or
+evaluation run reuses either engine, its results must be generated (or regenerated) after this
+fix, not before — do not treat any pre-2026-07-31 output from these two engines as a valid
+baseline for that gate.
+
+---
+
 ## 2026-07 — LangGraph orchestration hardening (`strategos_langgraph_hardening`)
 
 Engineering-hardening of the LangGraph orchestration and the benchmark sweep. No changes to

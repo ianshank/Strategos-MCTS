@@ -28,6 +28,8 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import numpy as np
 
+from src.observability.logging import get_logger
+
 if TYPE_CHECKING:
     from .core import MCTSNode, MCTSState
 
@@ -42,7 +44,7 @@ except ImportError:
     torch = None  # type: ignore[assignment,unused-ignore]
     nn = None  # type: ignore[assignment,unused-ignore]
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger(__name__)
 
 
 def is_torch_available() -> bool:
@@ -696,7 +698,11 @@ def select_child_puct(
     """
     Select child using PUCT algorithm.
 
-    Utility function for integrating PUCT with standard MCTSNode.
+    Utility function for integrating PUCT with standard MCTSNode. Delegates to the
+    canonical :func:`puct` formula so this call site cannot drift from it: previously this
+    function re-derived Q as ``child.value / child.visits``, but :attr:`MCTSNode.value` is
+    already the mean (``value_sum / visits``), so the old code silently double-divided Q
+    toward zero as visits grew — collapsing PUCT into an almost pure exploration bandit.
 
     Args:
         node: Parent MCTS node
@@ -714,19 +720,25 @@ def select_child_puct(
     best_action = None
     best_child = None
 
-    sqrt_parent = math.sqrt(node.visits) if node.visits > 0 else 1.0
-
     for child in node.children:
         action = child.action or ""  # Default to empty string if None
         prior = priors_manager.get_prior(state_hash, action)
+        score = puct(
+            q_value=child.value,
+            prior=prior,
+            visit_count=child.visits,
+            parent_visits=node.visits,
+            c_puct=c_puct,
+        )
 
-        # Calculate PUCT score
-        if child.visits == 0:
-            score = float("inf") if prior > 0 else c_puct * sqrt_parent
-        else:
-            q_value = child.value / child.visits if child.visits > 0 else 0.0
-            exploration = c_puct * prior * sqrt_parent / (1 + child.visits)
-            score = q_value + exploration
+        _logger.debug(
+            "select_child_puct candidate: action=%s visits=%d q_value=%.4f prior=%.4f score=%.4f",
+            action,
+            child.visits,
+            child.value,
+            prior,
+            score,
+        )
 
         if score > best_score:
             best_score = score

@@ -32,8 +32,13 @@ from typing import Any, cast
 
 import numpy as np
 
+from src.config.settings import get_settings
+from src.observability.logging import get_logger
+
 from .core import MCTSNode, MCTSState
 from .policies import RolloutPolicy
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -106,6 +111,15 @@ class ParallelMCTSConfig:
     # Search parameters
     exploration_weight: float = 1.414
     """UCB1 exploration constant (c). Higher = more exploration."""
+
+    two_player: bool = True
+    """
+    Treat search as two-player zero-sum (negamax): backpropagation in
+    ``ParallelMCTSEngine._run_simulation`` flips the value sign per ply, and selection
+    (``VirtualLossNode.select_child_with_vl``) negates each child's effective value to read
+    it from the parent's perspective. Set False for single-agent search, where values are
+    absolute and neither phase flips the sign.
+    """
 
     seed: int = 42
     """Random seed for deterministic behavior."""
@@ -207,12 +221,23 @@ class VirtualLossNode(MCTSNode):
         self.expanded_actions.add(action)
         return child
 
-    def select_child_with_vl(self, exploration_weight: float = 1.414) -> VirtualLossNode:
+    def select_child_with_vl(
+        self,
+        exploration_weight: float = 1.414,
+        *,
+        negate_child_value: bool = False,
+    ) -> VirtualLossNode:
         """
         Select best child using UCB1 with virtual loss.
 
         Args:
             exploration_weight: Exploration constant (c in UCB1)
+            negate_child_value: Negate the child's effective value for two-player (negamax)
+                search. Under the negamax backup in ``ParallelMCTSEngine._run_simulation``,
+                each node's value is stored from the perspective of the side to move AT THAT
+                NODE — i.e. the parent's opponent — so the parent must select on
+                ``-child.effective_value``. Single-agent search stores absolute values and
+                keeps the default (no negation).
 
         Returns:
             Best child node according to UCB1 with virtual loss
@@ -229,9 +254,23 @@ class VirtualLossNode(MCTSNode):
             if vl_child.effective_visits == 0:
                 return vl_child
 
-            exploitation = vl_child.effective_value
+            # effective_value is stored from the child's own perspective; negate it to read
+            # from the parent's perspective under the two-player negamax convention.
+            exploitation = -vl_child.effective_value if negate_child_value else vl_child.effective_value
             exploration = exploration_weight * math.sqrt(math.log(self.effective_visits) / vl_child.effective_visits)
             score = exploitation + exploration
+
+            logger.debug(
+                "select_child_with_vl candidate: action=%s visits=%d effective_value=%.4f "
+                "exploitation=%.4f exploration=%.4f score=%.4f negate=%s",
+                vl_child.action,
+                vl_child.visits,
+                vl_child.effective_value,
+                exploitation,
+                exploration,
+                score,
+                negate_child_value,
+            )
 
             if score > best_score:
                 best_score = score
@@ -283,6 +322,7 @@ class ParallelMCTSEngine:
                 adaptive_virtual_loss=adaptive_virtual_loss if adaptive_virtual_loss is not None else True,
                 exploration_weight=exploration_weight if exploration_weight is not None else 1.414,
                 seed=seed if seed is not None else 42,
+                two_player=get_settings().MCTS_TWO_PLAYER,
             )
 
         # Validate config to catch invalid values early
@@ -293,6 +333,7 @@ class ParallelMCTSEngine:
         self.virtual_loss_value = config.virtual_loss_value
         self.adaptive_virtual_loss = config.adaptive_virtual_loss
         self.exploration_weight = config.exploration_weight
+        self.two_player = config.two_player
         self.seed = config.seed
 
         # Shared lock for tree modifications
@@ -446,7 +487,10 @@ class ParallelMCTSEngine:
                 current.add_virtual_loss(self.virtual_loss_value)
                 path.append(current)
 
-                current = current.select_child_with_vl(self.exploration_weight)
+                current = current.select_child_with_vl(
+                    self.exploration_weight,
+                    negate_child_value=self.two_player,
+                )
 
             # Add leaf to path
             current.add_virtual_loss(self.virtual_loss_value)

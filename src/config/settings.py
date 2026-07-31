@@ -121,6 +121,16 @@ class Settings(BaseSettings):
         description="MCTS exploration weight (UCB1 constant, 0.0-10.0)",
     )
 
+    MCTS_TWO_PLAYER: bool = Field(
+        default=True,
+        description=(
+            "Treat MCTS search as two-player zero-sum (negamax): backpropagation flips the "
+            "value sign per ply, and selection reads each child's value from the parent's "
+            "perspective (negated). Set False for single-agent (non-adversarial) search, "
+            "where values are absolute and no sign flip applies at either phase."
+        ),
+    )
+
     # Random seed for reproducibility
     SEED: int | None = Field(default=None, ge=0, description="Random seed for reproducibility (optional)")
 
