@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Governance — Project Charter
+
+Spec: `specs/charter_alignment.SPEC.md` (schema v2 draft).
+
+#### Added
+- **`CHARTER.md`** at the repository root — the project's durable-intent authority: vision, mission
+  with falsifiable demo clauses, scope, ten numbered non-goals with carve-out budgets, eleven
+  invariants each carrying its enforcement mechanism and an honest ENFORCED / PARTIAL / ASPIRATIONAL
+  verdict, themed roadmap gates, an amendment protocol, and an append-only carve-out ledger.
+  It declares an **axis-of-authority rule** so it does not compete with `docs/STATUS.md` (measured
+  status), the 2026H2 roadmap (sequenced work), or `PROJECT_STRUCTURE.md` (layout).
+- **`docs/reviews/2026-07-31-charter-alignment-audit.md`** — the charter-versus-tree audit, with
+  every finding carrying a path-and-line reference and a disposition.
+- A "Charter impact" section in `.github/PULL_REQUEST_TEMPLATE.md`.
+
+#### Fixed (documentation drift)
+- README coverage badge read 93%; the measured baseline in `docs/STATUS.md` is 90.15%.
+- `docs/STATUS.md` contradicted its own headline, still citing the superseded 93.35% figure.
+- `.github/CONTRIBUTING.md`, `CLAUDE.md`, and `.claude/skills/strategos-primer/SKILL.md` all told
+  contributors the `No-Spec:` trailer was the expected channel "until the first approved spec
+  merges" — a precondition that lapsed once approved specs landed.
+- Five live documents cited `src/framework/graph.py`; orchestration is the `src/framework/graph/`
+  package. Fixed in `CLAUDE.md`, both narrations of it in `.claude/skills/strategos-primer/SKILL.md`,
+  and `docs/KEY_CODE_SNIPPETS.md`. Banner-marked historical plans and the generic architecture
+  template are deliberately left alone.
+- The primer claimed three console scripts; `pyproject.toml` declares five.
+- The fail-loud invariant was stated as "both fallbacks are opt-in" in the primer and
+  `.claude/agents/strategos-guide.md`, but `ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK` defaults on.
+- Supersession banners added to `docs/plans/MVP_ROADMAP.md` and
+  `docs/plans/PHASE_4_TEMPLATE_PLAN.md`; an unratified-template banner to `docs/SLA.md`; deprecation
+  banners to `planning/milestones.yaml` and `planning/epics/epic_5_1_neural_mcts.yaml`. Stale values
+  inside `planning/` are deliberately left uncorrected — correcting them would imply that abandoned
+  parallel planning system is alive (see `CHARTER.md` §3 NG-7).
+
 ### Code Hygiene & Modularity Program — Phase 1: MCTS Value-Semantics Correctness
 
 Landed on `claude/code-hygiene-modularity-skvtl6`. Program plan:

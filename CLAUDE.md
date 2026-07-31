@@ -1,6 +1,9 @@
 # CLAUDE.md - Project Context for AI Assistants
 
 > Quick reference for Claude Code and other AI assistants working on this codebase.
+> **Read `CHARTER.md` before planning any task** — it holds the project's scope, non-goals, and
+> invariants, and it governs whenever this file disagrees with it on those. This file governs
+> commands and day-to-day patterns.
 > For the implementation template, see:
 > - `docs/templates/MULTI_AGENT_MCTS_TEMPLATE.md` - Comprehensive template with C4 architecture (v2.0)
 
@@ -85,7 +88,7 @@ CONFIGURATION
 └── pyproject.toml               # Dependencies, tool config
 
 CORE FRAMEWORK
-├── src/framework/graph.py       # LangGraph orchestration
+├── src/framework/graph/         # LangGraph orchestration (package)
 ├── src/framework/mcts/core.py   # MCTS engine
 └── src/framework/factories.py   # Component factories
 
@@ -336,8 +339,8 @@ harness dry-run --spec specs/phase_1_correctness.SPEC.md  # plan only, no LLM
 - **CI traceability** (`harness spec-trace`, run by the `spec-validate` job on PRs): diffs
   touching `src/**` need a `spec/<id>` branch whose spec is `approved` on the base branch, or a
   `No-Spec: <reason>` commit trailer. Flips to `verified` require same-line `spec-id AC-n`
-  mappings under `tests/`. Until the first approved spec merges, the trailer is the expected
-  channel for all `src/**` work.
+  mappings under `tests/`. Approved specs exist, so the `spec/<id>` branch is the default channel
+  and the trailer is the written exception — see `CHARTER.md` §3 NG-4 and §7.
 
 Reusable project skills live in `.claude/skills/`: `quality-gate` (full local gate),
 `validate-specs` (validate all specs), `coverage-baseline` (refresh `docs/STATUS.md`).

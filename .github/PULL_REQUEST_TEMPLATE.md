@@ -27,6 +27,15 @@ Docs/governance/tooling-only PRs can state "N/A — no src/** changes".
 - Spec ID / branch: <!-- spec/<id>, or "N/A — no src/** changes" -->
 - Acceptance criteria addressed: <!-- AC-1, AC-2, ... or n/a -->
 
+## Charter impact
+
+<!--
+CHARTER.md §3 lists the project's non-goals and §4 its invariants. If this PR crosses one, it needs
+a carve-out ratified under §7 and recorded in the §8 ledger — not a silent exception.
+-->
+
+- [ ] No charter amendment required — or a carve-out is filed in `CHARTER.md` §8
+
 ## Checklist
 
 - [ ] Full local quality gate passes (`black --check`, `ruff`, `mypy src/`, `pytest --cov-fail-under=85`)

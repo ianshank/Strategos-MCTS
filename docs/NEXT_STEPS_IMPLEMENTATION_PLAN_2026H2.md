@@ -13,6 +13,9 @@ With the foundational MCTS architecture, GPU introspection, and testing gates st
 
 ### 1.1 Engineering Constraints (Non-Negotiable)
 
+> These four are the roadmap-local restatement of `CHARTER.md` §4, which is canonical and also
+> records how each is enforced: #1 → INV-9, #2 → INV-7, #3 → INV-1, #4 → INV-5.
+
 1. **Backward Compatibility:** No breaking changes to public signatures or the `DomainRegistry`. Single-GPU and CPU fallbacks must remain fully functional.
 2. **Spec-Driven Development (SDD):** Every phase below must be preceded by a formal `/spec-new` and approved by the `spec-review` gate before PR submission.
 3. **Pydantic Driven:** All new HPOs, scaling factors, and networking ports must flow through `SystemConfig` or `TrainingProfile`. No hardcoded values.

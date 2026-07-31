@@ -5,7 +5,7 @@ a DeepMind-style AI system with Neural MCTS and Hierarchical Reasoning (pre-inte
 [Known Limitations](#known-limitations)). Distributed on PyPI as `langgraph-multi-agent-mcts`.
 
 [![CI](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml/badge.svg)](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen.svg)](docs/STATUS.md)
+[![Coverage](https://img.shields.io/badge/coverage-90.15%25-brightgreen.svg)](docs/STATUS.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](pyproject.toml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](pyproject.toml)
@@ -61,6 +61,9 @@ graph TB
 - See **[`docs/STATUS.md`](docs/STATUS.md)** for the current, reproducible test/coverage status
   (the source of truth) and **[`docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`](docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md)**
   for the active roadmap. (`docs/archive/reports/GAP_ANALYSIS_REPORT.md` is retained for history but superseded.)
+- **[`CHARTER.md`](CHARTER.md)** states what this project is for, what it deliberately will *not* do,
+  and the invariants every change is judged against — including an honest record of which invariants
+  are actually gated and which are not.
 
 ## Key Features
 

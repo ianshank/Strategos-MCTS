@@ -1,3 +1,10 @@
+# ⚠️ DEPRECATED — this planning system is no longer maintained and must not be revived.
+# Work is planned in specs/*.SPEC.md (schema v2) and docs/plans/; measured status lives in
+# docs/STATUS.md. See CHARTER.md §3 NG-7 ("no second planning system").
+# The values below are deliberately left uncorrected: fixing them would imply this file is alive.
+# Known-stale examples: min_test_coverage is 80 here but the real gate is 85 (pyproject.toml);
+# the Python floor is >=3.11 here but the real floor is >=3.10.
+#
 # Multi-Agent MCTS Framework - Project Milestones
 # Auto-generated planning file following Agile methodology
 # Reference: universal-dev-agent prompt template

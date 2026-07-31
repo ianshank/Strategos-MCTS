@@ -1,3 +1,10 @@
+# ⚠️ DEPRECATED — see planning/milestones.yaml and CHARTER.md §3 NG-7.
+# Every artifact path listed below is fictional; this work landed at different locations:
+#   src/framework/mcts/neural_mcts.py, src/framework/mcts/neural_policies.py,
+#   src/training/self_play_trainer.py, src/models/policy_network.py, src/models/value_network.py.
+# The `status: planned` markers below are stale — the capability exists. Left uncorrected
+# deliberately; this file is a historical artifact, not a live plan.
+#
 # Epic 5.1: Neural MCTS
 # Part of Milestone 5: Advanced Features
 

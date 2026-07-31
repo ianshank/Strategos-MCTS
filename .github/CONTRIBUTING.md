@@ -58,9 +58,11 @@ Substantive work under `src/**` is specified before it is implemented:
    `origin/main`.
 
 **CI traceability:** a PR whose diff touches `src/**` needs either a `spec/<id>` branch with an approved
-spec on the base branch, **or** a `No-Spec: <reason>` trailer on the commit. Until the first approved spec
-merges, the `No-Spec:` trailer is the expected channel for `src/**` work. Documentation, governance, and
-tooling changes (like this file) do not require a spec.
+spec on the base branch, **or** a `No-Spec: <reason>` trailer on the commit. Approved specs now exist, so
+the `spec/<id>` branch is the **default** channel for `src/**` work and the `No-Spec:` trailer is the
+written exception — it must state a real reason, not simply assert one. Documentation, governance, and
+tooling changes (like this file) do not require a spec. See [`CHARTER.md`](../CHARTER.md) §3 NG-4 for the
+boundary this enforces and §7 for how exceptions are budgeted.
 
 ## Commit and PR conventions
 

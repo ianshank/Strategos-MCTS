@@ -1,4 +1,11 @@
+> Historical planning document — the Phase 4 work it describes has since landed; see
+> `docs/STATUS.md` for what is actually built and `CHARTER.md` for durable scope.
+
 # Phase 4: Agent Builder Benchmark - LangGraph MCTS vs Google ADK
+
+> **⚠️ Superseded / historical.** Retained for provenance. The "Status: Implementation Ready" line
+> below reflects the plan's original authoring, not the current tree — the benchmark framework it
+> proposes now exists under `src/benchmark/`.
 
 > **Template Version:** 2.0 | **Phase:** 4 of N | **Status:** Implementation Ready
 > **Design Principle:** Constraint programming over instruction writing. Define the feasible region,

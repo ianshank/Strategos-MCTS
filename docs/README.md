@@ -4,12 +4,16 @@ The map of Strategos-MCTS documentation, organized by purpose
 ([Diátaxis](https://diataxis.fr/): tutorials/how-to, reference, explanation, plus status and archives).
 Start with the [project README](../README.md) for installation and a feature overview.
 
-> **Source of truth for status:** [`STATUS.md`](STATUS.md) — the reproducible test/coverage baseline.
-> Point-in-time reports elsewhere are historical; where they disagree with `STATUS.md`, `STATUS.md` governs.
+> **Authority is scoped by axis, not by rank.** [`STATUS.md`](STATUS.md) governs **measured status** —
+> point-in-time reports elsewhere are historical, and where they disagree with `STATUS.md`, `STATUS.md`
+> governs. [`../CHARTER.md`](../CHARTER.md) governs **durable intent**: scope, non-goals, and invariants.
+> The two never overlap: the charter restates no measured value, and `STATUS.md` sets no boundary.
 
-## Status & roadmap
+## Charter, status & roadmap
 
-- [`STATUS.md`](STATUS.md) — reproducible test/coverage baseline (**source of truth**).
+- [`../CHARTER.md`](../CHARTER.md) — vision, scope, non-goals, invariants, amendment protocol
+  (**source of truth for intent**).
+- [`STATUS.md`](STATUS.md) — reproducible test/coverage baseline (**source of truth for status**).
 - [`NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`](NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md) — active roadmap.
 
 ## Explanation (architecture & concepts)
