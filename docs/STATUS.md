@@ -202,3 +202,25 @@ directory targets a pre-refactor API and is excluded from CI as well.
 
 `src/api/inference_server.py`, `src/api/rest_server.py`, and `src/games/chess/{ui,verification/game_verifier,verification/move_validator}.py`
 (`pyproject.toml [tool.coverage.run] omit`). REST request-path tests therefore cannot move the gate.
+
+## Code-hygiene & modularity program — LOC baseline (2026-07-30)
+
+Recorded at the start of the program described in `docs/plans/2026-07-30-code-hygiene-modularity.md`
+(spec `specs/hygiene_program_bootstrap.SPEC.md`, AC-4), on branch
+`claude/code-hygiene-modularity-skvtl6` at commit `39d180c`. `cloc` is not installed in this
+environment; the reproducible substitute is `find <dir> -name "*.py" | xargs wc -l` (same idiom used
+throughout the program's audit). Each destructive phase (P5-1..4, P6, P7b, P13) re-runs this exact
+command and records the delta in this section; the final total lands in the P14 close-out.
+
+| Tree | `.py` files | Lines (`wc -l` total) | Reproduce with |
+|---|---|---|---|
+| `src/` | 327 | 100,490 | `find src -name "*.py" \| xargs wc -l \| tail -1` |
+| `tests/` | 450 | 162,597 | `find tests -name "*.py" \| xargs wc -l \| tail -1` |
+| `training/` (root fork, target of `hygiene_train_delete`) | 43 | 28,642 | `find training -name "*.py" \| xargs wc -l \| tail -1` |
+| `specs/*.SPEC.md` | — | 41 files | `find specs -name "*.SPEC.md" \| wc -l` |
+
+The program's predicted net effect (see the plan's "Net effect" section) is roughly −50k `src/` LOC
+and −18k `tests/` LOC once all deletion and consolidation phases land; `training/` goes to 0 or to a
+small enumerated surviving surface per `hygiene_train_delete` AC-1. These are projections against
+the baseline above, not yet-measured results — each phase's PR pastes its own before/after delta
+here rather than relying on this prediction.
