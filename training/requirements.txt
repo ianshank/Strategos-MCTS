@@ -11,7 +11,7 @@
 
 # PyTorch - Core deep learning framework
 # Pin to 2.0+ for stable API and performance improvements
-torch~=2.0.0
+torch~=2.13.0
 
 # Hugging Face Transformers - Pre-trained models and training utilities
 # Pin to 4.30+ for latest model architectures and training improvements
