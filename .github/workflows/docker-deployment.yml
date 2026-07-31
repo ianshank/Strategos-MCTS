@@ -257,7 +257,7 @@ jobs:
           exit-code: '0'
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4.37.3
         # Guard on file existence and stay non-fatal if code scanning is unavailable.
         continue-on-error: true
         if: always() && hashFiles('trivy-results.sarif') != ''

@@ -521,7 +521,7 @@ jobs:
           exit-code: '0'
 
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4.37.3
         # Only upload when Trivy actually produced the SARIF (avoids
         # "Path does not exist: trivy-results.sarif" failing the job on a Trivy flake).
         # Advisory: don't fail the build if code scanning is unavailable on the repo
