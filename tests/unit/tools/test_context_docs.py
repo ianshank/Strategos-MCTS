@@ -87,7 +87,8 @@ def _make_repo(
         tmp_path / "src/framework/harness/intent/spec_validator.py",
         "SPEC_STATUSES = {" + ", ".join(f'"{s}"' for s in statuses) + "}\n",
     )
-    primer = f"fail_under = {fail_under}\n" + "\n".join(env_flags) + "\n" + primer_body
+    # The primer must name every declared console script — see `_check_console_scripts_documented`.
+    primer = f"fail_under = {fail_under}\n" + "\n".join(env_flags) + "\n" + "\n".join(scripts) + "\n" + primer_body
     _write(tmp_path / cd.ContextDocValidator.PRIMER, _SKILL.format(name="strategos-primer", body=primer))
     _write(
         tmp_path / cd.ContextDocValidator.GUIDE,
@@ -138,6 +139,22 @@ def test_governance_doc_coverage_gate_drift_is_flagged(tmp_path):
     (repo / "CHARTER.md").write_text("# Charter\n\nfail_under = 70.0\n", encoding="utf-8")
     failures = cd.ContextDocValidator(repo).validate()
     assert [f for f in failures if f.doc == "CHARTER.md" and "coverage gate drifted" in f.message]
+
+
+@pytest.mark.unit
+def test_declared_console_script_missing_from_primer_is_flagged(tmp_path):
+    """The drift that actually happened: a script is added, the primer's list is not updated.
+
+    Widening the pinned tuple cannot catch this — it only proves the scripts still exist. This check
+    runs the other direction, from pyproject to the prose.
+    """
+    repo = _make_repo(tmp_path)
+    primer = repo / cd.ContextDocValidator.PRIMER
+    text = primer.read_text(encoding="utf-8")
+    assert "validate-context-docs" in text
+    primer.write_text(text.replace("validate-context-docs", ""), encoding="utf-8")
+    failures = cd._check_console_scripts_documented(cd.ContextDocValidator(repo))
+    assert [f for f in failures if "validate-context-docs" in f.message and "not documented" in f.message]
 
 
 @pytest.mark.unit

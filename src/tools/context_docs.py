@@ -340,16 +340,44 @@ def _check_coverage_gate(v: ContextDocValidator) -> list[Failure]:
     return failures
 
 
-def _check_console_scripts(v: ContextDocValidator) -> list[Failure]:
+def _declared_console_scripts(v: ContextDocValidator) -> set[str] | None:
+    """Names under ``[project.scripts]``, or None when pyproject is unreadable."""
     pyproject = v.try_read("pyproject.toml")
     if pyproject is None:
-        return [Failure("pyproject.toml", "value-claim", "cannot read pyproject.toml")]
+        return None
     block = re.search(r"\[project\.scripts\](.*?)(?:\n\[|\Z)", pyproject, re.S)
-    defined = set(re.findall(r"^([A-Za-z][\w-]*)\s*=", block.group(1), re.M)) if block else set()
+    return set(re.findall(r"^([A-Za-z][\w-]*)\s*=", block.group(1), re.M)) if block else set()
+
+
+def _check_console_scripts(v: ContextDocValidator) -> list[Failure]:
+    defined = _declared_console_scripts(v)
+    if defined is None:
+        return [Failure("pyproject.toml", "value-claim", "cannot read pyproject.toml")]
     return [
         Failure("pyproject.toml", "value-claim", f"console script `{name}` no longer defined")
         for name in ("benchmark", "harness", "policy-lift", "self-play-convergence", "validate-context-docs")
         if name not in defined
+    ]
+
+
+def _check_console_scripts_documented(v: ContextDocValidator) -> list[Failure]:
+    """Every declared console script must be named in the primer.
+
+    Pinning a fixed tuple (:func:`_check_console_scripts`) only proves the scripts still *exist*; it
+    cannot notice that a doc enumerates a stale subset of them. That is precisely how the primer came
+    to claim "Three console scripts" after two more were added. This closes the loop in the other
+    direction: pyproject is the source, and the prose must keep up with it.
+    """
+    defined = _declared_console_scripts(v)
+    if defined is None:
+        return [Failure("pyproject.toml", "value-claim", "cannot read pyproject.toml")]
+    primer = v.try_read(v.PRIMER)
+    if primer is None:
+        return []
+    return [
+        Failure(v.PRIMER, "value-claim", f"console script `{name}` is declared but not documented in the primer")
+        for name in sorted(defined)
+        if name not in primer
     ]
 
 
@@ -410,6 +438,7 @@ def _check_absent_paths(v: ContextDocValidator) -> list[Failure]:
 VALUE_CLAIMS: tuple[ValueClaimCheck, ...] = (
     _check_coverage_gate,
     _check_console_scripts,
+    _check_console_scripts_documented,
     _check_env_flags,
     _check_spec_statuses,
     _check_settings_symbols,
