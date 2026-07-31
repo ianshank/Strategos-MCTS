@@ -39,7 +39,7 @@ pytest-asyncio>=0.21.0
 python-chess>=1.10.0
 
 # Selenium testing (optional - for UI tests)
-selenium>=4.15.0
+selenium>=4.46.0
 webdriver-manager>=4.0.0
 
 # Note: This demo now uses REAL trained models:
