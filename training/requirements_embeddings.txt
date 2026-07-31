@@ -10,7 +10,7 @@ pyyaml>=6.0
 
 # Sentence transformers (required for fallback)
 sentence-transformers>=2.2.0
-torch>=2.0.0
+torch>=2.13.0
 
 # Optional: API-based embeddings (install as needed)
 # Voyage AI (Top MTEB 2024)
