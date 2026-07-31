@@ -175,11 +175,14 @@ believes is enforced but is not is worse than one honestly labelled.
 1. **Configuration discipline.** All tunables and secrets flow through Pydantic Settings; shared
    defaults and bounds live in `src/config/constants.py`. No hardcoded keys or magic numbers.
    *Enforced by:* the secret scan in the `spec-validate` CI job (`.github/workflows/ci.yml`,
-   scoped to `src/` and `kubernetes/`), the repo-wide `secret-scan-gitleaks` job
-   (`.gitleaks.toml`), and the settings-symbol pin in `src/tools/context_docs.py`.
-   **Verdict: PARTIAL** — the two secret scans catch literal keys (one narrow-scope and
-   pattern-specific, one repo-wide and pattern-agnostic — see F-17), but nothing prevents a new
-   settings class outside `src/config/`, and several exist.
+   directory-scoped to `src/` and `kubernetes/`, and its `sk-[A-Za-z0-9]{20,}` pattern does not
+   match hyphenated vendor formats such as `sk-proj-...` or `sk-ant-api03-...` — the hyphen breaks
+   the character run before 20 chars), the `secret-scan-gitleaks` job (`.gitleaks.toml`, every
+   directory in the diff's commit range, using gitleaks' built-in vendor-format rules rather than
+   this repo's own pattern), and the settings-symbol pin in `src/tools/context_docs.py`.
+   **Verdict: PARTIAL** — the two secret scans catch literal keys (one narrow and, it turns out,
+   weaker than its own scope suggests; one broad and pattern-agnostic — see F-17), but nothing
+   prevents a new settings class outside `src/config/`, and several exist.
 2. **Asynchronous I/O.** New I/O paths use async/await, matching the graph's execution model.
    *Enforced by:* review only. **Verdict: ASPIRATIONAL.**
 3. **Dependency injection.** Components take their config, clients, and logger in the constructor

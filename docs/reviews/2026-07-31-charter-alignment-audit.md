@@ -220,6 +220,17 @@ scan, and the charter's INV-1 cites it as enforcement. But `.github/workflows/ci
 documentation file is invisible to it on **both** axes. The guard existed, was believed to cover this,
 and structurally could not.
 
+The pattern is weaker than "OpenAI-shaped" even implies: `sk-[A-Za-z0-9]{20,}` requires 20
+consecutive alphanumeric characters after `sk-`, but current OpenAI project keys
+(`sk-proj-...`) and Anthropic keys (`sk-ant-api03-...`) both embed a hyphen a few characters in,
+which breaks the character-class run before it reaches 20 — confirmed directly:
+`re.search(r"sk-[A-Za-z0-9]{20,}", "sk-proj-uJN73wUtmD...")` returns no match. This existing check
+predates this branch and is not touched here — patching a security-sensitive regex without a
+careful, independently-reviewed change is a worse trade than leaving it as a documented gap,
+especially now that `secret-scan-gitleaks` covers the same ground using gitleaks' maintained,
+vendor-format-aware ruleset rather than a hand-rolled pattern. Filed for `hygiene_ci_mechanical` or
+a dedicated hardening spec, not fixed here.
+
 *Disposition:* the value is **redacted here** and replaced with a placeholder. **Redaction is not
 remediation** — the key remains in git history and on the remote, so it must be treated as
 compromised and **rotated at wandb.ai/authorize**. That action is the maintainer's; this audit cannot
