@@ -111,7 +111,7 @@ hypothesis~=6.82.0  # Property-based testing
 # =============================================================================
 
 # Progress & Logging
-tqdm~=4.65.0  # Progress bars
+tqdm~=4.70.0  # Progress bars
 colorlog~=6.7.0  # Colored logging
 
 # Retry & Resilience
