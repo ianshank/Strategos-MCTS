@@ -1,6 +1,7 @@
 # AGENTS.md — Strategos-MCTS
 
 Routing ledger for autonomous agents. Keep ≤150 lines; prefer pointers over prose.
+Scope, non-goals, and invariants live in `CHARTER.md` — read it before planning.
 
 ## Setup
 

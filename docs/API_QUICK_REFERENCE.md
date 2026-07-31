@@ -1,11 +1,11 @@
 # API Quick Reference
 
-## Your Configured Providers
+## Provider Configuration (example shape — never commit real key material)
 
 ### OpenAI (Default)
 ```bash
 Provider: openai
-API Key: sk-proj-uJN73wUtmD...
+API Key: <set in .env, never committed>
 Model: gpt-4-turbo-preview
 Status: ✅ Working
 ```
@@ -13,14 +13,14 @@ Status: ✅ Working
 ### Anthropic
 ```bash
 Provider: anthropic  
-API Key: sk-ant-api03-OsXSRo...
+API Key: <set in .env, never committed>
 Model: claude-3-haiku-20240307
 Status: ⚠️ Check model availability
 ```
 
 ### Weights & Biases
 ```bash
-API Key: 26a08535e80a6d5d...
+API Key: <set in .env, never committed>
 Project: langgraph-mcts
 Status: ✅ Configured
 ```

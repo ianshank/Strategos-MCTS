@@ -197,7 +197,7 @@ class RNNMetaController(AbstractMetaController):
 ## 5. LangGraph State Machine Integration
 
 ```python
-# From: src/framework/graph.py
+# From: src/framework/graph/ (LangGraph orchestration package)
 class AgentState(TypedDict):
     """Shared state across all graph nodes."""
     query: str
@@ -418,4 +418,4 @@ class SequentialAgent(CompositeAgent):
 | Training (RNN) | `src/training/train_rnn.py` |
 | Training (BERT) | `src/training/train_bert_lora.py` |
 | Data Generator | `src/training/data_generator.py` |
-| Graph Integration | `src/framework/graph.py` |
+| Graph Integration | `src/framework/graph/` |

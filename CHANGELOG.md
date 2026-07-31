@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Governance — Project Charter
+
+Spec: `specs/charter_alignment.SPEC.md` (schema v2 draft).
+
+#### Added
+- **`CHARTER.md`** at the repository root — the project's durable-intent authority: vision, mission
+  with falsifiable demo clauses, scope, ten numbered non-goals with carve-out budgets, eleven
+  invariants each carrying its enforcement mechanism and an honest ENFORCED / PARTIAL / ASPIRATIONAL
+  verdict, themed roadmap gates, an amendment protocol, and an append-only carve-out ledger.
+  It declares an **axis-of-authority rule** so it does not compete with `docs/STATUS.md` (measured
+  status), the 2026H2 roadmap (sequenced work), or `PROJECT_STRUCTURE.md` (layout).
+- **`docs/reviews/2026-07-31-charter-alignment-audit.md`** — the charter-versus-tree audit, with
+  every finding carrying a path-and-line reference and a disposition.
+- A "Charter impact" section in `.github/PULL_REQUEST_TEMPLATE.md`.
+
+#### Fixed (documentation drift)
+- README coverage badge read 93%; the measured baseline in `docs/STATUS.md` is 90.15%.
+- `docs/STATUS.md` contradicted its own headline, still citing the superseded 93.35% figure.
+- `.github/CONTRIBUTING.md`, `CLAUDE.md`, and `.claude/skills/strategos-primer/SKILL.md` all told
+  contributors the `No-Spec:` trailer was the expected channel "until the first approved spec
+  merges" — a precondition that lapsed once approved specs landed.
+- Five live documents cited `src/framework/graph.py`; orchestration is the `src/framework/graph/`
+  package. Fixed in `CLAUDE.md`, both narrations of it in `.claude/skills/strategos-primer/SKILL.md`,
+  and `docs/KEY_CODE_SNIPPETS.md`. Banner-marked historical plans and the generic architecture
+  template are deliberately left alone.
+- The primer claimed three console scripts; `pyproject.toml` declares five. The checker now verifies
+  the direction that matters — every declared script must be named in the primer — rather than only
+  asserting that a fixed list still exists. `.claude/agents/strategos-guide.md` carried an
+  independent copy of the same stale list; rather than re-fixing a second copy, it now points at the
+  primer as the single enumeration, which is the failure mode this whole document argues against.
+- `docs/plans/2026-07-24-execute-m5.md` (an **active** plan) still cited the superseded 93.35%
+  coverage figure; `ATTRIBUTION.md` expanded TRM as "Tactical Reasoning Module" where every other
+  doc says "Task Refinement Module".
+
+#### Security
+- **Redacted a committed Weights & Biases API key** from `docs/API_CONFIGURATION_GUIDE.md`. The CI
+  secret scan could not see it on either axis: it is scoped to `src/` and `kubernetes/`, and its
+  pattern matches only `sk-`-shaped keys. **Redaction is not remediation — the key is in git history
+  and must be rotated.**
+- **F-20 — the fix above was incomplete, and its own guard would have made the gap worse.** A second
+  occurrence of the same key (its first 16 hex characters) survived at
+  `docs/API_QUICK_REFERENCE.md:23`, and the initial gitleaks allowlist covered that exact file by
+  whole path — the same "guard exists, cannot fire" shape as the original finding, freshly
+  introduced. All three example values in `docs/API_QUICK_REFERENCE.md` (OpenAI, Anthropic, W&B —
+  the section read as a real, committed local setup, not synthetic examples) are now generic
+  placeholders and should be treated as rotation candidates. `.gitleaks.toml`'s allowlist is
+  rewritten to literal-value matches only, with one structural exception (`.secrets.baseline`, whose
+  content is hash fingerprints, not secret values). Found by a separately-running adversarial review
+  after this PR first reported CI-green; recorded in the audit rather than fixed silently.
+- **Added a repo-wide `gitleaks` CI job** (`secret-scan-gitleaks`, `.gitleaks.toml`), closing the
+  scope gap above without replacing the existing `git grep` check. Spec:
+  `specs/security_secret_scan_hardening.SPEC.md`. Wired into the `summary` job's failure check from
+  day one. Config syntax validated locally (TOML, workflow YAML); no `gitleaks` binary was available
+  in this environment, so the scan's actual behavior is verified by the first CI run, not asserted
+  here.
+- The fail-loud invariant was stated as "both fallbacks are opt-in" in the primer and
+  `.claude/agents/strategos-guide.md`, but `ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK` defaults on.
+- Supersession banners added to `docs/plans/MVP_ROADMAP.md` and
+  `docs/plans/PHASE_4_TEMPLATE_PLAN.md`; an unratified-template banner to `docs/SLA.md` **and now
+  `docs/runbooks/incident-response.md`**, which made the identical unstaffed Operations
+  Team/PagerDuty/CTO-escalation claim (F-21) — the other three runbooks were checked and don't share
+  it; deprecation banners to `planning/milestones.yaml` and `planning/epics/epic_5_1_neural_mcts.yaml`.
+  Stale values inside `planning/` are deliberately left uncorrected — correcting them would imply
+  that abandoned parallel planning system is alive (see `CHARTER.md` §3 NG-7).
+- **F-21 — two `CHARTER.md` invariant verdicts were overstated.** INV-4 (hermetic unit tests) and
+  INV-7 (`src/**` spec-gating) were labelled ENFORCED; both downgraded to PARTIAL — INV-4 disables
+  common accidental network paths but has no actual socket block, and INV-7's trailer path accepts
+  any non-empty reason with no substance check. Also fixed: carve-out CO-2 was recorded
+  `CLOSED (merged)` while its own PR was still open (now `OPEN`, with §0/NG-4/budget-state updated to
+  match); the pre-charter `No-Spec:` commit count used an unanchored, overcounting grep (58 → the
+  anchored, `origin/main`-pinned figure is 57).
+
 ### Code Hygiene & Modularity Program — Phase 1: MCTS Value-Semantics Correctness
 
 Landed on `claude/code-hygiene-modularity-skvtl6`. Program plan:

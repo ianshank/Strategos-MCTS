@@ -1,3 +1,8 @@
+> **⚠️ UNRATIFIED TEMPLATE — not an operative commitment.** Like `docs/SLA.md`, this document
+> assumes a staffed "Operations Team" with PagerDuty on-call and a CTO escalation ladder that does
+> not exist for this project — see `CHARTER.md` §3 NG-1. Retained as reference for the alert-response
+> procedures below (Prometheus queries, remediation steps), which are useful independent of staffing.
+
 # Incident Response Runbook
 
 ## MCTS Framework Operations

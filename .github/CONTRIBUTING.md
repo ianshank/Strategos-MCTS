@@ -44,6 +44,9 @@ pytest tests/unit/ --cov=src --cov-fail-under=85    # 85% branch-coverage gate (
   [`docs/STATUS.md`](../docs/STATUS.md) (the single source of truth for test/coverage status).
 - **No hardcoded values:** all configuration flows through Pydantic Settings (`src/config/settings.py`).
   Never hardcode API keys, model names, or magic numbers.
+- **Secrets:** CI runs two independent scans — a fast `src/`/`kubernetes/`-scoped grep, and a
+  repo-wide, pattern-agnostic `gitleaks` scan (`.gitleaks.toml`). Both must pass; see the
+  `quality-gate` skill for how to run each locally.
 - **Async-first:** new I/O paths must be `async`; async tests use `@pytest.mark.asyncio` + `await`.
 - If you touch anything under `.claude/`, also run `validate-context-docs` (the `validate-context` skill).
 - If you touch `specs/`, run `harness validate-spec specs/*.SPEC.md`.
@@ -58,9 +61,11 @@ Substantive work under `src/**` is specified before it is implemented:
    `origin/main`.
 
 **CI traceability:** a PR whose diff touches `src/**` needs either a `spec/<id>` branch with an approved
-spec on the base branch, **or** a `No-Spec: <reason>` trailer on the commit. Until the first approved spec
-merges, the `No-Spec:` trailer is the expected channel for `src/**` work. Documentation, governance, and
-tooling changes (like this file) do not require a spec.
+spec on the base branch, **or** a `No-Spec: <reason>` trailer on the commit. Approved specs now exist, so
+the `spec/<id>` branch is the **default** channel for `src/**` work and the `No-Spec:` trailer is the
+written exception — it must state a real reason, not simply assert one. Documentation, governance, and
+tooling changes (like this file) do not require a spec. See [`CHARTER.md`](../CHARTER.md) §3 NG-4 for the
+boundary this enforces and §7 for how exceptions are budgeted.
 
 ## Commit and PR conventions
 

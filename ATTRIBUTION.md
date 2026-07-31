@@ -12,7 +12,7 @@ This project uses the following open-source datasets for training and testing. A
 **Dataset**: `adyen/DABstep`
 **URL**: https://huggingface.co/datasets/adyen/DABstep
 
-**Description**: DABStep contains 450+ data analysis tasks requiring sequential, iterative problem-solving. It is used for training HRM (Hierarchical Reasoning Module) and TRM (Tactical Reasoning Module) agents.
+**Description**: DABStep contains 450+ data analysis tasks requiring sequential, iterative problem-solving. It is used for training HRM (Hierarchical Reasoning Module) and TRM (Task Refinement Module) agents.
 
 **Citation**:
 ```

@@ -84,7 +84,7 @@ client = create_client(
 **Configuration**:
 ```python
 # In .env
-WANDB_API_KEY=26a08535e80a6d5d6f4a941f6a742264b25f4819
+WANDB_API_KEY=<your-wandb-api-key>   # 40-char hex, from https://wandb.ai/authorize
 
 # In code
 import wandb

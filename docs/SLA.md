@@ -1,3 +1,9 @@
+> **⚠️ UNRATIFIED TEMPLATE — not an operative commitment.** This document has never been ratified:
+> its contacts, jurisdiction, and approval block are unfilled placeholders, its dates are from
+> January 2025, and it names the project by a superseded title. Strategos-MCTS makes **no** uptime,
+> latency, or support-response commitment to anyone — see `CHARTER.md` §3 NG-1. Retained for
+> reference as a starting point should the project ever be operated as a service.
+
 # Service Level Agreement (SLA)
 
 ## LangGraph Multi-Agent MCTS Framework

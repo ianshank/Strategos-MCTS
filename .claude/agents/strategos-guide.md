@@ -45,16 +45,22 @@ never present an extension point or unfinished path as finished.
 | Agent harness | `src/framework/harness/` (`cli.py`, `loop/`, `tools/`, `hooks/`, `topology/`, `ralph/`, `replay/`, `intent/`) |
 | Spec-driven dev | `src/framework/harness/intent/{spec_loader,spec_validator,spec_trace}.py`; `specs/` |
 
-Console scripts (`pyproject.toml [project.scripts]`): `benchmark`, `harness`, `policy-lift`.
+Console scripts: see `strategos-primer`'s "Workflows & commands" for the full, current list — kept
+in one place rather than duplicated here, since the duplicate copy is exactly how this list went
+stale before (see `CHARTER.md` audit F-5).
 
 ## Invariants a change is judged against — flag any proposal that violates one
+
+> Canonical statement lives in `CHARTER.md` §4, which also records how each is enforced and whether
+> the enforcement is real. The list below is the working restatement; where they differ, the charter
+> governs.
 
 1. **Config via Pydantic Settings** (`get_settings`); no hardcoded keys or tunables — a `sk-` grep runs in the gate.
 2. **Async I/O** for new I/O paths.
 3. **Dependency injection** — config, clients, and logger are passed into `__init__`, not constructed internally.
 4. **Unit tests never touch the network** — mock all I/O; real calls live in integration/e2e behind markers.
 5. **Branch-coverage gate** `fail_under = 85.0` (`pyproject.toml`).
-6. **Fail loud by default** — mock-LLM / lightweight-framework fallbacks are opt-in env flags, not silent defaults.
+6. **Fail loud by default** — the mock-LLM fallback is an opt-in env flag, not a silent default. (The lightweight-framework fallback currently defaults **on**; see `CHARTER.md` §4 INV-6.)
 7. **`src/**` changes are spec-gated** — a `spec/<id>` branch whose spec is `approved`, or a `No-Spec: <reason>` commit trailer.
 8. **Structured, secret-safe logging** — log with a `correlation_id`; pass sensitive data through `sanitize_dict`.
 

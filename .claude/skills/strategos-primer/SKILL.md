@@ -17,9 +17,8 @@ description: >-
 Orientation to this codebase for anyone starting work, explaining the design, or making a change that
 crosses subsystems. `CLAUDE.md` is the always-on quick reference (commands, patterns); this skill is
 the map you consult when you need the whole picture and where things actually live. Paths here were
-verified against the current tree — where `CLAUDE.md`'s "Key File Locations" table disagrees, it lists
-`src/framework/graph.py`, but orchestration is now the `src/framework/graph/` package (its
-`src/framework/factories.py` entry is still correct — see the factory rows below).
+verified against the current tree; orchestration lives in the `src/framework/graph/` package, and
+`src/framework/factories.py` is the component-factory entry point (see the factory rows below).
 
 ## What the system is
 
@@ -98,9 +97,10 @@ These are the rules a change is judged against — violating one is how a PR fai
 5. **Coverage is a gate, not a report.** Branch coverage `fail_under = 85.0` (`pyproject.toml`).
    `src/api/rest_server.py`, `src/api/inference_server.py`, and three `src/games/chess/` modules are
    config-omitted and won't show as movable targets.
-6. **Fail loud by default.** Mock LLM / lightweight-framework fallbacks are **opt-in** via
-   `ALLOW_MOCK_LLM_FALLBACK` / `ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK`; without them the service errors
-   rather than silently serving mock output.
+6. **Fail loud by default.** The mock-LLM fallback is **opt-in** via `ALLOW_MOCK_LLM_FALLBACK`
+   (default off); without it the service errors rather than silently serving mock output.
+   `ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK` currently defaults **on**, so this invariant holds only
+   partially — see `CHARTER.md` §4 INV-6 and the audit in `docs/reviews/`.
 7. **`src/**` changes are spec-gated.** A change under `src/**` needs either a `spec/<id>` branch whose
    spec is `approved`, or a `No-Spec: <reason>` commit trailer. A PreToolUse hook
    (`.claude/hooks/spec_gate.py`) warns in-editor; the CI `spec-validate` job enforces it. See below.
@@ -109,12 +109,14 @@ These are the rules a change is judged against — violating one is how a PR fai
 
 ## Workflows & commands
 
-Three console scripts (declared in `pyproject.toml [project.scripts]`):
+Five console scripts (declared in `pyproject.toml [project.scripts]`):
 
 ```bash
-benchmark      # = python -m src.benchmark  — system-vs-system evaluation
-harness        # autonomous agent loop: run | dry-run | replay | validate-spec | spec-trace | spec-new
-policy-lift    # measure MCTS policy improvement (the M5 ≥20%-lift acceptance metric)
+benchmark              # = python -m src.benchmark  — system-vs-system evaluation
+harness                # autonomous agent loop: run | dry-run | replay | validate-spec | spec-trace | spec-new
+policy-lift            # measure MCTS policy improvement (the M5 ≥20%-lift acceptance metric)
+self-play-convergence  # self-play training convergence run
+validate-context-docs  # deterministic doc-vs-tree validation (see /validate-context)
 ```
 
 Reusable project skills (invoke by name) cover the routine loops so you don't reconstruct them:
@@ -135,7 +137,8 @@ lifecycle `draft → approved → implemented → verified → superseded`; body
 - `/spec-implement <id>` requires `approved`, then cuts/switches to the `spec/<id>` branch from
   `origin/main`.
 - CI traceability (`harness spec-trace`) requires `src/**` diffs to map to an approved spec or carry a
-  `No-Spec: <reason>` trailer. Until the first approved spec merges, the trailer is the expected channel.
+  `No-Spec: <reason>` trailer. Approved specs exist, so the `spec/<id>` branch is the default channel and
+  the trailer is the written exception (see `CHARTER.md` §3 NG-4).
 
 Full detail: `CLAUDE.md` → "Spec-Driven Development", and `docs/plans/SDD_PLUGIN_EXTRACTION_PLAN.md`
 (the plan to package this toolchain as the reusable `claude-code-foundry` plugin).
@@ -155,10 +158,9 @@ Full detail: `CLAUDE.md` → "Spec-Driven Development", and `docs/plans/SDD_PLUG
 
 ## Gotchas
 
-- **One `CLAUDE.md` path drift.** Its "Key File Locations" lists `src/framework/graph.py`, but
-  orchestration is now the `src/framework/graph/` package. Its `src/framework/factories.py` entry is
-  still correct — that module holds the core factories, and `src/framework/component_factory/` is a
-  *separate* training-factory package, not a replacement.
+- **Two similarly-named factory homes.** `src/framework/factories.py` holds the core factories;
+  `src/framework/component_factory/` is a *separate* training-factory package, not a replacement.
+  Orchestration lives in the `src/framework/graph/` package.
 - **Local test skips.** LMStudio tests need a local server (`LMSTUDIO_SKIP=1` to skip); Pinecone tests
   need a key or mocks; neural MCTS is slow on CPU (use CUDA or fewer iterations).
 - **Persisted-artifact formats changed.** Substructure library is JSON; the experience buffer is

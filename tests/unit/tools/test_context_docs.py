@@ -66,12 +66,13 @@ def _make_repo(
     tmp_path: Path,
     *,
     fail_under: str = "85.0",
-    scripts=("benchmark", "harness", "policy-lift"),
+    scripts=("benchmark", "harness", "policy-lift", "self-play-convergence", "validate-context-docs"),
     env_flags=_ENV_FLAGS,
     statuses=_STATUSES,
     symbols=("class Settings", "def get_settings"),
     primer_body: str = "",
     guide_body: str = "",
+    charter_body: str | None = "",
 ) -> Path:
     """Build a minimal but internally-consistent repo so `validate()` passes by default."""
     scripts_block = "\n".join(f'{name} = "pkg:main"' for name in scripts)
@@ -86,18 +87,90 @@ def _make_repo(
         tmp_path / "src/framework/harness/intent/spec_validator.py",
         "SPEC_STATUSES = {" + ", ".join(f'"{s}"' for s in statuses) + "}\n",
     )
-    primer = f"fail_under = {fail_under}\n" + "\n".join(env_flags) + "\n" + primer_body
+    # The primer must name every declared console script — see `_check_console_scripts_documented`.
+    primer = f"fail_under = {fail_under}\n" + "\n".join(env_flags) + "\n" + "\n".join(scripts) + "\n" + primer_body
     _write(tmp_path / cd.ContextDocValidator.PRIMER, _SKILL.format(name="strategos-primer", body=primer))
     _write(
         tmp_path / cd.ContextDocValidator.GUIDE,
         _AGENT.format(name="strategos-guide", body=f"fail_under = {fail_under}\n{guide_body}"),
     )
+    # ``charter_body=None`` omits the charter entirely, so its absence can be asserted.
+    if charter_body is not None:
+        for rel in cd.ContextDocValidator.GOVERNANCE_DOCS:
+            _write(tmp_path / rel, f"# Charter\n\nfail_under = {fail_under}\n{charter_body}\n")
     return tmp_path
 
 
 @pytest.mark.unit
 def test_synthetic_repo_is_clean_by_default(tmp_path):
     assert cd.ContextDocValidator(_make_repo(tmp_path)).validate() == []
+
+
+# --------------------------------------------------------------------------- governance docs
+
+
+@pytest.mark.unit
+def test_missing_governance_doc_is_flagged(tmp_path):
+    """A charter that can silently disappear cannot govern anything — its absence must fail."""
+    repo = _make_repo(tmp_path, charter_body=None)
+    failures = cd.ContextDocValidator(repo).validate()
+    assert [f for f in failures if f.doc in cd.ContextDocValidator.GOVERNANCE_DOCS and "missing" in f.message]
+
+
+@pytest.mark.unit
+def test_governance_doc_paths_are_checked(tmp_path):
+    repo = _make_repo(tmp_path, charter_body="Orchestration lives in `src/does/not/exist.py`.")
+    failures = cd.ContextDocValidator(repo).validate()
+    assert [f for f in failures if f.doc == "CHARTER.md" and "not found" in f.message]
+
+
+@pytest.mark.unit
+def test_governance_doc_needs_no_frontmatter(tmp_path):
+    """The charter carries no YAML block; it must bypass the frontmatter check, not fail it."""
+    repo = _make_repo(tmp_path)
+    assert "---" not in (repo / "CHARTER.md").read_text(encoding="utf-8")
+    assert [f for f in cd.ContextDocValidator(repo).validate() if f.category == "frontmatter"] == []
+
+
+@pytest.mark.unit
+def test_governance_doc_coverage_gate_drift_is_flagged(tmp_path):
+    """The charter is pinned to pyproject's fail_under exactly as the primer and guide are."""
+    repo = _make_repo(tmp_path)
+    (repo / "CHARTER.md").write_text("# Charter\n\nfail_under = 70.0\n", encoding="utf-8")
+    failures = cd.ContextDocValidator(repo).validate()
+    assert [f for f in failures if f.doc == "CHARTER.md" and "coverage gate drifted" in f.message]
+
+
+@pytest.mark.unit
+def test_declared_console_script_missing_from_primer_is_flagged(tmp_path):
+    """The drift that actually happened: a script is added, the primer's list is not updated.
+
+    Widening the pinned tuple cannot catch this — it only proves the scripts still exist. This check
+    runs the other direction, from pyproject to the prose.
+    """
+    repo = _make_repo(tmp_path)
+    primer = repo / cd.ContextDocValidator.PRIMER
+    text = primer.read_text(encoding="utf-8")
+    assert "validate-context-docs" in text
+    primer.write_text(text.replace("validate-context-docs", ""), encoding="utf-8")
+    failures = cd._check_console_scripts_documented(cd.ContextDocValidator(repo))
+    assert [f for f in failures if "validate-context-docs" in f.message and "not documented" in f.message]
+
+
+@pytest.mark.unit
+def test_all_five_console_scripts_are_pinned(tmp_path):
+    """Regression: pinning only the original three let the primer's script list drift undetected."""
+    for dropped in ("self-play-convergence", "validate-context-docs"):
+        repo = _make_repo(
+            tmp_path / dropped,
+            scripts=tuple(
+                s
+                for s in ("benchmark", "harness", "policy-lift", "self-play-convergence", "validate-context-docs")
+                if s != dropped
+            ),
+        )
+        failures = cd.ContextDocValidator(repo).validate()
+        assert [f for f in failures if dropped in f.message], f"`{dropped}` is not pinned"
 
 
 # --------------------------------------------------------------------------- path existence
@@ -227,13 +300,17 @@ def test_empty_description_flagged_folded_accepted(tmp_path):
 
 @pytest.mark.unit
 def test_coverage_gate_drift(tmp_path):
-    # Source says 90.0 but the primer still quotes 85.0 → drift on both primer and guide.
+    # Source says 90.0 but the docs still quote 85.0 → drift on the primer, guide, and charter.
     repo = _make_repo(tmp_path)
     (repo / "pyproject.toml").write_text(
         '[tool.coverage.report]\nfail_under = 90.0\n\n[project.scripts]\nbenchmark = "x:m"\nharness = "x:m"\npolicy-lift = "x:m"\n'
     )
     failures = cd._check_coverage_gate(cd.ContextDocValidator(repo))
-    assert {f.doc for f in failures} == {cd.ContextDocValidator.PRIMER, cd.ContextDocValidator.GUIDE}
+    assert {f.doc for f in failures} == {
+        cd.ContextDocValidator.PRIMER,
+        cd.ContextDocValidator.GUIDE,
+        *cd.ContextDocValidator.GOVERNANCE_DOCS,
+    }
 
 
 @pytest.mark.unit

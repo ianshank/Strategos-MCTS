@@ -1,4 +1,12 @@
+> Historical planning document — figures and gap claims herein are superseded; see `docs/STATUS.md`
+> for the current baseline and `CHARTER.md` for durable scope.
+
 # MVP Gaps Analysis & Roadmap
+
+> **⚠️ Superseded / historical.** Retained for provenance. Its stated counts and blockers no longer
+> describe the tree: it claims "217 Python source files" (`src/` now holds 327) and "No CI/CD
+> pipeline" (a multi-job pipeline exists at `.github/workflows/ci.yml`). Current status lives in
+> `docs/STATUS.md`; the active roadmap is `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`.
 
 > Analysis of gaps between current codebase state and a demo-able MVP,
 > with short/medium/long-term implementation plans.

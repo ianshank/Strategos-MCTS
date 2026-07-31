@@ -3,6 +3,7 @@
 ```
 langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 ├── README.md                    # Project overview and quick start
+├── CHARTER.md                   # Durable intent: vision, scope, non-goals, invariants
 ├── CHANGELOG.md                 # Version history
 ├── ATTRIBUTION.md               # Third-party attributions
 ├── LICENSE                      # MIT license
@@ -145,7 +146,8 @@ langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 ### Layout & naming disambiguation
 
 Several names look similar but serve distinct roles; they are intentionally **not** merged because doing so
-would break import contracts, Docker build context, or fresh-clone tests:
+would break import contracts, Docker build context, or fresh-clone tests. `CHARTER.md` §3 records these as
+"Recorded divergence" and NG-10 makes not-merging-them a non-goal — this section governs the detail:
 
 - **`config/` (runtime data) vs `src/config/` (code).** `config/` holds deployment YAML/JSON that is
   `COPY`-ed into the image (`Dockerfile`); `src/config/` is the Pydantic Settings + constants **code**

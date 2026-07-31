@@ -170,6 +170,23 @@ jobs:
           "
           fi
 
+  secret-scan-gitleaks:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 — gitleaks-action scans the commit range introduced by this push/PR, which
+      # needs full history to resolve; it does not rescan the repository's entire prior history.
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
   dependency-audit:
     name: Dependency Vulnerability Scan
     runs-on: ubuntu-latest
@@ -541,7 +558,7 @@ jobs:
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [lint, spec-validate, type-check, security-scan, dependency-audit, test, build-check, docker-build]
+    needs: [lint, spec-validate, type-check, security-scan, secret-scan-gitleaks, dependency-audit, test, build-check, docker-build]
     if: always()
     steps:
       - name: Check all job results
@@ -551,6 +568,7 @@ jobs:
           echo "Spec Validate:     ${{ needs.spec-validate.result }}"
           echo "Type Check:        ${{ needs.type-check.result }}"
           echo "Security Scan:     ${{ needs.security-scan.result }}"
+          echo "Secret Scan:       ${{ needs.secret-scan-gitleaks.result }}"
           echo "Dependency Audit:  ${{ needs.dependency-audit.result }}"
           echo "Tests:             ${{ needs.test.result }}"
           echo "Build Check:       ${{ needs.build-check.result }}"
@@ -560,6 +578,7 @@ jobs:
           if [[ "${{ needs.lint.result }}" == "failure" ]] || \
              [[ "${{ needs.spec-validate.result }}" == "failure" ]] || \
              [[ "${{ needs.type-check.result }}" == "failure" ]] || \
+             [[ "${{ needs.secret-scan-gitleaks.result }}" == "failure" ]] || \
              [[ "${{ needs.test.result }}" == "failure" ]] || \
              [[ "${{ needs.build-check.result }}" == "failure" ]] || \
              [[ "${{ needs.docker-build.result }}" == "failure" ]]; then
