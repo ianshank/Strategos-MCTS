@@ -292,11 +292,16 @@ class ContextDocValidator:
         for rel in self.GOVERNANCE_DOCS:
             governance_text = self.try_read(rel)
             if governance_text is None:
+                logger.debug("%s: governance doc missing", rel)
                 failures.append(Failure(rel, "path", "governance doc is missing"))
                 continue
-            failures += self.check_paths(self.repo / rel, governance_text)
+            doc_failures = self.check_paths(self.repo / rel, governance_text)
+            logger.debug("%s: governance doc checked, %d path failure(s)", rel, len(doc_failures))
+            failures += doc_failures
         for claim in VALUE_CLAIMS:
-            failures += claim(self)
+            claim_failures = claim(self)
+            logger.debug("%s: %d failure(s)", claim.__name__, len(claim_failures))
+            failures += claim_failures
         return failures
 
 

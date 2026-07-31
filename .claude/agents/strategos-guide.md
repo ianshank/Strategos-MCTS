@@ -45,7 +45,9 @@ never present an extension point or unfinished path as finished.
 | Agent harness | `src/framework/harness/` (`cli.py`, `loop/`, `tools/`, `hooks/`, `topology/`, `ralph/`, `replay/`, `intent/`) |
 | Spec-driven dev | `src/framework/harness/intent/{spec_loader,spec_validator,spec_trace}.py`; `specs/` |
 
-Console scripts (`pyproject.toml [project.scripts]`): `benchmark`, `harness`, `policy-lift`.
+Console scripts: see `strategos-primer`'s "Workflows & commands" for the full, current list — kept
+in one place rather than duplicated here, since the duplicate copy is exactly how this list went
+stale before (see `CHARTER.md` audit F-5).
 
 ## Invariants a change is judged against — flag any proposal that violates one
 
