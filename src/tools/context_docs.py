@@ -129,6 +129,12 @@ class ContextDocValidator:
     PRIMER = ".claude/skills/strategos-primer/SKILL.md"
     GUIDE = ".claude/agents/strategos-guide.md"
 
+    #: Root-level governance docs validated for *path existence only*. They carry no YAML
+    #: frontmatter, so they deliberately bypass :meth:`check_frontmatter` rather than joining
+    #: :meth:`iter_docs`. A missing entry is itself a failure: the charter's existence is gated,
+    #: because a charter that can silently disappear cannot govern anything.
+    GOVERNANCE_DOCS: tuple[str, ...] = ("CHARTER.md",)
+
     def __init__(self, repo_root: Path | str | None = None) -> None:
         self.repo = Path(repo_root) if repo_root is not None else _DEFAULT_REPO_ROOT
 
@@ -283,6 +289,12 @@ class ContextDocValidator:
             text = doc.read_text(encoding="utf-8")
             failures += self.check_frontmatter(doc, text)
             failures += self.check_paths(doc, text)
+        for rel in self.GOVERNANCE_DOCS:
+            governance_text = self.try_read(rel)
+            if governance_text is None:
+                failures.append(Failure(rel, "path", "governance doc is missing"))
+                continue
+            failures += self.check_paths(self.repo / rel, governance_text)
         for claim in VALUE_CLAIMS:
             failures += claim(self)
         return failures
@@ -321,7 +333,7 @@ def _check_coverage_gate(v: ContextDocValidator) -> list[Failure]:
         return [Failure("pyproject.toml", "value-claim", "no coverage `fail_under` found")]
     literal = f"fail_under = {match.group(1)}"
     failures: list[Failure] = []
-    for rel in (v.PRIMER, v.GUIDE):
+    for rel in (v.PRIMER, v.GUIDE, *v.GOVERNANCE_DOCS):
         text = v.try_read(rel)
         if text is not None and literal not in text:
             failures.append(Failure(rel, "value-claim", f"coverage gate drifted: expected `{literal}`"))
@@ -336,7 +348,7 @@ def _check_console_scripts(v: ContextDocValidator) -> list[Failure]:
     defined = set(re.findall(r"^([A-Za-z][\w-]*)\s*=", block.group(1), re.M)) if block else set()
     return [
         Failure("pyproject.toml", "value-claim", f"console script `{name}` no longer defined")
-        for name in ("benchmark", "harness", "policy-lift")
+        for name in ("benchmark", "harness", "policy-lift", "self-play-convergence", "validate-context-docs")
         if name not in defined
     ]
 
@@ -437,7 +449,8 @@ def main(argv: list[str] | None = None) -> int:
         for failure in failures:
             print(f"  - {failure}", file=sys.stderr)
     else:
-        print(f"Context-doc validation OK — {len(validator.iter_docs())} doc(s) checked, all claims verified.")
+        checked = len(validator.iter_docs()) + len(validator.GOVERNANCE_DOCS)
+        print(f"Context-doc validation OK — {checked} doc(s) checked, all claims verified.")
     return 1 if failures else 0
 
 

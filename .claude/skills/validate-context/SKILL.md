@@ -2,12 +2,13 @@
 name: validate-context
 description: >-
   Deterministically validate the repo's Claude context docs — every skill under .claude/skills and
-  every agent under .claude/agents (e.g. strategos-primer, strategos-guide) — against the real tree:
-  frontmatter schema, that every cited file path still resolves, and that pinned value claims
-  (coverage gate, console scripts, env flags, spec statuses) still match their sources. Use this
-  whenever you add or edit a skill or agent, before pushing changes under .claude/, or when you
-  suspect an orientation doc has drifted from the code it describes. Pure filesystem + regex — no
-  network, no LLM, same tree in, same verdict out.
+  every agent under .claude/agents (e.g. strategos-primer, strategos-guide) — plus the root
+  governance doc CHARTER.md, against the real tree: frontmatter schema, that every cited file path
+  still resolves, and that pinned value claims (coverage gate, console scripts, env flags, spec
+  statuses) still match their sources. Use this whenever you add or edit a skill, agent, or the
+  charter, before pushing changes under .claude/, or when you suspect an orientation doc has drifted
+  from the code it describes. Pure filesystem + regex — no network, no LLM, same tree in, same
+  verdict out.
 ---
 
 # Validate Context Docs
@@ -30,7 +31,9 @@ What it verifies (engine in `src/tools/context_docs.py`, thin `scripts/validate_
 wrapped by `tests/unit/tools/test_context_docs.py`):
 
 1. **Frontmatter schema** — every skill/agent doc has `name` + `description` (agents also `tools`),
-   and `name` matches the file/dir.
+   and `name` matches the file/dir. Root governance docs (`GOVERNANCE_DOCS`, currently `CHARTER.md`)
+   carry no frontmatter, so they are path-checked only — but a *missing* one is a failure, so the
+   charter's existence is itself gated.
 2. **Path existence** — every backticked repo path a doc cites resolves on disk. Brace groups such
    as `src/adapters/llm/{base,resilience}.py` expand to each file; a bare filename resolves against
    the nearest directory cited on the same line.
