@@ -45,7 +45,8 @@ deliberately does **not** operate as a hosted service with uptime commitments, d
 fallbacks, does not accept capability claims that no command can reproduce, and does not maintain a
 second planning system beside `specs/`.
 
-The charter has **0 active carve-outs against 10 non-goals** (2 closed, recorded in §8). No full
+The charter has **1 active carve-out against 10 non-goals** (CO-2, open pending this PR's merge; one
+prior carve-out closed — recorded in §8). No full
 charter review has yet occurred. Execution detail lives in
 `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`; this document defines intent, boundaries, and
 invariants only.
@@ -150,10 +151,10 @@ requires a full charter review under §7.4.
 
 | ID | Non-goal | Status | Active carve-outs |
 |------|----------|--------|-------------------|
-| NG-1 | Strategos-MCTS is not a hosted or managed service, and makes no uptime, latency, or support-response commitment to anyone. *(Rationale: an availability promise the maintainer cannot staff is a promise that will be broken; `docs/SLA.md` is an unratified template retained for reference only.)* | ACTIVE | 0 / 0 |
+| NG-1 | Strategos-MCTS is not a hosted or managed service, and makes no uptime, latency, or support-response commitment to anyone. *(Rationale: an availability promise the maintainer cannot staff is a promise that will be broken; `docs/SLA.md` and `docs/runbooks/incident-response.md` are unratified templates retained for reference only.)* | ACTIVE | 0 / 0 |
 | NG-2 | No silent fallback. A degraded path never becomes the default without being named in this charter and defaulted off. *(Rationale: silently serving mock or lightweight output makes every downstream measurement untrustworthy, and the damage is discovered long after the fact.)* | ACTIVE | 0 / 0 |
 | NG-3 | No capability, metric, or status claim appears in any document unless a named command reproduces it from the tree. *(Rationale: this is §1's never-sacrifice restated as an enforceable boundary; an unreproducible claim is indistinguishable from a false one.)* | ACTIVE | 0 / 0 |
-| NG-4 | No change under `src/` lands without either an approved spec on its own branch or a written, reasoned exception recorded in the commit. *(Rationale: untraceable changes are why the invariants below drifted from the code in the first place.)* | ACTIVE | 0 / 2 |
+| NG-4 | No change under `src/` lands without either an approved spec on its own branch or a written, reasoned exception recorded in the commit. *(Rationale: untraceable changes are why the invariants below drifted from the code in the first place.)* | ACTIVE | 1 / 2 |
 | NG-5 | The branch-coverage gate is never lowered, and modules are never added to the coverage omit list to make it pass. *(Rationale: a gate that moves to meet the code is a report, not a gate.)* | ACTIVE | 0 / 0 |
 | NG-6 | No breaking change to public signatures or the domain registry; CPU-only and single-GPU paths stay functional. *(Rationale: the framework's value is as a comparable baseline, which requires that old experiments still run.)* | ACTIVE | 0 / 2 |
 | NG-7 | No second planning system. Work is planned in `specs/` and `docs/plans/`; `planning/` is not revived. *(Rationale: two planning systems means neither is trusted, which is exactly what happened to `planning/`.)* | ACTIVE | 0 / 1 |
@@ -187,7 +188,10 @@ believes is enforced but is not is worse than one honestly labelled.
    **Verdict: ASPIRATIONAL.**
 4. **Unit tests are hermetic.** No real network or API calls under `tests/unit/`; all external I/O is
    mocked. *Enforced by:* the CI test job's environment, which forces offline hub and tracing modes
-   and injects a dummy API key (`.github/workflows/ci.yml`). **Verdict: ENFORCED.**
+   and injects a dummy API key (`.github/workflows/ci.yml`). **Verdict: PARTIAL** — this disables the
+   common accidental paths (HF Hub, W&B, LangChain tracing) but there is no actual socket block
+   (no `pytest-socket` or equivalent in `pyproject.toml` or `tests/conftest.py`); a test making a raw call to
+   an unrelated host would not be stopped.
 5. **Coverage is a gate, not a report.** Branch coverage must stay at or above `fail_under = 85.0`,
    declared in `pyproject.toml` and enforced in CI. *Scope, stated honestly:* the CI gate measures
    `tests/unit/` only, and the coverage configuration omits the two `src/api/` server modules and
@@ -202,7 +206,10 @@ believes is enforced but is not is worse than one honestly labelled.
    deliberate decision, not a drive-by fix.
 7. **Changes under `src/` are spec-gated.** A change needs an approved spec on its own branch or a
    written exception trailer. *Enforced by:* the `spec-validate` CI job's traceability step and the
-   editor-time hook at `.claude/hooks/spec_gate.py`. **Verdict: ENFORCED (hook warns, CI enforces).**
+   editor-time hook at `.claude/hooks/spec_gate.py`. **Verdict: PARTIAL** — CI genuinely blocks a
+   diff with *neither* an approved spec nor a trailer, but the trailer path is a total, unreviewed
+   bypass: `src/framework/harness/intent/spec_trace.py` accepts any non-empty `No-Spec: <reason>` string with no check on the
+   reason's substance, and in practice it has been the default channel, not the exception (§8).
 8. **Logs are structured and secret-safe.** Log with a correlation id and pass sensitive data through
    the sanitizer so secrets are masked. *Enforced by:* the secret scan only, which catches literals
    in source rather than secrets reaching a log sink. **Verdict: ASPIRATIONAL.**
@@ -359,14 +366,16 @@ Compensating controls, all of which this repository can actually run:
 | CO | Date | NG | Title | Ratified by | Status |
 |----|------|----|-------|-------------|--------|
 | CO-1 | 2026-07-30 | NG-4 | Documented exception for the MCTS value-semantics bugfix, which had to precede an open approved spec's implementation. Recorded in `CHANGELOG.md` and the hygiene program's governance section. | maintainer | CLOSED (merged) |
-| CO-2 | 2026-07-31 | NG-4 | Tooling-only extension of the deterministic documentation validator so this charter's own claims are mechanically checked. Defeats no check; adds one. | maintainer | CLOSED (merged) |
+| CO-2 | 2026-07-31 | NG-4 | Tooling-only extension of the deterministic documentation validator so this charter's own claims are mechanically checked. Defeats no check; adds one. | maintainer (this PR) | OPEN — closes on merge per §7.2's expiry definition |
 
-**Budget state (2026-07-31):** 0 active carve-outs / 10 non-goals · last 30-day window: 2
-ratifications of a maximum 3 · cumulative granted: 2 of 8 · last full review: never.
+**Budget state (2026-07-31):** 1 active carve-out (CO-2, pending merge) / 10 non-goals · last 30-day
+window: 2 ratifications of a maximum 3 · cumulative granted: 2 of 8 · last full review: never.
 
 > **Pre-charter history, recorded once and not retroactively ratified.** Before this charter existed,
-> 58 commits carried a written exception trailer for changes under `src/`, which means the exception
-> was the de-facto default channel rather than the exception NG-4 describes. Those changes are not
-> re-opened and are not entered in this ledger individually; the ledger begins with the rows above.
-> The gap between NG-4's intent and that history is the reason NG-4 carries a budget at all, and
-> closing it is tracked as part of Gate G-M5.
+> `main` carried **57 commits** with a `No-Spec:` trailer (`git log --grep="^No-Spec:" -E --oneline
+> origin/main`; anchored to the line start — a looser substring match overcounts), which means the
+> exception was the de-facto default channel rather than the exception NG-4 describes. That count
+> will drift as `main` moves; re-measure rather than trust this line. Those changes are not re-opened
+> and are not entered in this ledger individually; the ledger begins with the rows above. The gap
+> between NG-4's intent and that history is the reason NG-4 carries a budget at all, and closing it
+> is tracked as part of Gate G-M5.

@@ -65,10 +65,19 @@ Spec: `specs/charter_alignment.SPEC.md` (schema v2 draft).
 - The fail-loud invariant was stated as "both fallbacks are opt-in" in the primer and
   `.claude/agents/strategos-guide.md`, but `ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK` defaults on.
 - Supersession banners added to `docs/plans/MVP_ROADMAP.md` and
-  `docs/plans/PHASE_4_TEMPLATE_PLAN.md`; an unratified-template banner to `docs/SLA.md`; deprecation
-  banners to `planning/milestones.yaml` and `planning/epics/epic_5_1_neural_mcts.yaml`. Stale values
-  inside `planning/` are deliberately left uncorrected — correcting them would imply that abandoned
-  parallel planning system is alive (see `CHARTER.md` §3 NG-7).
+  `docs/plans/PHASE_4_TEMPLATE_PLAN.md`; an unratified-template banner to `docs/SLA.md` **and now
+  `docs/runbooks/incident-response.md`**, which made the identical unstaffed Operations
+  Team/PagerDuty/CTO-escalation claim (F-21) — the other three runbooks were checked and don't share
+  it; deprecation banners to `planning/milestones.yaml` and `planning/epics/epic_5_1_neural_mcts.yaml`.
+  Stale values inside `planning/` are deliberately left uncorrected — correcting them would imply
+  that abandoned parallel planning system is alive (see `CHARTER.md` §3 NG-7).
+- **F-21 — two `CHARTER.md` invariant verdicts were overstated.** INV-4 (hermetic unit tests) and
+  INV-7 (`src/**` spec-gating) were labelled ENFORCED; both downgraded to PARTIAL — INV-4 disables
+  common accidental network paths but has no actual socket block, and INV-7's trailer path accepts
+  any non-empty reason with no substance check. Also fixed: carve-out CO-2 was recorded
+  `CLOSED (merged)` while its own PR was still open (now `OPEN`, with §0/NG-4/budget-state updated to
+  match); the pre-charter `No-Spec:` commit count used an unanchored, overcounting grep (58 → the
+  anchored, `origin/main`-pinned figure is 57).
 
 ### Code Hygiene & Modularity Program — Phase 1: MCTS Value-Semantics Correctness
 

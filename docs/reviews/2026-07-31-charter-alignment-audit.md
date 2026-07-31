@@ -38,11 +38,12 @@
 | F-13 | The coverage gate's scope is narrower than the headline implies | code | CONFIRMED (by design) | Filed as a documentation-of-scope issue, now stated in INV-5 |
 | F-14 | The e2e workflow cannot fail | code | CONFIRMED | Filed |
 | F-15 | Two `src/` packages are unreachable from any production entry point | code | CONFIRMED | Filed — already scoped by hygiene specs |
-| F-16 | 58 commits carried the `No-Spec:` exception; it was the default channel | governance | CONFIRMED | Recorded once in `CHARTER.md` §8 |
+| F-16 | 57 commits carried the `No-Spec:` exception; it was the default channel | governance | CONFIRMED | Recorded once in `CHARTER.md` §8 |
 | **F-17** | **A live Weights & Biases API key is committed in `docs/`, outside every scan's scope** | **security** | **CONFIRMED** | **Redacted here (rotation still required); scan gap closed via `specs/security_secret_scan_hardening.SPEC.md`** |
 | F-18 | An *active* plan doc and `ATTRIBUTION.md` carried further drift the first sweep missed | doc | CONFIRMED | Fixed here |
 | F-19 | A fourth stale gate-status snapshot, and an axis rule that singled out one of four peer architecture docs | doc | CONFIRMED | Fixed here |
 | **F-20** | **The F-17 gitleaks fix had a whole-file allowlist entry covering the exact file where a second copy of the leaked key survived** | **security** | **CONFIRMED** | **Fixed here — see §5a** |
+| F-21 | Four governance-accuracy defects in `CHARTER.md` itself: two overstated invariant verdicts (INV-4, INV-7), a carve-out marked closed while its PR is still open, an unanchored/stale commit count, and an NG-1 violation in `docs/runbooks/` the SLA banner never reached | doc | CONFIRMED | Fixed here |
 
 ---
 
@@ -198,11 +199,12 @@ together as "Fast Gameplay Domains" without signalling the difference.
 siblings). Closing them is Gate G-M5 in `CHARTER.md` §5.
 
 **F-16 — The exception was the rule. (HIGH, governance)**
-`git log --grep="No-Spec" --oneline` returns **58 commits**. NG-4 describes the trailer as a written
-exception to spec-gated development; in practice it has been the default channel for `src/**` work.
-This is recorded once, in aggregate, in `CHARTER.md` §8 rather than as 58 retroactive ledger rows,
-and is explicitly *not* retroactively ratified. It is the reason NG-4 carries a carve-out budget at
-all.
+`git log --grep="^No-Spec:" -E --oneline origin/main` returns **57 commits** (an unanchored substring
+match overcounts — first drafted with that looser count, corrected here). NG-4 describes the trailer
+as a written exception to spec-gated development; in practice it has been the default channel for
+`src/**` work. This is recorded once, in aggregate, in `CHARTER.md` §8 rather than as 57 retroactive
+ledger rows, and is explicitly *not* retroactively ratified. It is the reason NG-4 carries a carve-out
+budget at all.
 
 ---
 
@@ -385,6 +387,50 @@ argument is that a guard which exists on paper and cannot fire is worse than no 
 trusted. Fixing this silently would repeat exactly that pattern one level up — a security fix whose
 own defect goes unrecorded. It is recorded here, at the same severity class as F-17, not folded into
 F-17's text as if it had been caught the first time.
+
+---
+
+## 5b. F-21 — four accuracy defects in `CHARTER.md`, caught by continuing to check the charter against itself
+
+The same adversarial review that found F-20 checked `CHARTER.md`'s own claims for the class of error
+this whole document exists to catch elsewhere: an assertion that outran what its cited evidence
+actually supports.
+
+- **INV-4 (unit tests are hermetic) was labelled ENFORCED; it is PARTIAL.** The cited mechanism —
+  CI forcing offline HF Hub / W&B / LangChain-tracing modes and a dummy API key — disables the
+  *common accidental* network paths. It is not a socket block: no `pytest-socket` or equivalent
+  exists anywhere in `pyproject.toml` or the test configuration (checked directly — no match). A
+  test making a raw call to an arbitrary host would not be stopped. Downgraded to PARTIAL with that
+  distinction stated, matching the charter's own definition of the tier.
+- **INV-7 (`src/**` changes are spec-gated) was labelled ENFORCED; it is PARTIAL.** CI genuinely
+  blocks a diff with *neither* an approved spec nor a trailer — but the trailer path, read directly
+  from `spec_trace.py`, accepts any non-empty `No-Spec: <reason>` string with no check on the
+  reason's substance. Given F-16 (57 pre-charter commits used exactly this path), "enforced" claimed
+  more than the mechanism delivers.
+- **CO-2 was recorded `CLOSED (merged)` while its own PR is still open.** §7.2 defines a carve-out's
+  closure as landing "one merged change" — this PR had not merged when that row was written. Fixed
+  to `OPEN — closes on merge`, with §0's summary, the NG-4 row's active-carve-out count, and the
+  budget-state line all updated to match (0 → 1 active carve-out) rather than only the ledger row.
+- **The "58 commits" pre-charter count was already imprecise, and would go stale on every commit
+  this PR itself makes.** `git log --grep="No-Spec" --oneline` (unanchored substring) overcounts
+  against the trailer's actual format (`^No-Spec:\s*(\S.*)$`); anchored, `origin/main` measures
+  **57**. Corrected in both `CHARTER.md` §8 and this document's F-16, with the exact command pinned
+  so a future reader can re-measure rather than trust a number that necessarily drifts.
+- **NG-1's banner reached `docs/SLA.md` but not `docs/runbooks/incident-response.md`**, which makes
+  the identical unstaffed-commitment claim — an "Operations Team" owner, PagerDuty on-call, a CTO
+  escalation ladder, an on-call email — under the same "Version 1.0.0 / 2025-01-15" template stamp.
+  The other three files under `docs/runbooks/` were checked and do **not** share this pattern — they
+  are alert-response technical procedures (Prometheus queries, remediation steps) that stand on
+  their own regardless of staffing, so only `incident-response.md` gets the banner, not the whole
+  directory.
+
+**Not chased**, and stated as such rather than silently dropped: this same review raised whether the
+charter-alignment work should itself be spec-first rather than riding a trailer (already disclosed in
+the spec's Constraints and this PR's description — a documented tradeoff, not a miss), whether one
+32-file PR with a solo reviewer is the right shape (already disclosed in §7.5), and whether
+`GOVERNANCE_DOCS` should widen beyond `CHARTER.md` (already named as the obvious next increment at
+the end of F-4). None of these have a single unambiguous fix available to apply unilaterally in this
+PR, unlike the five items above.
 
 ---
 
