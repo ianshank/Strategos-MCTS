@@ -1,0 +1,51 @@
+# Strategos-MCTS gitleaks configuration.
+#
+# Extends gitleaks' built-in ruleset rather than reimplementing secret-pattern detection — the
+# project should not maintain its own copy of hundreds of vendor key formats. This file only
+# narrows scope: an allowlist for the specific test fixtures and documentation placeholders that
+# are deliberately not real secrets.
+#
+# Why this exists: docs/reviews/2026-07-31-charter-alignment-audit.md F-17 found a real API key
+# committed in docs/, invisible to both of the repo's existing guards — the CI grep scan is scoped
+# to src/ and kubernetes/ only and matches `sk-`-shaped keys only, and detect-secrets is configured
+# in .pre-commit-config.yaml but was never wired into GitHub Actions CI. This config backs the
+# "Secret Scan (gitleaks)" CI job (.github/workflows/ci.yml), which is repo-wide and pattern-agnostic.
+# See specs/security_secret_scan_hardening.SPEC.md.
+#
+# Local run: gitleaks detect --config .gitleaks.toml --source . --no-git -v
+# (--no-git scans the working tree only; scanning full git history is a separate, larger decision —
+# see that spec's Out of Scope.)
+
+title = "strategos-mcts-gitleaks-config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures and documentation placeholders verified as non-secrets during the F-17 remediation"
+
+regexes = [
+  # tests/unit/adapters/llm/test_anthropic_client.py, tests/unit/adapters/test_anthropic_client.py,
+  # tests/unit/test_validation_config.py — labelled test doubles, never valid against a real provider.
+  '''sk-ant-test-key-for-unit-tests''',
+  '''sk-ant-test-key-12345''',
+  '''sk-ant-test1234567890123456''',
+  '''sk-ant-another_secret_1234567890''',
+  '''sk-ant-valid_key_12345678901234567890''',
+  # docs/SECRETS_MANAGEMENT.md — a fill-in-the-blank example, not a value that was ever real.
+  '''sk-ant-new-key-here''',
+  # docs/API_QUICK_REFERENCE.md — deliberately truncated with a trailing ellipsis; incomplete by
+  # construction, so it cannot be a usable key.
+  '''sk-proj-uJN73wUtmD\.\.\.''',
+  '''sk-ant-api03-OsXSRo\.\.\.''',
+]
+
+paths = [
+  '''^tests/unit/adapters/llm/test_anthropic_client\.py$''',
+  '''^tests/unit/adapters/test_anthropic_client\.py$''',
+  '''^tests/unit/test_validation_config\.py$''',
+  '''^docs/SECRETS_MANAGEMENT\.md$''',
+  '''^docs/API_QUICK_REFERENCE\.md$''',
+  # detect-secrets' own baseline necessarily contains hash-like fingerprints of prior findings.
+  '''^\.secrets\.baseline$''',
+]

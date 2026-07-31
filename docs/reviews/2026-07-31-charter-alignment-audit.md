@@ -39,7 +39,7 @@
 | F-14 | The e2e workflow cannot fail | code | CONFIRMED | Filed |
 | F-15 | Two `src/` packages are unreachable from any production entry point | code | CONFIRMED | Filed — already scoped by hygiene specs |
 | F-16 | 58 commits carried the `No-Spec:` exception; it was the default channel | governance | CONFIRMED | Recorded once in `CHARTER.md` §8 |
-| **F-17** | **A live Weights & Biases API key is committed in `docs/`, outside every scan's scope** | **security** | **CONFIRMED** | **Redacted here — the key still requires rotation** |
+| **F-17** | **A live Weights & Biases API key is committed in `docs/`, outside every scan's scope** | **security** | **CONFIRMED** | **Redacted here (rotation still required); scan gap closed via `specs/security_secret_scan_hardening.SPEC.md`** |
 | F-18 | An *active* plan doc and `ATTRIBUTION.md` carried further drift the first sweep missed | doc | CONFIRMED | Fixed here |
 
 ---
@@ -221,12 +221,15 @@ remediation** — the key remains in git history and on the remote, so it must b
 compromised and **rotated at wandb.ai/authorize**. That action is the maintainer's; this audit cannot
 perform it.
 
-*Filed, not fixed:* widening the scan. Making it repo-wide and format-agnostic requires an allowlist
-for the legitimate placeholder and test-fixture keys (`docs/SECRETS_MANAGEMENT.md:102`,
-`docs/API_QUICK_REFERENCE.md:8,16` — all truncated or obvious placeholders — plus roughly a dozen
-`sk-ant-test-…` fixtures under `tests/`). That is a real piece of work with a false-positive budget,
-and it belongs behind its own spec rather than being bolted onto a governance PR. It is the single
-highest-value item this audit surfaces for the next spec cycle.
+*Widened, in the same branch, under its own spec:* `specs/security_secret_scan_hardening.SPEC.md`
+adds `.gitleaks.toml` (extending gitleaks' built-in ruleset, allowlisting only the specific
+test-fixture and documentation-placeholder values already verified as non-secrets — not a broad
+path or pattern exclusion) and a `secret-scan-gitleaks` CI job, repo-wide and pattern-agnostic,
+wired into the `summary` job's failure check so it cannot fail silently. The `git grep` step is
+left untouched — the two layers are complementary, not a replacement of one by the other. This
+environment has no `gitleaks` binary, so the configuration's *syntax* was validated locally
+(TOML and workflow YAML both parse); its actual behavior against the live repository is verified
+by the first CI run, not asserted here.
 
 **F-18 — Two further drift sites the first sweep missed. (LOW)**
 `docs/plans/2026-07-24-execute-m5.md:7,186` cited the superseded 93.35% coverage figure. Unlike the
@@ -306,9 +309,16 @@ This change touches no runtime code path. The one file modified under `src/` is
 
 ## 6. What this audit did not do
 
-- It did not fix any code-side finding. F-10 through F-15 remain open by design.
+- It did not fix most code-side findings. F-10 through F-15 remain open by design. F-17 is the one
+  exception: its scan-coverage gap was closed under its own spec
+  (`specs/security_secret_scan_hardening.SPEC.md`) rather than left filed, because leaving a known,
+  currently-exploitable detection gap open for a future cycle was a worse trade than the scope
+  increase of fixing it now.
 - It did not open findings that duplicate the code-hygiene program's 25 `hygiene_*` draft specs;
   where a divergence is already scoped there, this audit links to that spec instead. (`specs/` now
-  holds 42 specs: 27 draft — including this change's own — 5 approved, 10 implemented, 0 verified.)
+  holds 43 specs: 28 draft — `charter_alignment` and `security_secret_scan_hardening` among them —
+  5 approved, 10 implemented, 0 verified.)
 - It did not correct the stale values inside `planning/`, for the reason given under F-8.
 - It did not retroactively ratify the 58 pre-charter exceptions in F-16.
+- It did not scan git history for secrets, and it did not attempt to rotate the F-17 key —
+  rotation is the maintainer's action, not this audit's.
