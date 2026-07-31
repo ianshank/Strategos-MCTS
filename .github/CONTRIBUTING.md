@@ -44,6 +44,9 @@ pytest tests/unit/ --cov=src --cov-fail-under=85    # 85% branch-coverage gate (
   [`docs/STATUS.md`](../docs/STATUS.md) (the single source of truth for test/coverage status).
 - **No hardcoded values:** all configuration flows through Pydantic Settings (`src/config/settings.py`).
   Never hardcode API keys, model names, or magic numbers.
+- **Secrets:** CI runs two independent scans — a fast `src/`/`kubernetes/`-scoped grep, and a
+  repo-wide, pattern-agnostic `gitleaks` scan (`.gitleaks.toml`). Both must pass; see the
+  `quality-gate` skill for how to run each locally.
 - **Async-first:** new I/O paths must be `async`; async tests use `@pytest.mark.asyncio` + `await`.
 - If you touch anything under `.claude/`, also run `validate-context-docs` (the `validate-context` skill).
 - If you touch `specs/`, run `harness validate-spec specs/*.SPEC.md`.

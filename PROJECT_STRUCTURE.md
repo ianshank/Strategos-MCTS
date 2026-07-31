@@ -3,6 +3,7 @@
 ```
 langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 ├── README.md                    # Project overview and quick start
+├── CHARTER.md                   # Durable intent: vision, scope, non-goals, invariants
 ├── CHANGELOG.md                 # Version history
 ├── ATTRIBUTION.md               # Third-party attributions
 ├── LICENSE                      # MIT license

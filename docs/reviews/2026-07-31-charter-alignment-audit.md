@@ -41,6 +41,7 @@
 | F-16 | 58 commits carried the `No-Spec:` exception; it was the default channel | governance | CONFIRMED | Recorded once in `CHARTER.md` §8 |
 | **F-17** | **A live Weights & Biases API key is committed in `docs/`, outside every scan's scope** | **security** | **CONFIRMED** | **Redacted here (rotation still required); scan gap closed via `specs/security_secret_scan_hardening.SPEC.md`** |
 | F-18 | An *active* plan doc and `ATTRIBUTION.md` carried further drift the first sweep missed | doc | CONFIRMED | Fixed here |
+| F-19 | A fourth stale gate-status snapshot, and an axis rule that singled out one of four peer architecture docs | doc | CONFIRMED | Fixed here |
 
 ---
 
@@ -238,6 +239,25 @@ claim rather than a historical record. *Fixed.* Separately, `ATTRIBUTION.md:15` 
 "Tactical Reasoning Module" where every other document in the repository says "Task Refinement
 Module". *Fixed.* Occurrences of 93.35% inside `CHANGELOG.md` are deliberately left alone — they are
 dated release records and are accurate as such.
+
+**F-19 — A third architecture doc carried its own hardcoded, stale gate snapshot; the charter's
+axis rule cited only one of four peer architecture docs. (LOW)**
+`docs/C4_ARCHITECTURE.md`'s closing section hardcoded a "Current gate status (2026-07-20)" table —
+305 source files, 93.82% coverage, 10,101 tests passed — the same shape of drift as F-1/F-2, just in
+a fourth location the first sweep didn't reach. *Fixed*, by the same principle applied everywhere
+else in this change: the table is replaced with a pointer to `docs/STATUS.md` rather than a
+corrected snapshot, so it cannot go stale the same way again.
+
+Separately, `CHARTER.md`'s original axis rule named `docs/C4_ARCHITECTURE.md` alone as governing
+"where code lives" — but `docs/README.md`'s own index lists **four** architecture documents
+(`architecture.md`, `C4_ARCHITECTURE.md`, `C4_MERMAID_ARCHITECTURE.md`,
+`langgraph_mcts_architecture.md`) as peers with no stated precedence, and `PROJECT_STRUCTURE.md`'s
+Quick Navigation points to `architecture.md`, not `C4_ARCHITECTURE.md`. Singling one out was itself
+inaccurate. *Fixed* by pointing the axis rule at `docs/README.md`'s index instead of picking a
+single file — the same move the whole charter makes everywhere else, delegate rather than duplicate.
+**Fully reconciling the four architecture docs against the current module layout — cross-checking
+every diagram, establishing an actual precedence, possibly merging some — is a substantially larger
+effort or its own spec, not attempted here.**
 
 ---
 

@@ -17,7 +17,7 @@
 > |---|---|
 > | Measured status (pass counts, coverage, lint) | `docs/STATUS.md` |
 > | Sequenced work — what next, in what order | `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md` |
-> | Where code lives | `docs/C4_ARCHITECTURE.md`, `.claude/skills/strategos-primer/SKILL.md` |
+> | Where code lives / architecture | `docs/README.md`'s "Explanation" index (`architecture.md`, `C4_ARCHITECTURE.md`, `C4_MERMAID_ARCHITECTURE.md`, `langgraph_mcts_architecture.md`), `.claude/skills/strategos-primer/SKILL.md` |
 > | Commands and day-to-day patterns | `CLAUDE.md`, `AGENTS.md` |
 > | Per-change process | `.github/CONTRIBUTING.md` |
 > | Layout duplications | `PROJECT_STRUCTURE.md` |

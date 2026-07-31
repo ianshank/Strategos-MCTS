@@ -204,6 +204,8 @@ dispatchable counterpart of the primer. See `AGENTS.md` for the agent routing le
 
 ## Documentation
 
+- **[Project Charter](CHARTER.md)**: Vision, scope, non-goals, and invariants — read this before
+  planning a change.
 - **[Documentation Index](docs/README.md)**: Start here — the full map of guides, references, and explanations.
 - **[Project Status](docs/STATUS.md)**: Reproducible test/coverage baseline (source of truth).
 - **[Active Roadmap](docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md)**: Current implementation plan.
