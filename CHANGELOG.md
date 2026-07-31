@@ -32,7 +32,19 @@ Spec: `specs/charter_alignment.SPEC.md` (schema v2 draft).
   package. Fixed in `CLAUDE.md`, both narrations of it in `.claude/skills/strategos-primer/SKILL.md`,
   and `docs/KEY_CODE_SNIPPETS.md`. Banner-marked historical plans and the generic architecture
   template are deliberately left alone.
-- The primer claimed three console scripts; `pyproject.toml` declares five.
+- The primer claimed three console scripts; `pyproject.toml` declares five. The checker now verifies
+  the direction that matters — every declared script must be named in the primer — rather than only
+  asserting that a fixed list still exists.
+- `docs/plans/2026-07-24-execute-m5.md` (an **active** plan) still cited the superseded 93.35%
+  coverage figure; `ATTRIBUTION.md` expanded TRM as "Tactical Reasoning Module" where every other
+  doc says "Task Refinement Module".
+
+#### Security
+- **Redacted a committed Weights & Biases API key** from `docs/API_CONFIGURATION_GUIDE.md`. The CI
+  secret scan could not see it on either axis: it is scoped to `src/` and `kubernetes/`, and its
+  pattern matches only `sk-`-shaped keys. **Redaction is not remediation — the key is in git history
+  and must be rotated.** Widening the scan needs a false-positive allowlist for the legitimate
+  placeholder and test-fixture keys and is filed for its own spec.
 - The fail-loud invariant was stated as "both fallbacks are opt-in" in the primer and
   `.claude/agents/strategos-guide.md`, but `ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK` defaults on.
 - Supersession banners added to `docs/plans/MVP_ROADMAP.md` and

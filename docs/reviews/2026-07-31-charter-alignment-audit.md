@@ -39,6 +39,8 @@
 | F-14 | The e2e workflow cannot fail | code | CONFIRMED | Filed |
 | F-15 | Two `src/` packages are unreachable from any production entry point | code | CONFIRMED | Filed — already scoped by hygiene specs |
 | F-16 | 58 commits carried the `No-Spec:` exception; it was the default channel | governance | CONFIRMED | Recorded once in `CHARTER.md` §8 |
+| **F-17** | **A live Weights & Biases API key is committed in `docs/`, outside every scan's scope** | **security** | **CONFIRMED** | **Redacted here — the key still requires rotation** |
+| F-18 | An *active* plan doc and `ATTRIBUTION.md` carried further drift the first sweep missed | doc | CONFIRMED | Fixed here |
 
 ---
 
@@ -89,10 +91,15 @@ caught mechanically, because only `.claude/` documents are in the validator's sc
 sweep. Widening `GOVERNANCE_DOCS` to cover more of `docs/` is the obvious next increment.
 
 **F-5 — Console-script count drifted silently.** The primer claimed "Three console scripts";
-`pyproject.toml:140-145` declares five. The reason this went undetected is itself a finding: the
-deterministic checker's `_check_console_scripts` pinned only the three original names, so adding
-`self-play-convergence` and `validate-context-docs` could not fail it. *Fixed in both the document
-and the checker.*
+`pyproject.toml:140-145` declares five. The reason it went undetected is itself the finding, and it
+is subtler than "the pinned tuple was short": `_check_console_scripts` asserts that named scripts
+still *exist* in pyproject. It reads in the wrong direction. No amount of widening that tuple can
+notice that a document enumerates a stale subset — the drift is in the prose, and pyproject is fine.
+
+*Fixed in the document, and the checker now closes the loop properly.* The tuple is widened to all
+five (so a removed script still fails), **and** a new `_check_console_scripts_documented` runs from
+pyproject to the prose: every declared script must be named in the primer. That is the check that
+would actually have caught this, and a negative test proves it fires.
 
 **F-6, F-7, F-8, F-9 — Stale documents reading as current.** `docs/plans/MVP_ROADMAP.md:10` claims
 "217 Python source files" (actual: 327) and `:56` "No CI/CD pipeline" (a twelve-job pipeline exists),
@@ -194,6 +201,40 @@ exception to spec-gated development; in practice it has been the default channel
 This is recorded once, in aggregate, in `CHARTER.md` §8 rather than as 58 retroactive ledger rows,
 and is explicitly *not* retroactively ratified. It is the reason NG-4 carries a carve-out budget at
 all.
+
+---
+
+**F-17 — A live credential is committed in `docs/`, where nothing was looking. (HIGH, security)**
+
+`docs/API_CONFIGURATION_GUIDE.md:87` contained a real-format Weights & Biases API key — a 40-character
+hex string presented as a `.env` example — committed to history and present on the remote.
+
+The mechanism failure is the point, and it is exactly the shape of F-11. The repository *has* a secret
+scan, and the charter's INV-1 cites it as enforcement. But `.github/workflows/ci.yml:100` runs
+`git grep -nE "sk-[A-Za-z0-9]{20,}" -- src/ kubernetes/`: it is scoped to two directories that exclude
+`docs/`, and its pattern matches only OpenAI-shaped `sk-` keys, so a hex-format W&B key in a
+documentation file is invisible to it on **both** axes. The guard existed, was believed to cover this,
+and structurally could not.
+
+*Disposition:* the value is **redacted here** and replaced with a placeholder. **Redaction is not
+remediation** — the key remains in git history and on the remote, so it must be treated as
+compromised and **rotated at wandb.ai/authorize**. That action is the maintainer's; this audit cannot
+perform it.
+
+*Filed, not fixed:* widening the scan. Making it repo-wide and format-agnostic requires an allowlist
+for the legitimate placeholder and test-fixture keys (`docs/SECRETS_MANAGEMENT.md:102`,
+`docs/API_QUICK_REFERENCE.md:8,16` — all truncated or obvious placeholders — plus roughly a dozen
+`sk-ant-test-…` fixtures under `tests/`). That is a real piece of work with a false-positive budget,
+and it belongs behind its own spec rather than being bolted onto a governance PR. It is the single
+highest-value item this audit surfaces for the next spec cycle.
+
+**F-18 — Two further drift sites the first sweep missed. (LOW)**
+`docs/plans/2026-07-24-execute-m5.md:7,186` cited the superseded 93.35% coverage figure. Unlike the
+other plans carrying it, this one is **Active** ("P0 awaits the operator GPU run"), so it is a live
+claim rather than a historical record. *Fixed.* Separately, `ATTRIBUTION.md:15` expanded TRM as
+"Tactical Reasoning Module" where every other document in the repository says "Task Refinement
+Module". *Fixed.* Occurrences of 93.35% inside `CHANGELOG.md` are deliberately left alone — they are
+dated release records and are accurate as such.
 
 ---
 
