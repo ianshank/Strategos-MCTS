@@ -46,6 +46,16 @@ Spec: `specs/charter_alignment.SPEC.md` (schema v2 draft).
   secret scan could not see it on either axis: it is scoped to `src/` and `kubernetes/`, and its
   pattern matches only `sk-`-shaped keys. **Redaction is not remediation — the key is in git history
   and must be rotated.**
+- **F-20 — the fix above was incomplete, and its own guard would have made the gap worse.** A second
+  occurrence of the same key (its first 16 hex characters) survived at
+  `docs/API_QUICK_REFERENCE.md:23`, and the initial gitleaks allowlist covered that exact file by
+  whole path — the same "guard exists, cannot fire" shape as the original finding, freshly
+  introduced. All three example values in `docs/API_QUICK_REFERENCE.md` (OpenAI, Anthropic, W&B —
+  the section read as a real, committed local setup, not synthetic examples) are now generic
+  placeholders and should be treated as rotation candidates. `.gitleaks.toml`'s allowlist is
+  rewritten to literal-value matches only, with one structural exception (`.secrets.baseline`, whose
+  content is hash fingerprints, not secret values). Found by a separately-running adversarial review
+  after this PR first reported CI-green; recorded in the audit rather than fixed silently.
 - **Added a repo-wide `gitleaks` CI job** (`secret-scan-gitleaks`, `.gitleaks.toml`), closing the
   scope gap above without replacing the existing `git grep` check. Spec:
   `specs/security_secret_scan_hardening.SPEC.md`. Wired into the `summary` job's failure check from

@@ -2,8 +2,7 @@
 #
 # Extends gitleaks' built-in ruleset rather than reimplementing secret-pattern detection — the
 # project should not maintain its own copy of hundreds of vendor key formats. This file only
-# narrows scope: an allowlist for the specific test fixtures and documentation placeholders that
-# are deliberately not real secrets.
+# narrows scope: an allowlist for the specific test-fixture literal values verified as non-secrets.
 #
 # Why this exists: docs/reviews/2026-07-31-charter-alignment-audit.md F-17 found a real API key
 # committed in docs/, invisible to both of the repo's existing guards — the CI grep scan is scoped
@@ -11,6 +10,13 @@
 # in .pre-commit-config.yaml but was never wired into GitHub Actions CI. This config backs the
 # "Secret Scan (gitleaks)" CI job (.github/workflows/ci.yml), which is repo-wide and pattern-agnostic.
 # See specs/security_secret_scan_hardening.SPEC.md.
+#
+# F-20 (see the audit): the first version of this file allowlisted docs/API_QUICK_REFERENCE.md by
+# whole file path, reasoning from two of its three lines (both truncated `sk-...` examples) without
+# checking the third — which turned out to be a second occurrence of the exact W&B key this file
+# exists to catch. Path-based "I looked at this file once" allowlisting is exactly the failure mode
+# this tool is meant to prevent, so it is not used here for anything with human-authored content.
+# The one exception (.secrets.baseline, below) rests on a structural argument, not an eyeball check.
 #
 # Local run: gitleaks detect --config .gitleaks.toml --source . --no-git -v
 # (--no-git scans the working tree only; scanning full git history is a separate, larger decision —
@@ -22,7 +28,7 @@ title = "strategos-mcts-gitleaks-config"
 useDefault = true
 
 [allowlist]
-description = "Test fixtures and documentation placeholders verified as non-secrets during the F-17 remediation"
+description = "Literal test-fixture values verified as non-secrets during the F-17/F-20 remediation"
 
 regexes = [
   # tests/unit/adapters/llm/test_anthropic_client.py, tests/unit/adapters/test_anthropic_client.py,
@@ -34,18 +40,10 @@ regexes = [
   '''sk-ant-valid_key_12345678901234567890''',
   # docs/SECRETS_MANAGEMENT.md — a fill-in-the-blank example, not a value that was ever real.
   '''sk-ant-new-key-here''',
-  # docs/API_QUICK_REFERENCE.md — deliberately truncated with a trailing ellipsis; incomplete by
-  # construction, so it cannot be a usable key.
-  '''sk-proj-uJN73wUtmD\.\.\.''',
-  '''sk-ant-api03-OsXSRo\.\.\.''',
 ]
 
 paths = [
-  '''^tests/unit/adapters/llm/test_anthropic_client\.py$''',
-  '''^tests/unit/adapters/test_anthropic_client\.py$''',
-  '''^tests/unit/test_validation_config\.py$''',
-  '''^docs/SECRETS_MANAGEMENT\.md$''',
-  '''^docs/API_QUICK_REFERENCE\.md$''',
-  # detect-secrets' own baseline necessarily contains hash-like fingerprints of prior findings.
+  # detect-secrets' own baseline stores SHA1 fingerprints of prior findings, not the secret values
+  # themselves — structurally not exploitable regardless of content, unlike a doc or test file.
   '''^\.secrets\.baseline$''',
 ]

@@ -42,6 +42,7 @@
 | **F-17** | **A live Weights & Biases API key is committed in `docs/`, outside every scan's scope** | **security** | **CONFIRMED** | **Redacted here (rotation still required); scan gap closed via `specs/security_secret_scan_hardening.SPEC.md`** |
 | F-18 | An *active* plan doc and `ATTRIBUTION.md` carried further drift the first sweep missed | doc | CONFIRMED | Fixed here |
 | F-19 | A fourth stale gate-status snapshot, and an axis rule that singled out one of four peer architecture docs | doc | CONFIRMED | Fixed here |
+| **F-20** | **The F-17 gitleaks fix had a whole-file allowlist entry covering the exact file where a second copy of the leaked key survived** | **security** | **CONFIRMED** | **Fixed here — see §5a** |
 
 ---
 
@@ -339,6 +340,51 @@ Live-service demo clauses noted in §4 remain unexecuted; running a server was o
 
 This change touches no runtime code path. The one file modified under `src/` is
 `src/tools/context_docs.py`, a build-time documentation validator with no production importer.
+
+---
+
+## 5a. F-20 — the gitleaks fix (F-17) had its own near-miss, found by adversarial review after merge readiness was claimed
+
+Recorded against the same discipline the rest of this document applies to everyone else: after F-17
+was fixed and this PR reported CI-green, a separately-running adversarial peer review of the branch
+found that the fix was incomplete, and its own mechanism made the gap *worse*, not better.
+
+**What was missed.** The leaked Weights & Biases key redacted from `docs/API_CONFIGURATION_GUIDE.md`
+had a second occurrence: `docs/API_QUICK_REFERENCE.md:23` carried the same key's first 16 hex
+characters, truncated with an ellipsis in the style of that file's other two example lines. The
+initial F-17 fix checked the one file the original grep hit named, and never swept the repo for
+other occurrences of the *value* before writing the allowlist.
+
+**Why the fix made it worse.** `.gitleaks.toml`'s first version allowlisted
+`docs/API_QUICK_REFERENCE.md` by **whole file path** — reasoned from its other two lines (both
+genuinely truncated placeholder-shaped examples) without checking the third. That path entry would
+have made the new, repo-wide scanner **structurally blind** to the exact file where the real
+exposure survived — the identical failure shape as F-17 itself (a guard that exists and cannot fire),
+introduced fresh in the guard meant to prevent it. The config's own header comment claimed the
+allowlist was "narrow scope... named literally, not by broad path or pattern exclusion" while the
+`paths` array was exactly that.
+
+**Disposition, fixed:**
+- `docs/API_QUICK_REFERENCE.md` — all three example lines (OpenAI, Anthropic, and the W&B fragment)
+  replaced with generic placeholders. On inspection the section was titled "Your Configured
+  Providers" with a specific project name and "✅ Working"/"✅ Configured" statuses — consistent with
+  a real local setup snapshot having been committed, not synthetic documentation. All three should be
+  treated as **rotation candidates**, not just the one already flagged; this audit cannot determine
+  whether the OpenAI/Anthropic fragments were ever live, and says so rather than assuming they are
+  safe because they are truncated.
+- `.gitleaks.toml` rewritten: the `paths` array is reduced to one entry, `.secrets.baseline`, kept on
+  a **structural** argument (it stores SHA1 fingerprints of prior findings, not secret values — not
+  exploitable regardless of content) rather than a one-time eyeball check of a doc's current
+  contents. Every other allowlist entry is now a literal-value `regexes` match, so it protects only
+  the specific string it names and cannot blind the scanner to anything else in the same file.
+- A repo-wide grep for the leaked value's fragment (`26a08535`, `sk-proj-uJN73wUtmD`,
+  `sk-ant-api03-OsXSRo`) confirms zero remaining occurrences in the tracked tree.
+
+**Why this belongs in the audit rather than a quiet follow-up commit.** This document's whole
+argument is that a guard which exists on paper and cannot fire is worse than no guard, because it is
+trusted. Fixing this silently would repeat exactly that pattern one level up — a security fix whose
+own defect goes unrecorded. It is recorded here, at the same severity class as F-17, not folded into
+F-17's text as if it had been caught the first time.
 
 ---
 
