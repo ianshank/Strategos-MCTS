@@ -18,7 +18,7 @@ torch~=2.13.0
 transformers~=4.30.0
 
 # Hugging Face Datasets - Efficient data loading and processing
-datasets~=2.14.0
+datasets~=5.0.1
 
 # PEFT - Parameter-efficient fine-tuning (LoRA, adapters)
 peft>=0.4,<0.21
