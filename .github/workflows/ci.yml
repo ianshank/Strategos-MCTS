@@ -19,6 +19,7 @@ jobs:
   lint:
     name: Lint & Format
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -45,6 +46,7 @@ jobs:
   spec-validate:
     name: Spec Validation & Secret Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -106,6 +108,7 @@ jobs:
   type-check:
     name: Type Check with MyPy
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -132,6 +135,7 @@ jobs:
   security-scan:
     name: Security Scan with Bandit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -156,8 +160,14 @@ jobs:
 
       - name: Fail on high severity issues
         run: |
-          if [ -f bandit-report.json ]; then
-            python -c "
+          # No `else` here previously: if bandit crashed before writing the report,
+          # this step passed silently and the scan gated nothing. A missing report is
+          # now itself a failure.
+          if [ ! -f bandit-report.json ]; then
+            echo "::error::bandit produced no report — the scan did not run to completion."
+            exit 1
+          fi
+          python -c "
           import json, sys
           d = json.load(open('bandit-report.json'))
           high = [r for r in d.get('results', []) if r.get('issue_severity') == 'HIGH']
@@ -168,11 +178,11 @@ jobs:
               sys.exit(1)
           print('No high severity issues found')
           "
-          fi
 
   secret-scan-gitleaks:
     name: Secret Scan (gitleaks)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       # fetch-depth: 0 — gitleaks-action scans the commit range introduced by this push/PR, which
       # needs full history to resolve; it does not rescan the repository's entire prior history.
@@ -190,6 +200,7 @@ jobs:
   dependency-audit:
     name: Dependency Vulnerability Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -216,8 +227,13 @@ jobs:
 
       - name: Fail on critical vulnerabilities
         run: |
-          if [ -f pip-audit-report.json ]; then
-            python -c "
+          # Same fail-open closure as the bandit gate above: a missing report means
+          # pip-audit did not complete, which is a failure rather than a pass.
+          if [ ! -f pip-audit-report.json ]; then
+            echo "::error::pip-audit produced no report — the audit did not run to completion."
+            exit 1
+          fi
+          python -c "
           import json, sys
           d = json.load(open('pip-audit-report.json'))
           crit = [dep for dep in d.get('dependencies', [])
@@ -229,11 +245,11 @@ jobs:
               sys.exit(1)
           print('No critical vulnerabilities found')
           "
-          fi
 
   test:
     name: Tests with Pytest
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [lint]
     steps:
       - name: Checkout code
@@ -246,7 +262,9 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -e ".[dev,neural]"
+        # `api` is required, not optional: without FastAPI the three API-server test
+        # suites cannot even be collected, which is what let them go ungated.
+        run: pip install -e ".[dev,neural,api]"
 
       - name: Show installed package versions
         run: pip list 2>&1 | head -100
@@ -260,10 +278,7 @@ jobs:
             --cov-report=term-missing \
             --cov-fail-under=85 \
             --junitxml=junit.xml \
-            -v \
-            --ignore=tests/unit/test_inference_server.py \
-            --ignore=tests/unit/test_rest_server.py \
-            --ignore=tests/unit/test_rest_server_ext.py
+            -v
         env:
           WANDB_MODE: disabled
           LANGCHAIN_TRACING_V2: "false"
@@ -297,6 +312,7 @@ jobs:
   chess-tests:
     name: Chess Domain Tests (optional extra)
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: [lint]
     steps:
       - name: Checkout code
@@ -336,6 +352,7 @@ jobs:
   integration-test:
     name: Integration Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: [test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
@@ -372,6 +389,7 @@ jobs:
   build-check:
     name: Build Verification
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [lint, type-check]
     steps:
       - name: Checkout code
@@ -397,6 +415,7 @@ jobs:
   docker-build:
     name: Docker Build and Test
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [lint, type-check]
     permissions:
       contents: read
@@ -508,10 +527,14 @@ jobs:
           docker stop mcts-api-test
           docker rm mcts-api-test
 
-      - name: Scan Docker image for vulnerabilities
+      # Two scans with deliberately different postures, because they answer different
+      # questions and have different failure modes.
+      #
+      # 1. Reporting scan (advisory): CRITICAL+HIGH -> SARIF -> the Security tab. A
+      #    Trivy DB-download flake here is infrastructure noise, so it stays
+      #    non-blocking and the upload below is guarded on the file existing.
+      - name: Scan Docker image for vulnerabilities (report)
         uses: aquasecurity/trivy-action@v0.36.0
-        # Advisory only (exit-code 0). Don't fail the job if Trivy's DB download flakes
-        # (a recurring infra issue) — the SARIF upload below is guarded on file existence.
         continue-on-error: true
         with:
           image-ref: langgraph-mcts:test
@@ -532,6 +555,24 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
 
+      # 2. Gating scan (blocking): CRITICAL only, fixable only. Previously the single
+      #    scan carried BOTH continue-on-error:true AND exit-code:'0', so it could not
+      #    fail anything while still costing ~3 minutes per run — an advisory job
+      #    nobody reads. Scoped tightly so it stays actionable:
+      #      - severity CRITICAL only (HIGH remains reported, not enforced)
+      #      - ignore-unfixed: an unfixable base-image CVE is not something this PR
+      #        can act on, so blocking on it would only train people to bypass
+      #      - accepted findings are recorded in .trivyignore with an expiry date
+      - name: Fail on CRITICAL image vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: langgraph-mcts:test
+          format: 'table'
+          severity: 'CRITICAL'
+          ignore-unfixed: true
+          trivyignores: '.trivyignore'
+          exit-code: '1'
+
       - name: Build and push Docker image (main branch only)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v5
@@ -543,7 +584,12 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=ci-production
-          cache-to: type=gha,mode=max,scope=ci-production,ignore-error=true
+          # cache-to deliberately omitted. Measured on run 30863130823: this step
+          # completes in 28s with all fifteen layers CACHED from the build step's
+          # builder instance, so it has nothing new to export — re-exporting only
+          # overwrites the manifest scope=ci-production was just written with, which
+          # is the same-scope clobber implicated in the BlobNotFound import failures
+          # at the top of the following run. cache-from is retained.
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 
@@ -553,40 +599,68 @@ jobs:
           echo "Docker image pushed successfully!"
           echo "Tags: ${{ steps.meta.outputs.tags }}"
           echo "Image can be pulled with:"
-          echo "docker pull ghcr.io/${{ github.repository }}:latest"
+          # github.repository is mixed-case (ianshank/Strategos-MCTS) but the pushed
+          # image ref is lowercase, so the previous form printed a command that fails
+          # with "repository name must be lowercase". Lowercase it before printing.
+          echo "docker pull ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]'):latest"
 
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [lint, spec-validate, type-check, security-scan, secret-scan-gitleaks, dependency-audit, test, build-check, docker-build]
+    timeout-minutes: 5
+    needs: [lint, spec-validate, type-check, security-scan, secret-scan-gitleaks, dependency-audit, test, chess-tests, integration-test, build-check, docker-build]
     if: always()
     steps:
       - name: Check all job results
+        # Every job in `needs` is both reported AND gated. Previously chess-tests and
+        # integration-test were absent from `needs` entirely, and security-scan and
+        # dependency-audit were reported but omitted from the failure condition — so a
+        # bandit HIGH or a critical CVE printed a red line and still merged green.
+        env:
+          LINT: ${{ needs.lint.result }}
+          SPEC_VALIDATE: ${{ needs.spec-validate.result }}
+          TYPE_CHECK: ${{ needs.type-check.result }}
+          SECURITY_SCAN: ${{ needs.security-scan.result }}
+          SECRET_SCAN: ${{ needs.secret-scan-gitleaks.result }}
+          DEPENDENCY_AUDIT: ${{ needs.dependency-audit.result }}
+          TESTS: ${{ needs.test.result }}
+          CHESS_TESTS: ${{ needs.chess-tests.result }}
+          INTEGRATION_TEST: ${{ needs.integration-test.result }}
+          BUILD_CHECK: ${{ needs.build-check.result }}
+          DOCKER_BUILD: ${{ needs.docker-build.result }}
         run: |
           echo "=== CI Pipeline Summary ==="
-          echo "Lint & Format:     ${{ needs.lint.result }}"
-          echo "Spec Validate:     ${{ needs.spec-validate.result }}"
-          echo "Type Check:        ${{ needs.type-check.result }}"
-          echo "Security Scan:     ${{ needs.security-scan.result }}"
-          echo "Secret Scan:       ${{ needs.secret-scan-gitleaks.result }}"
-          echo "Dependency Audit:  ${{ needs.dependency-audit.result }}"
-          echo "Tests:             ${{ needs.test.result }}"
-          echo "Build Check:       ${{ needs.build-check.result }}"
-          echo "Docker Build:      ${{ needs.docker-build.result }}"
+          # Single source of truth: the gated set and the reported set are the same
+          # list, so a job can never again be printed without also being enforced.
+          JOBS="LINT SPEC_VALIDATE TYPE_CHECK SECURITY_SCAN SECRET_SCAN \
+                DEPENDENCY_AUDIT TESTS CHESS_TESTS INTEGRATION_TEST \
+                BUILD_CHECK DOCKER_BUILD"
 
-          # Fail if any critical job failed
-          if [[ "${{ needs.lint.result }}" == "failure" ]] || \
-             [[ "${{ needs.spec-validate.result }}" == "failure" ]] || \
-             [[ "${{ needs.type-check.result }}" == "failure" ]] || \
-             [[ "${{ needs.secret-scan-gitleaks.result }}" == "failure" ]] || \
-             [[ "${{ needs.test.result }}" == "failure" ]] || \
-             [[ "${{ needs.build-check.result }}" == "failure" ]] || \
-             [[ "${{ needs.docker-build.result }}" == "failure" ]]; then
-            echo "::error::Critical job failed!"
+          status=0
+          for job in ${JOBS}; do
+            result="${!job}"
+            printf '  %-20s %s\n' "${job}" "${result}"
+            case "${result}" in
+              # 'skipped' is legitimate: integration-test is main-push only, and a
+              # job skipped by its own `if:` has not failed.
+              success|skipped) ;;
+              *) status=1 ;;
+            esac
+          done
+
+          echo ""
+          if [ "${status}" -ne 0 ]; then
+            for job in ${JOBS}; do
+              result="${!job}"
+              case "${result}" in
+                success|skipped) ;;
+                *) echo "::error::Required job ${job} finished with result '${result}'" ;;
+              esac
+            done
             exit 1
           fi
 
-          echo "All critical checks passed!"
+          echo "All required checks passed."
 
 # ============================================================================
 # RAG Evaluation Workflow (On-Demand)
@@ -597,6 +671,7 @@ jobs:
   rag-eval:
     name: RAG Evaluation with Ragas
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # Advisory-only job (every substantive step is continue-on-error and it is
     # excluded from the summary gate): run on demand or on a schedule, not on
     # every PR — it burns a runner and secrets for a result nothing gates on.

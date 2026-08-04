@@ -74,22 +74,57 @@ except ImportError:
 
 collect_ignore_glob = []
 
-# Conditionally skip test modules that require optional dependencies
-try:
-    import fastapi  # noqa: F401
-except ImportError:
-    collect_ignore_glob += [
+# When the suite runs in CI the optional extras are installed on purpose, so a missing
+# one means the environment is misconfigured — not that the tests should quietly
+# disappear. Degrading to a silent skip there is how the API server suites went
+# ungated for so long: the dependency was absent, so collection was skipped, so the
+# modules scored zero, so they were added to the coverage omit list to compensate.
+#
+# Locally the opposite is true: a contributor on a plain `.[dev]` install should still
+# be able to run `pytest tests/unit` without installing FastAPI and Torch. So the guard
+# stays, but becomes strict under CI. Set STRICT_OPTIONAL_DEPS=1 to reproduce CI's
+# behaviour locally.
+_STRICT_OPTIONAL_DEPS = os.environ.get("STRICT_OPTIONAL_DEPS", os.environ.get("CI", "")).strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
+
+def _require_or_ignore(module: str, extra: str, ignored: list[str]) -> None:
+    """Import ``module`` or arrange for ``ignored`` to be skipped.
+
+    Under CI (or ``STRICT_OPTIONAL_DEPS=1``) a missing optional dependency aborts
+    collection with an actionable message instead of silently shrinking the suite.
+    """
+    try:
+        __import__(module)
+    except ImportError:
+        if _STRICT_OPTIONAL_DEPS:
+            raise RuntimeError(
+                f"{module!r} is required to collect {ignored} but is not installed. "
+                f"CI installs it via the '{extra}' extra — check the test job's "
+                f'`pip install -e ".[...]"` line. To run without it locally, unset '
+                f"CI/STRICT_OPTIONAL_DEPS and these modules will be skipped instead."
+            ) from None
+        collect_ignore_glob.extend(ignored)
+
+
+_require_or_ignore(
+    "fastapi",
+    "api",
+    [
         "unit/test_inference_server.py",
         "unit/test_rest_server.py",
         "unit/test_rest_server_ext.py",
-    ]
-
-try:
-    import uvicorn  # noqa: F401
-except ImportError:
-    collect_ignore_glob += [
-        "unit/test_inference_server.py",
-    ]
+    ],
+)
+_require_or_ignore("uvicorn", "api", ["unit/test_inference_server.py"])
+# test_inference_server.py imports src/api/inference_server.py, which imports torch at
+# module scope. Previously unguarded, so a `.[dev,api]`-without-neural environment hit
+# a hard collection error rather than a skip.
+_require_or_ignore("torch", "neural", ["unit/test_inference_server.py"])
 
 try:
     import chess  # noqa: F401

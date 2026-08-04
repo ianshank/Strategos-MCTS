@@ -7,6 +7,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Quality gate — CI mechanical hardening
+
+Spec: `specs/hygiene_ci_mechanical.SPEC.md` (schema v2 draft; module `.github/`, no `src/**` changes).
+Review: `docs/reviews/2026-08-04-tech-debt-cicd-review.md`.
+
+#### Quality-gate changes (old vs new blocking set)
+
+The blocking set **widened**. Jobs that could not previously fail a build now can:
+
+| Job | Before | After |
+|---|---|---|
+| `chess-tests` | absent from `summary.needs` — could not block | in `needs` **and** gated |
+| `integration-test` | absent from `summary.needs` — could not block | in `needs` **and** gated |
+| `security-scan` (bandit) | in `needs`, printed, **omitted from the failure condition** | gated |
+| `dependency-audit` (pip-audit) | in `needs`, printed, **omitted from the failure condition** | gated |
+| Trivy image scan | `continue-on-error: true` **and** `exit-code: '0'` — could not fail | advisory SARIF scan retained; a second scan gates on CRITICAL, fixable-only |
+| e2e suites | `pytest ... \|\| true` — could not fail | exit code honoured; jobs gated on credentials being present |
+| pre-commit `pytest-quick` | `\|\| true` — could not fail | collection errors and test failures both fail |
+| `test_rest_server` / `_ext` / `test_inference_server` | suppressed in **three** places at once (ci.yml `--ignore`, conftest `collect_ignore_glob`, coverage `omit`) | all three layers removed; **115 tests now run and pass** |
+| `src/api/rest_server.py`, `src/api/inference_server.py` | omitted from coverage while their suites were suppressed — a self-consistent blind spot | measured (71.99% / 81.36%) |
+
+Measured, not estimated. All figures are gate scope (`pytest tests/unit/`), which had never been
+published — `docs/STATUS.md`'s 90.15% is the wider full-suite figure, and `CHARTER.md` INV-5 records
+the scope difference.
+
+| Step | Coverage | Denominator (stmt+branch) | Tests |
+|---|---|---|---|
+| Baseline, exactly as CI ran it (`.[dev,neural]`, 3 `--ignore` flags) | 89.87% | 41,471 | 8473 passed / 62 skipped / 0 failed |
+| + anchored `pass` regex | 89.85% | 41,716 | unchanged |
+| + API-server suites gated (`.[dev,neural,api]`, no ignores, no omits) | **89.65%** | **42,318** | **8651 passed / 61 skipped / 0 failed** |
+
+The gate got **stricter and the number went down by 0.22pp** — 847 previously-invisible units of real
+source code entered the denominator. `fail_under` stays at **85.0** (4.65pp headroom); `CHARTER.md`
+NG-5 carries a 0/0 budget, so lowering it or re-adding omit entries is not an available response.
+
+Full non-slow sweep: **9610 passed, 29 failed, 209 skipped**. All 29 failures are pre-existing and
+environment-dependent (23 Gradio/selenium UI, 4 offline HF hub, 1 LFS-pointer weights, 1 property
+test); verified identical on the unmodified tree, so this change introduces no regressions.
+
+#### Added
+- `timeout-minutes` on **all 23 jobs** across all three workflows. Previously **zero** declared one,
+  so every job inherited GitHub's 360-minute default — on a `docker-build` that has hung.
+- `concurrency` groups on `docker-deployment.yml` and `e2e_with_langsmith.yml` (only `ci.yml` had
+  one). A single dependabot batch had left ~10 overlapping 30-45 minute image builds in flight.
+- A `paths` filter on `docker-deployment.yml`'s `pull_request` trigger, matching the one its `push`
+  trigger already had. Docs-only PRs no longer run the full `Dockerfile.train` matrix.
+- A `check-secrets` gate job in `e2e_with_langsmith.yml`. The `secrets` context is not available in
+  a job-level `if:`, so credential presence is probed once and published as an output; traced jobs
+  skip cleanly without credentials instead of running untraced behind `|| true`.
+- `.trivyignore`, documenting the acceptance protocol for CRITICAL findings (rationale, expiry date,
+  tracking link required per entry). Currently empty, which is the correct steady state.
+- `tests/unit/test_ci_workflow_invariants.py` — 64 tests deriving the invariants above from the
+  workflow files themselves rather than a hardcoded job list, so a newly added job is covered
+  automatically. Each check was mutation-tested against the defect it guards, including a
+  cross-file invariant asserting the CI test job installs every extra `tests/conftest.py` requires.
+- `tests/conftest.py` optional-dependency guards are now **strict under CI**. A missing extra aborts
+  collection with an actionable message instead of silently shrinking the suite — the exact
+  mechanism by which the API-server suites disappeared. Local `.[dev]`-only runs still skip; set
+  `STRICT_OPTIONAL_DEPS=1` to reproduce CI's behaviour. A `torch` guard was added for
+  `test_inference_server.py`, which previously had none and hard-errored on `.[dev,api]`.
+- The CI test job installs `.[dev,neural,api]`. FastAPI and uvicorn live only in the `api` extra, so
+  without it the three API-server suites cannot be collected at all.
+
+#### Fixed
+- `--strict-markers` enabled. A typo'd marker previously became a silent no-op, so a test meant to
+  be excluded still ran. Verified safe first: all 21 declared markers are used, and no test uses an
+  undeclared one.
+- Coverage `exclude_lines` entry `"pass"` anchored to `"^\s*pass\s*$"`. Coverage applies these with
+  `re.search` on the raw line, so the bare form matched **359 lines in `src/`, 291 of which were not
+  `pass` statements** (docstrings reading "forward pass", dataclass fields `num_passed`/`pass_at_1`)
+  and silently removed them from the denominator — the gate moving to meet the code.
+- The bandit and pip-audit report parsers had `if [ -f report.json ]` with no `else`, so a scanner
+  that crashed before writing its report passed silently. A missing report is now a failure.
+- `CLAUDE.md` documented the type-check command as `mypy src/ --strict`. Measured: that reports
+  **545 errors in 92 files**. The gate is `mypy src/`, which is clean. Corrected rather than
+  suppressed; raising strictness remains a deliberate, separately-tracked ratchet.
+- The `docker-build` summary printed `docker pull ghcr.io/ianshank/Strategos-MCTS:latest`, which
+  fails — the published ref is lowercase.
+- Removed the redundant `cache-to` on the image **push** step. Measured: that step completes in 28s
+  with every layer already cached, so its export only overwrote the manifest the build step had just
+  written to the same scope — implicated in the `BlobNotFound` cache-import failures that force a
+  full rebuild on the following run. `cache-from` retained; `ignore-error=true` retained on the
+  surviving export (it guards cache-service hiccups and removing it would regress `ba63eaf`).
+
 ### Governance — Project Charter
 
 Spec: `specs/charter_alignment.SPEC.md` (schema v2 draft).

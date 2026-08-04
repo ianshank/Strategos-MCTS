@@ -28,6 +28,17 @@ on:
       - '.github/workflows/docker-deployment.yml'
   pull_request:
     branches: [main]
+    # Same filter as the push trigger above. Without it, every PR — including
+    # docs-only ones — runs the full Dockerfile.train matrix, which is the
+    # single most expensive job in the repository.
+    paths:
+      - 'src/**'
+      - 'training/**'
+      - 'scripts/**'
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+      - 'requirements.txt'
+      - '.github/workflows/docker-deployment.yml'
   workflow_dispatch:
     inputs:
       deploy_environment:
@@ -47,6 +58,13 @@ env:
   IMAGE_NAME: ianshank/strategos-mcts
   PYTHON_VERSION: '3.11'
 
+# Supersede in-flight runs for the same ref. Without this a burst of pushes (e.g. a
+# batch of dependabot merges) leaves ~10 overlapping 30-45 minute image builds running
+# against commits that are already stale. ci.yml has had this since inception.
+concurrency:
+  group: docker-deployment-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ===========================================================================
   # Stage 1: Pre-Deployment Sanity Checks
@@ -54,6 +72,7 @@ jobs:
   sanity-checks:
     name: Pre-Deployment Sanity Checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -94,6 +113,7 @@ jobs:
   build-images:
     name: Build Docker Images
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: sanity-checks
     permissions:
       contents: read
@@ -175,6 +195,7 @@ jobs:
   smoke-tests:
     name: Container Smoke Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: build-images
     if: github.event_name != 'pull_request'
     steps:
@@ -239,6 +260,7 @@ jobs:
   security-scan:
     name: Security Scanning
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: build-images
     permissions:
       security-events: write
@@ -270,6 +292,7 @@ jobs:
   deploy:
     name: Deploy to ${{ github.event.inputs.deploy_environment || 'staging' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [smoke-tests, security-scan]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     environment:
@@ -292,6 +315,7 @@ jobs:
   notify:
     name: Send Notifications
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [deploy]
     if: always()
     steps:

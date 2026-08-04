@@ -326,7 +326,11 @@ python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
-addopts = "-v --tb=short"
+# --strict-markers: an unregistered @pytest.mark.* is an error, not a silent no-op.
+# Without it a typo'd marker (e.g. @pytest.mark.slwo) silently fails to apply, so the
+# test runs in suites that meant to exclude it. Verified safe before enabling: every
+# marker used under tests/ is declared in the `markers` list below (0 undeclared).
+addopts = "-v --tb=short --strict-markers"
 timeout = 300  # 5 minute timeout for long-running tests
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
@@ -358,8 +362,9 @@ omit = [
     "*/tests/*",
     "*/__pycache__/*",
     "*/site-packages/*",
-    "src/api/inference_server.py",
-    "src/api/rest_server.py",
+    # src/api/inference_server.py and src/api/rest_server.py were omitted here while
+    # their test suites were suppressed elsewhere — a self-consistent blind spot. Both
+    # suites now collect and pass (115 tests), so the modules are measured.
     # Modules that require optional `python-chess` dep; tests skip when absent
     "src/games/chess/ui.py",
     "src/games/chess/verification/game_verifier.py",
@@ -378,7 +383,13 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
-    "pass",
+    # Anchored. coverage applies these patterns with re.search against the raw source
+    # line, so a bare "pass" matched any line CONTAINING the substring — 359 lines in
+    # src/, of which 291 were not pass statements at all ("forward pass" in a
+    # docstring, dataclass fields named num_passed / pass_at_1). Those lines were
+    # silently removed from the denominator, which is NG-5 inverted: the gate had
+    # moved to meet the code. The anchored form matches only a real pass statement.
+    "^\\s*pass\\s*$",
     "except ImportError:",
     "@abstractmethod",
 ]

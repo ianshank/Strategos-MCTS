@@ -41,7 +41,14 @@ pytest tests/unit -v --tb=short -q
 | `black . --line-length 120` | Format code |
 | `ruff check . --select I --fix` | Sort imports (ruff owns isort rules) |
 | `ruff check . --fix` | Lint with auto-fix |
-| `mypy src/ --strict` | Type check |
+| `mypy src/` | Type check (matches CI exactly) |
+
+> **Type-check strictness, stated honestly.** The gate is `mypy src/` with the settings in
+> `pyproject.toml` `[tool.mypy]` — which deliberately set `disallow_untyped_defs = false` and
+> `disallow_incomplete_defs = false`. It is **not** `--strict`. This table previously documented
+> `mypy src/ --strict`; measured 2026-08-04, that command reports **545 errors in 92 files**, so it
+> was a claim no command reproduced (CHARTER.md NG-3). Raising strictness is a deliberate ratchet,
+> tracked separately — do not "fix" the 545 by adding blanket ignores.
 
 > **Tooling is pinned for CI/local parity.** `ruff` and `mypy` are pinned to a validated
 > minor in the `[dev]` extra (the CI lint job installs `.[dev]`). Bump them deliberately and

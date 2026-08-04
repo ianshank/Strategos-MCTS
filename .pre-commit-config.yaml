@@ -105,7 +105,12 @@ repos:
     hooks:
       - id: pytest-quick
         name: pytest-quick (fast tests only)
-        entry: bash -c 'pytest -q --co -q > /dev/null 2>&1 && pytest -q -x --tb=short -m "not slow" || true'
+        # A trailing `|| true` used to swallow every result, so this hook could not
+        # fail and provided no signal. Collection errors and test failures are now
+        # both real failures. Use `SKIP=pytest-quick git commit ...` for the rare
+        # deliberate bypass; pre-commit.ci still skips it via the `ci.skip` list
+        # below, because CI runs the full suite separately.
+        entry: bash -c 'pytest -q --collect-only > /dev/null && pytest -q -x --tb=short -m "not slow"'
         language: system
         types: [python]
         pass_filenames: false
