@@ -175,8 +175,12 @@ the coverage gate:
 ```bash
 pip install -e ".[dev,neural,api]"
 ruff check . && black . --check --line-length 120 && mypy src/
-pytest tests/unit/ --cov=src --cov-fail-under=85
+STRICT_OPTIONAL_DEPS=1 pytest tests/unit/ --cov=src --cov-fail-under=85
 ```
+
+`STRICT_OPTIONAL_DEPS=1` matches the CI test job: a missing optional dependency aborts
+collection with an actionable message rather than silently shrinking the suite (and the
+coverage denominator). `make test` sets it for you.
 
 The CI pipeline enforces an **85% coverage gate** and pins `ruff`/`mypy` (in the `[dev]`
 extra, installed by the lint job) so local and CI runs use identical tool versions.

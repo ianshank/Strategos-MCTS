@@ -126,8 +126,10 @@ per task", so this is raised for the maintainer rather than fixed in passing. Th
   a job-level `if:`, so credential presence is probed once and published as an output; traced jobs
   skip cleanly without credentials instead of running untraced behind `|| true`.
 - `.trivyignore`, documenting the acceptance protocol for CRITICAL findings (rationale, expiry date,
-  tracking link required per entry). Currently empty, which is the correct steady state.
-- `tests/unit/test_ci_workflow_invariants.py` — 64 tests deriving the invariants above from the
+  tracking link required per entry). It carries one accepted entry, `CVE-2025-23042`: the fix
+  requires `huggingface-hub>=0.33.5`, which `requirements.txt:29` pins below, and the production
+  image never runs the affected Gradio path (`Dockerfile:89` starts `uvicorn rest_server`).
+- `tests/unit/test_ci_workflow_invariants.py` — 67 tests deriving the invariants above from the
   workflow files themselves rather than a hardcoded job list, so a newly added job is covered
   automatically. Each check was mutation-tested against the defect it guards, including a
   cross-file invariant asserting the CI test job installs every extra `tests/conftest.py` requires.

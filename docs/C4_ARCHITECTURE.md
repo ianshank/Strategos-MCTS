@@ -484,8 +484,9 @@ This updated C4 architecture reflects the **current state** of the application, 
 7.  **Assembly Router & Concept Extractor**: NLP-driven routing heuristics — `ConceptExtractor` classifies query concepts into `technical_term`, `domain_entity`, or `process_action` with a complexity score; `AssemblyRouter` maps these features to HRM/TRM/MCTS (`src/framework/assembly/`, `src/agents/meta_controller/assembly_router.py`).
 8.  **Prometheus Observability**: Full counter/histogram instrumentation for agent latency, MCTS iterations, LLM call outcomes, and active operations (`src/monitoring/prometheus_metrics.py`; `/metrics` endpoint via `rest_server.py`).
 9.  **Test hardening**: see `docs/STATUS.md` for the current measured pass counts, branch
-    coverage, and source-file count. `ruff`, `black`, and `mypy` are clean repo-wide, enforced by
-    the `lint` and `type-check` CI jobs.
+    coverage, and source-file count. `ruff` and `black` are clean repo-wide and `mypy` is clean
+    over `src/` (the gate is `mypy src/`, not `--strict` and not repo-wide), enforced by the
+    `lint` and `type-check` CI jobs.
 
 ### Technology Stack
 

@@ -22,14 +22,14 @@
 
 `main` has been red since at least 2026-07-31. Measured directly against the Actions API:
 
-```
+```text
 docker-deployment.yml on main: 30 of the last 30 runs → failure
 Latest: run 30863130835 · HEAD 74877fa · push → failure
 ```
 
 The cause is deterministic, not a flake:
 
-```
+```text
 training/requirements.txt:21    datasets~=5.0.1     # requires requests>=2.32.2
 training/requirements.txt:121   requests~=2.31.0
 → pip ResolutionImpossible at Dockerfile.train:84

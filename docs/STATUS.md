@@ -24,13 +24,16 @@
 | `mypy src/` (strict pins) | **clean** — no issues in 327 source files ✅ |
 | Wall time (full non-slow suite) | ~339s (5m 39s) |
 
-The gate-enforcing total (90.15%) is well above 85%. This reflects Phases 0–5 (through the M5
+The gate-enforcing total is the **89.65%** gate-scope figure in the first row — well above 85%.
+(The 90.15% below it is the full-suite headline, which CI does not enforce and which is stale;
+see CHARTER.md INV-5 for why the two differ.) This reflects Phases 0–5 (through the M5
 self-play stack), the July 2026 test hardening pass, the GPU training & gameplay domain extensions
 (Connect Four, Othello, GPU hardware utils, training profiles), and the 2026-07-25 code-hygiene pass
 (huggingface_space fork removal, dead-test deletion, repo-wide lint gates).
 
-> **Environment note:** this baseline was measured under exactly `pip install -e ".[dev,neural]"`
-> (the CI test-job dependency set). In that environment the full sweep also shows ~29
+> **Environment note:** this baseline was measured under exactly `pip install -e ".[dev,neural,api]"`
+> (the CI test-job dependency set — `api` was added when the three `--ignore` flags were removed).
+> In that environment the full sweep also shows ~29
 > environment-dependent failures outside the CI gate scope — `tests/e2e/test_ui_e2e.py` (needs a
 > live Gradio/selenium environment), LFS-pointer model weights, offline HF hub. These were verified
 > **identical on `main`** (same failure set on base commit `5cf5708`) — they are properties of the

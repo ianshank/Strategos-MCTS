@@ -283,8 +283,8 @@ ruff check .
 # 3. Types
 mypy src/
 
-# 4. Tests (the gate CI enforces; `make test` wraps this)
-pytest tests/unit/ --cov=src --cov-fail-under=85
+# 4. Tests (the gate CI enforces; `make test` wraps this, including STRICT_OPTIONAL_DEPS)
+STRICT_OPTIONAL_DEPS=1 pytest tests/unit/ --cov=src --cov-fail-under=85
 
 # 5. No hardcoded values
 grep -r "api_key.*=.*['\"]sk-" src/ && echo "FAIL: Hardcoded keys!" || echo "OK"

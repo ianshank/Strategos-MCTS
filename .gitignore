@@ -60,8 +60,9 @@ test_results.txt
 .hypothesis/
 
 # Trivy image-scan output. Both the advisory SARIF scan and the blocking CRITICAL
-# gate write this into the workspace root; the local reproduce command in
-# .trivyignore leaves it untracked.
+# gate write a report into the workspace root, and the local reproduce command in
+# .trivyignore's header does the same. The reports are per-run artifacts, not source.
+# (.trivyignore itself IS tracked — it is the allowlist, not an output.)
 *.sarif
 
 # Linter / static-analysis caches and generated scan reports

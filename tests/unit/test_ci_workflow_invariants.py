@@ -52,11 +52,20 @@ RESULT_BEARING_COMMANDS = (
     "harness",
 )
 
-# Shell constructs that discard a command's exit status. `|| true` is the obvious one;
-# `|| :` is the same thing spelled with the null builtin, and `set +e` disables the
-# errexit that would otherwise propagate a failure out of a multi-command step.
+# Shell constructs that discard a command's exit status. `|| true` is the obvious one
+# and `|| :` is the same thing spelled with the null builtin. Both are matched on the
+# command's own line.
 _DISARMING_SUFFIXES = (r"\|\|\s*true\b", r"\|\|\s*:\s*$", r"\|\|\s*:\s")
 _DISARMING_RE = re.compile("|".join(_DISARMING_SUFFIXES))
+
+# `set +e` is a different shape of the same defect: it disarms every *subsequent*
+# command in the step rather than the one it shares a line with, so a suffix regex
+# cannot see it. GitHub runs `run:` blocks under `bash -e`, so `set +e` turns the rest
+# of a multi-command step into best-effort — the step then reports the exit status of
+# whatever happened to run last. Matched separately, against the lines preceding the
+# command, by _step_disarms_command().
+_SET_PLUS_E_RE = re.compile(r"(?<![\w-])set\s+(?:-[a-zA-Z]+\s+)*\+[a-zA-Z]*e")
+_SET_MINUS_E_RE = re.compile(r"(?<![\w-])set\s+(?:\+[a-zA-Z]+\s+)*-[a-zA-Z]*e")
 
 # A command name only counts when it appears as a *word*. Substring matching flagged
 # `rm -rf .pytest_cache || true` (contains "pytest"), `docker rm blackbox || true`
@@ -66,6 +75,38 @@ _DISARMING_RE = re.compile("|".join(_DISARMING_SUFFIXES))
 _COMMAND_WORD_RE = re.compile(
     r"(?<![\w./-])(?:" + "|".join(re.escape(c) for c in RESULT_BEARING_COMMANDS) + r")(?![\w.-])"
 )
+
+
+def _disarmed_commands(run: str) -> list[str]:
+    """Lines in a ``run:`` block where a result-bearing command cannot fail the step.
+
+    Two independent disarming mechanisms, both reported:
+
+    * A per-line suffix (``|| true``, ``|| :``) that swallows *that* command.
+    * An in-scope ``set +e``, which swallows every command *after* it. A matching
+      ``set -e`` re-arms, so a step that deliberately brackets one tolerant region is
+      not flagged for the commands outside it.
+    """
+    offenders: list[str] = []
+    errexit_disabled = False
+    # Join backslash continuations first: a `|| true` on the wrapped tail of a
+    # command still disarms it, and the two belong to the same logical line.
+    logical = re.sub(r"\\\s*\n\s*", " ", run)
+    for line in logical.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            continue  # a comment mentioning `|| true` is not a disarmed command
+        if _SET_PLUS_E_RE.search(stripped):
+            errexit_disabled = True
+            continue
+        if _SET_MINUS_E_RE.search(stripped):
+            errexit_disabled = False
+            continue
+        if not _COMMAND_WORD_RE.search(stripped):
+            continue
+        if _DISARMING_RE.search(stripped) or errexit_disabled:
+            offenders.append(stripped)
+    return offenders
 
 
 def _workflow_files() -> list[Path]:
@@ -191,6 +232,14 @@ def test_every_workflow_has_a_concurrency_group(path: Path) -> None:
         f"{path.name} concurrency group {group!r} must be keyed on github.ref so that "
         f"runs for different branches do not cancel each other."
     )
+    # A group alone only serializes: without cancel-in-progress the superseded runs
+    # queue up and still execute, which is the cost this invariant exists to avoid.
+    cancel = concurrency.get("cancel-in-progress") if isinstance(concurrency, dict) else None
+    assert cancel is True, (
+        f"{path.name} declares cancel-in-progress={cancel!r}. A concurrency group "
+        f"without it queues superseded runs instead of cancelling them, so a push "
+        f"burst still pays for every obsolete run — it just pays serially."
+    )
 
 
 @pytest.mark.unit
@@ -311,21 +360,12 @@ def test_no_result_bearing_step_swallows_its_exit_code(workflow: str, job_id: st
             f"command under continue-on-error, so its result cannot fail the job."
         )
 
-        offenders: list[str] = []
-        # Join backslash continuations first: a `|| true` on the wrapped tail of a
-        # command still disarms it, and the two belong to the same logical line.
-        logical = re.sub(r"\\\s*\n\s*", " ", run)
-        for line in logical.splitlines():
-            stripped = line.strip()
-            if stripped.startswith("#"):
-                continue  # a comment mentioning `|| true` is not a disarmed command
-            if _DISARMING_RE.search(stripped) and _COMMAND_WORD_RE.search(stripped):
-                offenders.append(stripped)
-
+        offenders = _disarmed_commands(run)
         assert not offenders, (
             f"{workflow}::{job_id} step {step.get('name')!r} runs a result-bearing "
             f"command but discards its exit status: {offenders}. Remove the "
-            f"`|| true` / `|| :`, or gate the whole job on a precondition instead."
+            f"`|| true` / `|| :` / `set +e`, or gate the whole job on a precondition "
+            f"instead."
         )
 
 

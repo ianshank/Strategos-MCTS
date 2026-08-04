@@ -99,8 +99,11 @@ _STRICT_OPTIONAL_DEPS = os.environ.get("STRICT_OPTIONAL_DEPS", "").strip().lower
 def _require_or_ignore(module: str, extra: str, ignored: list[str]) -> None:
     """Import ``module`` or arrange for ``ignored`` to be skipped.
 
-    Under CI (or ``STRICT_OPTIONAL_DEPS=1``) a missing optional dependency aborts
-    collection with an actionable message instead of silently shrinking the suite.
+    When ``STRICT_OPTIONAL_DEPS`` is set to a truthy value a missing optional
+    dependency aborts collection with an actionable message instead of silently
+    shrinking the suite. Nothing else is consulted — deliberately *not* the ambient
+    ``CI`` variable, which GitHub sets in every job while only the ``test`` job
+    installs the ``api`` extra. Jobs that need the strict behaviour opt in explicitly.
     """
     try:
         __import__(module)
