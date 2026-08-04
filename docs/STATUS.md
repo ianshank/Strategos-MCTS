@@ -15,8 +15,8 @@
 
 | Metric | Value |
 |---|---|
-| Full test suite | **9,526 passed, 209 skipped** (excludes `slow`; `[dev,neural]` env — see note) |
-| Unit tests (`tests/unit/`, CI gate scope) | **8,445 passed, 0 failed** |
+| Full test suite | **9,526 passed, 209 skipped** — ⚠️ stale, same 2026-07-25 `[dev,neural]` run as the row below. Re-measure before quoting. |
+| Unit tests (`tests/unit/`, CI gate scope) | **9,025 passed, 29 skipped, 0 failed** (2026-08-04, `.[dev,neural,api]`; 8,445 before the `--ignore` flags were dropped) |
 | **Gate-scope branch coverage** (`tests/unit/` — what CI actually enforces) | **89.65%** (2026-08-04, `.[dev,neural,api]`; 89.87% before this change) ✅ |
 | Overall branch coverage (`src/`, full suite) | **90.15%** — ⚠️ stale, measured 2026-07-25; predates three denominator-widening changes. Re-measure before quoting. |
 | `ruff check .` (repo-wide) | **clean** — 0 issues ✅ |
@@ -24,7 +24,7 @@
 | `mypy src/` (strict pins) | **clean** — no issues in 327 source files ✅ |
 | Wall time (full non-slow suite) | ~339s (5m 39s) |
 
-The gate-enforcing total is the **89.65%** gate-scope figure in the first row — well above 85%.
+The gate-enforcing total is the **89.65%** "Gate-scope branch coverage" row — well above 85%.
 (The 90.15% below it is the full-suite headline, which CI does not enforce and which is stale;
 see CHARTER.md INV-5 for why the two differ.) This reflects Phases 0–5 (through the M5
 self-play stack), the July 2026 test hardening pass, the GPU training & gameplay domain extensions
@@ -197,7 +197,8 @@ directory targets a pre-refactor API and is excluded from CI as well.
 
 ## Implications for the plan
 
-- **Phase 2 is largely satisfied at the gate level** (90.15% ≥ 85%). Remaining work is opportunistic,
+- **Phase 2 is largely satisfied at the gate level** (89.65% ≥ 85% — the gate-scope figure, not the
+  stale 90.15% full-suite headline). Remaining work is opportunistic,
   targeting category B above — highest value: `data_science.py` (closes the last ADK agent), plus
   `api/auth.py` rising naturally from Phase 3.2.
 - Category A (chess) is gated on `python-chess`; raising it is a separate decision about adding the
