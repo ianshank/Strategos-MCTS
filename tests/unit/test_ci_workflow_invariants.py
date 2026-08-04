@@ -62,8 +62,8 @@ _DISARMING_RE = re.compile("|".join(_DISARMING_SUFFIXES))
 # command in the step rather than the one it shares a line with, so a suffix regex
 # cannot see it. GitHub runs `run:` blocks under `bash -e`, so `set +e` turns the rest
 # of a multi-command step into best-effort — the step then reports the exit status of
-# whatever happened to run last. Matched separately, against the lines preceding the
-# command, by _step_disarms_command().
+# whatever happened to run last. Matched separately, as a state machine over the step's
+# lines, by _disarmed_commands().
 _SET_PLUS_E_RE = re.compile(r"(?<![\w-])set\s+(?:-[a-zA-Z]+\s+)*\+[a-zA-Z]*e")
 _SET_MINUS_E_RE = re.compile(r"(?<![\w-])set\s+(?:\+[a-zA-Z]+\s+)*-[a-zA-Z]*e")
 
@@ -110,12 +110,18 @@ def _disarmed_commands(run: str) -> list[str]:
 
 
 def _workflow_files() -> list[Path]:
+    """Every workflow definition, discovered rather than listed.
+
+    A hardcoded list would silently stop covering a newly added workflow — which is
+    the class of gap this module exists to close.
+    """
     files = sorted(WORKFLOW_DIR.glob("*.yml")) + sorted(WORKFLOW_DIR.glob("*.yaml"))
     assert files, f"no workflow files found under {WORKFLOW_DIR}"
     return files
 
 
 def _load(path: Path) -> dict[str, Any]:
+    """Parse a workflow file into its YAML mapping."""
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
@@ -130,6 +136,7 @@ def _triggers(workflow: dict[str, Any]) -> dict[str, Any]:
 
 
 def _steps(job: dict[str, Any]) -> list[dict[str, Any]]:
+    """A job's steps, skipping any non-mapping entry so a malformed step cannot crash a test."""
     return [s for s in job.get("steps", []) or [] if isinstance(s, dict)]
 
 
@@ -143,6 +150,7 @@ def _all_jobs() -> list[tuple[str, str, dict[str, Any]]]:
 
 
 def _job_ids() -> list[str]:
+    """Stable ``workflow::job`` labels, so a parametrized failure names the job directly."""
     return [f"{wf}::{job_id}" for wf, job_id, _ in _all_jobs()]
 
 
@@ -386,6 +394,12 @@ def test_image_scan_can_actually_fail() -> None:
     assert scans, "expected at least one Trivy scan step in the docker-build job"
 
     def blocking(step: dict[str, Any]) -> bool:
+        """True when this scan step can actually fail its job.
+
+        Both conditions are required: a non-zero ``exit-code`` makes the scanner
+        report findings as failure, and the absence of ``continue-on-error`` lets
+        that failure reach the job.
+        """
         with_ = step.get("with") or {}
         return str(with_.get("exit-code", "0")) != "0" and not step.get("continue-on-error", False)
 
@@ -529,6 +543,7 @@ def test_suppressed_api_suites_are_no_longer_ignored() -> None:
 
 
 def _makefile_text() -> str:
+    """The Makefile source, read fresh so parity tests see the tree's current state."""
     return (Path(__file__).resolve().parents[2] / "Makefile").read_text(encoding="utf-8")
 
 
