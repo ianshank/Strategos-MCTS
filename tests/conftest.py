@@ -104,14 +104,14 @@ def _require_or_ignore(module: str, extra: str, ignored: list[str]) -> None:
     """
     try:
         __import__(module)
-    except ImportError:
+    except ImportError as exc:
         if _STRICT_OPTIONAL_DEPS:
             raise RuntimeError(
                 f"{module!r} is required to collect {ignored} but is not installed, "
                 f"and STRICT_OPTIONAL_DEPS is set. Install the '{extra}' extra — check "
                 f'the job\'s `pip install -e ".[...]"` line. Unset STRICT_OPTIONAL_DEPS '
-                f"to skip these modules instead."
-            ) from None
+                f"to skip these modules instead. Original import error: {exc}"
+            ) from exc
         collect_ignore_glob.extend(ignored)
 
 

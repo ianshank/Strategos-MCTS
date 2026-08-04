@@ -17,7 +17,8 @@
 |---|---|
 | Full test suite | **9,526 passed, 209 skipped** (excludes `slow`; `[dev,neural]` env — see note) |
 | Unit tests (`tests/unit/`, CI gate scope) | **8,445 passed, 0 failed** |
-| Overall branch coverage (`src/`, full suite) | **90.15%** (gate: `fail_under = 85.0`) ✅ |
+| **Gate-scope branch coverage** (`tests/unit/` — what CI actually enforces) | **89.65%** (2026-08-04, `.[dev,neural,api]`; 89.87% before this change) ✅ |
+| Overall branch coverage (`src/`, full suite) | **90.15%** — ⚠️ stale, measured 2026-07-25; predates three denominator-widening changes. Re-measure before quoting. |
 | `ruff check .` (repo-wide) | **clean** — 0 issues ✅ |
 | `black . --check --line-length 120` (repo-wide) | **clean** ✅ |
 | `mypy src/` (strict pins) | **clean** — no issues in 327 source files ✅ |
@@ -41,21 +42,22 @@ self-play stack), the July 2026 test hardening pass, the GPU training & gameplay
 ## How to reproduce
 
 ```bash
-pip install -e ".[dev,neural]"
+pip install -e ".[dev,neural,api]"
 export WANDB_MODE=disabled LANGCHAIN_TRACING_V2=false HF_HUB_OFFLINE=1 TOKENIZERS_PARALLELISM=false
+export STRICT_OPTIONAL_DEPS=1   # as the CI test job sets it
 
-# Unit suite only (fast gate — mirrors CI)
+# Unit suite only (the gate — mirrors CI exactly)
 python -m pytest tests/unit/ \
-  --cov=src --cov-report=term-missing --cov-report=xml:coverage.xml \
-  --ignore=tests/unit/test_inference_server.py \
-  --ignore=tests/unit/test_rest_server.py \
-  --ignore=tests/unit/test_rest_server_ext.py
+  --cov=src --cov-report=term-missing --cov-report=xml:coverage.xml
 
 # Full suite (includes integration, property-based, chess, etc.)
 python -m pytest tests/ -m "not slow" --cov=src --cov-report=term-missing
 ```
 
-CI installs `.[dev,neural]` and runs with `--cov-fail-under=85`. `python-chess` and
+CI installs `.[dev,neural,api]` and runs with `--cov-fail-under=85`. The `api` extra is
+load-bearing: FastAPI/uvicorn live only there, and without them the three API-server suites
+cannot be collected at all. The job also sets `STRICT_OPTIONAL_DEPS=1`, so a missing optional
+dependency aborts collection instead of silently shrinking the suite. `python-chess` and
 `google-adk` are **not** installed in this baseline (nor in CI), so their modules report
 low/zero coverage and many chess tests skip; they are excluded from the gate via
 `[tool.coverage.run] omit` for the three heaviest chess files.
@@ -200,8 +202,14 @@ directory targets a pre-refactor API and is excluded from CI as well.
 
 ## Excluded from coverage (by config)
 
-`src/api/inference_server.py`, `src/api/rest_server.py`, and `src/games/chess/{ui,verification/game_verifier,verification/move_validator}.py`
-(`pyproject.toml [tool.coverage.run] omit`). REST request-path tests therefore cannot move the gate.
+`src/games/chess/{ui,verification/game_verifier,verification/move_validator}.py`
+(`pyproject.toml [tool.coverage.run] omit`).
+
+**Changed 2026-08-04:** `src/api/inference_server.py` and `src/api/rest_server.py` were
+**un-omitted**. Their test suites had been suppressed in three places at once (ci.yml `--ignore`,
+conftest `collect_ignore_glob`, coverage `omit`), which made the omission self-consistent and
+invisible. All 115 of their tests now run and pass, so REST request-path tests **do** move the
+gate. The omit list shrank rather than grew — the direction CHARTER.md NG-5 requires.
 
 ## Code-hygiene & modularity program — LOC baseline (2026-07-30)
 

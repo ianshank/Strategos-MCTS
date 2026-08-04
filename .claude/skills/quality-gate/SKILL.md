@@ -24,7 +24,7 @@ ruff check .
 mypy src/
 
 # 4. Tests with branch coverage (gate = fail_under 85.0 in pyproject.toml)
-pytest tests/ --cov=src --cov-report=term-missing --cov-fail-under=85
+pytest tests/unit/ --cov=src --cov-report=term-missing --cov-fail-under=85
 
 # 5. No hardcoded secrets in source or manifests (fast, narrow-scope layer).
 # Use if/else with a subshell `(exit 1)` so a match returns a non-zero status
@@ -38,7 +38,11 @@ command -v gitleaks >/dev/null && gitleaks detect --config .gitleaks.toml --sour
 ```
 
 Notes:
-- Install deps first if missing: `pip install -e ".[dev,neural]"`.
+- Install deps first if missing: `pip install -e ".[dev,neural,api]"` — the exact set the CI
+  test job installs. Without `api`, FastAPI is absent and 115 API-server tests are silently
+  skipped, so the local number diverges from CI.
+- `--strict-markers` is active: an unregistered `@pytest.mark.*` is a collection error, not a
+  silent no-op. Register new markers in `pyproject.toml [tool.pytest.ini_options] markers`.
 - All tunables must come from `src/config/settings.py` / `src/config/constants.py` — never hardcode.
 - Unit tests must not make real network/API calls; mock all I/O.
 - The step-5 and step-6 secret scans are complementary, not redundant: step 5 is instant and

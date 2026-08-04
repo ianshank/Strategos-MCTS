@@ -386,3 +386,98 @@ def test_suppressed_api_suites_are_no_longer_ignored() -> None:
             f"{module} is back in the coverage omit list. Its test suite now collects "
             f"and passes, so omitting it only hides measured code — CHARTER.md NG-5."
         )
+
+
+# ------------------------------------------------------------------ Makefile parity
+
+
+def _makefile_text() -> str:
+    return (Path(__file__).resolve().parents[2] / "Makefile").read_text(encoding="utf-8")
+
+
+def _make_recipe(target: str) -> str:
+    """Return the recipe body (the tab-indented lines) of a Makefile target.
+
+    Deliberately excludes the target line itself, so a flag mentioned in the ``##``
+    help text — e.g. "NOT --strict" — is not mistaken for a flag actually passed to
+    the command. The first draft of the parity test below made exactly that mistake.
+    """
+    lines = _makefile_text().splitlines()
+    body: list[str] = []
+    collecting = False
+    for line in lines:
+        if re.match(rf"^{re.escape(target)}:", line):
+            collecting = True
+            continue
+        if collecting:
+            if line.startswith("\t"):
+                body.append(line.lstrip("\t"))
+            elif line.strip() == "":
+                continue
+            else:
+                break
+    return "\n".join(body)
+
+
+@pytest.mark.unit
+def test_makefile_exists_and_documents_its_targets() -> None:
+    """The Makefile is the developer entry point; every target carries help text.
+
+    Undocumented targets are how a Makefile becomes write-only.
+    """
+    text = _makefile_text()
+    declared = set(re.findall(r"^\.PHONY:\s*(.*(?:\\\n.*)*)", text, re.M))
+    phony = {t for block in declared for t in block.replace("\\", " ").split()}
+    documented = set(re.findall(r"^([a-zA-Z_-]+):.*?## ", text, re.M))
+    undocumented = phony - documented - {"help"}
+    assert not undocumented, f"Makefile targets without `## ` help text: {sorted(undocumented)}"
+
+
+@pytest.mark.unit
+def test_makefile_gate_matches_ci_flags() -> None:
+    """The Makefile must not drift from CI.
+
+    A Makefile that quietly disagrees with the workflow is worse than no Makefile:
+    it produces local green on a weaker check than the one that gates merges. These
+    are the flags where a mismatch would actually change the verdict.
+    """
+    text = _makefile_text()
+    ci_text = (WORKFLOW_DIR / "ci.yml").read_text(encoding="utf-8")
+
+    # Line length: whatever CI checks black against, the Makefile must use.
+    ci_line_length = re.search(r"black \. --check --line-length (\d+)", ci_text)
+    assert ci_line_length, "could not find black's --line-length in ci.yml"
+    assert f"LINE_LENGTH ?= {ci_line_length.group(1)}" in text, (
+        f"Makefile LINE_LENGTH must equal ci.yml's black --line-length " f"({ci_line_length.group(1)})"
+    )
+
+    # Coverage floor: must equal the workflow's --cov-fail-under, which in turn is
+    # protected from being lowered by CHARTER.md NG-5.
+    ci_cov = re.search(r"--cov-fail-under=(\d+)", ci_text)
+    assert ci_cov, "could not find --cov-fail-under in ci.yml"
+    assert (
+        f"COV_MIN     ?= {ci_cov.group(1)}" in text
+    ), f"Makefile COV_MIN must equal ci.yml's --cov-fail-under ({ci_cov.group(1)})"
+
+    # Extras: the Makefile's default install must cover what the test job installs,
+    # otherwise `make test` collects a different set of tests than CI does.
+    ci_extras = re.search(r'pip install -e "\.\[([^\]]+)\]"[\s\S]*?Run unit tests', ci_text)
+    assert ci_extras, "could not find the test job's pip install line in ci.yml"
+    required = {e.strip() for e in ci_extras.group(1).split(",")}
+    mk_extras = re.search(r"EXTRAS      \?= (.+)", text)
+    assert mk_extras, "Makefile does not define EXTRAS"
+    have = {e.strip() for e in mk_extras.group(1).split(",")}
+    assert required <= have, (
+        f"Makefile EXTRAS {sorted(have)} is missing {sorted(required - have)}, which "
+        f"the ci.yml test job installs. `make test` would collect fewer tests than CI."
+    )
+
+    # `make typecheck` must not silently be stricter or looser than the CI gate.
+    # Checked against the recipe body only — the help text legitimately mentions
+    # --strict in order to explain why it is NOT used.
+    typecheck = _make_recipe("typecheck")
+    assert "mypy src/" in typecheck, "Makefile `typecheck` must run `mypy src/`"
+    assert "--strict" not in typecheck, (
+        "Makefile typecheck must match CI's `mypy src/`; --strict reports 545 errors "
+        "and is a separately-tracked ratchet (see CLAUDE.md)."
+    )

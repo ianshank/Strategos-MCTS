@@ -5,7 +5,7 @@ a DeepMind-style AI system with Neural MCTS and Hierarchical Reasoning (pre-inte
 [Known Limitations](#known-limitations)). Distributed on PyPI as `langgraph-multi-agent-mcts`.
 
 [![CI](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml/badge.svg)](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-90.15%25-brightgreen.svg)](docs/STATUS.md)
+[![Coverage](https://img.shields.io/badge/coverage-89.65%25-brightgreen.svg)](docs/STATUS.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](pyproject.toml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](pyproject.toml)
@@ -173,7 +173,7 @@ To reproduce CI locally, install with the same extras CI uses and run the unit s
 the coverage gate:
 
 ```bash
-pip install -e ".[dev,neural]"
+pip install -e ".[dev,neural,api]"
 ruff check . && black . --check --line-length 120 && mypy src/
 pytest tests/unit/ --cov=src --cov-fail-under=85
 ```

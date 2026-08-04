@@ -233,18 +233,29 @@ jobs:
             echo "::error::pip-audit produced no report — the audit did not run to completion."
             exit 1
           fi
-          python -c "
-          import json, sys
+          python - <<'PYEOF'
+          import json
           d = json.load(open('pip-audit-report.json'))
-          crit = [dep for dep in d.get('dependencies', [])
-                  if any(v.get('severity', '') == 'CRITICAL' for v in dep.get('vulns', []))]
-          if crit:
-              print('CRITICAL VULNERABILITIES FOUND:')
-              for dep in crit:
-                  print(f\"  - {dep.get('name')}=={dep.get('version')}\")
-              sys.exit(1)
-          print('No critical vulnerabilities found')
-          "
+          deps = d.get('dependencies', [])
+          vulnerable = [dep for dep in deps if dep.get('vulns')]
+          # pip-audit's JSON formatter emits no severity field — each advisory carries
+          # only id / fix_versions / aliases / description. A previous version of this
+          # step filtered on v['severity'] == 'CRITICAL', which is never true, so the
+          # gate was decorative. Report honestly rather than pretend to rank.
+          keys = {k for dep in vulnerable for v in dep['vulns'] for k in v}
+          if 'severity' in keys:
+              print('NOTE: pip-audit now emits severity; this step can be tightened.')
+          print('pip-audit: %d dependencies scanned, %d with known advisories'
+                % (len(deps), len(vulnerable)))
+          for dep in vulnerable:
+              ids = ','.join(sorted({v['id'] for v in dep['vulns']}))
+              fixes = sorted({f for v in dep['vulns'] for f in v.get('fix_versions', [])})
+              suffix = ' (fixed in %s)' % ','.join(fixes) if fixes else ' (no fix available)'
+              print('  - %s==%s: %s%s' % (dep.get('name'), dep.get('version'), ids, suffix))
+          # Advisory on findings by design: without severity, failing on any advisory
+          # would block on unfixable transitive noise. The job still fails if pip-audit
+          # itself crashes or writes no report (guarded above).
+          PYEOF
 
   test:
     name: Tests with Pytest
@@ -614,7 +625,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [lint, spec-validate, type-check, security-scan, secret-scan-gitleaks, dependency-audit, test, chess-tests, integration-test, build-check, docker-build]
-    if: always()
+    # `!cancelled()` rather than `always()`: cancel-in-progress supersedes runs by
+    # design, and a superseded run must not report as a failure.
+    if: ${{ !cancelled() }}
     steps:
       - name: Check all job results
         # Every job in `needs` is both reported AND gated. Previously chess-tests and

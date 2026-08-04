@@ -26,7 +26,8 @@ python scripts/validate_context_docs.py  # deterministic check: .claude skills/a
 
 `ruff`/`mypy` are pinned in the `[dev]` extra (CI lint job installs `.[dev]`) for CI/local
 parity — bump deliberately and re-validate. Coverage gate: 85% (`--cov-fail-under=85`).
-Achieved: **90.15%** (full suite, 2026-07-25, `[dev,neural]` env — see `docs/STATUS.md`).
+Achieved: **89.65%** gate-scope (`tests/unit/`, 2026-08-04, `[dev,neural,api]` env — see
+`docs/STATUS.md`). The full-suite 90.15% figure predates the 2026-08-04 denominator widening.
 `mypy src/` must remain clean (327 files).
 Async tests must use `@pytest.mark.asyncio` + `await` — never `asyncio.get_event_loop()`.
 

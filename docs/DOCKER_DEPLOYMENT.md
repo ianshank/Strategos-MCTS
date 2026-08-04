@@ -418,7 +418,11 @@ The pipeline automatically:
 1. **Runs sanity checks** on every push
 2. **Builds Docker images** for demo and production
 3. **Runs smoke tests** on built images
-4. **Scans for vulnerabilities** with Trivy
+4. **Scans for vulnerabilities** with Trivy — an advisory CRITICAL+HIGH scan that uploads SARIF to
+   GitHub code scanning, plus a **blocking** scan that fails the build on fixable CRITICAL
+   findings. Accepted exceptions live in `.trivyignore` (each needs a rationale, an expiry date and
+   a tracking link). Note also that `docker-deployment.yml` now filters its `pull_request` trigger
+   by `paths`, so docs-only PRs no longer run the image matrix.
 5. **Deploys to staging/production** on main branch
 
 ```bash

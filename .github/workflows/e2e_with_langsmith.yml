@@ -49,6 +49,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          # models/*.pt are Git-LFS pointers. Without this the e2e suite loads a
+          # 130-byte text file as a checkpoint and dies with
+          # "UnpicklingError: Unsupported operand 118" (118 == 'v', the first byte of
+          # "version https://git-lfs.github.com/spec/v1"). Harmless while the job ran
+          # behind `|| true`; deterministically red now that it does not.
+          lfs: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -193,7 +200,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [check-secrets, e2e-tests-traced, api-smoke-tests-traced, mcts-performance-tests]
-    if: always()
+    # `!cancelled()` rather than `always()`: cancel-in-progress supersedes runs by
+    # design, and a superseded run must not report as a failure.
+    if: ${{ !cancelled() }}
     steps:
       - name: Check all E2E test results
         env:
@@ -201,6 +210,7 @@ jobs:
           SMOKE: ${{ needs.api-smoke-tests-traced.result }}
           PERF: ${{ needs.mcts-performance-tests.result }}
           HAS_LANGSMITH: ${{ needs.check-secrets.outputs.has_langsmith }}
+          CHECK_SECRETS: ${{ needs.check-secrets.result }}
         run: |
           echo "=== E2E Test Pipeline Summary ==="
           echo "LangSmith configured: ${HAS_LANGSMITH}"
@@ -215,7 +225,18 @@ jobs:
           # push). 'failure' and 'cancelled' are not, and previously went unreported
           # because this job only echoed. Treat any non-success, non-skipped result
           # as a pipeline failure.
+          # If the credential probe itself did not succeed, everything downstream
+          # skipped for the WRONG reason and the pipeline silently did not run.
+          # "skipped, no credentials" is fine; "skipped, upstream broke" is not.
           status=0
+          if [ "${CHECK_SECRETS}" != "success" ]; then
+            echo "::error::check-secrets finished with result '${CHECK_SECRETS}'; the traced jobs skipped without being evaluated."
+            status=1
+          fi
+          case "${HAS_LANGSMITH}" in
+            true|false) ;;
+            *) echo "::error::check-secrets published has_langsmith='${HAS_LANGSMITH}' (expected true/false)"; status=1 ;;
+          esac
           for job in E2E SMOKE PERF; do
             result="${!job}"
             case "${result}" in

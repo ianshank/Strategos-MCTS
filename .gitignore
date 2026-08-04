@@ -59,6 +59,11 @@ test_results.txt
 *.py,cover
 .hypothesis/
 
+# Trivy image-scan output. Both the advisory SARIF scan and the blocking CRITICAL
+# gate write this into the workspace root; the local reproduce command in
+# .trivyignore leaves it untracked.
+*.sarif
+
 # Linter / static-analysis caches and generated scan reports
 .ruff_cache/
 # Bandit / pip-audit / other tooling JSON reports (e.g. bandit-report.json,

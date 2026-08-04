@@ -332,8 +332,13 @@ python_functions = ["test_*"]
 asyncio_mode = "auto"
 # --strict-markers: an unregistered @pytest.mark.* is an error, not a silent no-op.
 # Without it a typo'd marker (e.g. @pytest.mark.slwo) silently fails to apply, so the
-# test runs in suites that meant to exclude it. Verified safe before enabling: every
-# marker used under tests/ is declared in the `markers` list below (0 undeclared).
+# test runs in suites that meant to exclude it.
+#
+# Registration is split across TWO places, which matters when adding a marker: this
+# list, and `pytest_configure` in tests/conftest.py (which registers `asyncio`, `mcts`,
+# `neural` and `llm`). `asyncio` in particular is used in ~148 files under tests/ and is
+# registered only by conftest — so "every marker is declared here" would be false.
+# Consolidating the two registries is worth doing; until then, check both.
 addopts = "-v --tb=short --strict-markers"
 # NOTE: with --strict-markers every marker must be registered, including ones supplied
 # by plugins. `timeout` comes from pytest-timeout, which is in the [dev] extra but NOT

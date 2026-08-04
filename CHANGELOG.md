@@ -21,7 +21,7 @@ The blocking set **widened**. Jobs that could not previously fail a build now ca
 | `chess-tests` | absent from `summary.needs` — could not block | in `needs` **and** gated |
 | `integration-test` | absent from `summary.needs` — could not block | in `needs` **and** gated |
 | `security-scan` (bandit) | in `needs`, printed, **omitted from the failure condition** | gated |
-| `dependency-audit` (pip-audit) | in `needs`, printed, **omitted from the failure condition** | gated |
+| `dependency-audit` (pip-audit) | in `needs`, printed, **omitted from the failure condition**, and its parser filtered on a `severity` key pip-audit never emits — so it was decorative twice over | in the failure condition; the parser now reports real advisory counts instead of pretending to rank by severity. **Still advisory on findings** — see note below |
 | Trivy image scan | `continue-on-error: true` **and** `exit-code: '0'` — could not fail | advisory SARIF scan retained; a second scan gates on CRITICAL, fixable-only |
 | e2e suites | `pytest ... \|\| true` — could not fail | exit code honoured; jobs gated on credentials being present |
 | pre-commit `pytest-quick` | `\|\| true` — could not fail | collection errors and test failures both fail |
@@ -46,7 +46,53 @@ Full non-slow sweep: **9610 passed, 29 failed, 209 skipped**. All 29 failures ar
 environment-dependent (23 Gradio/selenium UI, 4 offline HF hub, 1 LFS-pointer weights, 1 property
 test); verified identical on the unmodified tree, so this change introduces no regressions.
 
+> **`dependency-audit` is honest, not blocking.** pip-audit's JSON formatter emits only
+> `id`/`fix_versions`/`aliases`/`description` per advisory — there is no severity field, verified
+> against pip-audit 2.10.1. The old `severity == 'CRITICAL'` filter could therefore never match.
+> It now reports the true counts (7 dependencies currently carry advisories) and the job fails if
+> pip-audit itself crashes, but it does not fail on findings: without severity, that would block on
+> unfixable transitive noise. Gating properly needs an allowlist file like `.trivyignore`, which is
+> follow-up work rather than a CI-config change.
+
+#### Documentation reconciled to the new behaviour
+
+A doc sweep found **four documents asserting the two `src/api/` modules are coverage-omitted** —
+false as of this change — and a `docs/STATUS.md` reproduce block that no longer reproduces.
+
+- **`docs/STATUS.md`** — the reproduce command still passed the three `--ignore` flags this change
+  deleted, so following it produced a *different, lower* number than CI. Corrected, along with the
+  extras (`.[dev,neural,api]`), the `STRICT_OPTIONAL_DEPS=1` note, and the "Excluded from coverage"
+  section, whose closing sentence ("REST request-path tests therefore cannot move the gate") was a
+  direct inversion of current behaviour. The **gate-scope figure is now published for the first
+  time**; the full-suite 90.15% is marked stale rather than silently left in place.
+- **`README.md`** (badge 90.15% → 89.65%, install line), **`.github/CONTRIBUTING.md`**,
+  **`AGENTS.md`**, **`CLAUDE.md`** — corrected to `.[dev,neural,api]`.
+- **`.claude/skills/quality-gate`** claimed to mirror `ci.yml` while running `pytest tests/` (CI
+  gates `tests/unit/`) and installing without `api`. Both fixed.
+- **`.claude/skills/coverage-baseline`**, **`.claude/skills/strategos-primer`**,
+  **`docs/C4_ARCHITECTURE.md`** — stale omit-list claims corrected.
+- **`docs/C4_ARCHITECTURE.md`** carried `93.82%` in two places, one of them in a paragraph whose
+  own neighbouring note already explained that hardcoded snapshots had drifted. Replaced with a
+  pointer to `docs/STATUS.md`. Trivy is no longer described as advisory-only.
+- **`docs/DOCKER_DEPLOYMENT.md`** — documents the blocking scan and the new `paths` filter, a
+  behaviour change an operator would not otherwise predict.
+- **`CLAUDE.md`** — the Test Markers list became a trap under `--strict-markers` (an unlisted
+  marker is now a collection error); it now says so and points at the authoritative list. Two
+  Known-Issues rows added for the new failure modes.
+- **`docs/LINTING_SETUP.md`** — the `pytest-quick` hook can now fail a commit; that was documented
+  nowhere a contributor would look. The `SKIP=pytest-quick` bypass is recorded.
+- **`.gitignore`** — `*.sarif` (both Trivy steps write `trivy-results.sarif` to the workspace root).
+
+**Not edited, deliberately:** `CHARTER.md` INV-5 also asserts the `src/api/` modules are omitted and
+is now factually wrong. The charter states it "changes rarely and only by deliberate decision — not
+per task", so this is raised for the maintainer rather than fixed in passing. The correction is a
+*narrowing* of the omit list, which NG-5 encourages.
+
 #### Added
+- **`Makefile`** — a deliberately thin developer entry point (`make gate` runs the whole local gate
+  in CI order). It invents no commands: `tests/unit/test_ci_workflow_invariants.py` asserts its
+  line-length, coverage floor, extras and mypy invocation still match `ci.yml`, so it cannot become
+  a third contradictory source of truth alongside `CLAUDE.md` and the quality-gate skill.
 - `timeout-minutes` on **all 23 jobs** across all three workflows. Previously **zero** declared one,
   so every job inherited GitHub's 360-minute default — on a `docker-build` that has hung.
 - `concurrency` groups on `docker-deployment.yml` and `e2e_with_langsmith.yml` (only `ci.yml` had

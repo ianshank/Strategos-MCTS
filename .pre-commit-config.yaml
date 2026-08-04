@@ -110,7 +110,7 @@ repos:
         # both real failures. Use `SKIP=pytest-quick git commit ...` for the rare
         # deliberate bypass; pre-commit.ci still skips it via the `ci.skip` list
         # below, because CI runs the full suite separately.
-        entry: bash -c 'pytest -q --collect-only > /dev/null && pytest -q -x --tb=short -m "not slow"'
+        entry: bash -c 'pytest tests/unit/ -q --collect-only -q || { echo "collection failed:"; pytest tests/unit/ --collect-only -q; exit 1; }; pytest tests/unit/ -q -x --tb=short -m "not slow"'
         language: system
         types: [python]
         pass_filenames: false

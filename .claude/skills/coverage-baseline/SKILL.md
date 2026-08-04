@@ -31,5 +31,7 @@ per-module table (lowest first). Update `planning/milestones.yaml` `quality_metr
 
 Notes:
 - Coverage gate is branch coverage, `fail_under = 85.0` (`pyproject.toml`).
-- `src/api/rest_server.py`, `src/api/inference_server.py`, and three `src/games/chess/` modules are omitted
-  from coverage by config — they will not appear as movable targets.
+- Three `src/games/chess/` modules (`ui.py`, `verification/game_verifier.py`,
+  `verification/move_validator.py`) are omitted from coverage by config — they will not appear as
+  movable targets. The two `src/api/` server modules were **un-omitted** on 2026-08-04 and are now
+  measured.

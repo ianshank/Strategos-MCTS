@@ -20,7 +20,7 @@ By participating you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md)
 ```bash
 python -m venv .venv
 source .venv/bin/activate            # Windows: .venv\Scripts\activate
-pip install -e ".[dev,neural]"       # dev tooling + PyTorch for neural MCTS
+pip install -e ".[dev,neural,api]"   # dev tooling + PyTorch + FastAPI — the CI test job's exact set
 cp .env.example .env                 # then add OPENAI_API_KEY or ANTHROPIC_API_KEY
 ```
 
