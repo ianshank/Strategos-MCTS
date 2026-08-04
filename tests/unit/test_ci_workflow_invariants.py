@@ -37,10 +37,35 @@ WORKFLOW_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
 # that a hang looks like a slow run for most of a working day.
 MAX_TIMEOUT_MINUTES = 90
 
-# Steps whose failure must never be swallowed. `|| true` after any of these means the
-# job reports success regardless of the result, which is indistinguishable from having
-# no check at all.
-RESULT_BEARING_COMMANDS = ("pytest", "mypy", "ruff", "black")
+# Commands whose EXIT CODE is itself the gate. Deliberately excludes `bandit`,
+# `pip-audit` and `trivy`: those exit non-zero on *any* finding at *any* severity, so
+# their `|| true` is correct design — a separate parsing/gating step decides, and that
+# step is asserted elsewhere (test_image_scan_can_actually_fail, and the missing-report
+# guards in ci.yml). Adding them here would flag working code and train people to
+# ignore this test.
+RESULT_BEARING_COMMANDS = (
+    "pytest",
+    "mypy",
+    "ruff",
+    "black",
+    "gitleaks",
+    "harness",
+)
+
+# Shell constructs that discard a command's exit status. `|| true` is the obvious one;
+# `|| :` is the same thing spelled with the null builtin, and `set +e` disables the
+# errexit that would otherwise propagate a failure out of a multi-command step.
+_DISARMING_SUFFIXES = (r"\|\|\s*true\b", r"\|\|\s*:\s*$", r"\|\|\s*:\s")
+_DISARMING_RE = re.compile("|".join(_DISARMING_SUFFIXES))
+
+# A command name only counts when it appears as a *word*. Substring matching flagged
+# `rm -rf .pytest_cache || true` (contains "pytest"), `docker rm blackbox || true`
+# (contains "black") and `curl -F file=@pytest-report.xml || true` — all legitimate
+# cleanup or upload steps. Word boundaries with an explicit guard against `-`/`.`/`_`
+# neighbours fix that without needing an allowlist.
+_COMMAND_WORD_RE = re.compile(
+    r"(?<![\w./-])(?:" + "|".join(re.escape(c) for c in RESULT_BEARING_COMMANDS) + r")(?![\w.-])"
+)
 
 
 def _workflow_files() -> list[Path]:
@@ -78,6 +103,50 @@ def _all_jobs() -> list[tuple[str, str, dict[str, Any]]]:
 
 def _job_ids() -> list[str]:
     return [f"{wf}::{job_id}" for wf, job_id, _ in _all_jobs()]
+
+
+def _gated_job_list(body: str) -> set[str]:
+    """Names a summary job actually gates on.
+
+    Two legitimate forms, both counted:
+
+    1. Membership in the ``JOBS="..."`` list the status loop iterates.
+    2. An explicit conditional — ``[ "${NAME}" != "success" ]`` or ``case "${NAME}"``.
+       Needed because some results warrant different semantics than the loop's
+       ``success|skipped``: a *skipped* ``check-secrets`` means the credential probe
+       never ran, which is a failure, whereas a skipped test job is fine.
+
+    Comment lines are stripped first. Searching the raw body let a name mentioned only
+    in a ``#`` comment satisfy the check — mutation testing showed that was a live
+    route to the exact regression this invariant exists to prevent.
+    """
+    code = "\n".join(line for line in body.splitlines() if not line.strip().startswith("#"))
+
+    gated: set[str] = set()
+    match = re.search(r'JOBS=(["\'])(.*?)\1', code, re.S)
+    if match:
+        # Collapse backslash-continuations, then split on whitespace.
+        gated |= set(re.sub(r"\\\s*\n\s*", " ", match.group(2)).split())
+
+    # Explicitly tested names: `[ "${NAME}" ...`, `[[ "${NAME}" ...`, `case "${NAME}"`.
+    gated |= set(re.findall(r'(?:\[\[?|case)\s+"?\$\{([A-Z_][A-Z0-9_]*)\}"?', code))
+    return gated
+
+
+def _summary_jobs() -> list[tuple[str, dict[str, Any]]]:
+    """Every job across all workflows that acts as a pipeline summary/gate.
+
+    Derived from the workflows rather than naming ``ci.yml``'s summary explicitly, so
+    a second workflow that grows a summary job is held to the same contract. The
+    e2e workflow's summary was written by the same change and initially was not.
+    """
+    out: list[tuple[str, dict[str, Any]]] = []
+    for wf, job_id, job in _all_jobs():
+        if job_id != "summary":
+            continue
+        if any("JOBS=" in str(s.get("run", "")) for s in _steps(job)):
+            out.append((f"{wf}::{job_id}", job))
+    return out
 
 
 # --------------------------------------------------------------------------- AC-8
@@ -149,17 +218,18 @@ def test_expensive_workflow_filters_pull_requests_by_path() -> None:
 
 
 @pytest.mark.unit
-def test_ci_summary_gates_every_job_it_depends_on() -> None:
+@pytest.mark.parametrize(("label", "summary"), _summary_jobs(), ids=[lbl for lbl, _ in _summary_jobs()])
+def test_summary_gates_every_job_it_depends_on(label: str, summary: dict[str, Any]) -> None:
     """AC-1: the reported set and the enforced set must be identical.
 
     The original summary job listed ``security-scan`` and ``dependency-audit`` in
     ``needs``, printed their results, and then omitted them from the failure
     condition — so a bandit HIGH finding printed a red line and merged green.
     """
-    jobs = _load(WORKFLOW_DIR / "ci.yml")["jobs"]
-    summary = jobs["summary"]
     needs = summary["needs"]
-    assert isinstance(needs, list) and needs, "ci.yml summary job must declare a needs list"
+    if isinstance(needs, str):
+        needs = [needs]
+    assert needs, f"{label} must declare a needs list"
 
     step = next(s for s in _steps(summary) if "run" in s)
     env = step.get("env") or {}
@@ -171,22 +241,36 @@ def test_ci_summary_gates_every_job_it_depends_on() -> None:
     }
     missing = set(needs) - bound
     assert not missing, (
-        f"ci.yml summary depends on {sorted(missing)} but never reads their .result "
+        f"{label} depends on {sorted(missing)} but never reads their .result "
         f"into an env var, so they cannot be gated on."
     )
 
     # 2. Every such env var is named in the shell list the gate iterates over. This is
     #    what makes reported == enforced structurally, rather than by coincidence.
+    #    Matched against the extracted JOBS="..." assignment ONLY — searching the whole
+    #    body let a mere `#` comment mentioning the name satisfy the check, which
+    #    mutation testing showed was a live route to the exact regression this
+    #    prevents.
+    gated_list = _gated_job_list(body)
     result_vars = {name for name, value in env.items() if re.search(r"needs\.[\w-]+\.result", str(value))}
-    ungated = {name for name in result_vars if not re.search(rf"\b{re.escape(name)}\b", body)}
+    ungated = {name for name in result_vars if name not in gated_list}
     assert not ungated, (
-        f"ci.yml summary reads {sorted(ungated)} but never checks them in the gate "
+        f"{label} reads {sorted(ungated)} but never checks them in the gate "
         f"body. A job that is printed but not enforced is worse than one that is "
         f"absent, because the red line in the log implies it was checked."
     )
 
     # 3. The gate must actually be able to fail.
-    assert "exit 1" in body, "ci.yml summary job has no failing exit path"
+    # 3. The gate must be able to fail. Two equivalent spellings are accepted: a
+    #    literal `exit 1`, or an accumulator (`status=1` … `exit "${status}"`). Demanding
+    #    the literal would reject the accumulator form, which is the better one for a
+    #    loop that wants to report every offender before exiting.
+    has_literal_exit = re.search(r"\bexit\s+1\b", body)
+    has_accumulator = re.search(r"\bstatus=1\b", body) and re.search(r'\bexit\s+"?\$\{status\}"?', body)
+    assert has_literal_exit or has_accumulator, (
+        f"{label} has no failing exit path: expected either `exit 1` or a "
+        f'`status=1` … `exit "${{status}}"` accumulator.'
+    )
 
 
 @pytest.mark.unit
@@ -210,25 +294,38 @@ def test_ci_summary_covers_the_test_bearing_jobs() -> None:
 def test_no_result_bearing_step_swallows_its_exit_code(workflow: str, job_id: str, job: dict[str, Any]) -> None:
     """AC-3: a check that cannot fail is not a check.
 
-    Narrowly scoped to commands whose exit code *is* the signal. Cleanup and
-    best-effort reporting steps legitimately use ``|| true`` and are not flagged.
+    Narrowly scoped to commands whose exit code *is* the signal, matched on word
+    boundaries. Cleanup and best-effort reporting steps legitimately use ``|| true``
+    (``rm -rf .pytest_cache || true``) and must not be flagged just because a path
+    happens to contain a command name.
     """
     for step in _steps(job):
         run = step.get("run")
-        if not run or not any(cmd in run for cmd in RESULT_BEARING_COMMANDS):
+        if not run:
             continue
-        offenders = [
-            line.strip()
-            for line in run.splitlines()
-            if "|| true" in line and any(cmd in line for cmd in RESULT_BEARING_COMMANDS)
-        ]
-        # A trailing `|| true` on its own continuation line also disarms the command.
-        if re.search(r"(?:pytest|mypy|ruff|black)[^\n]*(?:\\\s*\n[^\n]*)*\|\|\s*true", run):
-            offenders.append(run.strip().splitlines()[0])
+
+        # `continue-on-error` disarms the whole step regardless of what the shell does,
+        # so it is the same defect as `|| true` wearing a different hat.
+        assert not (step.get("continue-on-error") and _COMMAND_WORD_RE.search(run)), (
+            f"{workflow}::{job_id} step {step.get('name')!r} runs a result-bearing "
+            f"command under continue-on-error, so its result cannot fail the job."
+        )
+
+        offenders: list[str] = []
+        # Join backslash continuations first: a `|| true` on the wrapped tail of a
+        # command still disarms it, and the two belong to the same logical line.
+        logical = re.sub(r"\\\s*\n\s*", " ", run)
+        for line in logical.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                continue  # a comment mentioning `|| true` is not a disarmed command
+            if _DISARMING_RE.search(stripped) and _COMMAND_WORD_RE.search(stripped):
+                offenders.append(stripped)
+
         assert not offenders, (
             f"{workflow}::{job_id} step {step.get('name')!r} runs a result-bearing "
             f"command but discards its exit status: {offenders}. Remove the "
-            f"`|| true`, or gate the whole job on a precondition instead."
+            f"`|| true` / `|| :`, or gate the whole job on a precondition instead."
         )
 
 

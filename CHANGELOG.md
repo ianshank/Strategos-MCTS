@@ -83,6 +83,29 @@ false as of this change — and a `docs/STATUS.md` reproduce block that no longe
   nowhere a contributor would look. The `SKIP=pytest-quick` bypass is recorded.
 - **`.gitignore`** — `*.sarif` (both Trivy steps write `trivy-results.sarif` to the workspace root).
 
+#### Invariant suite hardened against its own blind spots
+
+An adversarial review mutation-tested the new tests and found three ways they could be
+defeated or could cry wolf. All three are fixed and re-mutation-tested:
+
+- **False positives on legitimate `|| true`.** Substring matching flagged
+  `rm -rf .pytest_cache || true` (contains "pytest") and `docker rm blackbox || true`
+  (contains "black"). Now matched on word boundaries.
+- **Missed equivalent disarms.** `|| :` and step-level `continue-on-error` bypass a check
+  exactly as `|| true` does, and neither was detected. Both now are. `bandit`/`pip-audit`/
+  `trivy` are deliberately *excluded* from the checked set — they exit non-zero on any
+  finding at any severity, so their `|| true` is correct design and a separate parsing step
+  is the gate.
+- **A shell comment could defeat the summary-gate check.** It searched the whole `run`
+  body, so `# DEPENDENCY_AUDIT is checked elsewhere` satisfied it. It now parses the
+  `JOBS="..."` assignment (plus explicit `[ "${NAME}" ... ]` / `case` conditionals, which
+  carry different and legitimate semantics) with comment lines stripped first.
+
+The summary-gate invariant was also **hardcoded to `ci.yml`**, so the e2e summary written
+by the same change escaped it entirely — the exact rot the module docstring warns about. It
+is now parametrized over every workflow with a summary job, and `e2e_with_langsmith.yml`'s
+summary was reshaped to the same `JOBS="..."` form so one invariant covers both.
+
 **Not edited, deliberately:** `CHARTER.md` INV-5 also asserts the `src/api/` modules are omitted and
 is now factually wrong. The charter states it "changes rarely and only by deliberate decision — not
 per task", so this is raised for the maintainer rather than fixed in passing. The correction is a

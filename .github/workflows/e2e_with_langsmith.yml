@@ -237,7 +237,11 @@ jobs:
             true|false) ;;
             *) echo "::error::check-secrets published has_langsmith='${HAS_LANGSMITH}' (expected true/false)"; status=1 ;;
           esac
-          for job in E2E SMOKE PERF; do
+          # Same shape as ci.yml's summary: the reported set and the gated set are
+          # one list, so they cannot drift apart. tests/unit/test_ci_workflow_invariants.py
+          # parses this assignment and asserts every needs-derived env var appears in it.
+          JOBS="E2E SMOKE PERF"
+          for job in ${JOBS}; do
             result="${!job}"
             case "${result}" in
               success|skipped) ;;
