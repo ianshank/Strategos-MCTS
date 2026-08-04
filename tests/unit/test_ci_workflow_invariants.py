@@ -13,7 +13,8 @@ names, so adding a job to a workflow automatically brings it under the invariant
 instead of quietly escaping it — a hardcoded list would rot on the first new job and
 is the failure mode these tests exist to prevent.
 
-Spec: ``specs/hygiene_ci_mechanical.SPEC.md`` (AC-1, AC-2, AC-3, AC-8, AC-9, AC-12).
+Spec: ``specs/hygiene_ci_mechanical.SPEC.md`` (AC-1, AC-3, AC-5, AC-8, AC-9, AC-11, AC-12).
+Each section below is headed with the AC it enforces.
 """
 
 from __future__ import annotations
@@ -24,7 +25,10 @@ from typing import Any
 
 import pytest
 
-yaml = pytest.importorskip("yaml", reason="PyYAML is required to parse workflow files")
+# Imported normally, not via importorskip. PyYAML is a declared `dev` dependency, and a
+# regression gate that silently skips itself when a dependency goes missing is exactly
+# the failure mode this module exists to catch.
+import yaml
 
 WORKFLOW_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
 
@@ -254,7 +258,7 @@ def test_image_scan_can_actually_fail() -> None:
     )
 
 
-# --------------------------------------------------------------------------- AC-2
+# -------------------------------------------------------------------------- AC-11
 
 
 @pytest.mark.unit

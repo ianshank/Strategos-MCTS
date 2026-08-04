@@ -74,17 +74,21 @@ except ImportError:
 
 collect_ignore_glob = []
 
-# When the suite runs in CI the optional extras are installed on purpose, so a missing
-# one means the environment is misconfigured — not that the tests should quietly
-# disappear. Degrading to a silent skip there is how the API server suites went
-# ungated for so long: the dependency was absent, so collection was skipped, so the
-# modules scored zero, so they were added to the coverage omit list to compensate.
+# A job that deliberately installs the optional extras should FAIL when one is missing,
+# rather than silently collecting fewer tests. Degrading to a skip is how the API-server
+# suites went ungated for so long: the dependency was absent, so collection was skipped,
+# so the modules scored zero, so they were added to the coverage omit list to compensate.
 #
-# Locally the opposite is true: a contributor on a plain `.[dev]` install should still
-# be able to run `pytest tests/unit` without installing FastAPI and Torch. So the guard
-# stays, but becomes strict under CI. Set STRICT_OPTIONAL_DEPS=1 to reproduce CI's
-# behaviour locally.
-_STRICT_OPTIONAL_DEPS = os.environ.get("STRICT_OPTIONAL_DEPS", os.environ.get("CI", "")).strip().lower() in {
+# This is opt-in per job, NOT inferred from the ambient `CI` variable. GitHub Actions
+# sets CI=true in every job, but only the `test` job installs the `api` extra — keying
+# off CI made the guard fire in `chess-tests` and `integration-test`, which legitimately
+# install narrower dependency sets. The job that wants strictness declares it:
+#
+#     env:
+#       STRICT_OPTIONAL_DEPS: "1"
+#
+# Contributors on a plain `.[dev]` install are unaffected and still get skips.
+_STRICT_OPTIONAL_DEPS = os.environ.get("STRICT_OPTIONAL_DEPS", "").strip().lower() in {
     "1",
     "true",
     "yes",
@@ -103,10 +107,10 @@ def _require_or_ignore(module: str, extra: str, ignored: list[str]) -> None:
     except ImportError:
         if _STRICT_OPTIONAL_DEPS:
             raise RuntimeError(
-                f"{module!r} is required to collect {ignored} but is not installed. "
-                f"CI installs it via the '{extra}' extra — check the test job's "
-                f'`pip install -e ".[...]"` line. To run without it locally, unset '
-                f"CI/STRICT_OPTIONAL_DEPS and these modules will be skipped instead."
+                f"{module!r} is required to collect {ignored} but is not installed, "
+                f"and STRICT_OPTIONAL_DEPS is set. Install the '{extra}' extra — check "
+                f'the job\'s `pip install -e ".[...]"` line. Unset STRICT_OPTIONAL_DEPS '
+                f"to skip these modules instead."
             ) from None
         collect_ignore_glob.extend(ignored)
 

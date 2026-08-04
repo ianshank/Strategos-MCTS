@@ -54,6 +54,10 @@ dev = [
     "pytest-timeout>=2.1.0",
     "pytest-xdist>=3.3.0",
     "hypothesis>=6.88.0",
+    # Needed by tests/unit/test_ci_workflow_invariants.py to parse the workflow files.
+    # Previously only in the `neural` extra, which forced those tests to guard their
+    # import — and a regression gate that can skip itself is not a gate.
+    "PyYAML>=6.0.0",
     # Pin mypy to the validated minor: the no-redef diagnosis for optional-import
     # fallbacks (e.g. chess/mcp_chess_tools.py) varies across mypy releases, so an
     # unbounded range makes CI disagree with local. Bump deliberately when revalidated.
@@ -331,6 +335,11 @@ asyncio_mode = "auto"
 # test runs in suites that meant to exclude it. Verified safe before enabling: every
 # marker used under tests/ is declared in the `markers` list below (0 undeclared).
 addopts = "-v --tb=short --strict-markers"
+# NOTE: with --strict-markers every marker must be registered, including ones supplied
+# by plugins. `timeout` comes from pytest-timeout, which is in the [dev] extra but NOT
+# in the minimal environments some jobs build (scripts/deployment_sanity_check.py runs
+# pytest after only `pip install -e .`). Declaring it below keeps the config
+# self-sufficient: registration no longer depends on the plugin being installed.
 timeout = 300  # 5 minute timeout for long-running tests
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
@@ -354,6 +363,10 @@ markers = [
     "ma_due_diligence: M&A due diligence workflow tests",
     "selenium: Selenium browser automation tests",
     "harness: Agent harness framework tests",
+    # Supplied by the pytest-timeout plugin. Declared here so --strict-markers also
+    # holds in environments that install the project without the [dev] extra; pytest
+    # tolerates the plugin re-registering it.
+    "timeout: Per-test timeout (pytest-timeout)",
 ]
 
 [tool.coverage.run]

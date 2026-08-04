@@ -285,6 +285,11 @@ jobs:
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
           OPENAI_API_KEY: "sk-test-key-not-real"
+          # This job installs .[dev,neural,api] on purpose, so a missing optional
+          # dependency is a misconfigured runner, not a reason to collect fewer tests.
+          # Scoped to this job only: chess-tests and integration-test install narrower
+          # sets and must keep degrading to skips.
+          STRICT_OPTIONAL_DEPS: "1"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
