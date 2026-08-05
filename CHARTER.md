@@ -198,8 +198,9 @@ believes is enforced but is not is worse than one honestly labelled.
 5. **Coverage is a gate, not a report.** Branch coverage must stay at or above `fail_under = 85.0`,
    declared in `pyproject.toml` and enforced in CI. *Scope, stated honestly:* the CI gate measures
    `tests/unit/` only, and the coverage configuration omits three chess modules
-   (`src/games/chess/ui.py`, `verification/game_verifier.py`, `verification/move_validator.py`) — so
-   the gated number is narrower than the headline in `docs/STATUS.md`, which covers the full suite.
+   (`src/games/chess/ui.py`, `src/games/chess/verification/game_verifier.py`,
+   `src/games/chess/verification/move_validator.py`) — so the gated number is narrower than the
+   headline in `docs/STATUS.md`, which covers the full suite.
    The gate-scope figure is now measured and published in `docs/STATUS.md` rather than left implicit:
    **89.65%** as of 2026-08-04 under `.[dev,neural,api]`. **Verdict: ENFORCED (narrow scope).**
    *(Corrected 2026-08-05: this previously also listed the two `src/api/` server modules as omitted.
