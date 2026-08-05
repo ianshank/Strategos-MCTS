@@ -5,7 +5,7 @@ a DeepMind-style AI system with Neural MCTS and Hierarchical Reasoning (pre-inte
 [Known Limitations](#known-limitations)). Distributed on PyPI as `langgraph-multi-agent-mcts`.
 
 [![CI](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml/badge.svg)](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-90.15%25-brightgreen.svg)](docs/STATUS.md)
+[![Coverage](https://img.shields.io/badge/coverage-89.65%25-brightgreen.svg)](docs/STATUS.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](pyproject.toml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](pyproject.toml)
@@ -173,10 +173,14 @@ To reproduce CI locally, install with the same extras CI uses and run the unit s
 the coverage gate:
 
 ```bash
-pip install -e ".[dev,neural]"
+pip install -e ".[dev,neural,api]"
 ruff check . && black . --check --line-length 120 && mypy src/
-pytest tests/unit/ --cov=src --cov-fail-under=85
+STRICT_OPTIONAL_DEPS=1 pytest tests/unit/ --cov=src --cov-fail-under=85
 ```
+
+`STRICT_OPTIONAL_DEPS=1` matches the CI test job: a missing optional dependency aborts
+collection with an actionable message rather than silently shrinking the suite (and the
+coverage denominator). `make test` sets it for you.
 
 The CI pipeline enforces an **85% coverage gate** and pins `ruff`/`mypy` (in the `[dev]`
 extra, installed by the lint job) so local and CI runs use identical tool versions.

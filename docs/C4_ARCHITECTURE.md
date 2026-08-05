@@ -419,7 +419,7 @@ graph TB
 ### Serving, streaming & visualization (Phase 4)
 
 Framework capabilities are exposed through thin REST endpoints that delegate to coverage-bearing
-service modules (so `rest_server.py`, which is omitted from coverage, stays logic-free):
+service modules (keeping `rest_server.py` logic-free):
 
 - `src/api/streaming.py` (`StreamingService`) → `POST /query-stream` (SSE over LangGraph
   `astream_events`).
@@ -483,7 +483,10 @@ This updated C4 architecture reflects the **current state** of the application, 
 6.  **Parallel MCTS**: Tree-parallel search engine with virtual-loss collision avoidance and adaptive scaling (`src/framework/mcts/parallel_mcts.py`).
 7.  **Assembly Router & Concept Extractor**: NLP-driven routing heuristics — `ConceptExtractor` classifies query concepts into `technical_term`, `domain_entity`, or `process_action` with a complexity score; `AssemblyRouter` maps these features to HRM/TRM/MCTS (`src/framework/assembly/`, `src/agents/meta_controller/assembly_router.py`).
 8.  **Prometheus Observability**: Full counter/histogram instrumentation for agent latency, MCTS iterations, LLM call outcomes, and active operations (`src/monitoring/prometheus_metrics.py`; `/metrics` endpoint via `rest_server.py`).
-9.  **Test hardening (2026-07-20)**: 10 101 tests passing at 93.82% branch coverage; `ruff`, `black`, and `mypy` all clean across 305 source files.
+9.  **Test hardening**: see `docs/STATUS.md` for the current measured pass counts, branch
+    coverage, and source-file count. `ruff` and `black` are clean repo-wide and `mypy` is clean
+    over `src/` (the gate is `mypy src/`, not `--strict` and not repo-wide), enforced by the
+    `lint` and `type-check` CI jobs.
 
 ### Technology Stack
 
@@ -507,7 +510,7 @@ The `.github/workflows/ci.yml` pipeline includes the local `quality-gate` skill'
 same pinned tool versions (the lint job installs the `[dev]` extra; the type-check job installs
 `[dev,neural]`, which includes it): `black --check` → `ruff check` → `mypy src/` (strictness comes from
 `[tool.mypy]` in `pyproject.toml`, not a `--strict` flag; CI adds `--no-error-summary`) → `pytest` with
-branch coverage (`--cov-fail-under=85`, **achieved 93.82%** as of 2026-07-20) → a hardcoded-secret grep.
+branch coverage (`--cov-fail-under=85`; see `docs/STATUS.md` for the measured figure) → a hardcoded-secret grep.
 On top of that gate, CI-only jobs add `bandit` (HIGH-severity gate), `pip-audit` (CRITICAL gate), spec
 validation (`harness validate-spec` — error-level against spec schema v2 via
 `src/framework/harness/intent/spec_validator.py`: required `id`/`goal`/`status` frontmatter with a closed
@@ -517,7 +520,10 @@ plus, on PRs, `harness spec-trace` traceability: `src/**` diffs need a `spec/<id
 base branch or a `No-Spec: <reason>` commit trailer, and `verified` flips need same-line spec-id+`AC-n`
 mappings under `tests/`; the `spec-validate` job now gates the CI `summary` aggregate on failure), and a
 Docker build with a Trivy image scan whose SARIF results upload to GitHub code scanning (the `docker-build`
-job carries `security-events: write`; the upload is advisory and non-blocking). Configuration is
+job carries `security-events: write`; that upload is advisory and non-blocking) **plus a second,
+blocking scan** that fails the job on fixable CRITICAL findings, with accepted exceptions recorded
+in `.trivyignore`. The `summary` job gates every job it reports, including `chess-tests`,
+`integration-test`, `security-scan` and `dependency-audit`. Configuration is
 centralized in `src/config/constants.py` + `src/config/settings.py` (Pydantic Settings) with domain-specific
 constant modules; there are no hardcoded secrets or magic numbers in the routing/adapter layers.
 

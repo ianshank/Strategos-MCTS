@@ -123,6 +123,12 @@ git push
 
 ### Disable Hook Temporarily
 
+> **`pytest-quick` can now fail a commit.** It previously ended in `|| true`, so it could never
+> block anything. Collection errors and test failures both fail it now. The deliberate bypass is
+> `SKIP=pytest-quick git commit ...`; `pre-commit.ci` still skips it via the `ci.skip` list because
+> CI runs the full suite separately.
+
+
 ```bash
 git push --no-verify  # Skip pre-push hook
 ```

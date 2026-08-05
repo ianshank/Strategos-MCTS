@@ -1,0 +1,67 @@
+# Trivy ignore list — accepted container-image findings
+#
+# Consumed by the "Fail on CRITICAL image vulnerabilities" step in
+# .github/workflows/ci.yml, which gates on CRITICAL severity with
+# `ignore-unfixed: true`.
+#
+# SCOPE OF THE GATE
+#   - Only CRITICAL findings block. HIGH and below are still reported to the
+#     Security tab by the advisory SARIF scan in the same job, but do not fail CI.
+#   - Only *fixable* findings block. A CVE with no upstream fix available is not
+#     actionable in a pull request, so `ignore-unfixed` filters it out. It will
+#     start blocking automatically once a fixed version ships — which is the
+#     point at which someone can actually do something about it.
+#
+# ADDING AN ENTRY
+#   An entry here is a deliberate, temporary acceptance of a known CRITICAL
+#   vulnerability. It is not a way to make CI quiet. Every entry MUST carry:
+#
+#     1. The CVE id, one per line, uncommented.
+#     2. Why it is not exploitable in this image, or why the fix cannot be taken.
+#     3. An expiry date. Past that date, remove the entry and re-evaluate rather
+#        than extending it silently.
+#     4. A link to the tracking issue or spec.
+#
+#   Format:
+#
+#     # CVE-2026-12345 — <package> <version>
+#     # Rationale: <why this does not affect this image>
+#     # Expires:   2026-12-31   (re-evaluate; do not extend without review)
+#     # Tracking:  https://github.com/ianshank/Strategos-MCTS/issues/<n>
+#     CVE-2026-12345
+#
+# An empty list is the correct steady state. If this file grows, that is a signal
+# the base image needs updating, not that the gate needs loosening.
+#
+# Charter note: CHARTER.md NG-3 requires claims to be reproducible. Reproduce the
+# gate locally with:
+#
+#   docker build -t langgraph-mcts:test --target production .
+#   trivy image --severity CRITICAL --ignore-unfixed \
+#     --ignorefile .trivyignore --exit-code 1 langgraph-mcts:test
+#
+# --- accepted findings below this line ---
+
+# CVE-2025-23042 — gradio 4.44.1 (Blocked Path ACL Bypass), fixed in gradio 5.11.0
+#
+# Rationale: the fix cannot be taken as an isolated bump. gradio >=5.11 requires
+#   huggingface-hub >=0.33.5 (verified: `importlib.metadata.requires('gradio')` on
+#   5.50.0 yields `huggingface-hub<2.0,>=0.33.5`), while requirements.txt:29 pins
+#   huggingface_hub>=0.20.0,<0.30.0 — a pin that exists to hold transformers
+#   >=4.40.0,<4.46.0 and its peft compatibility (requirements.txt:14-17). Taking the
+#   CVE fix therefore cascades into a transformers/peft/hub upgrade, which is a
+#   deliberate dependency-migration task, not a CI change, and is CHARTER.md NG-6
+#   territory (no breaking changes to working paths).
+#
+#   Materially mitigating, and the reason this is an acceptable temporary state: the
+#   production image does not run Gradio. Dockerfile:89 is
+#   `uvicorn src.api.rest_server:app`; gradio is imported only by the root `app.py`
+#   demo (behind a guarded import) and `src/games/chess/ui.py`, neither of which is on
+#   the served path. The package is present in the image as transitive surface from
+#   `pip install -r requirements.txt` (Dockerfile:33), not because the API needs it.
+#   The cleanest real fix is likely to stop installing the UI dependency into the API
+#   image at all, rather than to upgrade it.
+#
+# Expires:   2026-09-04   (30 days — re-evaluate; do not extend without review)
+# Tracking:  raised in PR #142; needs its own spec under the M5 hygiene program.
+CVE-2025-23042

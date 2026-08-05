@@ -74,22 +74,64 @@ except ImportError:
 
 collect_ignore_glob = []
 
-# Conditionally skip test modules that require optional dependencies
-try:
-    import fastapi  # noqa: F401
-except ImportError:
-    collect_ignore_glob += [
+# A job that deliberately installs the optional extras should FAIL when one is missing,
+# rather than silently collecting fewer tests. Degrading to a skip is how the API-server
+# suites went ungated for so long: the dependency was absent, so collection was skipped,
+# so the modules scored zero, so they were added to the coverage omit list to compensate.
+#
+# This is opt-in per job, NOT inferred from the ambient `CI` variable. GitHub Actions
+# sets CI=true in every job, but only the `test` job installs the `api` extra — keying
+# off CI made the guard fire in `chess-tests` and `integration-test`, which legitimately
+# install narrower dependency sets. The job that wants strictness declares it:
+#
+#     env:
+#       STRICT_OPTIONAL_DEPS: "1"
+#
+# Contributors on a plain `.[dev]` install are unaffected and still get skips.
+_STRICT_OPTIONAL_DEPS = os.environ.get("STRICT_OPTIONAL_DEPS", "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
+
+def _require_or_ignore(module: str, extra: str, ignored: list[str]) -> None:
+    """Import ``module`` or arrange for ``ignored`` to be skipped.
+
+    When ``STRICT_OPTIONAL_DEPS`` is set to a truthy value a missing optional
+    dependency aborts collection with an actionable message instead of silently
+    shrinking the suite. Nothing else is consulted — deliberately *not* the ambient
+    ``CI`` variable, which GitHub sets in every job while only the ``test`` job
+    installs the ``api`` extra. Jobs that need the strict behaviour opt in explicitly.
+    """
+    try:
+        __import__(module)
+    except ImportError as exc:
+        if _STRICT_OPTIONAL_DEPS:
+            raise RuntimeError(
+                f"{module!r} is required to collect {ignored} but is not installed, "
+                f"and STRICT_OPTIONAL_DEPS is set. Install the '{extra}' extra — check "
+                f'the job\'s `pip install -e ".[...]"` line. Unset STRICT_OPTIONAL_DEPS '
+                f"to skip these modules instead. Original import error: {exc}"
+            ) from exc
+        collect_ignore_glob.extend(ignored)
+
+
+_require_or_ignore(
+    "fastapi",
+    "api",
+    [
         "unit/test_inference_server.py",
         "unit/test_rest_server.py",
         "unit/test_rest_server_ext.py",
-    ]
-
-try:
-    import uvicorn  # noqa: F401
-except ImportError:
-    collect_ignore_glob += [
-        "unit/test_inference_server.py",
-    ]
+    ],
+)
+_require_or_ignore("uvicorn", "api", ["unit/test_inference_server.py"])
+# test_inference_server.py imports src/api/inference_server.py, which imports torch at
+# module scope. Previously unguarded, so a `.[dev,api]`-without-neural environment hit
+# a hard collection error rather than a skip.
+_require_or_ignore("torch", "neural", ["unit/test_inference_server.py"])
 
 try:
     import chess  # noqa: F401

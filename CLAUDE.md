@@ -19,7 +19,7 @@ source .venv/bin/activate  # Linux/macOS
 
 # Install dependencies
 pip install -e ".[dev]"           # Development only
-pip install -e ".[dev,neural]"    # Include PyTorch for neural MCTS
+pip install -e ".[dev,neural,api]"  # The exact set the CI test job installs
 
 # Configure environment
 cp .env.example .env
@@ -38,10 +38,19 @@ pytest tests/unit -v --tb=short -q
 | `pip install -e ".[dev]"` | Install with dev dependencies |
 | `pip install -e ".[dev,benchmark]"` | Include benchmark framework |
 | `pip install -e ".[dev,neural]"` | Include PyTorch for neural MCTS |
+| `pip install -e ".[dev,neural,api]"` | The exact set the CI test job installs (FastAPI included) |
+| `make gate` | Run the whole local gate in CI order |
 | `black . --line-length 120` | Format code |
 | `ruff check . --select I --fix` | Sort imports (ruff owns isort rules) |
 | `ruff check . --fix` | Lint with auto-fix |
-| `mypy src/ --strict` | Type check |
+| `mypy src/` | Type check (matches CI exactly) |
+
+> **Type-check strictness, stated honestly.** The gate is `mypy src/` with the settings in
+> `pyproject.toml` `[tool.mypy]` — which deliberately set `disallow_untyped_defs = false` and
+> `disallow_incomplete_defs = false`. It is **not** `--strict`. This table previously documented
+> `mypy src/ --strict`; measured 2026-08-04, that command reports **545 errors in 92 files**, so it
+> was a claim no command reproduced (CHARTER.md NG-3). Raising strictness is a deliberate ratchet,
+> tracked separately — do not "fix" the 545 by adding blanket ignores.
 
 > **Tooling is pinned for CI/local parity.** `ruff` and `mypy` are pinned to a validated
 > minor in the `[dev]` extra (the CI lint job installs `.[dev]`). Bump them deliberately and
@@ -231,6 +240,8 @@ self._logger.info(
 | Issue | Workaround |
 |-------|------------|
 | LMStudio tests fail without local server | Set `LMSTUDIO_SKIP=1` to skip |
+| `pytest` errors on an unknown marker | `--strict-markers` is on — register it under `[tool.pytest.ini_options] markers` in `pyproject.toml` |
+| `RuntimeError: 'fastapi' is required to collect ...` | `STRICT_OPTIONAL_DEPS` is set — install `.[dev,neural,api]`, or unset the var to skip those modules |
 | Pinecone tests require valid API key | Use mocks in CI, real key locally |
 | Neural MCTS slow on CPU | Use CUDA or reduce iterations |
 | Type errors with langchain | Use `# type: ignore[import]` |
@@ -248,6 +259,14 @@ self._logger.info(
 @pytest.mark.property      # Property-based tests
 ```
 
+> **`--strict-markers` is enabled** (`pyproject.toml` `addopts`). An unregistered
+> `@pytest.mark.*` is now a **collection error**, not a silent no-op — which is the point: a
+> typo'd marker used to mean the test quietly ran in suites that meant to exclude it. The list
+> above is a subset; the authoritative set is `[tool.pytest.ini_options] markers` in
+> `pyproject.toml` (including `timeout`, supplied by pytest-timeout and declared there so the
+> config stays self-sufficient in environments without the plugin). Register a new marker before
+> using it.
+
 ---
 
 ## Verification Checklist
@@ -264,8 +283,8 @@ ruff check .
 # 3. Types
 mypy src/
 
-# 4. Tests
-pytest tests/unit -v
+# 4. Tests (the gate CI enforces; `make test` wraps this, including STRICT_OPTIONAL_DEPS)
+STRICT_OPTIONAL_DEPS=1 pytest tests/unit/ --cov=src --cov-fail-under=85
 
 # 5. No hardcoded values
 grep -r "api_key.*=.*['\"]sk-" src/ && echo "FAIL: Hardcoded keys!" || echo "OK"
@@ -347,4 +366,4 @@ Reusable project skills live in `.claude/skills/`: `quality-gate` (full local ga
 
 ---
 
-*Last Updated: 2026-06-30*
+*Last Updated: 2026-08-04*

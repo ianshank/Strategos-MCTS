@@ -95,8 +95,8 @@ These are the rules a change is judged against — violating one is how a PR fai
 4. **Unit tests never touch the network.** Mock every external call. Real API/LLM calls belong in
    integration/e2e tests behind markers, not `tests/unit`.
 5. **Coverage is a gate, not a report.** Branch coverage `fail_under = 85.0` (`pyproject.toml`).
-   `src/api/rest_server.py`, `src/api/inference_server.py`, and three `src/games/chess/` modules are
-   config-omitted and won't show as movable targets.
+   Three `src/games/chess/` modules are config-omitted and won't show as movable
+   targets; the two `src/api/` server modules are measured as of 2026-08-04.
 6. **Fail loud by default.** The mock-LLM fallback is **opt-in** via `ALLOW_MOCK_LLM_FALLBACK`
    (default off); without it the service errors rather than silently serving mock output.
    `ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK` currently defaults **on**, so this invariant holds only

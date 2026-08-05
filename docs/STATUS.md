@@ -1,6 +1,11 @@
 # Project Status — Evidence-Backed Baseline
 
-> **Date:** 2026-07-25 · **Status:** Authoritative baseline (post code-hygiene pass — fork removal, repo-wide lint gates)
+> **Date:** 2026-08-04 (partial refresh; rows carry their own measurement dates) · **Status:**
+> Authoritative baseline (post code-hygiene pass — fork removal, repo-wide lint gates)
+>
+> The gate-scope rows were re-measured 2026-08-04 under `.[dev,neural,api]`. The full-suite rows
+> still date from the 2026-07-25 pass and are marked stale individually rather than silently
+> inheriting this header's date.
 > **Supersedes** the stale `88.4% / 44 failures` figures in `planning/milestones.yaml`,
 > `docs/plans/IMPLEMENTATION_ROADMAP.md`, and `docs/plans/IMPLEMENTATION_PLAN_COMPREHENSIVE.md`.
 >
@@ -15,21 +20,25 @@
 
 | Metric | Value |
 |---|---|
-| Full test suite | **9,526 passed, 209 skipped** (excludes `slow`; `[dev,neural]` env — see note) |
-| Unit tests (`tests/unit/`, CI gate scope) | **8,445 passed, 0 failed** |
-| Overall branch coverage (`src/`, full suite) | **90.15%** (gate: `fail_under = 85.0`) ✅ |
+| Full test suite | **9,526 passed, 209 skipped** — ⚠️ stale. A separate historical measurement, recorded 2026-07-25 in `0d10811` under `[dev,neural]`. Re-measure before quoting. |
+| Unit tests (`tests/unit/`, CI gate scope) | **9,025 passed, 29 skipped, 0 failed** (2026-08-04, `.[dev,neural,api]`; 8,445 before the `--ignore` flags were dropped) |
+| **Gate-scope branch coverage** (`tests/unit/` — what CI actually enforces) | **89.65%** (2026-08-04, `.[dev,neural,api]`; 89.87% before this change) ✅ |
+| Overall branch coverage (`src/`, full suite) | **90.15%** — ⚠️ stale, measured 2026-07-25; predates three denominator-widening changes. Re-measure before quoting. |
 | `ruff check .` (repo-wide) | **clean** — 0 issues ✅ |
 | `black . --check --line-length 120` (repo-wide) | **clean** ✅ |
 | `mypy src/` (strict pins) | **clean** — no issues in 327 source files ✅ |
 | Wall time (full non-slow suite) | ~339s (5m 39s) |
 
-The gate-enforcing total (90.15%) is well above 85%. This reflects Phases 0–5 (through the M5
+The gate-enforcing total is the **89.65%** "Gate-scope branch coverage" row — well above 85%.
+(The 90.15% below it is the full-suite headline, which CI does not enforce and which is stale;
+see CHARTER.md INV-5 for why the two differ.) This reflects Phases 0–5 (through the M5
 self-play stack), the July 2026 test hardening pass, the GPU training & gameplay domain extensions
 (Connect Four, Othello, GPU hardware utils, training profiles), and the 2026-07-25 code-hygiene pass
 (huggingface_space fork removal, dead-test deletion, repo-wide lint gates).
 
-> **Environment note:** this baseline was measured under exactly `pip install -e ".[dev,neural]"`
-> (the CI test-job dependency set). In that environment the full sweep also shows ~29
+> **Environment note:** this baseline was measured under exactly `pip install -e ".[dev,neural,api]"`
+> (the CI test-job dependency set — `api` was added when the three `--ignore` flags were removed).
+> In that environment the full sweep also shows ~29
 > environment-dependent failures outside the CI gate scope — `tests/e2e/test_ui_e2e.py` (needs a
 > live Gradio/selenium environment), LFS-pointer model weights, offline HF hub. These were verified
 > **identical on `main`** (same failure set on base commit `5cf5708`) — they are properties of the
@@ -41,21 +50,22 @@ self-play stack), the July 2026 test hardening pass, the GPU training & gameplay
 ## How to reproduce
 
 ```bash
-pip install -e ".[dev,neural]"
+pip install -e ".[dev,neural,api]"
 export WANDB_MODE=disabled LANGCHAIN_TRACING_V2=false HF_HUB_OFFLINE=1 TOKENIZERS_PARALLELISM=false
+export STRICT_OPTIONAL_DEPS=1   # as the CI test job sets it
 
-# Unit suite only (fast gate — mirrors CI)
+# Unit suite only (the gate — mirrors CI exactly)
 python -m pytest tests/unit/ \
-  --cov=src --cov-report=term-missing --cov-report=xml:coverage.xml \
-  --ignore=tests/unit/test_inference_server.py \
-  --ignore=tests/unit/test_rest_server.py \
-  --ignore=tests/unit/test_rest_server_ext.py
+  --cov=src --cov-report=term-missing --cov-report=xml:coverage.xml
 
 # Full suite (includes integration, property-based, chess, etc.)
 python -m pytest tests/ -m "not slow" --cov=src --cov-report=term-missing
 ```
 
-CI installs `.[dev,neural]` and runs with `--cov-fail-under=85`. `python-chess` and
+CI installs `.[dev,neural,api]` and runs with `--cov-fail-under=85`. The `api` extra is
+load-bearing: FastAPI/uvicorn live only there, and without them the three API-server suites
+cannot be collected at all. The job also sets `STRICT_OPTIONAL_DEPS=1`, so a missing optional
+dependency aborts collection instead of silently shrinking the suite. `python-chess` and
 `google-adk` are **not** installed in this baseline (nor in CI), so their modules report
 low/zero coverage and many chess tests skip; they are excluded from the gate via
 `[tool.coverage.run] omit` for the three heaviest chess files.
@@ -192,7 +202,8 @@ directory targets a pre-refactor API and is excluded from CI as well.
 
 ## Implications for the plan
 
-- **Phase 2 is largely satisfied at the gate level** (90.15% ≥ 85%). Remaining work is opportunistic,
+- **Phase 2 is largely satisfied at the gate level** (89.65% ≥ 85% — the gate-scope figure, not the
+  stale 90.15% full-suite headline). Remaining work is opportunistic,
   targeting category B above — highest value: `data_science.py` (closes the last ADK agent), plus
   `api/auth.py` rising naturally from Phase 3.2.
 - Category A (chess) is gated on `python-chess`; raising it is a separate decision about adding the
@@ -200,8 +211,14 @@ directory targets a pre-refactor API and is excluded from CI as well.
 
 ## Excluded from coverage (by config)
 
-`src/api/inference_server.py`, `src/api/rest_server.py`, and `src/games/chess/{ui,verification/game_verifier,verification/move_validator}.py`
-(`pyproject.toml [tool.coverage.run] omit`). REST request-path tests therefore cannot move the gate.
+`src/games/chess/{ui,verification/game_verifier,verification/move_validator}.py`
+(`pyproject.toml [tool.coverage.run] omit`).
+
+**Changed 2026-08-04:** `src/api/inference_server.py` and `src/api/rest_server.py` were
+**un-omitted**. Their test suites had been suppressed in three places at once (ci.yml `--ignore`,
+conftest `collect_ignore_glob`, coverage `omit`), which made the omission self-consistent and
+invisible. All 115 of their tests now run and pass, so REST request-path tests **do** move the
+gate. The omit list shrank rather than grew — the direction CHARTER.md NG-5 requires.
 
 ## Code-hygiene & modularity program — LOC baseline (2026-07-30)
 

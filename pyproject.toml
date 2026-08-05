@@ -54,6 +54,15 @@ dev = [
     "pytest-timeout>=2.1.0",
     "pytest-xdist>=3.3.0",
     "hypothesis>=6.88.0",
+    # Needed by tests/unit/test_ci_workflow_invariants.py to parse the workflow files.
+    # Previously only in the `neural` extra, which forced those tests to guard their
+    # import — and a regression gate that can skip itself is not a gate.
+    "PyYAML>=6.0.0",
+    # Same module reads pyproject.toml to assert the coverage config. `tomllib` is
+    # stdlib only from 3.11, and this project declares requires-python = ">=3.10", so
+    # on the declared baseline the module failed at collection. Marker-gated, so it
+    # installs nothing on the 3.11 CI runners.
+    "tomli>=2.0.0; python_version < '3.11'",
     # Pin mypy to the validated minor: the no-redef diagnosis for optional-import
     # fallbacks (e.g. chess/mcp_chess_tools.py) varies across mypy releases, so an
     # unbounded range makes CI disagree with local. Bump deliberately when revalidated.
@@ -326,7 +335,21 @@ python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
-addopts = "-v --tb=short"
+# --strict-markers: an unregistered @pytest.mark.* is an error, not a silent no-op.
+# Without it a typo'd marker (e.g. @pytest.mark.slwo) silently fails to apply, so the
+# test runs in suites that meant to exclude it.
+#
+# Registration is split across TWO places, which matters when adding a marker: this
+# list, and `pytest_configure` in tests/conftest.py (which registers `asyncio`, `mcts`,
+# `neural` and `llm`). `asyncio` in particular is used in ~148 files under tests/ and is
+# registered only by conftest — so "every marker is declared here" would be false.
+# Consolidating the two registries is worth doing; until then, check both.
+addopts = "-v --tb=short --strict-markers"
+# NOTE: with --strict-markers every marker must be registered, including ones supplied
+# by plugins. `timeout` comes from pytest-timeout, which is in the [dev] extra but NOT
+# in the minimal environments some jobs build (scripts/deployment_sanity_check.py runs
+# pytest after only `pip install -e .`). Declaring it below keeps the config
+# self-sufficient: registration no longer depends on the plugin being installed.
 timeout = 300  # 5 minute timeout for long-running tests
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
@@ -350,6 +373,10 @@ markers = [
     "ma_due_diligence: M&A due diligence workflow tests",
     "selenium: Selenium browser automation tests",
     "harness: Agent harness framework tests",
+    # Supplied by the pytest-timeout plugin. Declared here so --strict-markers also
+    # holds in environments that install the project without the [dev] extra; pytest
+    # tolerates the plugin re-registering it.
+    "timeout: Per-test timeout (pytest-timeout)",
 ]
 
 [tool.coverage.run]
@@ -358,8 +385,9 @@ omit = [
     "*/tests/*",
     "*/__pycache__/*",
     "*/site-packages/*",
-    "src/api/inference_server.py",
-    "src/api/rest_server.py",
+    # src/api/inference_server.py and src/api/rest_server.py were omitted here while
+    # their test suites were suppressed elsewhere — a self-consistent blind spot. Both
+    # suites now collect and pass (115 tests), so the modules are measured.
     # Modules that require optional `python-chess` dep; tests skip when absent
     "src/games/chess/ui.py",
     "src/games/chess/verification/game_verifier.py",
@@ -378,7 +406,13 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
-    "pass",
+    # Anchored. coverage applies these patterns with re.search against the raw source
+    # line, so a bare "pass" matched any line CONTAINING the substring — 359 lines in
+    # src/, of which 291 were not pass statements at all ("forward pass" in a
+    # docstring, dataclass fields named num_passed / pass_at_1). Those lines were
+    # silently removed from the denominator, which is NG-5 inverted: the gate had
+    # moved to meet the code. The anchored form matches only a real pass statement.
+    "^\\s*pass\\s*$",
     "except ImportError:",
     "@abstractmethod",
 ]
