@@ -31,6 +31,45 @@ Two figures from the original amendment were WRONG and are corrected in the ACs 
 silently dropped: "19 of 22 markers unused" (re-derived: 0 unused of 21) and "docker-build builds
 the same image twice" (the push step is 28s of cached layers, not a second build — see AC-10).
 
+# Status against the tree (recorded 2026-08-05, after PR #142 merged as 743d5e3)
+
+The status field stays `draft` because the spec is **not** fully implemented: eleven of thirteen ACs
+shipped, two did not. Recorded per-AC rather than summarised, so the gap is legible instead of being
+rounded up to "done". The `draft` -> `approved` flip remains the maintainer's alone (CHARTER.md §7.5;
+CLAUDE.md: "a human flips the status").
+
+| AC | State | Evidence |
+|----|-------|----------|
+| AC-1 | SHIPPED | summary gates all 11 needs via one `JOBS=` list; bandit/pip-audit fail-open closed |
+| AC-2 | SHIPPED | `--strict-markers` in addopts; `timeout` marker registered |
+| AC-3 | SHIPPED | `check-secrets` gate job; both `\|\| true` removed; `lfs: true` on checkout |
+| AC-4 | SHIPPED | pre-commit `pytest-quick` can fail |
+| AC-5 | SHIPPED | all three suppression layers removed; gate-scope 89.65% on 42,318 units |
+| AC-6 | SHIPPED | measured figures in the PR and in `docs/STATUS.md` |
+| AC-7 | **PARTIAL** | CLAUDE.md's mypy claim corrected, but the required tracking spec did not exist until `specs/hygiene_mypy_strictness_ratchet.SPEC.md` (2026-08-05) |
+| AC-8 | SHIPPED | `timeout-minutes` on all jobs across all three workflows |
+| AC-9 | SHIPPED | concurrency + `cancel-in-progress` everywhere; PR `paths` filter on docker-deployment |
+| AC-10 | **PARTIAL** | (i) done — push-step `cache-to` deleted, `cache-from` kept. (ii) NOT done — see below |
+| AC-11 | SHIPPED | `pass` anchored to `^\s*pass\s*$` |
+| AC-12 | SHIPPED | advisory SARIF scan + separate blocking CRITICAL scan with `.trivyignore` |
+| AC-13 | SHIPPED | printed `docker pull` lowercased via `tr` |
+
+**AC-10(ii), measured 2026-08-05.** The AC required changing the surviving `cache-to` (ci.yml:491)
+from `mode=max` to `mode=min`, or removing it, justified by a before/after on a main-branch run. That
+run now exists — 31001989634 at 743d5e3, the first main run after the merge:
+
+- `Build Docker image`: **17m37s**, against the 17m34s baseline on run 30863130823 (74877fa).
+- `Build and push`: 58s (28s at baseline; it now genuinely pushes, having become a main-branch run).
+
+So AC-10(i) landed and moved nothing: the 714.4s of `preparing`/`sending cache export` — 68% of the
+build step — is written by the *surviving* `mode=max` line, which is untouched. AC-10(ii) is
+therefore still open and is where the whole cost lives.
+
+One honest caveat before anyone acts on the above: 31001989634 is the **first** main run after the
+change, so its `cache-from` read a cache written by the pre-change run. A clean before/after needs a
+second consecutive main run. Do not flip `mode=max` -> `mode=min` on this single data point — the AC
+says "Do not guess which; measure", and one run is not yet the measurement.
+
 # Acceptance Criteria
 
 - AC-1: chess-tests and integration-test are in the summary job's needs and failure conditions; security-scan and dependency-audit (already in needs and already printed at ci.yml:570,572) are added to the failure condition at ci.yml:578-586, and their fail-open paths are closed (the '|| true' at ci.yml:149 and :209, and the 'if [ -f ... ]' guards at :159 and :219 that pass silently when the report file is absent).
