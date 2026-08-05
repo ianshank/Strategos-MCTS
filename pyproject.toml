@@ -58,6 +58,11 @@ dev = [
     # Previously only in the `neural` extra, which forced those tests to guard their
     # import — and a regression gate that can skip itself is not a gate.
     "PyYAML>=6.0.0",
+    # Same module reads pyproject.toml to assert the coverage config. `tomllib` is
+    # stdlib only from 3.11, and this project declares requires-python = ">=3.10", so
+    # on the declared baseline the module failed at collection. Marker-gated, so it
+    # installs nothing on the 3.11 CI runners.
+    "tomli>=2.0.0; python_version < '3.11'",
     # Pin mypy to the validated minor: the no-redef diagnosis for optional-import
     # fallbacks (e.g. chess/mcp_chess_tools.py) varies across mypy releases, so an
     # unbounded range makes CI disagree with local. Bump deliberately when revalidated.

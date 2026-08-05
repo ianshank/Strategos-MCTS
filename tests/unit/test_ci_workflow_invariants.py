@@ -19,6 +19,7 @@ Each section below is headed with the AC it enforces.
 
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 from typing import Any
@@ -119,6 +120,24 @@ _COMMAND_WORD_RE = re.compile(
     r"(?<![\w./-])(?:" + "|".join(re.escape(c) for c in RESULT_BEARING_COMMANDS) + r")(?![\w.-])"
 )
 
+# One shell line can hold several commands. `set +e; pytest tests/unit/` disables
+# errexit and then runs a suppressed test suite on that same line — treating the line
+# as a single unit meant the `set +e` branch consumed it and the `pytest` after the
+# separator was never examined at all.
+#
+# `;` and `&&` split; `||` deliberately does NOT, because `pytest … || true` is one
+# command plus its disarming tail and splitting it would destroy the very pattern
+# _DISARMING_RE exists to match.
+_SEGMENT_SPLIT_RE = re.compile(r";|&&")
+
+# The API suites whose three-layer suppression AC-5 removed. Named once so the
+# suppression invariant and its message stay in step.
+PROTECTED_API_SUITES = ("test_rest_server.py", "test_inference_server.py")
+
+# pytest accepts both `--ignore=path` and `--ignore path`; matching only the first
+# spelling let the second slip a suite back out of collection.
+_IGNORE_ARG_RE = re.compile(r"--ignore(?:=|\s+)(\S+)")
+
 
 def _disarmed_commands(run: str) -> list[str]:
     """Lines in a ``run:`` block where a result-bearing command cannot fail the step.
@@ -139,14 +158,17 @@ def _disarmed_commands(run: str) -> list[str]:
         stripped = line.strip()
         if stripped.startswith("#"):
             continue  # a comment mentioning `|| true` is not a disarmed command
-        change = _errexit_change(stripped)
-        if change is not None:
-            errexit_disabled = change
-            continue
-        if not _COMMAND_WORD_RE.search(stripped):
-            continue
-        if _DISARMING_RE.search(stripped) or errexit_disabled:
-            offenders.append(stripped)
+        for segment in (part.strip() for part in _SEGMENT_SPLIT_RE.split(stripped)):
+            if not segment:
+                continue
+            change = _errexit_change(segment)
+            if change is not None:
+                errexit_disabled = change
+                continue
+            if not _COMMAND_WORD_RE.search(segment):
+                continue
+            if _DISARMING_RE.search(segment) or errexit_disabled:
+                offenders.append(segment)
     return offenders
 
 
@@ -164,6 +186,50 @@ def _workflow_files() -> list[Path]:
 def _load(path: Path) -> dict[str, Any]:
     """Parse a workflow file into its YAML mapping."""
     return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+def _literal_collect_ignores() -> set[str]:
+    """Paths added to conftest's ``collect_ignore_glob`` by a literal list.
+
+    Parsed from the AST, not matched textually. conftest carries a comment that names
+    ``test_inference_server.py`` while explaining why its torch guard exists, and a
+    substring check read that comment as a suppression — this test failed on its own
+    first draft for exactly that reason.
+
+    ``_require_or_ignore()`` is invisible here by construction: it appends through a
+    *variable* inside the function, so only unconditional literal additions surface.
+    That is the intended distinction — the helper fires only when an optional
+    dependency is genuinely absent, and STRICT_OPTIONAL_DEPS turns it into a hard
+    error under CI.
+    """
+    tree = ast.parse((REPO_ROOT / "tests" / "conftest.py").read_text(encoding="utf-8"))
+    found: set[str] = set()
+    for node in ast.walk(tree):
+        target = node.target if isinstance(node, ast.AugAssign) else None
+        if isinstance(target, ast.Name) and target.id == "collect_ignore_glob":
+            for element in ast.walk(node.value):
+                if isinstance(element, ast.Constant) and isinstance(element.value, str):
+                    found.add(element.value)
+    return found
+
+
+def _load_pyproject() -> dict[str, Any]:
+    """Parse ``pyproject.toml``.
+
+    ``tomllib`` is stdlib only from 3.11, while ``pyproject.toml`` itself declares
+    ``requires-python = ">=3.10"``. Importing it unconditionally made this module
+    fail at *collection* time on the declared baseline — and a regression gate that
+    cannot be collected enforces nothing. The ``tomli`` backport is declared in the
+    ``dev`` extra behind a ``python_version < "3.11"`` marker, so it costs nothing on
+    the 3.11 CI runners.
+    """
+    try:
+        import tomllib as toml_reader
+    except ModuleNotFoundError:  # pragma: no cover - only on Python 3.10
+        import tomli as toml_reader  # type: ignore[import-not-found]
+
+    with (REPO_ROOT / "pyproject.toml").open("rb") as fh:
+        return toml_reader.load(fh)
 
 
 def _triggers(workflow: dict[str, Any]) -> dict[str, Any]:
@@ -461,11 +527,7 @@ def test_coverage_exclude_patterns_are_anchored() -> None:
     docstrings ("forward pass") or dataclass fields (``num_passed``). That is the
     coverage gate moving to meet the code, which CHARTER.md NG-5 forbids.
     """
-    import tomllib
-
-    with (REPO_ROOT / "pyproject.toml").open("rb") as fh:
-        config = tomllib.load(fh)
-    patterns = config["tool"]["coverage"]["report"]["exclude_lines"]
+    patterns = _load_pyproject()["tool"]["coverage"]["report"]["exclude_lines"]
 
     # Bare single-word patterns that are also common English/identifier substrings.
     risky = {"pass", "continue", "break", "raise", "return", "..."}
@@ -556,19 +618,32 @@ def test_suppressed_api_suites_are_no_longer_ignored() -> None:
     ``ci.yml`` --ignore flags, the conftest ``collect_ignore_glob``, and the coverage
     ``omit`` list previously hid the same three modules in three different places, so
     removing any one of them alone did nothing visible.
+
+    All three layers are checked here. The first version of this test named three and
+    checked two, leaving the conftest layer — the one it calls "protected" — free to
+    re-suppress the suites on its own.
     """
-    import tomllib
-
+    # Layer 1: ci.yml --ignore. Matched semantically, because pytest accepts both
+    # `--ignore=path` and `--ignore path`, and only the `=` spelling was rejected.
     ci_text = (WORKFLOW_DIR / CI_WORKFLOW).read_text(encoding="utf-8")
-    assert (
-        "--ignore=tests/unit/test_rest_server.py" not in ci_text
-    ), "ci.yml still passes --ignore for the rest_server suite"
-    assert (
-        "--ignore=tests/unit/test_inference_server.py" not in ci_text
-    ), "ci.yml still passes --ignore for the inference_server suite"
+    ignored = {Path(arg).name for arg in _IGNORE_ARG_RE.findall(ci_text)}
+    clashes = ignored & set(PROTECTED_API_SUITES)
+    assert not clashes, (
+        f"ci.yml passes --ignore for {sorted(clashes)}. Those suites now collect and "
+        f"pass; ignoring them only hides measured code."
+    )
 
-    with (REPO_ROOT / "pyproject.toml").open("rb") as fh:
-        omit = tomllib.load(fh)["tool"]["coverage"]["run"]["omit"]
+    # Layer 2: the conftest collect_ignore_glob.
+    suppressed = {Path(entry).name for entry in _literal_collect_ignores()}
+    clashes = suppressed & set(PROTECTED_API_SUITES)
+    assert not clashes, (
+        f"tests/conftest.py adds {sorted(clashes)} to collect_ignore_glob via a "
+        f"literal list rather than the _require_or_ignore() guard, so it is "
+        f"suppressed even when the extra is installed. That is the silent-shrink "
+        f"defect AC-5 removed."
+    )
+
+    omit = _load_pyproject()["tool"]["coverage"]["run"]["omit"]
     for module in ("src/api/rest_server.py", "src/api/inference_server.py"):
         assert module not in omit, (
             f"{module} is back in the coverage omit list. Its test suite now collects "
@@ -719,6 +794,13 @@ def test_named_workflows_resolve() -> None:
         ),
         # set +e: disarms every LATER command, not the line it sits on.
         ("set +e disarms what follows", "set +e\npytest tests/unit/", ["pytest tests/unit/"]),
+        # Inline separators: the state change and the command it disarms share a line,
+        # so treating the line as one unit let the `set +e` branch swallow both.
+        ("inline ; after set +e", "set +e; pytest tests/unit/", ["pytest tests/unit/"]),
+        ("inline && after set +e", "set +e && pytest tests/unit/", ["pytest tests/unit/"]),
+        ("inline ; with later re-arm", "set +e; mypy src/; set -e; pytest a/", ["mypy src/"]),
+        # `||` must NOT split, or `pytest … || true` stops being one matchable unit.
+        ("|| is not a separator", "pytest a/ || true", ["pytest a/ || true"]),
         ("set +e leaves earlier lines armed", "pytest a/\nset +e\npytest b/", ["pytest b/"]),
         ("set -e re-arms", "set +e\nset -e\npytest tests/unit/", []),
         ("bracketed tolerant region", "pytest a/\nset +e\nmypy src/\nset -e\npytest b/", ["mypy src/"]),
@@ -796,3 +878,44 @@ def test_make_recipe_extracts_only_the_recipe_body() -> None:
     # The help text lives on the target line, which the recipe body excludes.
     assert "##" not in _make_recipe("typecheck")
     assert _make_recipe("no-such-target-xyz") == ""
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("label", "text", "expected"),
+    [
+        ("equals form", "pytest --ignore=tests/unit/test_rest_server.py", {"tests/unit/test_rest_server.py"}),
+        ("space form", "pytest --ignore tests/unit/test_rest_server.py", {"tests/unit/test_rest_server.py"}),
+        ("both forms", "pytest --ignore=a.py --ignore b.py", {"a.py", "b.py"}),
+        ("multiline", "pytest \\\n  --ignore=a.py \\\n  --ignore b.py", {"a.py", "b.py"}),
+        ("none present", "pytest tests/unit/ --cov=src", set()),
+    ],
+)
+def test_ignore_arg_parsing_covers_both_spellings(label: str, text: str, expected: set[str]) -> None:
+    """AC-5: pytest accepts ``--ignore=path`` and ``--ignore path``.
+
+    The suppression invariant reads whatever this finds. Matching only the ``=``
+    spelling would let the space form quietly put a suite back out of collection —
+    and because ``ci.yml`` currently carries no ``--ignore`` at all, that assertion
+    passes vacuously either way. This is what actually pins the parsing.
+    """
+    assert set(_IGNORE_ARG_RE.findall(text)) == expected, label
+
+
+@pytest.mark.unit
+def test_literal_collect_ignores_reads_the_real_guards() -> None:
+    """AC-5: the conftest layer is parsed, not assumed empty.
+
+    A parser that silently returned nothing would make the suppression check pass no
+    matter what conftest did. conftest has three genuine literal guards (chess,
+    hypothesis, gradio); finding them proves the AST walk actually reaches the
+    ``collect_ignore_glob`` additions, and none of them is an API suite.
+    """
+    found = _literal_collect_ignores()
+    assert found, "parsed no collect_ignore_glob entries at all — the AST walk is not reaching them"
+    # The optional-dependency guards conftest really declares, by literal list.
+    assert "unit/test_chess_ensemble_checker.py" in found
+    assert "ui/test_gradio_app.py" in found
+    # `_require_or_ignore` appends through a variable, so its API-suite entries must
+    # NOT appear here — that distinction is the whole point of the helper.
+    assert not {Path(f).name for f in found} & set(PROTECTED_API_SUITES)

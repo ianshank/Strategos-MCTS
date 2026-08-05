@@ -1,6 +1,11 @@
 # Project Status — Evidence-Backed Baseline
 
-> **Date:** 2026-07-25 · **Status:** Authoritative baseline (post code-hygiene pass — fork removal, repo-wide lint gates)
+> **Date:** 2026-08-04 (partial refresh; rows carry their own measurement dates) · **Status:**
+> Authoritative baseline (post code-hygiene pass — fork removal, repo-wide lint gates)
+>
+> The gate-scope rows were re-measured 2026-08-04 under `.[dev,neural,api]`. The full-suite rows
+> still date from the 2026-07-25 pass and are marked stale individually rather than silently
+> inheriting this header's date.
 > **Supersedes** the stale `88.4% / 44 failures` figures in `planning/milestones.yaml`,
 > `docs/plans/IMPLEMENTATION_ROADMAP.md`, and `docs/plans/IMPLEMENTATION_PLAN_COMPREHENSIVE.md`.
 >
@@ -15,7 +20,7 @@
 
 | Metric | Value |
 |---|---|
-| Full test suite | **9,526 passed, 209 skipped** — ⚠️ stale, same 2026-07-25 `[dev,neural]` run as the row below. Re-measure before quoting. |
+| Full test suite | **9,526 passed, 209 skipped** — ⚠️ stale. A separate historical measurement, recorded 2026-07-25 in `0d10811` under `[dev,neural]`. Re-measure before quoting. |
 | Unit tests (`tests/unit/`, CI gate scope) | **9,025 passed, 29 skipped, 0 failed** (2026-08-04, `.[dev,neural,api]`; 8,445 before the `--ignore` flags were dropped) |
 | **Gate-scope branch coverage** (`tests/unit/` — what CI actually enforces) | **89.65%** (2026-08-04, `.[dev,neural,api]`; 89.87% before this change) ✅ |
 | Overall branch coverage (`src/`, full suite) | **90.15%** — ⚠️ stale, measured 2026-07-25; predates three denominator-widening changes. Re-measure before quoting. |
