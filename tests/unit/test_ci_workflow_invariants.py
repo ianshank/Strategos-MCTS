@@ -30,7 +30,16 @@ import pytest
 # the failure mode this module exists to catch.
 import yaml
 
-WORKFLOW_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+WORKFLOW_DIR = REPO_ROOT / ".github" / "workflows"
+
+# Most invariants below are derived from *every* workflow, so they need no filename.
+# These two are named because the invariant is genuinely about that specific pipeline:
+# the main gate, and the one whose image matrix is expensive enough to need a paths
+# filter. Named once so a rename fails in test_named_workflows_resolve with a clear
+# message instead of five KeyErrors in unrelated tests.
+CI_WORKFLOW = "ci.yml"
+EXPENSIVE_WORKFLOW = "docker-deployment.yml"
 
 # Upper bound on any single job. Not a performance target — a backstop that turns a
 # hung job into a failed job. The GitHub default is 360 minutes, which is long enough
@@ -62,10 +71,44 @@ _DISARMING_RE = re.compile("|".join(_DISARMING_SUFFIXES))
 # command in the step rather than the one it shares a line with, so a suffix regex
 # cannot see it. GitHub runs `run:` blocks under `bash -e`, so `set +e` turns the rest
 # of a multi-command step into best-effort — the step then reports the exit status of
-# whatever happened to run last. Matched separately, as a state machine over the step's
-# lines, by _disarmed_commands().
-_SET_PLUS_E_RE = re.compile(r"(?<![\w-])set\s+(?:-[a-zA-Z]+\s+)*\+[a-zA-Z]*e")
-_SET_MINUS_E_RE = re.compile(r"(?<![\w-])set\s+(?:\+[a-zA-Z]+\s+)*-[a-zA-Z]*e")
+# whatever happened to run last. Tracked as a state machine over the step's lines by
+# _disarmed_commands().
+#
+# Parsed rather than pattern-matched, because errexit has two spellings and a regex
+# for the short one silently misses the long one: `set +o errexit` disarms exactly as
+# `set +e` does. The lookbehind keeps `offset=+e` and `--dataset +e` from matching.
+_SET_LINE_RE = re.compile(r"(?<![\w-])set\s+([-+][^\n;&|]*)")
+
+
+def _errexit_change(line: str) -> bool | None:
+    """Whether a ``set`` line disables errexit (True), enables it (False), or is unrelated (None).
+
+    Handles every spelling bash accepts, since they are equivalent in effect:
+
+    * short flags, alone or bundled — ``set -e``, ``set +e``, ``set -euo pipefail``
+    * the long option — ``set -o errexit``, ``set +o errexit``
+
+    Unrelated options are ignored, so ``set -o pipefail`` and ``set -x`` return None
+    and leave the current state alone rather than falsely re-arming.
+    """
+    match = _SET_LINE_RE.search(line)
+    if not match:
+        return None
+    state: bool | None = None
+    tokens = match.group(1).split()
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if token in ("-o", "+o"):
+            if index + 1 < len(tokens) and tokens[index + 1] == "errexit":
+                state = token.startswith("+")
+                index += 2
+                continue
+        elif token.startswith(("-", "+")) and "e" in token[1:]:
+            state = token.startswith("+")
+        index += 1
+    return state
+
 
 # A command name only counts when it appears as a *word*. Substring matching flagged
 # `rm -rf .pytest_cache || true` (contains "pytest"), `docker rm blackbox || true`
@@ -96,11 +139,9 @@ def _disarmed_commands(run: str) -> list[str]:
         stripped = line.strip()
         if stripped.startswith("#"):
             continue  # a comment mentioning `|| true` is not a disarmed command
-        if _SET_PLUS_E_RE.search(stripped):
-            errexit_disabled = True
-            continue
-        if _SET_MINUS_E_RE.search(stripped):
-            errexit_disabled = False
+        change = _errexit_change(stripped)
+        if change is not None:
+            errexit_disabled = change
             continue
         if not _COMMAND_WORD_RE.search(stripped):
             continue
@@ -258,7 +299,7 @@ def test_expensive_workflow_filters_pull_requests_by_path() -> None:
     trigger did not, so a two-file Markdown PR ran the full ``Dockerfile.train``
     matrix — the single most expensive job in the repository.
     """
-    triggers = _triggers(_load(WORKFLOW_DIR / "docker-deployment.yml"))
+    triggers = _triggers(_load(WORKFLOW_DIR / EXPENSIVE_WORKFLOW))
     push_paths = set((triggers.get("push") or {}).get("paths") or [])
     pr_paths = set((triggers.get("pull_request") or {}).get("paths") or [])
 
@@ -317,7 +358,6 @@ def test_summary_gates_every_job_it_depends_on(label: str, summary: dict[str, An
         f"absent, because the red line in the log implies it was checked."
     )
 
-    # 3. The gate must actually be able to fail.
     # 3. The gate must be able to fail. Two equivalent spellings are accepted: a
     #    literal `exit 1`, or an accumulator (`status=1` … `exit "${status}"`). Demanding
     #    the literal would reject the accumulator form, which is the better one for a
@@ -337,7 +377,7 @@ def test_ci_summary_covers_the_test_bearing_jobs() -> None:
     ``chess-tests`` and ``integration-test`` were absent from ``needs`` entirely, so
     neither could block a merge no matter how it finished.
     """
-    jobs = _load(WORKFLOW_DIR / "ci.yml")["jobs"]
+    jobs = _load(WORKFLOW_DIR / CI_WORKFLOW)["jobs"]
     needs = set(jobs["summary"]["needs"])
     for required in ("test", "chess-tests", "integration-test", "security-scan", "dependency-audit"):
         assert required in needs, f"ci.yml summary must depend on the {required!r} job"
@@ -389,7 +429,7 @@ def test_image_scan_can_actually_fail() -> None:
     run. The split is intentional: an advisory scan feeds the Security tab and may
     flake, while a separate blocking scan gates on CRITICAL.
     """
-    docker_build = _load(WORKFLOW_DIR / "ci.yml")["jobs"]["docker-build"]
+    docker_build = _load(WORKFLOW_DIR / CI_WORKFLOW)["jobs"]["docker-build"]
     scans = [s for s in _steps(docker_build) if "trivy-action" in str(s.get("uses", ""))]
     assert scans, "expected at least one Trivy scan step in the docker-build job"
 
@@ -423,8 +463,7 @@ def test_coverage_exclude_patterns_are_anchored() -> None:
     """
     import tomllib
 
-    root = Path(__file__).resolve().parents[2]
-    with (root / "pyproject.toml").open("rb") as fh:
+    with (REPO_ROOT / "pyproject.toml").open("rb") as fh:
         config = tomllib.load(fh)
     patterns = config["tool"]["coverage"]["report"]["exclude_lines"]
 
@@ -496,7 +535,7 @@ def test_test_job_installs_the_extras_its_suites_require() -> None:
     required = set(re.findall(r'_require_or_ignore\(\s*"[^"]+"\s*,\s*"([^"]+)"', conftest))
     assert required, "expected tests/conftest.py to declare optional-dependency extras"
 
-    test_job = _load(WORKFLOW_DIR / "ci.yml")["jobs"]["test"]
+    test_job = _load(WORKFLOW_DIR / CI_WORKFLOW)["jobs"]["test"]
     install = " ".join(str(s.get("run", "")) for s in _steps(test_job) if "pip install" in str(s.get("run", "")))
     match = re.search(r'pip install\s+-e\s+"?\.\[([^\]]+)\]', install)
     assert match, f"could not find a `pip install -e .[...]` line in the test job; got: {install!r}"
@@ -520,9 +559,7 @@ def test_suppressed_api_suites_are_no_longer_ignored() -> None:
     """
     import tomllib
 
-    root = Path(__file__).resolve().parents[2]
-
-    ci_text = (WORKFLOW_DIR / "ci.yml").read_text(encoding="utf-8")
+    ci_text = (WORKFLOW_DIR / CI_WORKFLOW).read_text(encoding="utf-8")
     assert (
         "--ignore=tests/unit/test_rest_server.py" not in ci_text
     ), "ci.yml still passes --ignore for the rest_server suite"
@@ -530,7 +567,7 @@ def test_suppressed_api_suites_are_no_longer_ignored() -> None:
         "--ignore=tests/unit/test_inference_server.py" not in ci_text
     ), "ci.yml still passes --ignore for the inference_server suite"
 
-    with (root / "pyproject.toml").open("rb") as fh:
+    with (REPO_ROOT / "pyproject.toml").open("rb") as fh:
         omit = tomllib.load(fh)["tool"]["coverage"]["run"]["omit"]
     for module in ("src/api/rest_server.py", "src/api/inference_server.py"):
         assert module not in omit, (
@@ -544,7 +581,7 @@ def test_suppressed_api_suites_are_no_longer_ignored() -> None:
 
 def _makefile_text() -> str:
     """The Makefile source, read fresh so parity tests see the tree's current state."""
-    return (Path(__file__).resolve().parents[2] / "Makefile").read_text(encoding="utf-8")
+    return (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
 
 
 def _make_recipe(target: str) -> str:
@@ -594,7 +631,7 @@ def test_makefile_gate_matches_ci_flags() -> None:
     are the flags where a mismatch would actually change the verdict.
     """
     text = _makefile_text()
-    ci_text = (WORKFLOW_DIR / "ci.yml").read_text(encoding="utf-8")
+    ci_text = (WORKFLOW_DIR / CI_WORKFLOW).read_text(encoding="utf-8")
 
     # Line length: whatever CI checks black against, the Makefile must use.
     ci_line_length = re.search(r"black \. --check --line-length (\d+)", ci_text)
@@ -633,3 +670,129 @@ def test_makefile_gate_matches_ci_flags() -> None:
         "Makefile typecheck must match CI's `mypy src/`; --strict reports 545 errors "
         "and is a separately-tracked ratchet (see CLAUDE.md)."
     )
+
+
+# ------------------------------------------------------- the helpers' own invariants
+#
+# Everything above rests on the parsers in this module. That makes them a single point
+# of silent failure: if `_gated_job_list` ever returned every name it saw, or
+# `_disarmed_commands` returned nothing, the invariants would keep passing while
+# enforcing nothing — the exact "green but not checked" defect they exist to prevent.
+#
+# The live workflows cannot exercise these paths, and that is the point: no workflow
+# uses `set +e` (the invariant forbids it), so the branch that detects it is
+# unreachable from real inputs and would otherwise be verified only by a mutation run
+# that leaves nothing behind. The cases below pin that behaviour in the tree.
+
+
+@pytest.mark.unit
+def test_named_workflows_resolve() -> None:
+    """CI_WORKFLOW / EXPENSIVE_WORKFLOW must name files that exist.
+
+    Renaming a workflow otherwise surfaces as a confusing ``KeyError`` inside an
+    unrelated assertion, several tests deep.
+    """
+    names = {p.name for p in _workflow_files()}
+    for constant, value in (("CI_WORKFLOW", CI_WORKFLOW), ("EXPENSIVE_WORKFLOW", EXPENSIVE_WORKFLOW)):
+        assert value in names, f"{constant}={value!r} names no workflow. Present: {sorted(names)}."
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("label", "run", "expected"),
+    [
+        ("plain command is armed", "pytest tests/unit/", []),
+        ("|| true disarms", "pytest tests/unit/ || true", ["pytest tests/unit/ || true"]),
+        ("|| : disarms", "mypy src/ || :", ["mypy src/ || :"]),
+        ("|| : mid-line disarms", "mypy src/ || : # tolerated", ["mypy src/ || : # tolerated"]),
+        # Word-boundary guards: each of these contains a command name as a substring
+        # only, and flagging them would train people to ignore this test.
+        ("cache path is not pytest", "rm -rf .pytest_cache || true", []),
+        ("container name is not black", "docker rm blackbox || true", []),
+        ("report filename is not pytest", "curl -F f=@pytest-report.xml || true", []),
+        ("comment is not a command", "# pytest tests/ || true", []),
+        # A wrapped command and its disarming tail are one logical line.
+        (
+            "backslash continuation",
+            "pytest tests/unit/ \\\n  --tb=short || true",
+            ["pytest tests/unit/  --tb=short || true"],
+        ),
+        # set +e: disarms every LATER command, not the line it sits on.
+        ("set +e disarms what follows", "set +e\npytest tests/unit/", ["pytest tests/unit/"]),
+        ("set +e leaves earlier lines armed", "pytest a/\nset +e\npytest b/", ["pytest b/"]),
+        ("set -e re-arms", "set +e\nset -e\npytest tests/unit/", []),
+        ("bracketed tolerant region", "pytest a/\nset +e\nmypy src/\nset -e\npytest b/", ["mypy src/"]),
+        # Long-option spellings are equivalent to the short flags and must behave the
+        # same; a regex for `+e` alone silently missed `+o errexit` entirely.
+        ("set -o errexit re-arms", "set +e\nset -o errexit\npytest a/", []),
+        ("set +o errexit disarms", "set +o errexit\npytest a/", ["pytest a/"]),
+        ("set -o pipefail does not re-arm", "set +e\nset -o pipefail\npytest a/", ["pytest a/"]),
+        ("set -x does not re-arm", "set +e\nset -x\npytest a/", ["pytest a/"]),
+        ("set -euo pipefail re-arms", "set +e\nset -euo pipefail\npytest a/", []),
+        ("set -eu counts as re-arming", "set +e\nset -eu\npytest a/", []),
+        ("set +ex counts as disarming", "set +ex\npytest a/", ["pytest a/"]),
+        # `offset` is a word containing "set" — the lookbehind must not match it.
+        ("word containing set is not set", "offset=+e\npytest a/", []),
+    ],
+)
+def test_disarmed_commands_detects_each_shape(label: str, run: str, expected: list[str]) -> None:
+    """``_disarmed_commands`` must catch both disarming mechanisms and neither false-positive."""
+    assert _disarmed_commands(run) == expected, label
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("label", "body", "expected"),
+    [
+        ("JOBS list", 'JOBS="LINT TESTS"\nfor j in ${JOBS}; do :; done', {"LINT", "TESTS"}),
+        ("JOBS continuation", 'JOBS="LINT \\\n      TESTS"', {"LINT", "TESTS"}),
+        ("single-bracket test", '[ "${CHECK_SECRETS}" != "success" ]', {"CHECK_SECRETS"}),
+        ("double-bracket test", '[[ "${CHECK}" != "success" ]]', {"CHECK"}),
+        ("case statement", 'case "${HAS_KEY}" in', {"HAS_KEY"}),
+        ("both forms combine", 'JOBS="A B"\ncase "${C}" in', {"A", "B", "C"}),
+        # The regression mutation testing surfaced: a name appearing only inside a
+        # comment must NOT count as gated, or the summary passes while enforcing less
+        # than it prints. Both shapes below yield the wrong answer if the comment
+        # stripping is removed, which a comment carrying no gating construct does not.
+        ("commented gate does not count", '# case "${TESTS}" in\nJOBS="LINT"', {"LINT"}),
+        ("commented-out JOBS does not count", '# JOBS="A B C"\nJOBS="LINT"', {"LINT"}),
+        ("commented bracket test does not count", '# [ "${OLD}" != "success" ]\nJOBS="LINT"', {"LINT"}),
+        ("no gate at all", 'echo "nothing here"', set()),
+    ],
+)
+def test_gated_job_list_counts_only_real_gates(label: str, body: str, expected: set[str]) -> None:
+    """``_gated_job_list`` decides whether a summary enforces what it prints."""
+    assert _gated_job_list(body) == expected, label
+
+
+@pytest.mark.unit
+def test_triggers_handles_the_yaml_boolean_on_key() -> None:
+    """``on:`` parses as the boolean ``True`` under YAML 1.1, which PyYAML follows.
+
+    Both spellings must work, so quoting the key in a workflow does not silently
+    empty every trigger-based assertion.
+    """
+    assert _triggers({True: {"push": {}}}) == {"push": {}}
+    assert _triggers({"on": {"push": {}}}) == {"push": {}}
+    assert _triggers({}) == {}
+
+
+@pytest.mark.unit
+def test_steps_skips_malformed_entries() -> None:
+    """A non-mapping step is skipped rather than crashing every step-walking test."""
+    assert _steps({"steps": [{"run": "a"}, "not-a-step", None, {"uses": "b"}]}) == [{"run": "a"}, {"uses": "b"}]
+    assert _steps({}) == []
+    assert _steps({"steps": None}) == []
+
+
+@pytest.mark.unit
+def test_make_recipe_extracts_only_the_recipe_body() -> None:
+    """``_make_recipe`` must stop at the next target and exclude the ``##`` help text.
+
+    The first draft of the Makefile parity test matched ``--strict`` inside a help
+    comment that exists precisely to say ``--strict`` is NOT used.
+    """
+    assert "mypy src/" in _make_recipe("typecheck")
+    # The help text lives on the target line, which the recipe body excludes.
+    assert "##" not in _make_recipe("typecheck")
+    assert _make_recipe("no-such-target-xyz") == ""

@@ -129,10 +129,14 @@ per task", so this is raised for the maintainer rather than fixed in passing. Th
   tracking link required per entry). It carries one accepted entry, `CVE-2025-23042`: the fix
   requires `huggingface-hub>=0.33.5`, which `requirements.txt:29` pins below, and the production
   image never runs the affected Gradio path (`Dockerfile:89` starts `uvicorn rest_server`).
-- `tests/unit/test_ci_workflow_invariants.py` — 67 tests deriving the invariants above from the
+- `tests/unit/test_ci_workflow_invariants.py` — 102 tests deriving the invariants above from the
   workflow files themselves rather than a hardcoded job list, so a newly added job is covered
   automatically. Each check was mutation-tested against the defect it guards, including a
   cross-file invariant asserting the CI test job installs every extra `tests/conftest.py` requires.
+  A second tier covers the module's own parsers directly. They are the single point of silent
+  failure for everything above — a parser that returned nothing would leave every invariant green
+  while enforcing nothing — and their branches are unreachable from the live workflows by
+  construction, since the invariants forbid the very constructs those branches detect.
 - `tests/conftest.py` optional-dependency guards are now **strict under CI**. A missing extra aborts
   collection with an actionable message instead of silently shrinking the suite — the exact
   mechanism by which the API-server suites disappeared. Local `.[dev]`-only runs still skip; set
