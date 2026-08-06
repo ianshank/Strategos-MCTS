@@ -437,12 +437,18 @@ async def readiness_check():
         "prometheus_available": PROMETHEUS_AVAILABLE,
     }
 
-    # Check if all critical services are available
+    # The framework backs /query, /query-stream and /graph/* — every route that is
+    # not health or stats. Reporting ready while it is uninitialized tells a
+    # readiness probe to send live traffic to a server that 503s all of them, so
+    # readiness must account for it unless an operator opts out explicitly.
+    require_framework = get_settings().REQUIRE_FRAMEWORK_FOR_READINESS and FRAMEWORK_SERVICE_AVAILABLE
+    checks["framework_required_for_readiness"] = require_framework
+
     all_ready = all(
         [
             checks["imports_available"],
             checks["authenticator_configured"],
-            # Framework readiness is optional - can still serve basic requests
+            framework_ready or not require_framework,
         ]
     )
 

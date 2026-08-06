@@ -377,3 +377,29 @@ MIN_CUDA_MEMORY_FRACTION: Final[float] = 0.1
 MAX_CUDA_MEMORY_FRACTION: Final[float] = 1.0
 MIN_GPU_MEMORY_GB: Final[float] = 2.0
 SUPPORTED_CUDA_BACKENDS: Final[tuple[str, ...]] = ("nccl", "gloo")
+
+# ============================================================================
+# Model Checkpoint Integrity
+# ============================================================================
+
+# Magic prefix of a Git-LFS pointer file. A repository cloned without
+# `git lfs install && git lfs pull` leaves ~130-byte text stubs in place of the
+# real weights, and `Path.exists()` happily returns True for them — so existence
+# is not a usable readiness signal. Detecting the prefix lets callers degrade
+# with an actionable message instead of dying inside a deserializer.
+GIT_LFS_POINTER_MAGIC: Final[bytes] = b"version https://git-lfs.github.com/spec/v1"
+
+# Pointer files are a few short lines; anything larger is real content. Bounds
+# how much of a candidate file is read during inspection.
+GIT_LFS_POINTER_MAX_BYTES: Final[int] = 1024
+
+# Leading bytes of a Python pickle stream (protocol 2+), used by legacy
+# (pre-1.6) torch checkpoints that are not zip archives.
+PICKLE_PROTOCOL2_MAGIC: Final[bytes] = b"\x80"
+
+# Weight file suffixes recognized when inspecting a checkpoint directory
+# (e.g. a PEFT/LoRA adapter directory rather than a single file).
+CHECKPOINT_WEIGHT_SUFFIXES: Final[tuple[str, ...]] = (".pt", ".pth", ".bin", ".safetensors", ".ckpt")
+
+# Remediation hint surfaced when a checkpoint turns out to be an LFS pointer.
+GIT_LFS_REMEDIATION: Final[str] = "git lfs install && git lfs pull"

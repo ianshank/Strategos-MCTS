@@ -21,7 +21,7 @@ import uuid
 from contextvars import ContextVar
 from datetime import datetime
 from functools import wraps
-from typing import Any
+from typing import Any, Final
 
 import psutil
 
@@ -118,6 +118,58 @@ def sanitize_dict(data: dict) -> dict:
         else:
             result[key] = value
     return result
+
+
+# Keyword arguments consumed by ``logging.Logger.log`` itself. They must be forwarded
+# to stdlib rather than folded into ``extra``, where they would become inert record
+# attributes (and ``exc_info`` would additionally collide with the reserved slot).
+_STDLIB_LOG_KWARGS: Final[frozenset[str]] = frozenset({"exc_info", "stack_info", "stacklevel"})
+
+# Attribute names ``logging.Logger.makeRecord`` refuses to overwrite. Passing any of
+# them via ``extra`` raises ``KeyError: "Attempt to overwrite 'name' in LogRecord"``,
+# so a caller logging a field innocently named ``module`` or ``filename`` would crash
+# the call site rather than the log line.
+_RESERVED_RECORD_ATTRS: Final[frozenset[str]] = frozenset(
+    {
+        "args",
+        "asctime",
+        "created",
+        "exc_info",
+        "exc_text",
+        "filename",
+        "funcName",
+        "levelname",
+        "levelno",
+        "lineno",
+        "message",
+        "module",
+        "msecs",
+        "msg",
+        "name",
+        "pathname",
+        "process",
+        "processName",
+        "relativeCreated",
+        "stack_info",
+        "taskName",
+        "thread",
+        "threadName",
+    }
+)
+
+
+def _shield_reserved(extra: dict[str, Any]) -> dict[str, Any]:
+    """
+    Rename structured keys that would collide with reserved ``LogRecord`` slots.
+
+    A colliding key is suffixed with ``_`` rather than dropped, so the value still
+    reaches the formatter instead of disappearing (or taking the process down).
+    """
+    if not extra:
+        return extra
+    if not _RESERVED_RECORD_ATTRS.intersection(extra):
+        return extra
+    return {(f"{k}_" if k in _RESERVED_RECORD_ATTRS else k): v for k, v in extra.items()}
 
 
 class CorrelationIdFilter(logging.Filter):
@@ -552,45 +604,77 @@ class StructuredLogger:
         """
         self._logger = logging.getLogger(name)
 
-    def _log(self, level: int, message: str, **extra) -> None:
+    def _split_extra(self, extra: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+        """
+        Separate stdlib-reserved keyword arguments from structured extras.
+
+        ``exc_info``/``stack_info``/``stacklevel`` are parameters of
+        ``logging.Logger.log``, not record attributes. Left in ``extra`` they are
+        attached to the record as ordinary fields, so ``exc_info=True`` silently
+        stops producing a traceback (and collides with the reserved attribute).
+
+        Returns:
+            ``(stdlib_kwargs, structured_extra)``
+        """
+        stdlib_kwargs = {k: extra.pop(k) for k in _STDLIB_LOG_KWARGS if k in extra}
+        return stdlib_kwargs, extra
+
+    def _log(self, level: int, message: str, /, *args: Any, **extra: Any) -> None:
         """
         Internal log method with correlation ID and sanitization.
 
+        Accepts both calling conventions so an injected ``StructuredLogger`` is a
+        drop-in for a stdlib ``logging.Logger``:
+
+        - structured: ``log(level, "Built graph", nodes=12)``
+        - printf-style: ``log(level, "Built graph: nodes=%d", 12)``
+
+        Positional ``args`` are forwarded to stdlib untouched, preserving lazy
+        ``%``-interpolation (the record only formats if a handler emits it).
+
         Args:
             level: Logging level (e.g., logging.INFO)
-            message: Log message
+            message: Log message, optionally a ``%``-style format template
+            *args: Interpolation arguments for a ``%``-style ``message``
             **extra: Additional structured data to include
         """
+        stdlib_kwargs, extra = self._split_extra(extra)
         extra["correlation_id"] = get_correlation_id()
-        sanitized_extra = sanitize_dict(extra) if extra else {}
-        self._logger.log(level, sanitize_message(message), extra=sanitized_extra)
+        sanitized_extra = _shield_reserved(sanitize_dict(extra))
+        self._logger.log(level, sanitize_message(message), *args, extra=sanitized_extra, **stdlib_kwargs)
 
-    def debug(self, message: str, **extra) -> None:
+    def debug(self, message: str, /, *args: Any, **extra: Any) -> None:
         """Log debug message with structured data."""
-        self._log(logging.DEBUG, message, **extra)
+        self._log(logging.DEBUG, message, *args, **extra)
 
-    def info(self, message: str, **extra) -> None:
+    def info(self, message: str, /, *args: Any, **extra: Any) -> None:
         """Log info message with structured data."""
-        self._log(logging.INFO, message, **extra)
+        self._log(logging.INFO, message, *args, **extra)
 
-    def warning(self, message: str, **extra) -> None:
+    def warning(self, message: str, /, *args: Any, **extra: Any) -> None:
         """Log warning message with structured data."""
-        self._log(logging.WARNING, message, **extra)
+        self._log(logging.WARNING, message, *args, **extra)
 
-    def error(self, message: str, **extra) -> None:
+    def error(self, message: str, /, *args: Any, **extra: Any) -> None:
         """Log error message with structured data."""
-        self._log(logging.ERROR, message, **extra)
+        self._log(logging.ERROR, message, *args, **extra)
 
-    def critical(self, message: str, **extra) -> None:
+    def critical(self, message: str, /, *args: Any, **extra: Any) -> None:
         """Log critical message with structured data."""
-        self._log(logging.CRITICAL, message, **extra)
+        self._log(logging.CRITICAL, message, *args, **extra)
 
-    def exception(self, message: str, **extra) -> None:
+    def exception(self, message: str, /, *args: Any, **extra: Any) -> None:
         """Log exception with traceback and structured data."""
+        stdlib_kwargs, extra = self._split_extra(extra)
         extra["correlation_id"] = get_correlation_id()
         extra["traceback"] = traceback.format_exc()
-        sanitized_extra = sanitize_dict(extra) if extra else {}
-        self._logger.exception(sanitize_message(message), extra=sanitized_extra)
+        sanitized_extra = _shield_reserved(sanitize_dict(extra))
+        if "exc_info" in stdlib_kwargs:
+            # Logger.exception() forces exc_info=True itself, so an explicit value
+            # from the caller would arrive as a duplicate keyword argument.
+            self._logger.error(sanitize_message(message), *args, extra=sanitized_extra, **stdlib_kwargs)
+        else:
+            self._logger.exception(sanitize_message(message), *args, extra=sanitized_extra, **stdlib_kwargs)
 
     def log_timing(self, operation: str, duration_ms: float, **extra) -> None:
         """
@@ -695,3 +779,30 @@ def get_structured_logger(name: str) -> StructuredLogger:
         StructuredLogger instance
     """
     return StructuredLogger(name)
+
+
+def ensure_structured_logger(
+    logger: "StructuredLogger | logging.Logger | None",
+    default_name: str,
+) -> StructuredLogger:
+    """
+    Normalize any accepted logger into a :class:`StructuredLogger`.
+
+    ``StructuredLogger`` tolerates stdlib-style printf calls, but the reverse is
+    not true: a stdlib ``Logger`` raises ``TypeError`` on arbitrary keyword
+    fields. Functions that accept an injected logger and then log structured
+    fields must normalize first, or they crash on the very path meant to report a
+    problem.
+
+    Args:
+        logger: A ``StructuredLogger``, a stdlib ``Logger``, or ``None``.
+        default_name: Logger name used when ``logger`` is ``None``.
+
+    Returns:
+        A ``StructuredLogger`` writing to the same underlying logger name.
+    """
+    if isinstance(logger, StructuredLogger):
+        return logger
+    if isinstance(logger, logging.Logger):
+        return StructuredLogger(logger.name)
+    return StructuredLogger(default_name)

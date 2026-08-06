@@ -435,6 +435,17 @@ class Settings(BaseSettings):
         ),
     )
 
+    REQUIRE_FRAMEWORK_FOR_READINESS: bool = Field(
+        default=True,
+        description=(
+            "When True, /ready reports not-ready unless the framework service is actually "
+            "initialized. Default True because /query, /query-stream and /graph/* all 503 "
+            "without it — a readiness probe that ignores this routes live traffic to a "
+            "server that cannot serve its primary function. Set False for deployments that "
+            "intentionally expose only the health/stats surface."
+        ),
+    )
+
     ASSEMBLY_TRUST_LEGACY_PICKLE: bool = Field(
         default=False,
         description=(

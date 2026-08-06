@@ -376,22 +376,34 @@ class FrameworkService:
                         correlation_id=correlation_id,
                         framework_type="integrated",
                     )
-            except (ImportError, NotImplementedError) as e:
-                # Lightweight mode still issues real LLM calls (legitimate degraded mode),
-                # but make it explicit and opt-out-able rather than silent.
+            # Deliberately broad. This previously caught only (ImportError,
+            # NotImplementedError), so a TypeError raised while *constructing* the
+            # integrated framework escaped the fallback entirely and left
+            # ``self._framework`` as None — every /query, /query-stream and /graph
+            # route then 503'd, with nothing in the logs naming the cause. A
+            # missing dependency and a genuine defect must both be survivable here,
+            # but a defect has to be loud: the full traceback is always emitted.
+            except Exception as e:  # noqa: BLE001 - see comment above
                 if not self._settings.ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK:
                     raise ConfigurationError(
                         "Integrated framework is unavailable and lightweight fallback is "
                         "disabled. Set ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK=true to allow it."
                     ) from e
+                # An unexpected type means a bug, not a missing optional dependency.
+                # Log it at error with the traceback so it cannot degrade silently.
+                unexpected = not isinstance(e, ImportError | NotImplementedError)
                 if _HAS_STRUCTURED_LOGGING:
-                    self._logger.warning(
+                    log = self._logger.exception if unexpected else self._logger.warning
+                    log(
                         "Full framework unavailable; using lightweight mode "
                         "(ALLOW_LIGHTWEIGHT_FRAMEWORK_FALLBACK enabled)",
                         correlation_id=correlation_id,
                         event="lightweight_framework_fallback",
-                        error=str(e),
+                        error=f"{type(e).__name__}: {e}",
+                        unexpected_error=unexpected,
                     )
+                elif unexpected:
+                    self._logger.exception(f"Full framework unavailable: {e}, using lightweight mode")
                 else:
                     self._logger.warning(f"Full framework unavailable: {e}, using lightweight mode")
                 self._framework = LightweightFramework(
