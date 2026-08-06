@@ -21,7 +21,7 @@ from typing import Any
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-from src.config.constants import DEFAULT_APP_VERSION
+from src.config.constants import DEFAULT_APP_VERSION, DEGRADED_RESPONSE_PREFIX
 
 # Settings are resolved lazily rather than at import. Calling get_settings() at
 # module scope made `import app` raise ValidationError whenever OPENAI_API_KEY was
@@ -29,6 +29,9 @@ from src.config.constants import DEFAULT_APP_VERSION
 # and made all 27 tests in tests/e2e/test_ui_e2e.py ERROR rather than skip.
 from src.config.settings import get_settings
 from src.models.checkpoints import inspect_checkpoint, load_checkpoint
+from src.ui.agent_routes import AGENT_ROUTES, AgentRouteSpec, default_route
+from src.ui.agent_routes import derive_reasoning_steps as _derive_reasoning_steps
+from src.ui.status import checkpoint_status_banner, inspect_configured_checkpoints
 
 
 def _module_settings():
@@ -332,13 +335,8 @@ class IntegratedFramework:
                 self.bert_report.remediation or "",
             )
 
-        # Agent routing map
-        self.agent_handlers = {
-            "hrm": self._handle_hrm,
-            "trm": self._handle_trm,
-            "mcts": self._handle_mcts,
-        }
-
+        # Routing is table-driven via src.ui.agent_routes.AGENT_ROUTES; there is no
+        # separate handler map to keep in sync with it.
         print("Framework initialized successfully!")
 
     async def process_query(
@@ -373,9 +371,11 @@ class IntegratedFramework:
         # Get routing probabilities (prediction.probabilities is already a dict)
         routing_probs = prediction.probabilities
 
-        # Step 3: Route to selected agent
-        handler = self.agent_handlers.get(selected_agent, self._handle_hrm)
-        agent_result = await handler(query)
+        # Step 3: Route to selected agent. AGENT_ROUTES is the single source of
+        # truth for which routes exist, so an unrecognized controller output falls
+        # back through the same table rather than a separately-hardcoded default.
+        route = AGENT_ROUTES.get(selected_agent, default_route())
+        agent_result = await self._run_via_framework(query, route)
 
         # Create controller decision summary
         controller_decision = ControllerDecision(
@@ -397,71 +397,49 @@ class IntegratedFramework:
 
         return agent_result, controller_decision
 
-    async def _handle_hrm(self, query: str) -> AgentResult:
-        """Handle query with Hierarchical Reasoning Module."""
-        # Simulate HRM processing
-        await asyncio.sleep(0.1)
+    async def _run_via_framework(self, query: str, spec: AgentRouteSpec) -> AgentResult:
+        """
+        Answer ``query`` through the real framework, degrading explicitly on failure.
 
-        steps = [
-            "Decompose query into hierarchical subproblems",
-            "Apply high-level reasoning (H-Module)",
-            "Execute low-level refinement (L-Module)",
-            "Synthesize hierarchical solution",
-        ]
+        Routes through the same ``FrameworkService`` the REST server uses, so the
+        UI and the API cannot drift apart. Confidence, agent attribution and MCTS
+        statistics all come from the framework's own output — the previous
+        implementation returned ``asyncio.sleep()`` plus an f-string with a
+        hardcoded confidence, under a banner advertising trained models.
 
-        response = f"[HRM Analysis] Breaking down the problem hierarchically: {query}\n\nThis response has been fully generated and is complete."
+        Args:
+            query: The user's question.
+            spec: Which route to take and how to label it.
 
-        return AgentResult(
-            agent_name="HRM (Hierarchical Reasoning)",
-            response=response,
-            confidence=0.85,
-            reasoning_steps=steps,
-            execution_time_ms=0.0,
-        )
-
-    async def _handle_trm(self, query: str) -> AgentResult:
-        """Handle query with Tree Reasoning Module."""
-        # Simulate TRM processing
-        await asyncio.sleep(0.1)
-
-        steps = [
-            "Initialize solution state",
-            "Recursive refinement iteration 1",
-            "Recursive refinement iteration 2",
-            "Convergence achieved - finalize",
-        ]
-
-        response = f"[TRM Analysis] Applying iterative refinement: {query[:100]}..."
-
-        return AgentResult(
-            agent_name="TRM (Iterative Refinement)",
-            response=response,
-            confidence=0.80,
-            reasoning_steps=steps,
-            execution_time_ms=0.0,
-        )
-
-    async def _handle_mcts(self, query: str) -> AgentResult:
-        """Handle query with MCTS."""
-        # Simulate MCTS processing
-        await asyncio.sleep(0.15)
-
-        steps = [
-            "Build search tree",
-            "Selection: UCB1 exploration",
-            "Expansion: Add promising nodes",
-            "Simulation: Rollout evaluation",
-            "Backpropagation: Update values",
-        ]
-
-        response = f"[MCTS Analysis] Strategic exploration via tree search: {query[:100]}..."
+        Returns:
+            An :class:`AgentResult`. On failure the result is clearly marked as
+            degraded rather than presented as a confident answer.
+        """
+        try:
+            service = await _get_framework_service()
+            result = await service.process_query(query, use_mcts=spec.use_mcts)
+        except Exception as exc:  # noqa: BLE001 - any failure must degrade visibly, not crash the UI
+            ui_logger.warning(
+                "Framework query failed; returning a degraded response",
+                extra={"agent": spec.label, "error": f"{type(exc).__name__}: {exc}"},
+            )
+            return AgentResult(
+                agent_name=f"{spec.label} — DEGRADED",
+                response=(
+                    f"{DEGRADED_RESPONSE_PREFIX} The reasoning framework is unavailable, so this "
+                    f"answer could not be generated.\n\nCause: {type(exc).__name__}: {exc}"
+                ),
+                confidence=0.0,
+                reasoning_steps=[f"Framework unavailable: {type(exc).__name__}"],
+                execution_time_ms=0.0,
+            )
 
         return AgentResult(
-            agent_name="MCTS (Monte Carlo Tree Search)",
-            response=response,
-            confidence=0.88,
-            reasoning_steps=steps,
-            execution_time_ms=0.0,
+            agent_name=spec.label,
+            response=result.response,
+            confidence=result.confidence,
+            reasoning_steps=_derive_reasoning_steps(result),
+            execution_time_ms=result.processing_time_ms,
         )
 
 
@@ -577,6 +555,26 @@ EXAMPLE_QUERIES = [
 _graph_framework: Any | None = None
 
 
+async def _get_framework_service() -> Any:
+    """
+    Lazily build and cache the initialized ``FrameworkService``.
+
+    Single construction path for the whole UI — the query handlers, the graph
+    panel and the streaming panel all share one initialized service, which is the
+    same one ``rest_server`` builds. Two construction paths would let the UI and
+    the API drift apart silently.
+    """
+    from src.api.framework_service import FrameworkConfig, FrameworkService
+
+    settings = get_settings()
+    service = await FrameworkService.get_instance(
+        config=FrameworkConfig.from_settings(settings),
+        settings=settings,
+    )
+    await service.initialize()
+    return service
+
+
 async def _get_graph_framework() -> Any:
     """Lazily build and cache the LangGraph IntegratedFramework via FrameworkService.
 
@@ -587,14 +585,7 @@ async def _get_graph_framework() -> Any:
     if _graph_framework is not None:
         return _graph_framework
 
-    from src.api.framework_service import FrameworkConfig, FrameworkService
-
-    settings = get_settings()
-    service = await FrameworkService.get_instance(
-        config=FrameworkConfig.from_settings(settings),
-        settings=settings,
-    )
-    await service.initialize()
+    service = await _get_framework_service()
     if service.framework is None:
         raise RuntimeError("Framework service did not produce a usable framework instance")
     _graph_framework = service.framework
@@ -703,6 +694,12 @@ def run_streaming_ui(query: str, use_mcts: bool) -> str:
     return "\n".join(collected)
 
 
+def _checkpoint_status_banner() -> str:
+    """Describe which model weights actually loaded, for the UI header."""
+    reports = inspect_configured_checkpoints(_module_settings(), Path(__file__).parent)
+    return checkpoint_status_banner(reports)
+
+
 def _build_demo() -> "gr.Blocks":
     """Construct the Gradio UI. Requires the ``[ui]`` extra (gradio).
 
@@ -718,15 +715,16 @@ def _build_demo() -> "gr.Blocks":
         .highlight { background-color: #e3f2fd; padding: 10px; border-radius: 5px; margin: 10px 0; }
         """,
     ) as demo:
-        gr.Markdown("""
+        gr.Markdown(f"""
             # 🎯 LangGraph Multi-Agent MCTS Framework
-            ## Production Demo with Trained Neural Meta-Controllers
+            ## Demo with Neural Meta-Controllers
 
-            This demo uses **REAL trained models**:
+            {_checkpoint_status_banner()}
+
             - 🧠 **RNN Meta-Controller**: GRU-based sequential pattern recognition
-            - 🤖 **BERT with LoRA**: Transformer-based text understanding for routing
+            - 🤖 **BERT with LoRA**: transformer-based routing
 
-            The meta-controllers learn to route queries to the optimal agent:
+            The meta-controllers route queries to one of three agents:
             - **HRM**: Hierarchical reasoning for complex decomposition
             - **TRM**: Iterative refinement for progressive improvement
             - **MCTS**: Strategic exploration for optimization problems
@@ -871,18 +869,16 @@ def _build_demo() -> "gr.Blocks":
 
             ### 📚 About This Demo
 
-            This is a **production demonstration** of trained neural meta-controllers for multi-agent routing.
+            A demonstration of neural meta-controllers routing queries across multiple agents.
 
             **Models:**
             - RNN Meta-Controller: 10-dimensional feature vector → 3-class routing (HRM/TRM/MCTS)
             - BERT with LoRA: Text features → routing decision with adapters
 
-            **Training:**
-            - Synthetic dataset: 1000+ samples with balanced routing decisions
-            - Optimization: Adam optimizer, cross-entropy loss
-            - Validation: 80/20 train/val split with early stopping
+            **Weights** are tracked with Git-LFS. If the banner above reports reduced mode,
+            run `git lfs install && git lfs pull` and restart to load the trained checkpoints.
 
-            **Repository:** [GitHub - langgraph_multi_agent_mcts](https://github.com/ianshank/langgraph_multi_agent_mcts)
+            **Repository:** [GitHub - Strategos-MCTS](https://github.com/ianshank/Strategos-MCTS)
 
             ---
             *Built with PyTorch, Transformers, PEFT, and Gradio*

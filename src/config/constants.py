@@ -412,3 +412,9 @@ GIT_LFS_REMEDIATION: Final[str] = "git lfs install && git lfs pull"
 # Settings cannot be constructed (e.g. no provider key configured), instead of
 # duplicating the literal at the call site.
 DEFAULT_APP_VERSION: Final[str] = "2025-11-25-FIX-REDUX"
+
+# Prefix marking a UI answer produced without a working reasoning framework.
+# Degraded output must be visibly labelled rather than presented as a confident
+# answer — the prior implementation returned hardcoded confidences under a banner
+# advertising trained models.
+DEGRADED_RESPONSE_PREFIX: Final[str] = "⚠️ **Degraded mode.**"
