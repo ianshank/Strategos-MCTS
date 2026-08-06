@@ -162,11 +162,22 @@ class TestUIPageLoad:
         # Expected component types
         expected_types = ["Textbox", "Button", "Radio", "Dropdown", "Markdown", "JSON", "Accordion"]
 
-        for expected in expected_types:
-            found = any(expected in ct for ct in component_types)
-            if not found:
-                # Some components might have different names
-                pass
+        # This loop previously ended in `if not found: pass`, so the test passed
+        # against any UI whatsoever — including one with no components at all.
+        # Textbox/Button/Markdown are the irreducible core of the query surface:
+        # without them there is nothing to type into, submit, or read back.
+        required_types = ["Textbox", "Button", "Markdown"]
+        missing = [t for t in required_types if not any(t in ct for ct in component_types)]
+        assert (
+            not missing
+        ), f"UI is missing essential components {missing}; present types: {sorted(set(component_types))}"
+
+        # The remaining expected types are advisory — Gradio renames components
+        # across majors — so report them without failing the build.
+        advisory = [t for t in expected_types if t not in required_types]
+        absent_advisory = [t for t in advisory if not any(t in ct for ct in component_types)]
+        if absent_advisory:
+            print(f"note: advisory components not found by name: {absent_advisory}")
 
         update_run_metadata(
             {
@@ -953,8 +964,10 @@ class TestUIErrorHandling:
             # Expected - None is not a valid query
             pass
         except Exception as e:
-            # Other exceptions should be informative
-            assert str(e) is not None
+            # This previously read `assert str(e) is not None`, which is true of
+            # every exception ever raised — the handler asserted nothing. An
+            # informative error must actually carry a message.
+            assert str(e).strip(), f"{type(e).__name__} was raised with an empty message"
 
         update_run_metadata(
             {

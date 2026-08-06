@@ -7,6 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### UI runtime integrity — the demo, chess UI and API actually run
+
+Specs: `specs/ui_runtime_integrity.SPEC.md`, `specs/ui_test_coverage.SPEC.md` (schema v2 drafts).
+
+An audit of every web surface found none of them working. Three root causes, each fixed at the
+contract rather than patched per call site.
+
+#### Fixed
+
+- **Injected-logger contract** (`src/observability/logging.py`). `StructuredLogger`'s methods were
+  `(self, message, **extra)`, so they rejected printf-style calls. `GraphBuilder` takes an injected
+  `logger` and calls it printf-style; `FrameworkService` injects a `StructuredLogger` into it. The
+  resulting `TypeError` escaped a narrow `except (ImportError, NotImplementedError)` and left the
+  framework as `None` — so `/query`, `/query-stream` and `/graph/*` all returned 503 while 115 mocked
+  tests stayed green. `src/` holds ~376 printf-style logger calls; every one reachable through an
+  injection path was the same latent defect. Both conventions now work, `exc_info`/`stack_info`/
+  `stacklevel` forward to stdlib instead of becoming inert record attributes, and fields colliding
+  with reserved `LogRecord` slots are renamed rather than raising at the call site.
+- **Import-time bootstrap** (`app.py`). Settings were resolved at module scope and the Blocks graph
+  was built at import, so `import app` raised `ValidationError` without `OPENAI_API_KEY`. That turned
+  `tests/ui` into a collection error aborting the whole session and made all 27 tests in
+  `tests/e2e/test_ui_e2e.py` ERROR rather than execute. Both are now lazy; PEP 562 `__getattr__`
+  preserves `app.APP_VERSION` and `app.demo`. `import torch` is guarded like the gradio import above
+  it — unguarded, it meant `pip install -e ".[ui]"` still could not import the module.
+- **Gradio 5 compatibility** (`src/ui/gradio_compat.py`). `create_chess_ui()` raised `TypeError`:
+  `Blocks.load(..., every=)` was removed in Gradio 5 and `pyproject.toml` declares `>=4,<6`, so the
+  declared range was itself the guarantee of a crash. Runtime capability detection keeps the whole
+  range working instead of narrowing the pin.
+- **Win attribution** (`src/games/chess/ui.py`). `record_game_result("AI wins by checkmate!")`
+  credited the win to the human: a `"checkmate"` substring test shadowed the `elif "AI wins"` branch,
+  and both produced strings contain "checkmate".
+- **Readiness semantics** (`src/api/rest_server.py`). `/ready` returned `200 {"ready": true}` while
+  its own payload reported `framework_ready: false`, so a readiness probe routed live traffic to a
+  server that 503'd everything. Gated by `REQUIRE_FRAMEWORK_FOR_READINESS`.
+- **Selenium fixture shadowing** (`tests/games/chess/test_ui_selenium.py`). The module-local `driver`
+  fixture skipped only when selenium was *uninstalled*, so an absent browser produced 48 ERRORs
+  instead of skips, shadowing the graceful skip in `tests/games/chess/conftest.py`. Now 48 skips.
+
+#### Added
+
+- `src/models/checkpoints.py` — classifies a checkpoint before any deserializer sees it. Every
+  checkpoint in this repository is a ~130-byte Git-LFS pointer stub that `Path.exists()` reports as
+  present, so `torch.load` failed with an opaque `UnpicklingError`. Files and adapter directories are
+  both handled; the tolerant loader returns `None` with an actionable warning.
+- `src/ui/` — UI logic that must be measured. The root `app.py` sits outside
+  `[tool.coverage.run] source = ["src"]` and is invisible to the coverage gate by construction.
+- `ui-tests` CI job installing the `[ui]` and `[chess]` extras. No job previously installed `[ui]`,
+  and no test anywhere constructed a Blocks graph — which is how a launch-blocking `TypeError` reached
+  `main` behind 66 passing tests. Wired into the summary job's `needs`, env map and gated `JOBS` list.
+
+#### Changed
+
+- UI query handlers route through the same `FrameworkService` the REST server uses. They were
+  `asyncio.sleep()` plus f-strings with hardcoded confidences of 0.85/0.80/0.88; confidence, agent
+  attribution and the reasoning trace now come from framework output. Failures return a visibly
+  degraded result with zero confidence rather than a confident-looking answer.
+- The UI header reports measured checkpoint state instead of claiming "REAL trained models"
+  unconditionally, and the footer no longer asserts a training methodology the shipped stubs cannot
+  substantiate (CHARTER NG-3).
+
+#### Removed
+
+- `examples/chess_demo/` and `tests/chess_demo/` (`hygiene_chess_consolidation` AC-4). Rollback tag:
+  `pre-delete/examples-chess-demo`. Zero `src/` imports, a private ~40-line UCB loop standing in for
+  MCTS, hand-coded HRM/TRM heuristics, and raw `os.getenv` configuration; flask and flask-cors appear
+  in no dependency file, so it could not start from any documented install. Root `chess_demo.py` and
+  `demo.py` are unaffected — different entry points that do import from `src/`.
+- `FlexibleLogger` is superseded by `ensure_structured_logger()`; the dead `agent_handlers` dispatch
+  map and its three wrapper methods are deleted.
+
+
 ### Quality gate — CI mechanical hardening
 
 Spec: `specs/hygiene_ci_mechanical.SPEC.md` (schema v2 draft; module `.github/`, no `src/**` changes).

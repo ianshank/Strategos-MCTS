@@ -123,8 +123,15 @@ def driver(config: SeleniumTestConfig) -> Generator[WebDriver, None, None]:
                 service = ChromeService(ChromeDriverManager().install())
                 driver_instance = webdriver.Chrome(service=service, options=options)
             except Exception:
-                # Try without webdriver-manager
-                driver_instance = webdriver.Chrome(options=options)
+                # Try without webdriver-manager.
+                try:
+                    driver_instance = webdriver.Chrome(options=options)
+                except Exception as exc:
+                    # Selenium being importable does not mean a browser exists. Without
+                    # this, an absent chromedriver raised here and every test in this
+                    # module ERRORed instead of skipping — shadowing the graceful skip
+                    # in tests/games/chess/conftest.py, which this fixture overrides.
+                    pytest.skip(f"No usable Chrome/chromedriver available: {type(exc).__name__}: {exc}")
 
         else:  # firefox
             options = FirefoxOptions()
@@ -137,7 +144,10 @@ def driver(config: SeleniumTestConfig) -> Generator[WebDriver, None, None]:
                 service = FirefoxService(GeckoDriverManager().install())
                 driver_instance = webdriver.Firefox(service=service, options=options)
             except Exception:
-                driver_instance = webdriver.Firefox(options=options)
+                try:
+                    driver_instance = webdriver.Firefox(options=options)
+                except Exception as exc:
+                    pytest.skip(f"No usable Firefox/geckodriver available: {type(exc).__name__}: {exc}")
 
         driver_instance.implicitly_wait(config.implicit_wait)
         driver_instance.set_page_load_timeout(config.page_load_timeout)
