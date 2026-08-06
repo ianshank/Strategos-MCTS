@@ -1,1 +1,0 @@
-"""Chess demo tests."""
