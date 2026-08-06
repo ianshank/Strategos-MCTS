@@ -403,3 +403,12 @@ CHECKPOINT_WEIGHT_SUFFIXES: Final[tuple[str, ...]] = (".pt", ".pth", ".bin", ".s
 
 # Remediation hint surfaced when a checkpoint turns out to be an LFS pointer.
 GIT_LFS_REMEDIATION: Final[str] = "git lfs install && git lfs pull"
+
+# ============================================================================
+# Application Identity
+# ============================================================================
+
+# Default APP_VERSION. Lives here so app.py can report a version even when
+# Settings cannot be constructed (e.g. no provider key configured), instead of
+# duplicating the literal at the call site.
+DEFAULT_APP_VERSION: Final[str] = "2025-11-25-FIX-REDUX"

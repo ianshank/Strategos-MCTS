@@ -19,6 +19,11 @@ from typing import Any
 import chess.pgn
 import gradio as gr
 
+from src.games.chess.constants import (
+    AI_WIN_MARKER,
+    LEARNING_REFRESH_SECONDS,
+    PLAYER_WIN_MARKER,
+)
 from src.games.chess.continuous_learning import (
     ContinuousLearningConfig,
     ContinuousLearningSession,
@@ -26,6 +31,7 @@ from src.games.chess.continuous_learning import (
     ScoreCard,
 )
 from src.observability.logging import get_logger
+from src.ui.gradio_compat import schedule_refresh
 
 logger = get_logger(__name__)
 
@@ -60,17 +66,22 @@ class GameSession:
         self.last_ai_analysis = {}
 
     def record_game_result(self, result: str) -> None:
-        """Record a game result to the scorecard."""
-        if "You win" in result or "checkmate" in result.lower():
-            if self.player_color == "white":
-                game_result = GameResult.WHITE_WIN
-            else:
-                game_result = GameResult.BLACK_WIN
-        elif "AI wins" in result:
-            if self.player_color == "white":
-                game_result = GameResult.BLACK_WIN
-            else:
-                game_result = GameResult.WHITE_WIN
+        """
+        Record a game result to the scorecard.
+
+        The winner is identified only by an explicit win marker. A previous
+        version also treated the substring "checkmate" as a player win, but both
+        produced strings contain it ("You win by checkmate!" / "AI wins by
+        checkmate!"), so every AI checkmate was recorded as a win for the human.
+        The AI marker is tested first so no later branch can shadow it.
+        """
+        lowered = result.lower()
+        player_is_white = self.player_color == "white"
+
+        if AI_WIN_MARKER in lowered:
+            game_result = GameResult.BLACK_WIN if player_is_white else GameResult.WHITE_WIN
+        elif PLAYER_WIN_MARKER in lowered:
+            game_result = GameResult.WHITE_WIN if player_is_white else GameResult.BLACK_WIN
         else:
             game_result = GameResult.DRAW
 
@@ -1121,11 +1132,15 @@ def create_chess_ui() -> gr.Blocks:
             outputs=[learning_message, learning_status_display],
         )
 
-        # Auto-refresh learning tab (status + board) every 1 second
-        demo.load(
+        # Auto-refresh learning tab (status + board). Routed through the compat
+        # helper because Gradio 5 removed `Blocks.load(every=...)` in favour of
+        # gr.Timer, and pyproject declares support for both majors.
+        schedule_refresh(
+            gr,
+            demo,
             fn=lambda: (render_learning_status(), render_learning_board_html()),
             outputs=[learning_status_display, learning_board_display],
-            every=1.0,
+            every_seconds=LEARNING_REFRESH_SECONDS,
         )
 
         refresh_btn.click(

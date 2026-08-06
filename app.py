@@ -14,7 +14,6 @@ import logging
 import sys
 import time
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,17 +21,43 @@ from typing import Any
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Get global settings
+from src.config.constants import DEFAULT_APP_VERSION
+
+# Settings are resolved lazily rather than at import. Calling get_settings() at
+# module scope made `import app` raise ValidationError whenever OPENAI_API_KEY was
+# unset, which turned tests/ui into a collection error that aborted the whole run
+# and made all 27 tests in tests/e2e/test_ui_e2e.py ERROR rather than skip.
 from src.config.settings import get_settings
+from src.models.checkpoints import inspect_checkpoint, load_checkpoint
 
-_settings = get_settings()
 
-# Debug marker
-APP_VERSION = _settings.APP_VERSION
-logger.info("=" * 80)
-logger.info(f"DEBUG: Starting app.py version {APP_VERSION}")
-logger.info(f"DEBUG: Startup time: {datetime.now().isoformat()}")
-logger.info("=" * 80)
+def _module_settings():
+    """Resolve settings on first use, tolerating an unconfigured environment."""
+    try:
+        return get_settings()
+    except Exception as exc:  # noqa: BLE001 - pydantic raises ValidationError subclasses
+        logger.warning("Settings unavailable at import (%s); using built-in defaults", exc)
+        return None
+
+
+def __getattr__(name: str):
+    """
+    PEP 562 module-level attribute access.
+
+    Keeps ``app.APP_VERSION`` working for existing importers now that the value is
+    no longer computed eagerly at import time.
+    """
+    if name == "APP_VERSION":
+        settings = _module_settings()
+        return settings.APP_VERSION if settings is not None else DEFAULT_APP_VERSION
+    if name == "_settings":
+        return _module_settings()
+    if name == "demo":
+        # Preserves `app.demo` / `from app import demo` for existing importers now
+        # that the Blocks graph is built on demand rather than at import.
+        return get_demo()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 # Fail fast if critical dependencies are missing or broken
 try:
@@ -58,7 +83,17 @@ except ImportError as exc:  # pragma: no cover - exercised only when extra absen
     _GRADIO_AVAILABLE = False
     logger.warning(f"gradio not installed; UI disabled. Install with `pip install -e '.[ui]'`. ({exc})")
 
-import torch
+# torch ships with the ``[neural]`` extra, not ``[ui]``. Leaving this unguarded
+# meant `pip install -e ".[ui]"` — the install README documents for the UI — still
+# could not import this module, and made the guarded gradio import above moot.
+try:
+    import torch
+
+    _TORCH_AVAILABLE = True
+except ImportError as exc:  # pragma: no cover - exercised only when extra absent
+    torch = None
+    _TORCH_AVAILABLE = False
+    logger.warning(f"torch not installed; neural routing disabled. Install with `pip install -e '.[neural]'`. ({exc})")
 
 # Import the trained controllers
 sys.path.insert(0, str(Path(__file__).parent))
@@ -84,7 +119,6 @@ except Exception as e:
     logger.warning("⚠️ Will use heuristic-based feature extraction")
 
 from src.config.constants import DEFAULT_SERVER_HOST
-from src.config.settings import get_settings
 from src.observability.logging import get_logger
 from src.utils.personality_response import PersonalityResponseGenerator
 
@@ -245,13 +279,30 @@ class IntegratedFramework:
         else:
             rnn_model_path = Path(__file__).parent / "models" / "rnn_meta_controller.pt"
 
-        if rnn_model_path.exists():
-            checkpoint = torch.load(rnn_model_path, map_location=self.device, weights_only=True)
+        # Path.exists() is True for a Git-LFS pointer stub, so it is not a usable
+        # readiness signal — load_checkpoint classifies the file first and returns
+        # None (with an actionable warning) rather than raising UnpicklingError.
+        self.rnn_report = inspect_checkpoint(rnn_model_path)
+        checkpoint = (
+            load_checkpoint(
+                rnn_model_path,
+                logger=logger,
+                map_location=self.device,
+                weights_only=True,
+            )
+            if self.rnn_report.is_ok
+            else None
+        )
+        if checkpoint is not None:
             self.rnn_controller.model.load_state_dict(checkpoint)
             self.rnn_controller.model.eval()
             logger.info(f"✅ Loaded RNN model from {rnn_model_path}")
         else:
-            logger.warning(f"⚠️ RNN model not found at {rnn_model_path}, using untrained model")
+            logger.warning(
+                "⚠️ RNN weights unusable (%s); using an untrained model. %s",
+                self.rnn_report.detail,
+                self.rnn_report.remediation or "",
+            )
 
         # Load trained BERT Meta-Controller V2 with graceful LoRA fallback
         logger.info("🔧 Loading BERT Meta-Controller V2 with LoRA...")
@@ -266,7 +317,8 @@ class IntegratedFramework:
         else:
             bert_model_path = Path(__file__).parent / "models" / "bert_lora" / "final_model"
 
-        if bert_model_path.exists():
+        self.bert_report = inspect_checkpoint(bert_model_path)
+        if self.bert_report.is_ok:
             try:
                 self.bert_controller.load_model(str(bert_model_path))
                 logger.info(f"✅ Loaded BERT LoRA model from {bert_model_path}")
@@ -274,7 +326,11 @@ class IntegratedFramework:
                 logger.warning(f"⚠️ Error loading BERT model: {e}")
                 logger.warning("⚠️ Using untrained BERT model")
         else:
-            logger.warning(f"⚠️ BERT model not found at {bert_model_path}, using untrained model")
+            logger.warning(
+                "⚠️ BERT adapter unusable (%s); using an untrained model. %s",
+                self.bert_report.detail,
+                self.bert_report.remediation or "",
+            )
 
         # Agent routing map
         self.agent_handlers = {
@@ -835,18 +891,35 @@ def _build_demo() -> "gr.Blocks":
     return demo
 
 
-# Build the UI only when gradio is installed. ``demo`` stays None without the
-# ``[ui]`` extra so ``import app`` always succeeds (e.g. for unit collection).
-demo = _build_demo() if _GRADIO_AVAILABLE else None
+# The UI is built on first access, not at import. Building it eagerly called
+# get_settings() (via _build_demo), so `import app` raised ValidationError without
+# a provider key — which is what turned tests/ui into a collection error and made
+# every test in tests/e2e/test_ui_e2e.py ERROR instead of run.
+_demo_cache: "gr.Blocks | None" = None
+
+
+def get_demo() -> "gr.Blocks | None":
+    """
+    Build (once) and return the Gradio UI, or None when gradio is absent.
+
+    Cached so repeated access — and ``app.demo`` — reuse a single Blocks graph.
+    """
+    global _demo_cache
+    if not _GRADIO_AVAILABLE:
+        return None
+    if _demo_cache is None:
+        _demo_cache = _build_demo()
+    return _demo_cache
 
 
 if __name__ == "__main__":
-    if not _GRADIO_AVAILABLE or demo is None:
+    if not _GRADIO_AVAILABLE:
         raise SystemExit("gradio is not installed. Install the UI extra: pip install -e '.[ui]'")
 
-    # Initialize framework
-    print("Initializing framework with trained models...")
-    framework = IntegratedFramework()
+    _demo = get_demo()
+    if _demo is None:
+        raise SystemExit("Failed to build the Gradio UI.")
 
-    # Launch the demo
-    demo.launch(server_name=DEFAULT_SERVER_HOST, share=False, show_error=True)
+    # Launch the demo. The framework is constructed lazily by the query handlers,
+    # so a missing checkpoint degrades the answer rather than blocking startup.
+    _demo.launch(server_name=DEFAULT_SERVER_HOST, share=False, show_error=True)

@@ -20,6 +20,7 @@ from pydantic import (
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.config.constants import (
+    DEFAULT_APP_VERSION,
     DEFAULT_CUDA_MEMORY_FRACTION,
     MAX_CUDA_MEMORY_FRACTION,
     MIN_CUDA_MEMORY_FRACTION,
@@ -69,7 +70,7 @@ class Settings(BaseSettings):
     )
 
     # Application Version
-    APP_VERSION: str = Field(default="2025-11-25-FIX-REDUX", description="Application version identifier")
+    APP_VERSION: str = Field(default=DEFAULT_APP_VERSION, description="Application version identifier")
 
     # LLM Provider Configuration
     LLM_PROVIDER: LLMProvider = Field(
