@@ -40,7 +40,9 @@ from src.config.constants import (
     GIT_LFS_POINTER_MAGIC,
     GIT_LFS_POINTER_MAX_BYTES,
     GIT_LFS_REMEDIATION,
-    PICKLE_PROTOCOL2_MAGIC,
+    PICKLE_MAX_PROTOCOL,
+    PICKLE_MIN_PROTOCOL,
+    PICKLE_PROTO_OPCODE,
 )
 from src.observability.logging import StructuredLogger, ensure_structured_logger
 
@@ -118,11 +120,34 @@ def _is_lfs_pointer(path: Path, size: int) -> bool:
         return False
 
 
-def _looks_like_safetensors(head: bytes) -> bool:
-    """True when ``head`` opens like a safetensors container."""
+def _looks_like_pickle(head: bytes) -> bool:
+    """
+    True when ``head`` opens with a genuine pickle PROTO opcode.
+
+    The opcode alone (``0x80``) is not a signature — it is an ordinary byte, so
+    testing only for it classifies any binary file starting with ``0x80`` as a
+    valid legacy checkpoint. The protocol number that must follow it is what makes
+    the pair discriminating.
+    """
+    if len(head) < 2 or head[:1] != PICKLE_PROTO_OPCODE:
+        return False
+    return PICKLE_MIN_PROTOCOL <= head[1] <= PICKLE_MAX_PROTOCOL
+
+
+def _looks_like_safetensors(head: bytes, file_size: int) -> bool:
+    """
+    True when ``head`` opens like a safetensors container.
+
+    Checks the declared header length as well as the opening brace: a u64 length
+    that is zero, or larger than the file itself, cannot describe a real header,
+    and testing only for ``{`` at offset 8 would accept arbitrary binary content.
+    """
     if len(head) <= _SAFETENSORS_HEADER_BYTES:
         return False
-    return head[_SAFETENSORS_HEADER_BYTES : _SAFETENSORS_HEADER_BYTES + 1] == _SAFETENSORS_JSON_START
+    if head[_SAFETENSORS_HEADER_BYTES : _SAFETENSORS_HEADER_BYTES + 1] != _SAFETENSORS_JSON_START:
+        return False
+    header_len = int.from_bytes(head[:_SAFETENSORS_HEADER_BYTES], "little")
+    return 0 < header_len <= file_size - _SAFETENSORS_HEADER_BYTES
 
 
 def _inspect_file(path: Path) -> CheckpointReport:
@@ -154,9 +179,9 @@ def _inspect_file(path: Path) -> CheckpointReport:
     except OSError as exc:
         return CheckpointReport(path, CheckpointStatus.UNREADABLE, f"read failed: {exc}", size)
 
-    if head.startswith(PICKLE_PROTOCOL2_MAGIC):
+    if _looks_like_pickle(head):
         return CheckpointReport(path, CheckpointStatus.OK, "legacy pickle checkpoint", size)
-    if _looks_like_safetensors(head):
+    if _looks_like_safetensors(head, size):
         return CheckpointReport(path, CheckpointStatus.OK, "safetensors checkpoint", size)
 
     return CheckpointReport(

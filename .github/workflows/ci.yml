@@ -362,6 +362,7 @@ jobs:
             tests/unit/test_checkpoints.py \
             tests/unit/test_agent_routes.py \
             tests/unit/test_ui_status.py \
+            tests/unit/test_framework_service_fallback.py \
             tests/ui \
             -m "not slow" -q
         env:

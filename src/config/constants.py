@@ -394,8 +394,17 @@ GIT_LFS_POINTER_MAGIC: Final[bytes] = b"version https://git-lfs.github.com/spec/
 GIT_LFS_POINTER_MAX_BYTES: Final[int] = 1024
 
 # Leading bytes of a Python pickle stream (protocol 2+), used by legacy
-# (pre-1.6) torch checkpoints that are not zip archives.
-PICKLE_PROTOCOL2_MAGIC: Final[bytes] = b"\x80"
+# (pre-1.6) torch checkpoints that are not zip archives. The PROTO opcode is a
+# single 0x80 byte followed by the protocol number, so the opcode ALONE is not a
+# usable signature — 0x80 is an ordinary byte and any binary file starting with
+# it would be misread as a valid checkpoint.
+PICKLE_PROTO_OPCODE: Final[bytes] = b"\x80"
+
+# Protocol numbers that may follow the PROTO opcode. 2 is the lowest that emits
+# it; 5 is the highest Python defines today. The ceiling is deliberately not
+# open-ended: an arbitrary byte here means the file is not a pickle.
+PICKLE_MIN_PROTOCOL: Final[int] = 2
+PICKLE_MAX_PROTOCOL: Final[int] = 5
 
 # Weight file suffixes recognized when inspecting a checkpoint directory
 # (e.g. a PEFT/LoRA adapter directory rather than a single file).

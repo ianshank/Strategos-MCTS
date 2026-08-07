@@ -64,7 +64,7 @@ class TestBanner:
     def test_all_ok_claims_trained_weights(self) -> None:
         banner = checkpoint_status_banner({"RNN": _ok("a.pt"), "BERT": _ok("b.pt")})
 
-        assert "trained weights" in banner
+        assert "Running on trained weights" in banner
         assert "Reduced mode" not in banner
 
     def test_any_stub_downgrades_the_claim(self) -> None:
@@ -118,7 +118,29 @@ class TestEndToEndInspection:
 
         banner = checkpoint_status_banner(inspect_configured_checkpoints(None, tmp_path))
 
-        assert "trained weights" in banner
+        assert "Running on trained weights" in banner
 
     def test_inspection_never_raises_on_a_bare_tree(self, tmp_path: Path) -> None:
         assert inspect_configured_checkpoints(None, tmp_path)
+
+    def test_corrupt_weights_do_not_claim_trained_operation(self, tmp_path: Path) -> None:
+        """
+        Regression for the permissive pickle check.
+
+        A file opening with a bare 0x80 byte was classified OK, so the banner
+        announced trained-model operation for content torch could not load. The
+        banner is the user-facing consequence of a misclassification, so it is
+        asserted here as well as at the inspection layer.
+        """
+        models = tmp_path / "models"
+        (models / "bert_lora" / "final_model").mkdir(parents=True)
+        (models / "rnn_meta_controller.pt").write_bytes(b"\x80" + b"\xff" * 512)
+        (models / "bert_lora" / "final_model" / "adapter_model.safetensors").write_bytes(b"\x80" + b"\xff" * 512)
+
+        banner = checkpoint_status_banner(inspect_configured_checkpoints(None, tmp_path))
+
+        # Match the success phrase exactly: the reduced-mode text contains
+        # "untrained weights", so a bare "trained weights" substring test passes
+        # against both banners and would assert nothing.
+        assert "Running on trained weights" not in banner
+        assert "Reduced mode" in banner

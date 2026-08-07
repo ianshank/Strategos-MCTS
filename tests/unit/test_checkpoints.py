@@ -116,6 +116,41 @@ class TestInvalidPaths:
 
         assert inspect_checkpoint(path).status is CheckpointStatus.UNREADABLE
 
+    def test_pickle_opcode_alone_is_not_a_signature(self, tmp_path: Path) -> None:
+        """
+        Regression: 0x80 is an ordinary byte, not a signature.
+
+        Matching only the PROTO opcode classified any binary file starting with
+        0x80 as a valid legacy checkpoint. That mattered beyond load time —
+        inspect_checkpoint feeds the UI banner, so a corrupt file made the app
+        claim it was running on trained weights.
+        """
+        path = tmp_path / "corrupt.pt"
+        path.write_bytes(b"\x80" + b"\xff" * 512)
+
+        assert inspect_checkpoint(path).status is CheckpointStatus.UNREADABLE
+
+    @pytest.mark.parametrize("protocol", [2, 3, 4, 5])
+    def test_every_proto_emitting_pickle_protocol_is_accepted(self, tmp_path: Path, protocol: int) -> None:
+        """Tightening the check must not reject genuine pickles."""
+        path = tmp_path / f"p{protocol}.pt"
+        path.write_bytes(pickle.dumps({"state_dict": {}}, protocol=protocol))
+
+        assert inspect_checkpoint(path).is_ok
+
+    def test_safetensors_header_length_must_be_plausible(self, tmp_path: Path) -> None:
+        """A u64 length larger than the file cannot describe a real header."""
+        path = tmp_path / "bogus.safetensors"
+        path.write_bytes((10**9).to_bytes(8, "little") + b'{"a":1}')
+
+        assert inspect_checkpoint(path).status is CheckpointStatus.UNREADABLE
+
+    def test_safetensors_zero_header_length_is_rejected(self, tmp_path: Path) -> None:
+        path = tmp_path / "empty-header.safetensors"
+        path.write_bytes((0).to_bytes(8, "little") + b'{"a":1}')
+
+        assert inspect_checkpoint(path).status is CheckpointStatus.UNREADABLE
+
     def test_inspection_never_raises(self, tmp_path: Path) -> None:
         """Callers branch on the report; they must not need a try/except."""
         for candidate in [tmp_path / "absent", tmp_path, Path("/dev/null")]:
