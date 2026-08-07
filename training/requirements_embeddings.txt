@@ -14,7 +14,7 @@ torch>=2.13.0
 
 # Optional: API-based embeddings (install as needed)
 # Voyage AI (Top MTEB 2024)
-voyageai>=0.2.0
+voyageai>=0.5.0
 
 # Cohere Embed v3 (Matryoshka support)
 cohere>=4.0.0
