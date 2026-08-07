@@ -5,7 +5,11 @@
 # pins here (selenium, webdriver-manager, wandb) have no pyproject extra home.
 
 # Core UI Framework
-gradio>=4.0.0,<5.0.0  # pinned to the major app.py is exercised against; pyproject [ui] allows <6 for new work
+gradio>=4.0.0,<6.0.0  # matches pyproject [ui]. The two files previously disagreed (<5 here, <6 there)
+                      # while the comment claimed this was "the major app.py is exercised against" —
+                      # CI resolves 5.50.0. src/ui/gradio_compat.py detects gr.Timer vs
+                      # Blocks.load(every=) at runtime, so both majors work and the ui-tests job
+                      # exercises whichever one resolves.
 
 # Numerical computation
 numpy>=1.24.0,<2.0.0
