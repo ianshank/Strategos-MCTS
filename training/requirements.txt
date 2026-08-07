@@ -130,7 +130,7 @@ PyGithub~=2.1.1  # GitHub API access for code corpus builder
 networkx~=3.0  # Graph data structure and algorithms
 
 # LLM Integration
-openai~=1.0.0  # OpenAI API for knowledge extraction
+openai~=2.53.0  # OpenAI API for knowledge extraction
 langchain~=0.0.300  # LangGraph integration
 
 # Graph Databases (Optional)
