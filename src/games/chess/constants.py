@@ -7,7 +7,7 @@ consistency across the codebase. All values are configurable via settings.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
     from src.config.settings import Settings
@@ -209,4 +209,21 @@ __all__ = [
     "get_piece_values",
     "get_routing_scores",
     "get_stockfish_executables",
+    "AI_WIN_MARKER",
+    "PLAYER_WIN_MARKER",
+    "LEARNING_REFRESH_SECONDS",
 ]
+
+# ---------------------------------------------------------------------------
+# UI result markers and timing
+# ---------------------------------------------------------------------------
+
+# Lowercase markers used to attribute a finished game to a winner. Matched
+# against the lowercased result string, so they must be lowercase here.
+# "checkmate" is deliberately NOT a marker: it appears in both win strings and
+# identifies the ending, not the winner.
+AI_WIN_MARKER: Final[str] = "ai wins"
+PLAYER_WIN_MARKER: Final[str] = "you win"
+
+# Auto-refresh interval for the continuous-learning panel, in seconds.
+LEARNING_REFRESH_SECONDS: Final[float] = 1.0

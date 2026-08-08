@@ -377,3 +377,53 @@ MIN_CUDA_MEMORY_FRACTION: Final[float] = 0.1
 MAX_CUDA_MEMORY_FRACTION: Final[float] = 1.0
 MIN_GPU_MEMORY_GB: Final[float] = 2.0
 SUPPORTED_CUDA_BACKENDS: Final[tuple[str, ...]] = ("nccl", "gloo")
+
+# ============================================================================
+# Model Checkpoint Integrity
+# ============================================================================
+
+# Magic prefix of a Git-LFS pointer file. A repository cloned without
+# `git lfs install && git lfs pull` leaves ~130-byte text stubs in place of the
+# real weights, and `Path.exists()` happily returns True for them — so existence
+# is not a usable readiness signal. Detecting the prefix lets callers degrade
+# with an actionable message instead of dying inside a deserializer.
+GIT_LFS_POINTER_MAGIC: Final[bytes] = b"version https://git-lfs.github.com/spec/v1"
+
+# Pointer files are a few short lines; anything larger is real content. Bounds
+# how much of a candidate file is read during inspection.
+GIT_LFS_POINTER_MAX_BYTES: Final[int] = 1024
+
+# Leading bytes of a Python pickle stream (protocol 2+), used by legacy
+# (pre-1.6) torch checkpoints that are not zip archives. The PROTO opcode is a
+# single 0x80 byte followed by the protocol number, so the opcode ALONE is not a
+# usable signature — 0x80 is an ordinary byte and any binary file starting with
+# it would be misread as a valid checkpoint.
+PICKLE_PROTO_OPCODE: Final[bytes] = b"\x80"
+
+# Protocol numbers that may follow the PROTO opcode. 2 is the lowest that emits
+# it; 5 is the highest Python defines today. The ceiling is deliberately not
+# open-ended: an arbitrary byte here means the file is not a pickle.
+PICKLE_MIN_PROTOCOL: Final[int] = 2
+PICKLE_MAX_PROTOCOL: Final[int] = 5
+
+# Weight file suffixes recognized when inspecting a checkpoint directory
+# (e.g. a PEFT/LoRA adapter directory rather than a single file).
+CHECKPOINT_WEIGHT_SUFFIXES: Final[tuple[str, ...]] = (".pt", ".pth", ".bin", ".safetensors", ".ckpt")
+
+# Remediation hint surfaced when a checkpoint turns out to be an LFS pointer.
+GIT_LFS_REMEDIATION: Final[str] = "git lfs install && git lfs pull"
+
+# ============================================================================
+# Application Identity
+# ============================================================================
+
+# Default APP_VERSION. Lives here so app.py can report a version even when
+# Settings cannot be constructed (e.g. no provider key configured), instead of
+# duplicating the literal at the call site.
+DEFAULT_APP_VERSION: Final[str] = "2025-11-25-FIX-REDUX"
+
+# Prefix marking a UI answer produced without a working reasoning framework.
+# Degraded output must be visibly labelled rather than presented as a confident
+# answer — the prior implementation returned hardcoded confidences under a banner
+# advertising trained models.
+DEGRADED_RESPONSE_PREFIX: Final[str] = "⚠️ **Degraded mode.**"

@@ -25,6 +25,9 @@ on:
       - 'Dockerfile*'
       - 'docker-compose*.yml'
       - 'requirements.txt'
+      # pyproject.toml governs the package the images install; without it a change
+      # to the dependency set triggers no image build.
+      - 'pyproject.toml'
       - '.github/workflows/docker-deployment.yml'
   pull_request:
     branches: [main]
@@ -38,6 +41,9 @@ on:
       - 'Dockerfile*'
       - 'docker-compose*.yml'
       - 'requirements.txt'
+      # pyproject.toml governs the package the images install; without it a change
+      # to the dependency set triggers no image build.
+      - 'pyproject.toml'
       - '.github/workflows/docker-deployment.yml'
   workflow_dispatch:
     inputs:

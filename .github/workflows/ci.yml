@@ -325,6 +325,70 @@ jobs:
           name: test-results
           path: junit.xml
 
+  ui-tests:
+    name: UI Tests (gradio extra)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [lint]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      # No other job installs [ui] or builds a Gradio Blocks graph, which is how a
+      # launch-blocking TypeError in src/games/chess/ui.py reached main behind 66
+      # passing tests: every existing chess-UI test exercised pure helpers only.
+      # [chess] is required too — the chess UI imports python-chess, and without it
+      # importorskip collapses the whole module to a single skip.
+      - name: Install dependencies (with ui + chess extras)
+        run: pip install -e ".[dev,neural,api,ui,chess]"
+
+      - name: Report resolved gradio version
+        run: python -c "import gradio; print('gradio', gradio.__version__)"
+
+      # This job proves the UI actually constructs against the installed gradio major.
+      # It also carries the only coverage gate for src/games/chess/ui.py: the main
+      # test job omits that module because it installs no python-chess and would
+      # score it 0%. Scope and threshold live in .coveragerc.ui — see that file for
+      # why a second config is needed rather than a --cov flag.
+      - name: Run UI construction and compatibility tests
+        run: |
+          pytest tests/unit/test_gradio_compat.py \
+            tests/unit/test_chess_ui_construction.py \
+            tests/unit/test_chess_ui.py \
+            tests/unit/test_chess_ui_outcomes.py \
+            tests/unit/test_structured_logger_contract.py \
+            tests/unit/test_checkpoints.py \
+            tests/unit/test_agent_routes.py \
+            tests/unit/test_ui_status.py \
+            tests/unit/test_framework_service_fallback.py \
+            tests/ui \
+            -m "not slow" -q \
+            --cov --cov-config=.coveragerc.ui --cov-report=term-missing
+        env:
+          WANDB_MODE: disabled
+          LANGCHAIN_TRACING_V2: "false"
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+          # Settings requires a provider key of at least 40 characters.
+          OPENAI_API_KEY: "sk-test-not-a-real-key-000000000000000000000000"
+
+      # app.py must import without any provider key configured. Regression guard:
+      # a module-scope get_settings() previously made `import app` raise
+      # ValidationError, turning tests/ui into a collection error that aborted the
+      # entire session and making all 27 tests in tests/e2e/test_ui_e2e.py ERROR.
+      - name: Verify app.py imports without a provider key
+        run: python -c "import app; print('app imports clean; APP_VERSION =', app.APP_VERSION)"
+        env:
+          WANDB_MODE: disabled
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+
   chess-tests:
     name: Chess Domain Tests (optional extra)
     runs-on: ubuntu-latest
@@ -405,8 +469,13 @@ jobs:
   build-check:
     name: Build Verification
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: [lint, type-check]
+    # 25, not 15: the training-manifest resolve below backtracks and materializes
+    # ~3 GB of wheels on a cold runner (measured 2m15s-3m35s cold, 70-90s warm).
+    timeout-minutes: 25
+    # Deliberately NOT gated behind lint/type-check. A broken dependency manifest
+    # should report in its own right rather than queue behind mypy on 327 files —
+    # the previous `needs: [lint, type-check]` delayed exactly the signal this job
+    # now carries.
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -427,6 +496,18 @@ jobs:
 
       - name: Build package
         run: python -m build --no-isolation --wheel
+
+      # training/requirements.txt is installed only by Dockerfile.train, so until now
+      # nothing checked it could resolve except a multi-minute image build that was
+      # itself already failing. Two Dependabot bumps (datasets 2.14->5.0.1,
+      # tenacity 8.2->9.1.4) each made the file unresolvable and merged anyway,
+      # leaving every training image build broken with ResolutionImpossible.
+      #
+      # --ignore-installed is load-bearing: without it pip resolves against this
+      # runner's site-packages and can pass while the cold Docker build still fails,
+      # which is precisely the blind spot this step exists to close.
+      - name: Verify training manifest resolves
+        run: pip install --dry-run --ignore-installed -r training/requirements.txt
 
   docker-build:
     name: Docker Build and Test
@@ -624,7 +705,7 @@ jobs:
     name: CI Summary
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [lint, spec-validate, type-check, security-scan, secret-scan-gitleaks, dependency-audit, test, chess-tests, integration-test, build-check, docker-build]
+    needs: [lint, spec-validate, type-check, security-scan, secret-scan-gitleaks, dependency-audit, test, ui-tests, chess-tests, integration-test, build-check, docker-build]
     # `!cancelled()` rather than `always()`: cancel-in-progress supersedes runs by
     # design, and a superseded run must not report as a failure.
     if: ${{ !cancelled() }}
@@ -642,6 +723,7 @@ jobs:
           SECRET_SCAN: ${{ needs.secret-scan-gitleaks.result }}
           DEPENDENCY_AUDIT: ${{ needs.dependency-audit.result }}
           TESTS: ${{ needs.test.result }}
+          UI_TESTS: ${{ needs.ui-tests.result }}
           CHESS_TESTS: ${{ needs.chess-tests.result }}
           INTEGRATION_TEST: ${{ needs.integration-test.result }}
           BUILD_CHECK: ${{ needs.build-check.result }}
@@ -651,7 +733,7 @@ jobs:
           # Single source of truth: the gated set and the reported set are the same
           # list, so a job can never again be printed without also being enforced.
           JOBS="LINT SPEC_VALIDATE TYPE_CHECK SECURITY_SCAN SECRET_SCAN \
-                DEPENDENCY_AUDIT TESTS CHESS_TESTS INTEGRATION_TEST \
+                DEPENDENCY_AUDIT TESTS UI_TESTS CHESS_TESTS INTEGRATION_TEST \
                 BUILD_CHECK DOCKER_BUILD"
 
           status=0

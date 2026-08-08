@@ -7,6 +7,153 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### UI runtime integrity — the demo, chess UI and API actually run
+
+Specs: `specs/ui_runtime_integrity.SPEC.md`, `specs/ui_test_coverage.SPEC.md` (schema v2 drafts).
+
+An audit of every web surface found none of them working. Three root causes, each fixed at the
+contract rather than patched per call site.
+
+#### Fixed
+
+- **Injected-logger contract** (`src/observability/logging.py`). `StructuredLogger`'s methods were
+  `(self, message, **extra)`, so they rejected printf-style calls. `GraphBuilder` takes an injected
+  `logger` and calls it printf-style; `FrameworkService` injects a `StructuredLogger` into it. The
+  resulting `TypeError` escaped a narrow `except (ImportError, NotImplementedError)` and left the
+  framework as `None` — so `/query`, `/query-stream` and `/graph/*` all returned 503 while 115 mocked
+  tests stayed green. `src/` holds ~376 printf-style logger calls; every one reachable through an
+  injection path was the same latent defect. Both conventions now work, `exc_info`/`stack_info`/
+  `stacklevel` forward to stdlib instead of becoming inert record attributes, and fields colliding
+  with reserved `LogRecord` slots are renamed rather than raising at the call site.
+- **Import-time bootstrap** (`app.py`). Settings were resolved at module scope and the Blocks graph
+  was built at import, so `import app` raised `ValidationError` without `OPENAI_API_KEY`. That turned
+  `tests/ui` into a collection error aborting the whole session and made all 27 tests in
+  `tests/e2e/test_ui_e2e.py` ERROR rather than execute. Both are now lazy; PEP 562 `__getattr__`
+  preserves `app.APP_VERSION` and `app.demo`. `import torch` is guarded like the gradio import above
+  it — unguarded, it meant `pip install -e ".[ui]"` still could not import the module.
+- **Gradio 5 compatibility** (`src/ui/gradio_compat.py`). `create_chess_ui()` raised `TypeError`:
+  `Blocks.load(..., every=)` was removed in Gradio 5 and `pyproject.toml` declares `>=4,<6`, so the
+  declared range was itself the guarantee of a crash. Runtime capability detection keeps the whole
+  range working instead of narrowing the pin.
+- **Win attribution** (`src/games/chess/ui.py`). `record_game_result("AI wins by checkmate!")`
+  credited the win to the human: a `"checkmate"` substring test shadowed the `elif "AI wins"` branch,
+  and both produced strings contain "checkmate".
+- **Readiness semantics** (`src/api/rest_server.py`). `/ready` returned `200 {"ready": true}` while
+  its own payload reported `framework_ready: false`, so a readiness probe routed live traffic to a
+  server that 503'd everything. Gated by `REQUIRE_FRAMEWORK_FOR_READINESS`.
+- **Selenium fixture shadowing** (`tests/games/chess/test_ui_selenium.py`). The module-local `driver`
+  fixture skipped only when selenium was *uninstalled*, so an absent browser produced 48 ERRORs
+  instead of skips, shadowing the graceful skip in `tests/games/chess/conftest.py`. Now 48 skips.
+
+#### Added
+
+- `src/models/checkpoints.py` — classifies a checkpoint before any deserializer sees it. Every
+  checkpoint in this repository is a ~130-byte Git-LFS pointer stub that `Path.exists()` reports as
+  present, so `torch.load` failed with an opaque `UnpicklingError`. Files and adapter directories are
+  both handled; the tolerant loader returns `None` with an actionable warning.
+- `src/ui/` — UI logic that must be measured. The root `app.py` sits outside
+  `[tool.coverage.run] source = ["src"]` and is invisible to the coverage gate by construction.
+- `ui-tests` CI job installing the `[ui]` and `[chess]` extras. No job previously installed `[ui]`,
+  and no test anywhere constructed a Blocks graph — which is how a launch-blocking `TypeError` reached
+  `main` behind 66 passing tests. Wired into the summary job's `needs`, env map and gated `JOBS` list.
+- **A coverage gate for `src/games/chess/ui.py`** (`.coveragerc.ui`, wired into `ui-tests`). The main
+  gate omits that module for a sound reason — the coverage-gated job installs no `python-chess`, so
+  it would score 0% — but the consequence was a module exercised by ~90 tests and measured by no job
+  at all. It now gates at the same 85% the rest of the repo does; measured 91.48% (branch), up from
+  86.41% before the tests below. `test_every_module_omitted_from_the_main_gate_is_measured_somewhere`
+  fails if the flag is dropped, the scope stops covering an omitted module, or the threshold is
+  lowered — verified by mutating all three.
+- `tests/unit/test_chess_ui_outcomes.py` — 11 tests driving both move handlers from real positions
+  through checkmate, stalemate and draw. The win-attribution fix below had tests on the helper but
+  none on the handlers that build its input, so the same bug could return at the call site with the
+  helper's tests still green. Verified by reverting the fix: exactly the two AI-checkmate tests fail.
+
+#### Changed
+
+- UI query handlers route through the same `FrameworkService` the REST server uses. They were
+  `asyncio.sleep()` plus f-strings with hardcoded confidences of 0.85/0.80/0.88; confidence, agent
+  attribution and the reasoning trace now come from framework output. Failures return a visibly
+  degraded result with zero confidence rather than a confident-looking answer.
+- The UI header reports measured checkpoint state instead of claiming "REAL trained models"
+  unconditionally, and the footer no longer asserts a training methodology the shipped stubs cannot
+  substantiate (CHARTER NG-3).
+
+#### Removed
+
+- `examples/chess_demo/` and `tests/chess_demo/` (`hygiene_chess_consolidation` AC-4). Rollback tag:
+  `pre-delete/examples-chess-demo`. Zero `src/` imports, a private ~40-line UCB loop standing in for
+  MCTS, hand-coded HRM/TRM heuristics, and raw `os.getenv` configuration; flask and flask-cors appear
+  in no dependency file, so it could not start from any documented install. Root `chess_demo.py` and
+  `demo.py` are unaffected — different entry points that do import from `src/`.
+- `FlexibleLogger` is superseded by `ensure_structured_logger()`; the dead `agent_handlers` dispatch
+  map and its three wrapper methods are deleted.
+- Dead continuous-learning state in `src/games/chess/ui.py`: the `GameSession.learning_session` and
+  `GameSession.learning_thread` fields (declared, never read or written — the module uses process
+  globals instead) and `_learning_stop_event` (a `threading.Event` that was constructed and cleared
+  but never `set()`, `is_set()` or waited on). Stopping is cooperative and owned by
+  `ContinuousLearningSession.stop()`; the Event was a second, inert mechanism implying a control path
+  that did not exist. Behaviour is unchanged — every removed name was write-only.
+- Two more write-only `GameSession` fields, `ai_thinking` and `last_ai_analysis`, plus the assignment
+  that fed the latter. An AST walk over the module finds zero `Load` contexts for either name across
+  four write sites; `last_ai_analysis` duplicated a local that `format_analysis()` already renders
+  directly, so the stored copy was never the one displayed. Found by an audit that scanned with
+  `tests/` included — without that, 477 of 581 candidates were merely test-only usage.
+### Fixed — the training image build, red on `main` since 2026-07-20
+
+`Dockerfile.train` installs `training/requirements.txt`, which could not resolve.
+Every `Build Docker Images` run on `main` has failed for 30 consecutive runs.
+
+Two independent Dependabot bumps, neither validated by any resolver, each made the
+file unresolvable:
+
+- `datasets~=2.14.0` → `~=5.0.1` — needs `requests>=2.32.2` (pinned `~=2.31.0`) and
+  `pyarrow>=21.0.0`, while `mlflow~=2.5.0` caps `pyarrow<13`.
+- `tenacity~=8.2.0` → `~=9.1.4` — `langchain~=0.0.300` requires `tenacity>=8.1.0,<9.0.0`.
+
+Reverting either alone still fails; both are reverted here, with the forcing
+constraint recorded inline so the next bump has the reason in front of it. Verified:
+the manifest now resolves to 181 packages.
+
+Raising these again requires a coordinated bump of `requests`, `mlflow`/`pyarrow`,
+`transformers` and `langchain` together — tracked by
+`specs/hygiene_train_container.SPEC.md`, not attempted here.
+
+#### Why it went unnoticed
+
+Nothing gated `training/requirements.txt` except the Docker build, and that build was
+already red — so a red build carried no signal and both bumps merged straight through
+it.
+
+- **`build-check` now resolves the training manifest** (`pip install --dry-run
+  --ignore-installed`). `--ignore-installed` is load-bearing: without it pip resolves
+  against the runner's site-packages and can pass while the cold Docker build still
+  fails, which is exactly the blind spot the step exists to close. The job no longer
+  waits on `lint`/`type-check` so a broken manifest reports in its own right, and its
+  timeout rises to 25 minutes (the resolve takes minutes and materializes ~3 GB).
+- **`pip` added to `RESULT_BEARING_COMMANDS`** in `tests/unit/test_ci_workflow_invariants.py`,
+  so the new gate cannot be deleted or `|| true`-d unnoticed. Verified by disarming it
+  and confirming the invariant fails. `pip-audit`'s intentional suppression is
+  unaffected — the word-boundary lookahead excludes a following hyphen.
+- **`pyproject.toml` added to both `paths` filters** in `docker-deployment.yml`. It was
+  absent, so a change to the dependency set triggered no image build.
+
+#### Fixed — Container Smoke Tests could never pass on a CPU runner
+
+A second, independent failure sat behind the red build: on the one run where both
+images built, `Container Smoke Tests` failed 4/12.
+
+- `test_cuda_available_in_container`, `test_nvidia_smi_in_container` and
+  `test_gpu_memory_available` carried only `@pytest.mark.smoke` with no GPU guard, so
+  they *failed* rather than skipped on the CPU-only `ubuntu-latest` runner
+  (`exec: "nvidia-smi": executable file not found`). They now skip unless a GPU is
+  present; `FORCE_GPU_TESTS=1` overrides.
+- `healthcheck.py` registered the CUDA probe as **critical** unconditionally, so the
+  container could never report healthy without a GPU. An absent GPU is now `DEGRADED`
+  and non-critical by default, and fatal only where `REQUIRE_GPU` declares a GPU
+  necessary. 18 new tests cover both branches with `torch` stubbed, so the GPU-present
+  path is exercised on CPU hosts too.
+
+
 ### Quality gate — CI mechanical hardening
 
 Spec: `specs/hygiene_ci_mechanical.SPEC.md` (schema v2 draft; module `.github/`, no `src/**` changes).

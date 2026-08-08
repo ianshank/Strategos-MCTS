@@ -18,7 +18,13 @@ torch~=2.13.0
 transformers~=4.30.0
 
 # Hugging Face Datasets - Efficient data loading and processing
-datasets~=5.0.1
+# Held at 2.x: datasets 5.x requires requests>=2.32.2 and pyarrow>=21.0.0, which
+# this file cannot satisfy — requests is pinned ~=2.31.0 below and mlflow~=2.5.0
+# caps pyarrow<13. A bump to ~=5.0.1 landed via Dependabot and made the whole file
+# unresolvable, breaking every Dockerfile.train build. Raising this again requires
+# raising requests, mlflow/pyarrow and transformers together — see
+# specs/hygiene_train_container.SPEC.md.
+datasets~=2.14.0
 
 # PEFT - Parameter-efficient fine-tuning (LoRA, adapters)
 peft>=0.4,<0.21
@@ -115,7 +121,10 @@ tqdm~=4.70.0  # Progress bars
 colorlog~=6.7.0  # Colored logging
 
 # Retry & Resilience
-tenacity~=9.1.4  # Retry logic for external services
+# Held below 9: langchain~=0.0.300 (line 134) requires tenacity>=8.1.0,<9.0.0.
+# A Dependabot bump to ~=9.1.4 made this file unresolvable. Raising this requires
+# raising langchain first.
+tenacity~=8.2.0  # Retry logic for external services
 
 # HTTP & API
 requests~=2.31.0  # HTTP library

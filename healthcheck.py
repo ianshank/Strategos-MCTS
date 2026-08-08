@@ -25,7 +25,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Final
 
 # Configure logging
 logging.basicConfig(
@@ -34,6 +34,24 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
+
+
+# Environment variable names this script honours. Named rather than inlined so each
+# contract is stated once.
+#
+# Deliberately read from os.environ rather than the project's Pydantic Settings:
+# this module is a STANDALONE script copied into the image (Dockerfile.train:95,
+# wired as the container HEALTHCHECK). It holds no `src` imports at all, and every
+# one of its nine config reads — PINECONE_API_KEY, OPENAI_API_KEY, LLM_PROVIDER,
+# LMSTUDIO_BASE_URL, OTEL_EXPORTER_OTLP_ENDPOINT and the rest — uses os.environ.
+# Importing Settings would add this file's first `src` dependency AND require a
+# configured provider key: get_settings() raises ValidationError without one, which
+# would crash the healthcheck in precisely the degraded containers it exists to
+# probe.
+REQUIRE_GPU_ENV: Final[str] = "REQUIRE_GPU"
+
+# Accepted spellings for a boolean environment flag.
+TRUTHY_ENV_VALUES: Final[frozenset[str]] = frozenset({"1", "true", "yes"})
 
 
 class HealthStatus(str, Enum):
@@ -185,28 +203,52 @@ class HealthChecker:
                 metadata={"error_type": type(e).__name__},
             )
 
+    @staticmethod
+    def _gpu_required() -> bool:
+        """
+        Whether a missing GPU should make the container UNHEALTHY.
+
+        The training image runs on both GPU hosts and CPU-only hosts (CI smoke tests
+        use `ubuntu-latest`). Treating an absent GPU as unconditionally critical meant
+        the container could never report healthy off-GPU, which kept the deployment
+        workflow red for a reason unrelated to the image.
+
+        Defaults to False so a CPU host degrades rather than fails. GPU deployments
+        set ``REQUIRE_GPU=1`` to keep the check gating.
+
+        Read from the environment rather than Pydantic Settings by design — see
+        ``REQUIRE_GPU_ENV`` above.
+        """
+        return os.environ.get(REQUIRE_GPU_ENV, "").strip().lower() in TRUTHY_ENV_VALUES
+
     async def check_cuda(self) -> CheckResult:
         """Check CUDA/GPU availability."""
+        gpu_required = self._gpu_required()
+        # Absent GPU is a hard failure only where a GPU was declared necessary;
+        # elsewhere it is a capability the container is running without.
+        absent_status = HealthStatus.UNHEALTHY if gpu_required else HealthStatus.DEGRADED
+        absent_hint = "" if gpu_required else " (set REQUIRE_GPU=1 to treat this as fatal)"
+
         try:
             import torch
 
             if not torch.cuda.is_available():
                 return CheckResult(
                     name="cuda",
-                    status=HealthStatus.UNHEALTHY,
-                    message="CUDA not available",
+                    status=absent_status,
+                    message=f"CUDA not available{absent_hint}",
                     duration_ms=0,
-                    critical=True,
+                    critical=gpu_required,
                 )
 
             gpu_count = torch.cuda.device_count()
             if gpu_count == 0:
                 return CheckResult(
                     name="cuda",
-                    status=HealthStatus.UNHEALTHY,
-                    message="No GPUs detected",
+                    status=absent_status,
+                    message=f"No GPUs detected{absent_hint}",
                     duration_ms=0,
-                    critical=True,
+                    critical=gpu_required,
                 )
 
             # Get GPU info
@@ -227,10 +269,10 @@ class HealthChecker:
         except ImportError:
             return CheckResult(
                 name="cuda",
-                status=HealthStatus.UNHEALTHY,
-                message="PyTorch not installed",
+                status=absent_status,
+                message=f"PyTorch not installed{absent_hint}",
                 duration_ms=0,
-                critical=True,
+                critical=gpu_required,
             )
         except Exception as e:
             return CheckResult(
@@ -508,7 +550,9 @@ class HealthChecker:
 
         # Define checks with their configurations
         checks_to_run = [
-            ("cuda", self.check_cuda(), True, None),
+            # critical flag follows REQUIRE_GPU, matching the CheckResult itself; it was
+            # hard-coded True, so a CPU-only host could never report healthy.
+            ("cuda", self.check_cuda(), self._gpu_required(), None),
             ("pinecone", self.run_check("pinecone", self.check_pinecone, critical=False), False, None),
             (
                 f"llm_{llm_provider}",

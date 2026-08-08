@@ -20,6 +20,7 @@ from pydantic import (
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.config.constants import (
+    DEFAULT_APP_VERSION,
     DEFAULT_CUDA_MEMORY_FRACTION,
     MAX_CUDA_MEMORY_FRACTION,
     MIN_CUDA_MEMORY_FRACTION,
@@ -69,7 +70,7 @@ class Settings(BaseSettings):
     )
 
     # Application Version
-    APP_VERSION: str = Field(default="2025-11-25-FIX-REDUX", description="Application version identifier")
+    APP_VERSION: str = Field(default=DEFAULT_APP_VERSION, description="Application version identifier")
 
     # LLM Provider Configuration
     LLM_PROVIDER: LLMProvider = Field(
@@ -432,6 +433,17 @@ class Settings(BaseSettings):
             "When True, the framework service falls back to LightweightFramework (real LLM "
             "calls, no full agent orchestration) if the integrated framework is unavailable. "
             "Default True preserves the documented zero-dependency path; set False to fail loud."
+        ),
+    )
+
+    REQUIRE_FRAMEWORK_FOR_READINESS: bool = Field(
+        default=True,
+        description=(
+            "When True, /ready reports not-ready unless the framework service is actually "
+            "initialized. Default True because /query, /query-stream and /graph/* all 503 "
+            "without it — a readiness probe that ignores this routes live traffic to a "
+            "server that cannot serve its primary function. Set False for deployments that "
+            "intentionally expose only the health/stats surface."
         ),
     )
 
