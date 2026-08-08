@@ -92,8 +92,9 @@ graph TB
 - **Graph visualization**: structure / Mermaid / Kroki render (`/graph/*`) via `src/api/graph_service.py`.
 - **MCTS vs single-shot comparison**: `/compare` + `demo.py --compare` + Gradio UI (`app.py`, `[ui]` extra).
 - All gated by settings flags (`ENABLE_STREAMING` / `ENABLE_GRAPH_VISUALIZATION` / `ENABLE_DEMO_COMPARISON`).
-- **Hosted demo**: the Gradio app is deployed to a Hugging Face Space from this branch by
-  `.github/workflows/deploy-space.yml`; see [`docs/HUGGINGFACE_SPACE.md`](docs/HUGGINGFACE_SPACE.md).
+- **Hosted demo**: the Gradio app is deployed to a Hugging Face Space from `main`, after a successful
+  CI run, by `.github/workflows/deploy-space.yml`; see
+  [`docs/HUGGINGFACE_SPACE.md`](docs/HUGGINGFACE_SPACE.md).
 
 ### 🔁 Neural Self-Play & Fast Gameplay (M5+)
 - **Generalized `SelfPlayTrainer`** (`src/training/self_play_trainer.py`) supporting DistributedDataParallel (DDP), FP16 mixed precision, `torch.compile`, pinned memory, and non-pickle checkpoint sidecars.
