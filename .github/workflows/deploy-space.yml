@@ -1,0 +1,126 @@
+name: Deploy Hugging Face Space
+
+# The Space at ianshank/langgraph-mcts-demo is a build artifact of this branch,
+# not a repository anyone edits. This workflow is its only writer: it assembles a
+# tree from an allowlist, overlays the Space-specific card and Dockerfile, and
+# force-pushes. Anything committed to the Space by hand is discarded on the next
+# deploy, by design — a hand-maintained copy is how the previous Space drifted
+# into a fork of src/ that diverged in 51 files.
+#
+# Deploys follow CI rather than raw pushes, so a red commit never reaches the
+# Space. See docs/HUGGINGFACE_SPACE.md for token setup and rollback.
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-space-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  SPACE_ID: ianshank/langgraph-mcts-demo
+  HF_USERNAME: ianshank
+
+jobs:
+  deploy:
+    name: Assemble and push Space
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # workflow_dispatch has no upstream conclusion to inspect; a workflow_run
+    # trigger must have succeeded.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # For workflow_run the default checkout is the *default branch tip*,
+          # which may have moved past the commit CI actually validated.
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
+
+      - name: Assemble Space tree
+        id: assemble
+        run: |
+          set -euo pipefail
+          STAGE="$(mktemp -d)"
+
+          # Allowlist, not denylist: the Space gets what the demo imports at
+          # runtime and nothing else. Notably absent — models/ (Git-LFS pointer
+          # stubs; space_bootstrap.py fetches the real weights from the Hub),
+          # tests/, docs/, .github/ and .gitattributes (LFS patterns with no LFS
+          # objects behind them).
+          cp -r src "$STAGE/src"
+          cp app.py space_bootstrap.py pyproject.toml LICENSE "$STAGE/"
+          cp Dockerfile.space "$STAGE/Dockerfile"
+          cp README.space.md "$STAGE/README.md"
+
+          # The Hub rejects non-LFS files over 10MB outright. Fail here with a
+          # readable message rather than at git push with a protocol error.
+          if find "$STAGE" -type f -size +10M | grep .; then
+            echo "::error::file larger than 10MB in the Space tree; it would be rejected by the Hub"
+            exit 1
+          fi
+
+          find "$STAGE" -type d -name __pycache__ -prune -exec rm -rf {} +
+          echo "stage=$STAGE" >> "$GITHUB_OUTPUT"
+          echo "Assembled $(find "$STAGE" -type f | wc -l) files"
+
+      - name: Push to Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          STAGE: ${{ steps.assemble.outputs.stage }}
+          DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HF_TOKEN:-}" ]; then
+            echo "::error::HF_TOKEN is not set; add a write-scoped token to the repository secrets"
+            exit 1
+          fi
+          cd "$STAGE"
+          git init -q -b main
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Deploy ${DEPLOY_SHA} from GitHub main"
+          # Single-commit history: the Space mirrors one state, and its history
+          # is the GitHub repository's, not a second timeline.
+          git push --force \
+            "https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${SPACE_ID}" main:main
+
+      - name: Wait for the Space to come up
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -euo pipefail
+          # A green push only means the Hub accepted the commit; the image build
+          # happens afterwards. Without this the workflow would report success
+          # over a Space that failed to build.
+          for attempt in $(seq 1 60); do
+            STAGE_NAME="$(curl -sS -H "Authorization: Bearer ${HF_TOKEN}" \
+              "https://huggingface.co/api/spaces/${SPACE_ID}/runtime" \
+              | python -c 'import json,sys; print(json.load(sys.stdin).get("stage","UNKNOWN"))')"
+            echo "attempt ${attempt}: stage=${STAGE_NAME}"
+            case "$STAGE_NAME" in
+              RUNNING|RUNNING_APP_STARTING|RUNNING_BUILDING)
+                if [ "$STAGE_NAME" = "RUNNING" ]; then
+                  echo "Space is running: https://huggingface.co/spaces/${SPACE_ID}"
+                  exit 0
+                fi
+                ;;
+              BUILD_ERROR|RUNTIME_ERROR|CONFIG_ERROR|DELETING)
+                echo "::error::Space entered ${STAGE_NAME}; check the build logs"
+                exit 1
+                ;;
+            esac
+            sleep 20
+          done
+          echo "::error::Space did not reach RUNNING within the polling window"
+          exit 1
