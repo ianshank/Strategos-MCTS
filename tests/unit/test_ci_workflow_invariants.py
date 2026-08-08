@@ -20,7 +20,9 @@ Each section below is headed with the AC it enforces.
 from __future__ import annotations
 
 import ast
+import configparser
 import re
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
@@ -550,6 +552,73 @@ def test_coverage_exclude_patterns_are_anchored() -> None:
                 f"substring and silently shrinks the coverage denominator. Anchor it, "
                 f"e.g. '^\\\\s*{stripped}\\\\s*$'."
             )
+
+
+@pytest.mark.unit
+def test_every_module_omitted_from_the_main_gate_is_measured_somewhere() -> None:
+    """ui_test_coverage AC-6: a module the main gate omits must be measured by some job.
+
+    ``[tool.coverage.run] omit`` drops ``src/games/chess/ui.py`` for a sound reason —
+    the coverage-gated job installs no ``python-chess``, so the module would score 0%.
+    The cost was a blind spot: the module is exercised by ~90 tests in ``ui-tests``,
+    which measured nothing, so a launch-blocking defect could land inside a
+    covered-looking repo. That is exactly how a TypeError in that file reached main.
+
+    ``ui-tests`` now carries the gate via ``.coveragerc.ui``. This test fails if the
+    flag is dropped, the config's scope stops covering an omitted module, or its
+    threshold is quietly lowered — each of which restores the blind spot silently.
+
+    The two ``verification/`` modules are knowingly still unmeasured; they are listed
+    here so removing that exemption is a deliberate edit rather than an oversight.
+    """
+    known_unmeasured = {
+        "src/games/chess/verification/game_verifier.py",
+        "src/games/chess/verification/move_validator.py",
+    }
+
+    omitted = {
+        entry
+        for entry in _load_pyproject()["tool"]["coverage"]["run"]["omit"]
+        if entry.startswith("src/") and entry.endswith(".py")
+    }
+    needing_a_gate = omitted - known_unmeasured
+    assert needing_a_gate, "expected at least one omitted src module to be gated elsewhere"
+
+    ui_job = _load(WORKFLOW_DIR / CI_WORKFLOW)["jobs"]["ui-tests"]
+    runs = " ".join(str(step.get("run", "")) for step in _steps(ui_job))
+    match = re.search(r"--cov-config=(\S+)", runs)
+    assert match, (
+        "the ui-tests job no longer passes --cov-config, so the modules the main "
+        f"gate omits ({sorted(needing_a_gate)}) are measured by no job at all."
+    )
+
+    config_path = Path(__file__).resolve().parents[2] / match.group(1)
+    assert config_path.is_file(), f"ui-tests references a missing coverage config: {match.group(1)}"
+
+    # Parsed, not substring-matched: this file explains itself in prose that names the
+    # very modules being checked, so `module in text` passes on the comment alone.
+    parser = configparser.ConfigParser()
+    parser.read(config_path, encoding="utf-8")
+    scope = parser.get("run", "include", fallback="") + "\n" + parser.get("run", "source", fallback="")
+    scope_entries = [line.strip() for line in scope.splitlines() if line.strip()]
+
+    for module in sorted(needing_a_gate):
+        covered = any(fnmatch(module, entry) or fnmatch(f"/{module}", entry) for entry in scope_entries)
+        assert covered, (
+            f"{module} is omitted from the main coverage gate but matches no entry in "
+            f"{match.group(1)}'s [run] scope ({scope_entries}), so nothing measures it. "
+            f"Add it there, or accept the gap explicitly in known_unmeasured."
+        )
+
+    # The gate must be able to fail, and at no less than the main gate's threshold.
+    main_threshold = float(_load_pyproject()["tool"]["coverage"]["report"]["fail_under"])
+    ui_threshold = parser.get("report", "fail_under", fallback="")
+    assert ui_threshold, f"{match.group(1)} sets no fail_under, so its coverage report cannot fail"
+    assert float(ui_threshold) >= main_threshold, (
+        f"{match.group(1)} gates at {ui_threshold}%, below the main gate's "
+        f"{main_threshold}%. The omitted modules would be held to a weaker standard "
+        f"than the code that is measured normally."
+    )
 
 
 # ---------------------------------------------------------------- structural sanity

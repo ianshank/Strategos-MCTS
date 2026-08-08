@@ -35,8 +35,17 @@ This spec closes the gap between "tests exist" and "tests run and mean something
 - AC-5: No UI test asserts nothing. The `if not found: pass` loop and the
   `except Exception as e: assert str(e) is not None` handler in `tests/e2e/test_ui_e2e.py` are replaced
   with assertions that can fail.
-- AC-6: `src/games/chess/ui.py` is removed from the coverage omit list once its logic is testable, and
-  UI logic that must be measured lives under `src/` rather than the root `app.py`.
+- AC-6: `src/games/chess/ui.py` is measured by a coverage gate at no less than the main gate's
+  threshold, and UI logic that must be measured lives under `src/` rather than the root `app.py`.
+
+  This AC originally read "is removed from the coverage omit list once its logic is testable". That
+  was written before the omit's cause was checked, and it is not achievable as stated: the module
+  imports `chess.pgn` and `gradio` at module scope (`src/games/chess/ui.py:19-20`), so the
+  coverage-gated `test` job could only measure it by installing `[ui,chess]` — pulling gradio into
+  the gated job and duplicating the `ui-tests` job that already owns those extras. Keeping the omit
+  while leaving the module unmeasured was the worse half of the trade: ~90 tests exercised it and no
+  job scored it. Satisfied instead by a second gate (`.coveragerc.ui`) in `ui-tests`, scoped to
+  exactly the modules the main gate omits, at the same 85% threshold. Measured 91.48% branch coverage.
 
 # Constraints
 
@@ -44,6 +53,8 @@ This spec closes the gap between "tests exist" and "tests run and mean something
   exist. Registration is split between `pyproject.toml` and `tests/conftest.py`; check both.
 - No real network or provider calls; a test that needs a downloadable model skips with a reason.
 - Skips must name their cause. A skip that hides a real failure is worse than the failure.
-- The 85% branch-coverage gate stays owned by the main test job; the UI job proves construction, not
-  coverage.
+- The repo-wide 85% branch-coverage gate stays owned by the main test job. The UI job gates only the
+  modules the main job's `omit` list excludes, and at the same threshold — it must never become a
+  second, weaker gate over code the main job already measures. `test_every_module_omitted_from_the_
+  main_gate_is_measured_somewhere` enforces both halves.
 - Full local gate green before push.

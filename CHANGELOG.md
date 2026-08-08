@@ -56,6 +56,17 @@ contract rather than patched per call site.
 - `ui-tests` CI job installing the `[ui]` and `[chess]` extras. No job previously installed `[ui]`,
   and no test anywhere constructed a Blocks graph — which is how a launch-blocking `TypeError` reached
   `main` behind 66 passing tests. Wired into the summary job's `needs`, env map and gated `JOBS` list.
+- **A coverage gate for `src/games/chess/ui.py`** (`.coveragerc.ui`, wired into `ui-tests`). The main
+  gate omits that module for a sound reason — the coverage-gated job installs no `python-chess`, so
+  it would score 0% — but the consequence was a module exercised by ~90 tests and measured by no job
+  at all. It now gates at the same 85% the rest of the repo does; measured 91.48% (branch), up from
+  86.41% before the tests below. `test_every_module_omitted_from_the_main_gate_is_measured_somewhere`
+  fails if the flag is dropped, the scope stops covering an omitted module, or the threshold is
+  lowered — verified by mutating all three.
+- `tests/unit/test_chess_ui_outcomes.py` — 11 tests driving both move handlers from real positions
+  through checkmate, stalemate and draw. The win-attribution fix below had tests on the helper but
+  none on the handlers that build its input, so the same bug could return at the call site with the
+  helper's tests still green. Verified by reverting the fix: exactly the two AI-checkmate tests fail.
 
 #### Changed
 
@@ -76,6 +87,12 @@ contract rather than patched per call site.
   `demo.py` are unaffected — different entry points that do import from `src/`.
 - `FlexibleLogger` is superseded by `ensure_structured_logger()`; the dead `agent_handlers` dispatch
   map and its three wrapper methods are deleted.
+- Dead continuous-learning state in `src/games/chess/ui.py`: the `GameSession.learning_session` and
+  `GameSession.learning_thread` fields (declared, never read or written — the module uses process
+  globals instead) and `_learning_stop_event` (a `threading.Event` that was constructed and cleared
+  but never `set()`, `is_set()` or waited on). Stopping is cooperative and owned by
+  `ContinuousLearningSession.stop()`; the Event was a second, inert mechanism implying a control path
+  that did not exist. Behaviour is unchanged — every removed name was write-only.
 ### Fixed — the training image build, red on `main` since 2026-07-20
 
 `Dockerfile.train` installs `training/requirements.txt`, which could not resolve.

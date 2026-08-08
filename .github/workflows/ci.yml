@@ -351,20 +351,25 @@ jobs:
       - name: Report resolved gradio version
         run: python -c "import gradio; print('gradio', gradio.__version__)"
 
-      # No coverage flags: the 85% gate is owned by the main test job. This job
-      # proves the UI actually constructs against the installed gradio major.
+      # This job proves the UI actually constructs against the installed gradio major.
+      # It also carries the only coverage gate for src/games/chess/ui.py: the main
+      # test job omits that module because it installs no python-chess and would
+      # score it 0%. Scope and threshold live in .coveragerc.ui — see that file for
+      # why a second config is needed rather than a --cov flag.
       - name: Run UI construction and compatibility tests
         run: |
           pytest tests/unit/test_gradio_compat.py \
             tests/unit/test_chess_ui_construction.py \
             tests/unit/test_chess_ui.py \
+            tests/unit/test_chess_ui_outcomes.py \
             tests/unit/test_structured_logger_contract.py \
             tests/unit/test_checkpoints.py \
             tests/unit/test_agent_routes.py \
             tests/unit/test_ui_status.py \
             tests/unit/test_framework_service_fallback.py \
             tests/ui \
-            -m "not slow" -q
+            -m "not slow" -q \
+            --cov --cov-config=.coveragerc.ui --cov-report=term-missing
         env:
           WANDB_MODE: disabled
           LANGCHAIN_TRACING_V2: "false"

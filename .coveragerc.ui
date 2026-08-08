@@ -1,0 +1,33 @@
+# Coverage configuration for the "UI Tests" CI job only.
+#
+# Why this file exists at all: the main coverage gate (pyproject.toml,
+# [tool.coverage.run] omit) deliberately omits src/games/chess/ui.py, because the
+# job that owns the 85% gate installs .[dev,neural,api] — no python-chess — so the
+# chess UI tests skip there and the module would score 0%.
+#
+# The consequence was a blind spot: the module is exercised by ~90 tests in the UI
+# job, which installs [ui,chess], but that job measured nothing. A launch-blocking
+# defect could land inside a covered-looking repo. This config measures exactly the
+# module the main gate cannot, so the two gates together leave no unmeasured file.
+#
+# Keep the threshold in step with [tool.coverage.report] fail_under in pyproject.toml.
+
+# Scoped to the one module this job is the sole measurer of. The other two files
+# the main gate omits (verification/game_verifier.py, verification/move_validator.py)
+# are exercised by the Chess Domain Tests job, which runs no coverage; measuring
+# them needs that job to gate too, and is tracked separately rather than bolted on
+# here where no test would move the number.
+[run]
+branch = True
+include =
+    */src/games/chess/ui.py
+
+[report]
+show_missing = True
+precision = 2
+fail_under = 85.0
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if __name__ == .__main__.:
+    raise NotImplementedError

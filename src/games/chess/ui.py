@@ -51,9 +51,9 @@ class GameSession:
     # Scorecard
     scorecard: ScoreCard = field(default_factory=ScoreCard)
 
-    # Learning mode
-    learning_session: ContinuousLearningSession | None = None
-    learning_thread: threading.Thread | None = None
+    # NOTE: continuous-learning state deliberately does not live here. It is
+    # process-global (``_learning_session`` below) because the learning thread
+    # outlives any single session object.
 
     def reset(self, player_color: str = "white") -> None:
         """Reset the game to initial state."""
@@ -710,8 +710,10 @@ def export_game_pgn() -> str | None:
 
 
 # Continuous learning functions
+# Stopping is cooperative and owned by the session itself
+# (``ContinuousLearningSession.stop()`` clears its ``is_running`` flag), so
+# there is no separate stop Event to keep in sync.
 _learning_session: ContinuousLearningSession | None = None
-_learning_stop_event = threading.Event()
 
 
 def start_continuous_learning(
@@ -719,12 +721,10 @@ def start_continuous_learning(
     max_games: int,
 ) -> tuple[str, str]:
     """Start continuous learning mode."""
-    global _learning_session, _learning_stop_event
+    global _learning_session
 
     if _learning_session is not None and _learning_session.is_running:
         return "Learning already running!", render_learning_status()
-
-    _learning_stop_event.clear()
 
     from src.games.chess import get_chess_small_config
 
