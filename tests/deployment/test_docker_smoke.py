@@ -128,6 +128,32 @@ def exec_in_container(
         return 1, str(e)
 
 
+# GPU probe configuration. Named rather than inlined so the override contract is
+# stated once and the timeout is not a bare magic number at the call site.
+#
+# Read from the environment rather than Pydantic Settings deliberately: this module
+# probes the *host* before any container or application config exists, and importing
+# Settings requires a configured provider key it has no business demanding. The same
+# reasoning governs healthcheck.py, which reads all nine of its config values from
+# os.environ and holds no `src` imports at all.
+GPU_TEST_OVERRIDE_ENV = "FORCE_GPU_TESTS"
+GPU_PROBE_TIMEOUT_ENV = "GPU_PROBE_TIMEOUT_SECONDS"
+DEFAULT_GPU_PROBE_TIMEOUT_SECONDS = 10.0
+_TRUTHY = frozenset({"1", "true", "yes"})
+
+
+def _gpu_probe_timeout() -> float:
+    """Seconds to allow the `nvidia-smi` probe, overridable for slow hosts."""
+    raw = os.environ.get(GPU_PROBE_TIMEOUT_ENV, "").strip()
+    if not raw:
+        return DEFAULT_GPU_PROBE_TIMEOUT_SECONDS
+    try:
+        return float(raw)
+    except ValueError:
+        # A malformed override must not silently disable the probe's timeout.
+        return DEFAULT_GPU_PROBE_TIMEOUT_SECONDS
+
+
 def _host_has_gpu() -> bool:
     """
     True when the host exposes an NVIDIA GPU that Docker can pass through.
@@ -137,14 +163,15 @@ def _host_has_gpu() -> bool:
     failure mode (``exec: "nvidia-smi": executable file not found``) instead of a
     skip.
     """
-    if os.environ.get("FORCE_GPU_TESTS") == "1":
+    if os.environ.get(GPU_TEST_OVERRIDE_ENV, "").strip().lower() in _TRUTHY:
         return True
     if shutil.which("nvidia-smi") is None:
         return False
     try:
-        return subprocess.run(["nvidia-smi", "-L"], capture_output=True, timeout=10).returncode == 0
+        completed = subprocess.run(["nvidia-smi", "-L"], capture_output=True, timeout=_gpu_probe_timeout())
     except (OSError, subprocess.SubprocessError):
         return False
+    return completed.returncode == 0
 
 
 # The GPU assertions below are real checks on a GPU host and unsatisfiable anywhere

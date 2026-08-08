@@ -25,7 +25,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Final
 
 # Configure logging
 logging.basicConfig(
@@ -34,6 +34,24 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
+
+
+# Environment variable names this script honours. Named rather than inlined so each
+# contract is stated once.
+#
+# Deliberately read from os.environ rather than the project's Pydantic Settings:
+# this module is a STANDALONE script copied into the image (Dockerfile.train:95,
+# wired as the container HEALTHCHECK). It holds no `src` imports at all, and every
+# one of its nine config reads — PINECONE_API_KEY, OPENAI_API_KEY, LLM_PROVIDER,
+# LMSTUDIO_BASE_URL, OTEL_EXPORTER_OTLP_ENDPOINT and the rest — uses os.environ.
+# Importing Settings would add this file's first `src` dependency AND require a
+# configured provider key: get_settings() raises ValidationError without one, which
+# would crash the healthcheck in precisely the degraded containers it exists to
+# probe.
+REQUIRE_GPU_ENV: Final[str] = "REQUIRE_GPU"
+
+# Accepted spellings for a boolean environment flag.
+TRUTHY_ENV_VALUES: Final[frozenset[str]] = frozenset({"1", "true", "yes"})
 
 
 class HealthStatus(str, Enum):
@@ -196,9 +214,12 @@ class HealthChecker:
         workflow red for a reason unrelated to the image.
 
         Defaults to False so a CPU host degrades rather than fails. GPU deployments
-        set REQUIRE_GPU=1 to keep the check gating.
+        set ``REQUIRE_GPU=1`` to keep the check gating.
+
+        Read from the environment rather than Pydantic Settings by design — see
+        ``REQUIRE_GPU_ENV`` above.
         """
-        return os.environ.get("REQUIRE_GPU", "").strip().lower() in {"1", "true", "yes"}
+        return os.environ.get(REQUIRE_GPU_ENV, "").strip().lower() in TRUTHY_ENV_VALUES
 
     async def check_cuda(self) -> CheckResult:
         """Check CUDA/GPU availability."""

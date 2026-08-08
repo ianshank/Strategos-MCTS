@@ -32,6 +32,7 @@ pytestmark = pytest.mark.unit
 
 
 def _run(coro):
+    """Drive a coroutine to completion in a fresh event loop."""
     return asyncio.run(coro)
 
 
@@ -56,14 +57,18 @@ def with_cuda(monkeypatch: pytest.MonkeyPatch):
 
 
 class TestGpuRequiredFlag:
+    """Parsing of the REQUIRE_GPU environment flag."""
+
     @pytest.mark.parametrize("value", ["1", "true", "TRUE", "yes", " 1 "])
     def test_truthy_values_require_a_gpu(self, monkeypatch: pytest.MonkeyPatch, value: str) -> None:
+        """Case and surrounding whitespace must not change the verdict."""
         monkeypatch.setenv("REQUIRE_GPU", value)
 
         assert healthcheck.HealthChecker._gpu_required() is True
 
     @pytest.mark.parametrize("value", ["0", "false", "no", ""])
     def test_falsy_values_do_not(self, monkeypatch: pytest.MonkeyPatch, value: str) -> None:
+        """An explicit falsy value is as permissive as an unset one."""
         monkeypatch.setenv("REQUIRE_GPU", value)
 
         assert healthcheck.HealthChecker._gpu_required() is False
@@ -79,6 +84,7 @@ class TestCudaAbsentByDefault:
     """The regression: a CPU-only host must still be able to report healthy."""
 
     def test_absent_cuda_is_degraded_not_unhealthy(self, monkeypatch: pytest.MonkeyPatch, no_cuda) -> None:
+        """The core regression: a CPU host must not be reported as unhealthy."""
         monkeypatch.delenv("REQUIRE_GPU", raising=False)
 
         result = _run(healthcheck.HealthChecker().check_cuda())
@@ -87,6 +93,7 @@ class TestCudaAbsentByDefault:
         assert result.critical is False
 
     def test_message_names_the_override(self, monkeypatch: pytest.MonkeyPatch, no_cuda) -> None:
+        """An operator reading the degraded message learns how to make it fatal."""
         monkeypatch.delenv("REQUIRE_GPU", raising=False)
 
         assert "REQUIRE_GPU=1" in _run(healthcheck.HealthChecker().check_cuda()).message
@@ -104,6 +111,7 @@ class TestCudaAbsentByDefault:
         assert result.critical is False
 
     def test_missing_torch_is_degraded(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """No torch is a missing capability, not a failed container."""
         monkeypatch.delenv("REQUIRE_GPU", raising=False)
         monkeypatch.setitem(sys.modules, "torch", None)  # forces ImportError on `import torch`
 
@@ -117,6 +125,7 @@ class TestCudaRequired:
     """Where a GPU is declared necessary, the check must still gate."""
 
     def test_absent_cuda_is_unhealthy_and_critical(self, monkeypatch: pytest.MonkeyPatch, no_cuda) -> None:
+        """Opting in must restore the original gating behaviour exactly."""
         monkeypatch.setenv("REQUIRE_GPU", "1")
 
         result = _run(healthcheck.HealthChecker().check_cuda())
@@ -125,13 +134,17 @@ class TestCudaRequired:
         assert result.critical is True
 
     def test_no_override_hint_when_already_required(self, monkeypatch: pytest.MonkeyPatch, no_cuda) -> None:
+        """Do not advise setting a flag the operator has already set."""
         monkeypatch.setenv("REQUIRE_GPU", "1")
 
         assert "REQUIRE_GPU=1" not in _run(healthcheck.HealthChecker().check_cuda()).message
 
 
 class TestCudaPresent:
+    """With a visible GPU the probe is healthy regardless of the flag."""
+
     def test_available_gpu_reports_healthy(self, monkeypatch: pytest.MonkeyPatch, with_cuda) -> None:
+        """Device metadata is surfaced so operators can confirm what was found."""
         monkeypatch.delenv("REQUIRE_GPU", raising=False)
 
         result = _run(healthcheck.HealthChecker().check_cuda())
@@ -140,6 +153,7 @@ class TestCudaPresent:
         assert result.metadata["gpu_count"] == 1
 
     def test_healthy_regardless_of_require_gpu(self, monkeypatch: pytest.MonkeyPatch, with_cuda) -> None:
+        """The flag changes the absent-GPU verdict only, never the present-GPU one."""
         monkeypatch.setenv("REQUIRE_GPU", "1")
 
         assert _run(healthcheck.HealthChecker().check_cuda()).status is healthcheck.HealthStatus.HEALTHY
