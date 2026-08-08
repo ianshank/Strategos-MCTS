@@ -14,6 +14,7 @@ contents, so the suite stays valid after a ``git lfs pull``.
 from __future__ import annotations
 
 import pickle
+import sys
 import zipfile
 from pathlib import Path
 
@@ -22,6 +23,7 @@ import pytest
 from src.config.constants import GIT_LFS_POINTER_MAGIC, GIT_LFS_REMEDIATION
 from src.models.checkpoints import (
     CheckpointStatus,
+    _inspect_file,
     inspect_checkpoint,
     load_checkpoint,
 )
@@ -203,6 +205,31 @@ class TestTolerantLoading:
 
         assert load_checkpoint(path) is None
 
+    def test_deserializer_failure_degrades_rather_than_raising(self, tmp_path: Path) -> None:
+        """
+        The file passes inspection but the deserializer rejects it.
+
+        Distinct from the corrupt-container case, which is now caught at
+        classification and never reaches torch. This is the last line of defence —
+        a well-formed container whose *contents* torch cannot load.
+        """
+        path = tmp_path / "wellformed-but-unloadable.pt"
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr("not-a-torch-archive.txt", b"payload")
+
+        assert inspect_checkpoint(path).is_ok, "precondition: must pass classification"
+        assert load_checkpoint(path) is None
+
+    def test_deserializer_failure_is_logged(self, tmp_path: Path, caplog) -> None:
+        path = tmp_path / "wellformed-but-unloadable.pt"
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr("not-a-torch-archive.txt", b"payload")
+
+        with caplog.at_level("WARNING"):
+            load_checkpoint(path)
+
+        assert any("degraded mode" in r.message for r in caplog.records)
+
     def test_failure_is_logged_with_structured_fields(self, lfs_pointer: Path, caplog) -> None:
         with caplog.at_level("WARNING"):
             load_checkpoint(lfs_pointer)
@@ -214,3 +241,116 @@ class TestTolerantLoading:
         import logging
 
         assert load_checkpoint(lfs_pointer, logger=logging.getLogger("plain.stdlib")) is None
+
+    def test_returns_the_deserialized_object_on_success(self, tmp_path: Path) -> None:
+        """The success path — the only one that returns something."""
+        torch = pytest.importorskip("torch", reason="requires the [neural] extra")
+        path = tmp_path / "real.pt"
+        torch.save({"weight": 1}, path)
+
+        assert load_checkpoint(path) == {"weight": 1}
+
+    def test_absent_torch_degrades_instead_of_raising(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        """
+        A readable checkpoint with torch missing must return None, not ImportError.
+
+        This is the `pip install -e '.[ui]'` case: the file is fine, the deserializer
+        simply is not installed.
+        """
+        path = tmp_path / "model.pt"
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr("data.pkl", b"payload")
+        monkeypatch.setitem(sys.modules, "torch", None)  # forces ImportError on `import torch`
+
+        assert load_checkpoint(path) is None
+
+
+class TestUnreadableFilesystem:
+    """OS-level failures must produce a report, never an exception."""
+
+    def test_unreadable_file_is_classified_not_raised(self, tmp_path: Path) -> None:
+        """A file whose bytes cannot be read still yields a verdict."""
+        path = tmp_path / "locked.pt"
+        path.write_bytes(b"\x80\x02payload")
+        path.chmod(0o000)
+        try:
+            report = inspect_checkpoint(path)
+        finally:
+            path.chmod(0o644)  # let tmp_path clean up
+
+        # Root ignores mode bits, so accept either a clean read or the guarded failure —
+        # the contract under test is "returns a report", not which branch was taken.
+        assert report.status in {CheckpointStatus.OK, CheckpointStatus.UNREADABLE}
+
+    def test_stat_failure_is_reported(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        Targets _inspect_file directly.
+
+        Patching Path.stat globally also breaks Path.exists(), which swallows OSError
+        and reroutes to MISSING — so the stat-guard inside _inspect_file would never
+        be reached and the test would pass for the wrong reason.
+        """
+        path = tmp_path / "gone.pt"
+        path.write_bytes(b"\x80\x02payload")
+
+        def exploding_stat(self, *args, **kwargs):
+            raise OSError("simulated stat failure")
+
+        monkeypatch.setattr(Path, "stat", exploding_stat)
+
+        report = _inspect_file(path)
+
+        assert report.status is CheckpointStatus.UNREADABLE
+        assert "stat failed" in report.detail
+
+    def test_file_too_short_to_hold_a_header_is_unreadable(self, tmp_path: Path) -> None:
+        """Fewer bytes than a safetensors length prefix cannot be any known container."""
+        path = tmp_path / "stub.pt"
+        path.write_bytes(b"tiny")
+
+        assert inspect_checkpoint(path).status is CheckpointStatus.UNREADABLE
+
+    def test_directory_with_an_unreadable_weight_names_the_file(self, tmp_path: Path) -> None:
+        """A corrupt (non-pointer) member must be reported by name, not silently ignored."""
+        adapter = tmp_path / "final_model"
+        adapter.mkdir()
+        (adapter / "broken.safetensors").write_bytes(b"\x80" + b"\xff" * 512)
+
+        report = inspect_checkpoint(adapter)
+
+        assert report.status is CheckpointStatus.UNREADABLE
+        assert "broken.safetensors" in report.detail
+
+    def test_read_failure_is_reported(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """stat() succeeds but the read raises — e.g. a disappearing network mount."""
+        path = tmp_path / "flaky.pt"
+        path.write_bytes(b"\x80\x02payload")
+
+        real_open = Path.open
+        calls = {"n": 0}
+
+        def flaky_open(self, *args, **kwargs):
+            if self == path:
+                calls["n"] += 1
+                if calls["n"] > 1:  # let the LFS-pointer probe succeed, fail the format read
+                    raise OSError("simulated read failure")
+            return real_open(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "open", flaky_open)
+
+        report = inspect_checkpoint(path)
+
+        assert report.status is CheckpointStatus.UNREADABLE
+        assert "read failed" in report.detail
+
+    def test_lfs_probe_survives_an_unreadable_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """_is_lfs_pointer swallows OSError and reports 'not a pointer' rather than raising."""
+        path = tmp_path / "small.pt"
+        path.write_bytes(b"tiny")
+
+        def exploding_open(self, *args, **kwargs):
+            raise OSError("simulated open failure")
+
+        monkeypatch.setattr(Path, "open", exploding_open)
+
+        assert inspect_checkpoint(path).status is CheckpointStatus.UNREADABLE

@@ -90,6 +90,39 @@ class TestReasoningStepDerivation:
         assert "42" in joined
         assert "expand" in joined
 
+    @pytest.mark.parametrize(
+        ("stats", "expected_fragment", "absent_fragment"),
+        [
+            ({"iterations": 7}, "MCTS iterations: 7", "Nodes explored"),
+            ({"nodes_explored": 9}, "Nodes explored: 9", "MCTS iterations"),
+            ({"best_action": "hold"}, "Best action: hold", "Nodes explored"),
+        ],
+    )
+    def test_partial_mcts_stats_report_only_what_is_present(
+        self, stats: dict, expected_fragment: str, absent_fragment: str
+    ) -> None:
+        """
+        A framework reporting some MCTS keys but not others must not invent the rest.
+
+        Each key is independently optional; covering only the all-keys-present case
+        left the absent-key branches untested, which is where a KeyError or a
+        fabricated "Nodes explored: None" line would hide.
+        """
+        steps = derive_reasoning_steps(_Result(mcts_stats=stats))
+        joined = " ".join(steps)
+
+        assert expected_fragment in joined
+        assert absent_fragment not in joined
+
+    def test_total_nodes_is_accepted_as_an_alias(self) -> None:
+        """The reader falls back to `total_nodes` when `nodes_explored` is absent."""
+        steps = derive_reasoning_steps(_Result(mcts_stats={"total_nodes": 11}))
+
+        assert any("11" in s for s in steps)
+
+    def test_empty_mcts_stats_adds_nothing(self) -> None:
+        assert derive_reasoning_steps(_Result(mcts_stats={})) == []
+
     def test_empty_result_yields_no_invented_steps(self) -> None:
         """The old code returned four lines of prose regardless of what ran."""
         assert derive_reasoning_steps(_Result()) == []
