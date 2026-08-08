@@ -45,8 +45,6 @@ class GameSession:
     game_over: bool = False
     result: str = ""
     player_color: str = "white"
-    ai_thinking: bool = False
-    last_ai_analysis: dict[str, Any] = field(default_factory=dict)
 
     # Scorecard
     scorecard: ScoreCard = field(default_factory=ScoreCard)
@@ -62,8 +60,6 @@ class GameSession:
         self.game_over = False
         self.result = ""
         self.player_color = player_color
-        self.ai_thinking = False
-        self.last_ai_analysis = {}
 
     def record_game_result(self, result: str) -> None:
         """
@@ -508,7 +504,6 @@ def make_ai_move_sync() -> tuple[str, str, str, str, str]:
 
         _session.fen = board.fen()
         _session.move_history.append(ai_move)
-        _session.last_ai_analysis = analysis
 
         if board.is_game_over():
             _session.game_over = True

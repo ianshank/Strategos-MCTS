@@ -93,6 +93,11 @@ contract rather than patched per call site.
   but never `set()`, `is_set()` or waited on). Stopping is cooperative and owned by
   `ContinuousLearningSession.stop()`; the Event was a second, inert mechanism implying a control path
   that did not exist. Behaviour is unchanged — every removed name was write-only.
+- Two more write-only `GameSession` fields, `ai_thinking` and `last_ai_analysis`, plus the assignment
+  that fed the latter. An AST walk over the module finds zero `Load` contexts for either name across
+  four write sites; `last_ai_analysis` duplicated a local that `format_analysis()` already renders
+  directly, so the stored copy was never the one displayed. Found by an audit that scanned with
+  `tests/` included — without that, 477 of 581 candidates were merely test-only usage.
 ### Fixed — the training image build, red on `main` since 2026-07-20
 
 `Dockerfile.train` installs `training/requirements.txt`, which could not resolve.
