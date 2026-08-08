@@ -1,0 +1,84 @@
+# Hugging Face Space image (Docker SDK) for the root Gradio demo.
+#
+# This file is deployed as the Space's `Dockerfile` by
+# .github/workflows/deploy-space.yml; it is not part of the production API image
+# (see ./Dockerfile) and not used by docker-compose.
+#
+# The install set is DERIVED from pyproject.toml rather than restated. A second
+# dependency manifest is exactly how the previous Space drifted into a fork of
+# src/ that diverged in 51 files (CHANGELOG.md); there is one source of truth
+# here, and it is the one the tests run against.
+#
+# Layout follows the Hugging Face Docker Spaces permissions guidance: the
+# container runs as uid 1000, so the user is created first and every install and
+# copy happens as that user. Packages installed as root into /root/.local would
+# be invisible at runtime.
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=100
+
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH \
+    HF_HOME=/home/user/.cache/huggingface
+WORKDIR $HOME/app
+
+# --- dependency layer -------------------------------------------------------
+# Rebuilt only when pyproject.toml changes, which keeps redeploys off the slow
+# torch path. CPU wheels: the default PyPI torch on linux drags in the full CUDA
+# stack (~2.5GB of nvidia-* packages) that a cpu-basic Space can never use.
+COPY --chown=user pyproject.toml ./
+RUN python - <<'PY' > /tmp/deps.txt
+import tomllib
+
+with open("pyproject.toml", "rb") as handle:
+    project = tomllib.load(handle)["project"]
+
+extras = project["optional-dependencies"]
+for requirement in project["dependencies"] + extras["ui"] + extras["neural"]:
+    print(requirement)
+PY
+RUN pip install --user --upgrade pip \
+ && pip install --user torch --index-url https://download.pytorch.org/whl/cpu \
+ && pip install --user -r /tmp/deps.txt
+
+# --- model prewarm layer ----------------------------------------------------
+# The demo pulls these from the Hub on its first query. Space disks are
+# ephemeral, so without this every restart (including every wake from the 48h
+# idle sleep) re-downloads ~135MB before the first answer.
+RUN python - <<'PY'
+from sentence_transformers import SentenceTransformer
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+AutoTokenizer.from_pretrained("prajjwal1/bert-mini")
+AutoModelForSequenceClassification.from_pretrained("prajjwal1/bert-mini", num_labels=3)
+SentenceTransformer("all-MiniLM-L6-v2")
+PY
+
+# --- application layer ------------------------------------------------------
+COPY --chown=user . .
+
+# Every value here differs from its in-repo default and is explained in
+# docs/HUGGINGFACE_SPACE.md.
+#
+#   ENABLE_DEMO_COMPARISON  default False; turns on the MCTS-vs-single-shot
+#                           surface, whose explicit "mock" provider is what runs
+#                           for real without any API key.
+#   GRADIO_SERVER_PORT      matches `app_port` in the Space card.
+#
+# ALLOW_MOCK_LLM_FALLBACK is deliberately NOT set: the fallback it guards fires
+# only when LLM client *creation* raises, which never happens on the provider
+# this container selects. Setting it would advertise behaviour that cannot occur.
+ENV ENABLE_DEMO_COMPARISON=true \
+    GRADIO_SERVER_PORT=7860 \
+    LOG_LEVEL=INFO \
+    STRATEGOS_CHECKPOINT_REPO=ianshank/strategos-mcts-checkpoints
+
+EXPOSE 7860
+
+CMD ["python", "space_bootstrap.py"]

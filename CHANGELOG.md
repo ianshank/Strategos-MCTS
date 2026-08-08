@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Hugging Face Space deployed from the canonical tree
+
+Spec: `specs/hf_space_deploy.SPEC.md` (schema v2 draft).
+
+The demo Space at `ianshank/langgraph-mcts-demo` was still serving the vendored `src/` fork this
+repository deleted for silently diverging in 51 files (see the entry below). It is now a build
+artifact of `main`, redeployed by CI, so it cannot drift again.
+
+#### Added
+
+- **Space image** (`Dockerfile.space`). Docker-SDK Space built as uid 1000 per Hugging Face's
+  permissions guidance. Its install set is *derived* from `pyproject.toml` (`[project.dependencies]`
+  plus the `ui` and `neural` extras) rather than restated — a second dependency manifest is how the
+  previous Space became a fork. Torch comes from the CPU wheel index, since the default PyPI build
+  drags in a CUDA stack a `cpu-basic` Space can never use. `prajjwal1/bert-mini` and
+  `all-MiniLM-L6-v2` are baked into a prewarm layer: Space disks are ephemeral, so without it every
+  wake from the 48-hour idle sleep re-downloads them, and a Hub hiccup fails the query path outright.
+- **Startup shim** (`space_bootstrap.py`). Fetches checkpoints from the Hub into the layout
+  `src/ui/status.py` already expects, tolerating failure — the app's runtime banner then reports
+  reduced mode rather than the shim asserting anything. Selects a provider that settings can
+  construct: an explicit `LLM_PROVIDER`, else a key-derived one, else `lmstudio` pointed at a closed
+  loopback port. `_build_demo()` resolves settings eagerly, so a keyless container without this
+  fails to start at all.
+- **Deploy workflow** (`.github/workflows/deploy-space.yml`). Triggered by a successful *CI Pipeline*
+  run on `main`, so a red commit never deploys, and checked out at the commit CI actually validated
+  rather than the branch tip. Assembles the Space tree from an allowlist, refuses any file over the
+  Hub's 10MB non-LFS limit, force-pushes a single-commit history, then polls the runtime API and
+  fails unless the Space reaches `RUNNING` — a green run means a live Space, not merely an accepted
+  push.
+- **Checkpoint rescue** (`scripts/rescue_space_weights.py`). The old Space held the only copies of the
+  trained RNN and BERT-LoRA weights; this repository carries them as Git-LFS pointer stubs, and the
+  force-push overwrites that history. The script loads each checkpoint through the *current*
+  controller code paths, asserts the RNN state-dict contract, runs a forward pass, and refuses to
+  publish on mismatch. That refusal is not cosmetic: `app.py` calls `load_state_dict` unwrapped, so
+  real-but-mismatched weights crash every query instead of degrading to the banner. Fork-era training
+  metrics are deliberately not republished — no command in this tree reproduces them.
+- **Runbook** (`docs/HUGGINGFACE_SPACE.md`). Token setup, rollback, the environment table, and which
+  verifications a restricted network can and cannot perform.
+
+#### Notes
+
+- `ALLOW_MOCK_LLM_FALLBACK` is deliberately **not** set. The fallback it guards fires only when LLM
+  client *creation* raises, which cannot happen on the provider this container selects — LMStudio
+  construction is lazy, and the `openai`-without-key alternative fails earlier inside
+  `validate_provider_credentials()`. Setting it would advertise behaviour that cannot occur.
+- `ENABLE_GRAPH_VISUALIZATION` and `ENABLE_STREAMING` already default to `true` and are not restated,
+  so the image shows only real deviations from repository defaults.
+- Publishing a public deployment surface touches NG-1, whose carve-out budget is 0/0. The scope ruling
+  is recorded by a human before merge; this changelog entry does not resolve it.
+
 ### UI runtime integrity — the demo, chess UI and API actually run
 
 Specs: `specs/ui_runtime_integrity.SPEC.md`, `specs/ui_test_coverage.SPEC.md` (schema v2 drafts).

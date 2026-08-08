@@ -5,6 +5,7 @@ a DeepMind-style AI system with Neural MCTS and Hierarchical Reasoning (pre-inte
 [Known Limitations](#known-limitations)). Distributed on PyPI as `langgraph-multi-agent-mcts`.
 
 [![CI](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml/badge.svg)](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml)
+[![Hugging Face Space](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Space-blue.svg)](https://huggingface.co/spaces/ianshank/langgraph-mcts-demo)
 [![Coverage](https://img.shields.io/badge/coverage-89.65%25-brightgreen.svg)](docs/STATUS.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](pyproject.toml)
@@ -91,6 +92,8 @@ graph TB
 - **Graph visualization**: structure / Mermaid / Kroki render (`/graph/*`) via `src/api/graph_service.py`.
 - **MCTS vs single-shot comparison**: `/compare` + `demo.py --compare` + Gradio UI (`app.py`, `[ui]` extra).
 - All gated by settings flags (`ENABLE_STREAMING` / `ENABLE_GRAPH_VISUALIZATION` / `ENABLE_DEMO_COMPARISON`).
+- **Hosted demo**: the Gradio app is deployed to a Hugging Face Space from this branch by
+  `.github/workflows/deploy-space.yml`; see [`docs/HUGGINGFACE_SPACE.md`](docs/HUGGINGFACE_SPACE.md).
 
 ### 🔁 Neural Self-Play & Fast Gameplay (M5+)
 - **Generalized `SelfPlayTrainer`** (`src/training/self_play_trainer.py`) supporting DistributedDataParallel (DDP), FP16 mixed precision, `torch.compile`, pinned memory, and non-pickle checkpoint sidecars.
