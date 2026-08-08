@@ -60,6 +60,16 @@ RESULT_BEARING_COMMANDS = (
     "black",
     "gitleaks",
     "harness",
+    # `pip` covers both dependency installs and the training-manifest resolve gate in
+    # build-check. A disarmed `pip install` is never correct: it turns a failed install
+    # into a green step whose later commands then fail for unrelated-looking reasons.
+    # The resolve gate in particular is the only thing standing between a Dependabot
+    # bump and an unresolvable manifest, so it must not be deletable without notice.
+    #
+    # This does NOT flag `pip-audit ... || true` (ci.yml:220): the word-boundary
+    # lookahead below excludes a following hyphen, and pip-audit's suppression is the
+    # correct design documented above — a separate step parses its report and gates.
+    "pip",
 )
 
 # Shell constructs that discard a command's exit status. `|| true` is the obvious one

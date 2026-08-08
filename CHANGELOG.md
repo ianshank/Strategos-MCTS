@@ -76,6 +76,60 @@ contract rather than patched per call site.
   `demo.py` are unaffected — different entry points that do import from `src/`.
 - `FlexibleLogger` is superseded by `ensure_structured_logger()`; the dead `agent_handlers` dispatch
   map and its three wrapper methods are deleted.
+### Fixed — the training image build, red on `main` since 2026-07-20
+
+`Dockerfile.train` installs `training/requirements.txt`, which could not resolve.
+Every `Build Docker Images` run on `main` has failed for 30 consecutive runs.
+
+Two independent Dependabot bumps, neither validated by any resolver, each made the
+file unresolvable:
+
+- `datasets~=2.14.0` → `~=5.0.1` — needs `requests>=2.32.2` (pinned `~=2.31.0`) and
+  `pyarrow>=21.0.0`, while `mlflow~=2.5.0` caps `pyarrow<13`.
+- `tenacity~=8.2.0` → `~=9.1.4` — `langchain~=0.0.300` requires `tenacity>=8.1.0,<9.0.0`.
+
+Reverting either alone still fails; both are reverted here, with the forcing
+constraint recorded inline so the next bump has the reason in front of it. Verified:
+the manifest now resolves to 181 packages.
+
+Raising these again requires a coordinated bump of `requests`, `mlflow`/`pyarrow`,
+`transformers` and `langchain` together — tracked by
+`specs/hygiene_train_container.SPEC.md`, not attempted here.
+
+#### Why it went unnoticed
+
+Nothing gated `training/requirements.txt` except the Docker build, and that build was
+already red — so a red build carried no signal and both bumps merged straight through
+it.
+
+- **`build-check` now resolves the training manifest** (`pip install --dry-run
+  --ignore-installed`). `--ignore-installed` is load-bearing: without it pip resolves
+  against the runner's site-packages and can pass while the cold Docker build still
+  fails, which is exactly the blind spot the step exists to close. The job no longer
+  waits on `lint`/`type-check` so a broken manifest reports in its own right, and its
+  timeout rises to 25 minutes (the resolve takes minutes and materializes ~3 GB).
+- **`pip` added to `RESULT_BEARING_COMMANDS`** in `tests/unit/test_ci_workflow_invariants.py`,
+  so the new gate cannot be deleted or `|| true`-d unnoticed. Verified by disarming it
+  and confirming the invariant fails. `pip-audit`'s intentional suppression is
+  unaffected — the word-boundary lookahead excludes a following hyphen.
+- **`pyproject.toml` added to both `paths` filters** in `docker-deployment.yml`. It was
+  absent, so a change to the dependency set triggered no image build.
+
+#### Fixed — Container Smoke Tests could never pass on a CPU runner
+
+A second, independent failure sat behind the red build: on the one run where both
+images built, `Container Smoke Tests` failed 4/12.
+
+- `test_cuda_available_in_container`, `test_nvidia_smi_in_container` and
+  `test_gpu_memory_available` carried only `@pytest.mark.smoke` with no GPU guard, so
+  they *failed* rather than skipped on the CPU-only `ubuntu-latest` runner
+  (`exec: "nvidia-smi": executable file not found`). They now skip unless a GPU is
+  present; `FORCE_GPU_TESTS=1` overrides.
+- `healthcheck.py` registered the CUDA probe as **critical** unconditionally, so the
+  container could never report healthy without a GPU. An absent GPU is now `DEGRADED`
+  and non-critical by default, and fatal only where `REQUIRE_GPU` declares a GPU
+  necessary. 18 new tests cover both branches with `torch` stubbed, so the GPU-present
+  path is exercised on CPU hosts too.
 
 
 ### Quality gate — CI mechanical hardening

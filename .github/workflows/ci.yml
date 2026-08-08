@@ -464,8 +464,13 @@ jobs:
   build-check:
     name: Build Verification
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: [lint, type-check]
+    # 25, not 15: the training-manifest resolve below backtracks and materializes
+    # ~3 GB of wheels on a cold runner (measured 2m15s-3m35s cold, 70-90s warm).
+    timeout-minutes: 25
+    # Deliberately NOT gated behind lint/type-check. A broken dependency manifest
+    # should report in its own right rather than queue behind mypy on 327 files —
+    # the previous `needs: [lint, type-check]` delayed exactly the signal this job
+    # now carries.
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -486,6 +491,18 @@ jobs:
 
       - name: Build package
         run: python -m build --no-isolation --wheel
+
+      # training/requirements.txt is installed only by Dockerfile.train, so until now
+      # nothing checked it could resolve except a multi-minute image build that was
+      # itself already failing. Two Dependabot bumps (datasets 2.14->5.0.1,
+      # tenacity 8.2->9.1.4) each made the file unresolvable and merged anyway,
+      # leaving every training image build broken with ResolutionImpossible.
+      #
+      # --ignore-installed is load-bearing: without it pip resolves against this
+      # runner's site-packages and can pass while the cold Docker build still fails,
+      # which is precisely the blind spot this step exists to close.
+      - name: Verify training manifest resolves
+        run: pip install --dry-run --ignore-installed -r training/requirements.txt
 
   docker-build:
     name: Docker Build and Test

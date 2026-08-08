@@ -26,6 +26,8 @@ Usage:
 """
 
 import os
+import shutil
+import subprocess
 import time
 
 import pytest
@@ -126,6 +128,36 @@ def exec_in_container(
         return 1, str(e)
 
 
+def _host_has_gpu() -> bool:
+    """
+    True when the host exposes an NVIDIA GPU that Docker can pass through.
+
+    Checked on the host rather than in the container: a container cannot see a GPU
+    the host does not have, and probing inside is what produced the original
+    failure mode (``exec: "nvidia-smi": executable file not found``) instead of a
+    skip.
+    """
+    if os.environ.get("FORCE_GPU_TESTS") == "1":
+        return True
+    if shutil.which("nvidia-smi") is None:
+        return False
+    try:
+        return subprocess.run(["nvidia-smi", "-L"], capture_output=True, timeout=10).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+# The GPU assertions below are real checks on a GPU host and unsatisfiable anywhere
+# else. Without this guard they carried only @pytest.mark.smoke, so they FAILED
+# rather than skipped on the CPU-only `ubuntu-latest` runner the smoke job uses —
+# keeping the workflow red for a reason unrelated to the code under test.
+# Set FORCE_GPU_TESTS=1 to run them regardless.
+requires_gpu = pytest.mark.skipif(
+    not _host_has_gpu(),
+    reason="no NVIDIA GPU on the host (set FORCE_GPU_TESTS=1 to override)",
+)
+
+
 # ============================================================================
 # Container Health Tests
 # ============================================================================
@@ -192,6 +224,7 @@ def test_training_container_healthy(docker_client, training_container_name):
 
 @pytest.mark.smoke
 @pytest.mark.integration
+@requires_gpu
 def test_cuda_available_in_container(docker_client, training_container_name):
     """Test that CUDA is available in training container."""
     exit_code, output = exec_in_container(
@@ -207,6 +240,7 @@ def test_cuda_available_in_container(docker_client, training_container_name):
 
 @pytest.mark.smoke
 @pytest.mark.integration
+@requires_gpu
 def test_nvidia_smi_in_container(docker_client, training_container_name):
     """Test that nvidia-smi works in container."""
     exit_code, output = exec_in_container(
@@ -371,6 +405,7 @@ def test_api_container_health_endpoint(api_container_name):
 
 @pytest.mark.smoke
 @pytest.mark.benchmark
+@requires_gpu
 def test_gpu_memory_available(docker_client, training_container_name):
     """Test that sufficient GPU memory is available."""
     exit_code, output = exec_in_container(

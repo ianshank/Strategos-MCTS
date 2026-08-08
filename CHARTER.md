@@ -197,9 +197,16 @@ believes is enforced but is not is worse than one honestly labelled.
    an unrelated host would not be stopped.
 5. **Coverage is a gate, not a report.** Branch coverage must stay at or above `fail_under = 85.0`,
    declared in `pyproject.toml` and enforced in CI. *Scope, stated honestly:* the CI gate measures
-   `tests/unit/` only, and the coverage configuration omits the two `src/api/` server modules and
-   three chess modules — so the gated number is narrower than the headline in `docs/STATUS.md`, which
-   covers the full suite. **Verdict: ENFORCED (narrow scope).**
+   `tests/unit/` only, and the coverage configuration omits three chess modules
+   (`src/games/chess/ui.py`, `src/games/chess/verification/game_verifier.py`,
+   `src/games/chess/verification/move_validator.py`) — so the gated number is narrower than the
+   headline in `docs/STATUS.md`, which covers the full suite.
+   The gate-scope figure is now measured and published in `docs/STATUS.md` rather than left implicit:
+   **89.65%** as of 2026-08-04 under `.[dev,neural,api]`. **Verdict: ENFORCED (narrow scope).**
+   *(Corrected 2026-08-05: this previously also listed the two `src/api/` server modules as omitted.
+   PR #142 removed them from the omit list and dropped the matching `--ignore` flags, widening the
+   denominator from 41,471 to 42,318 units — a legitimate NG-5-compliant move in the protected
+   direction. Leaving the old text would have been exactly the unreproducible claim NG-3 forbids.)*
 6. **Fail loud by default.** Degraded execution paths are opt-in, never the default.
    *Enforced by:* the fallback flag defaults in `src/config/settings.py`, whose names are pinned by
    `src/tools/context_docs.py`. **Verdict: PARTIAL** — the mock-LLM fallback defaults off as

@@ -31,6 +31,45 @@ Two figures from the original amendment were WRONG and are corrected in the ACs 
 silently dropped: "19 of 22 markers unused" (re-derived: 0 unused of 21) and "docker-build builds
 the same image twice" (the push step is 28s of cached layers, not a second build — see AC-10).
 
+# Status against the tree (recorded 2026-08-05, after PR #142 merged as 743d5e3)
+
+The status field stays `draft` because the spec is **not** fully implemented: twelve of thirteen ACs
+now hold, one does not. Recorded per-AC rather than summarised, so the gap is legible instead of
+being rounded up to "done". The `draft` -> `approved` flip remains the maintainer's alone
+(CHARTER.md §7.5; CLAUDE.md: "a human flips the status").
+
+| AC | State | Evidence |
+|----|-------|----------|
+| AC-1 | SHIPPED | summary gates all 11 needs via one `JOBS=` list; bandit/pip-audit fail-open closed |
+| AC-2 | SHIPPED | `--strict-markers` in addopts; `timeout` marker registered |
+| AC-3 | SHIPPED | `check-secrets` gate job; both `\|\| true` removed; `lfs: true` on checkout |
+| AC-4 | SHIPPED | pre-commit `pytest-quick` can fail |
+| AC-5 | SHIPPED | all three suppression layers removed; gate-scope 89.65% on 42,318 units |
+| AC-6 | SHIPPED | measured figures in the PR and in `docs/STATUS.md` |
+| AC-7 | SHIPPED | both clauses now hold: CLAUDE.md's mypy claim was corrected in #142, and the required tracking spec is `specs/hygiene_mypy_strictness_ratchet.SPEC.md`, added here. It was PARTIAL at #142's merge and is closed by this PR |
+| AC-8 | SHIPPED | `timeout-minutes` on all jobs across all three workflows |
+| AC-9 | SHIPPED | concurrency + `cancel-in-progress` everywhere; PR `paths` filter on docker-deployment |
+| AC-10 | **PARTIAL** | (i) done — push-step `cache-to` deleted, `cache-from` kept. (ii) NOT done — see below |
+| AC-11 | SHIPPED | `pass` anchored to `^\s*pass\s*$` |
+| AC-12 | SHIPPED | advisory SARIF scan + separate blocking CRITICAL scan with `.trivyignore` |
+| AC-13 | SHIPPED | printed `docker pull` lowercased via `tr` |
+
+**AC-10(ii), measured 2026-08-05.** The AC required changing the surviving `cache-to` (the `mode=max` export on the `Build Docker image` step)
+from `mode=max` to `mode=min`, or removing it, justified by a before/after on a main-branch run. That
+run now exists — 31001989634 at 743d5e3, the first main run after the merge:
+
+- `Build Docker image`: **17m37s**, against the 17m34s baseline on run 30863130823 (74877fa).
+- `Build and push`: 58s (28s at baseline; it now genuinely pushes, having become a main-branch run).
+
+So AC-10(i) landed and moved nothing: the 714.4s of `preparing`/`sending cache export` — 68% of the
+build step — is written by the *surviving* `mode=max` line, which is untouched. AC-10(ii) is
+therefore still open and is where the whole cost lives.
+
+One honest caveat before anyone acts on the above: 31001989634 is the **first** main run after the
+change, so its `cache-from` read a cache written by the pre-change run. A clean before/after needs a
+second consecutive main run. Do not flip `mode=max` -> `mode=min` on this single data point — the AC
+says "Do not guess which; measure", and one run is not yet the measurement.
+
 # Acceptance Criteria
 
 - AC-1: chess-tests and integration-test are in the summary job's needs and failure conditions; security-scan and dependency-audit (already in needs and already printed at ci.yml:570,572) are added to the failure condition at ci.yml:578-586, and their fail-open paths are closed (the '|| true' at ci.yml:149 and :209, and the 'if [ -f ... ]' guards at :159 and :219 that pass silently when the report file is absent).
@@ -46,7 +85,7 @@ the same image twice" (the push step is 28s of cached layers, not a second build
   (a) WRONG: "collapse the duplicate build". The push step (ci.yml:535-548) is NOT a second build in any compute sense — it takes 28s with all fifteen layers CACHED from the same builder instance, against 17m34s for ci.yml:444. Re-tagging and pushing the locally-loaded image would save ~2s and LOSE the SLSA provenance attestation that build-push-action auto-injects (--attest type=provenance,mode=max), all 8 org.opencontainers.image.* labels, and the OCI image-index media type. Both build steps stay.
   (b) WRONG: "remove ignore-error=true from both cache-to lines". ignore-error is a cache-EXPORT option; removing it would newly hard-fail the job on a GHA cache-service hiccup, which is precisely what commit ba63eaf fixed. It stays on whichever cache-to survives.
   The real defect, measured: 'preparing build cache for export' + 'sending cache export' is 714.4s = 11m54s = 68% of the 17m34s step, and the cache it writes then FAILS TO IMPORT on the next run ('#20/#21/#22 ERROR: blob sha256:... not found', 14 such lines), so the build falls back to a full pip re-resolve. Root cause is mode=max against the 10GB per-repo GHA cache limit with LRU eviction, compounded by both cache-to lines targeting the same scope=ci-production so the push step overwrites the manifest the build step just wrote.
-  Required: (i) delete the redundant cache-to on the push step (ci.yml:546) only, keeping its cache-from — that build is 100% local-cache hits, so its export only clobbers the scope; (ii) change the surviving cache-to (ci.yml:456) from mode=max to mode=min, or remove it, with the decision justified by a measured before/after on a main-branch run pasted into the PR per AC-6. Do not guess which; measure.
+  Required: (i) delete the redundant cache-to on the PUSH step (the `Build and push Docker image (main branch only)` step in the docker-build job) only, keeping its cache-from — that build is 100% local-cache hits, so its export only clobbers the scope; (ii) change the surviving cache-to on the BUILD step (the `Build Docker image` step, the one carrying `mode=max`) from mode=max to mode=min, or remove it, with the decision justified by a measured before/after on a main-branch run pasted into the PR per AC-6. Do not guess which; measure. Steps are named rather than numbered deliberately: the original ci.yml:456/:546 references were already stale by the time #142 merged, because the line numbers moved when the timeouts and blocking scan landed.
 - AC-13: ci.yml:556 prints 'docker pull ghcr.io/${{ github.repository }}:latest', which renders the mixed-case 'ianshank/Strategos-MCTS'; the published image is lowercase (env.IMAGE_NAME). The printed command must be one a reader can paste and run.
 - AC-11: pyproject.toml's coverage exclude_lines entry "pass" is anchored to '^\\s*pass\\s*$'. Coverage applies these as re.search over raw source lines, so the bare form currently excludes 359 lines in src/ of which 291 are not pass statements (docstrings and comments containing "forward pass", dataclass fields such as num_passed/pass_at_1). This is NG-5 inverted — the gate has silently moved to meet the code — so the reported number is expected to drop and fail_under must not be lowered in response.
 - AC-12: The Trivy step (ci.yml:511-521) either fails the job on CRITICAL with a documented .trivyignore for accepted findings, or is removed. It currently carries both continue-on-error: true and exit-code: '0', so it cannot fail anything while costing 176s per run — the same permanently-informational defect this phase exists to remove.
