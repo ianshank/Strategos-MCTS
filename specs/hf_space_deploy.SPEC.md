@@ -38,14 +38,17 @@ which the LMStudio client never does. Setting it would advertise behaviour that 
 - AC-3: `ALLOW_MOCK_LLM_FALLBACK` is not set anywhere in the deployment, and the runbook records why
   with the code citations that make it unreachable. Every environment variable the deployment sets that
   differs from its in-repo default is named in the image definition and explained in the runbook.
-  Intended verification: `grep -c ALLOW_MOCK_LLM_FALLBACK Dockerfile.space` returns `0`; the `ENV` block
-  in `Dockerfile.space` cross-checked line-for-line against the table in `docs/HUGGINGFACE_SPACE.md`'s
-  "Environment" section.
+  Intended verification: `grep -c "ALLOW_MOCK_LLM_FALLBACK=" Dockerfile.space` returns `0` (matches
+  an actual assignment, not the explanatory comment at `Dockerfile.space:74` that names the variable
+  without setting it — a bare `grep -c ALLOW_MOCK_LLM_FALLBACK` returns `1` against that comment and
+  is not the intended check); the three `ENV` blocks in `Dockerfile.space` (lines 18-22, 26-28, 77-80)
+  cross-checked against the table in `docs/HUGGINGFACE_SPACE.md`'s "Environment" section.
 - AC-4: With no key configured, LLM-synthesised answers carry the degraded-mode marker, and the
   comparison surface runs its explicit `mock` provider. Neither path emits an unlabelled answer that
   could be mistaken for a real provider call. Intended verification: the `gradio_client` snippet in
-  `docs/HUGGINGFACE_SPACE.md`'s "Verifying locally" section, which asserts the degraded-mode label
-  appears in `result[0]` against a running keyless instance — not merely assumed.
+  `docs/HUGGINGFACE_SPACE.md`'s "Verifying locally" section, run against a live keyless instance and
+  visually confirming the degraded-mode label appears in `result[0]` — a manual check (the snippet
+  `print()`s the value with an inline comment, it does not `assert`), not an automated pass/fail.
 - AC-5: Model checkpoints reach the Space from a Hugging Face model repository at startup, and a
   download failure is non-fatal — the existing runtime banner reports what actually loaded. The
   checkpoint layout matches `DEFAULT_CHECKPOINTS` so the configured paths resolve unchanged. Intended
