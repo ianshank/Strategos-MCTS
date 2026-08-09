@@ -151,7 +151,7 @@ requires a full charter review under §7.4.
 
 | ID | Non-goal | Status | Active carve-outs |
 |------|----------|--------|-------------------|
-| NG-1 | Strategos-MCTS is not a hosted or managed service, and makes no uptime, latency, or support-response commitment to anyone. *(Rationale: an availability promise the maintainer cannot staff is a promise that will be broken; `docs/SLA.md` and `docs/runbooks/incident-response.md` are unratified templates retained for reference only.)* | ACTIVE | 0 / 0 |
+| NG-1 | Strategos-MCTS is not a hosted or managed service, and makes no uptime, latency, or support-response commitment to anyone. *(Rationale: an availability promise the maintainer cannot staff is a promise that will be broken; `docs/SLA.md` and `docs/runbooks/incident-response.md` are unratified templates retained for reference only.)* See §8.1 Ruling R-1 (drafted, pending ratification): the Hugging Face Space deployment. | ACTIVE | 0 / 0 |
 | NG-2 | No silent fallback. A degraded path never becomes the default without being named in this charter and defaulted off. *(Rationale: silently serving mock or lightweight output makes every downstream measurement untrustworthy, and the damage is discovered long after the fact.)* | ACTIVE | 0 / 0 |
 | NG-3 | No capability, metric, or status claim appears in any document unless a named command reproduces it from the tree. *(Rationale: this is §1's never-sacrifice restated as an enforceable boundary; an unreproducible claim is indistinguishable from a false one.)* | ACTIVE | 0 / 0 |
 | NG-4 | No change under `src/` lands without either an approved spec on its own branch or a written, reasoned exception recorded in the commit. *(Rationale: untraceable changes are why the invariants below drifted from the code in the first place.)* | ACTIVE | 1 / 2 |
@@ -389,3 +389,56 @@ window: 2 ratifications of a maximum 3 · cumulative granted: 2 of 8 · last ful
 > and are not entered in this ledger individually; the ledger begins with the rows above. The gap
 > between NG-4's intent and that history is the reason NG-4 carries a budget at all, and closing it
 > is tracked as part of Gate G-M5.
+
+### 8.1 Rulings (non-amendment determinations)
+
+Unlike §8, this table is not a carve-out ledger — it records determinations that a specific proposal
+was never inside a non-goal's clause in the first place, so **no** amendment is needed and **no**
+carve-out budget is consumed. This distinction matters most for the five zero-budget non-goals
+(NG-1, NG-2, NG-3, NG-5, NG-8), which cannot be carved out at all (§7.2) but can still be *ruled*
+inapplicable to a specific proposal. Per §7.5's compensating control 3, any such ruling requires an
+adversarial agent review before ratification; per §7.5's compensating control 4, an agent may draft a
+ruling but **never ratify one** — every row below is void as governance until its "Ratified by" cell
+names a human, in writing, in a commit of their own.
+
+| R | Date drafted | NG | Title | Ratified by | Status |
+|---|--------------|----|-------|--------------|--------|
+| R-1 | 2026-08-09 | NG-1 | The Hugging Face Space deployment (`.github/workflows/deploy-space.yml`, `docs/HUGGINGFACE_SPACE.md`, `README.space.md`, as of commit `4aab3ee`) falls outside NG-1's clause. | **NOT YET RATIFIED** | DRAFT — pending maintainer sign-off |
+
+> **Ruling R-1 (determination, not a carve-out — NG-1 carries a 0/0 carve-out budget and cannot be
+> carved out per §7.2; drafted by AI agent review 2026-08-09, awaiting maintainer ratification per
+> §7.5 — not yet in effect): the Hugging Face Space deployment falls outside NG-1's clause.**
+>
+> **Scope of review:** `.github/workflows/deploy-space.yml`, `docs/HUGGINGFACE_SPACE.md`,
+> `README.space.md`, as of commit `4aab3ee3a0d9f1f0dafd7359f4e26838e46b7046`.
+>
+> **Determination:** the deploy pipeline's poll-until-`RUNNING` CI gate, force-push mechanism,
+> rollback runbook, and model-prewarming are deploy-correctness and build-quality controls internal
+> to the maintainer's own CI, not an uptime, latency, or support-response commitment surfaced to end
+> users. The only user-facing artifacts (`README.space.md`'s Space card, `docs/HUGGINGFACE_SPACE.md`)
+> affirmatively disclaim all three, in NG-1's own words, and the Space's documented 48-hour
+> idle-sleep/cold-start behavior is the negation of an availability posture rather than an instance
+> of one. `docs/SLA.md` and `docs/runbooks/incident-response.md` remain unratified per §3's Recorded
+> Divergence.
+>
+> **Basis:** three independent adversarial reviews (strict textualist, adversarial-steelman, and
+> precedent/rationale lenses), satisfying §7.5's compensating control 3 for any proposal touching a
+> zero-budget non-goal. All three concluded no violation; none found grounds for a §7.4 full charter
+> review, including the review built specifically to argue the opposite.
+>
+> **Ratification status: NOT YET RATIFIED.** Per §7.5, ratification authority rests with the
+> maintainer alone, acting explicitly and in writing. This entry records the adversarial-review input
+> §7.5 requires before ratification; it does not itself constitute ratification. To ratify, the
+> maintainer edits the table row and this line to name themselves and the ratification date, in a
+> commit separate from any feature work (mirroring §7.5's compensating control 2) — or edits this
+> entry to reject the ruling and force a §7.4 review instead.
+>
+> **Durability / re-open triggers (once ratified):** this ruling covers only the artifacts and
+> mechanics listed above as of the reviewed commit. It does **not** ratify `docs/SLA.md` or the
+> incident-response runbook, and it lapses in effect — requiring fresh review, not silent reliance —
+> if any future change adds a stated uptime percentage, a response-time target, a support-response
+> window, a status page, or otherwise contradicts the Space card's disclaimer. Such a change would
+> need to go through this same §7.5 process again, not cite this ruling as precedent for itself.
+>
+> Until ratified, this is not a determination that NG-1 was not implicated — it is a drafted proposal
+> that it was not. Every other §3 non-goal still stands regardless of the outcome here.
