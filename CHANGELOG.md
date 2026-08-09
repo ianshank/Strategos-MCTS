@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Hugging Face install/configure hardening
+
+`huggingface_hub` was previously only a transitive dependency (via `datasets` /
+`sentence-transformers` / `gradio`), despite `space_bootstrap.py`, `scripts/rescue_space_weights.py`,
+and `scripts/setup_hf_auth.py` all importing it directly.
+
+#### Added
+
+- **Explicit dependency.** `huggingface_hub>=0.34.0` added to the `neural` extra in
+  `pyproject.toml`, so `pip install -e ".[neural]"` alone is sufficient to run the Hub-dependent
+  scripts above. `requirements.txt`'s existing `huggingface_hub<0.30.0` cap was not reused here:
+  it is scoped to that manifest's own `transformers<4.46.0` pin, whereas this extra's unbounded
+  `transformers`/`gradio` versions already require `huggingface-hub>=0.34.0` and `>=0.33.5`
+  respectively — the old cap would have made the extra unsatisfiable.
+
+#### Changed
+
+- **`docs/DATASET_SETUP.md`.** PRIMUS auth instructions now document the current `hf` CLI
+  (`hf auth login`, plus the standalone installer) instead of the deprecated `huggingface-cli`,
+  with a fallback note since `huggingface-cli` still works under this project's pinned
+  `huggingface_hub` version.
+
 ### Hugging Face Space deployed from the canonical tree
 
 Spec: `specs/hf_space_deploy.SPEC.md` (schema v2 draft).

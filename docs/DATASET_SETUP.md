@@ -42,14 +42,32 @@ PRIMUS is a **gated dataset** that requires HuggingFace authentication.
 6. Copy the token (starts with `hf_`)
 
 #### Step 4: Authenticate CLI
+
+If you've installed the `neural` extra (`pip install -e ".[neural]"`), the `hf` CLI is already
+available — it ships with `huggingface_hub` as of the `>=0.34.0` this project pins. Otherwise,
+install the standalone `hf` CLI, which runs independent of any project's Python environment:
+
+```bash
+curl -LsSf https://hf.co/cli/install.sh | bash        # macOS/Linux
+# powershell -ExecutionPolicy ByPass -c "irm https://hf.co/cli/install.ps1 | iex"   # Windows
+```
+
+Then authenticate:
+
 ```bash
 # Option 1: Interactive login
-huggingface-cli login
+hf auth login
 
-# Option 2: Set environment variable
+# Option 2: Non-interactive, with a token already in hand
+hf auth login --token $HF_TOKEN
+
+# Option 3: Set the environment variable directly (no CLI needed)
 set HF_TOKEN=hf_your_token_here  # Windows
 export HF_TOKEN=hf_your_token_here  # Linux/Mac
 ```
+
+> The older `huggingface-cli login` also still works (deprecated with a warning; not removed
+> upstream until `huggingface_hub` v1.0.0), but `hf` is the current command going forward.
 
 #### Step 5: Load PRIMUS
 ```python
