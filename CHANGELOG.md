@@ -25,9 +25,11 @@ and `scripts/setup_hf_auth.py` all importing it directly.
 #### Changed
 
 - **`docs/DATASET_SETUP.md`.** PRIMUS auth instructions now document the current `hf` CLI
-  (`hf auth login`, plus the standalone installer) instead of the deprecated `huggingface-cli`,
-  with a fallback note since `huggingface-cli` still works today regardless of `huggingface_hub`
-  version (deprecated with a warning; not removed upstream until v1.0.0).
+  (`hf auth login`, plus the standalone installer) instead of the removed `huggingface-cli`.
+  `huggingface-cli` was completely removed in `huggingface_hub` v1.0.0 (Oct 2025, no compatibility
+  shim); since this project's `neural` extra pins an unbounded `huggingface_hub>=0.34.0`, a fresh
+  install resolves to a 1.x release where `huggingface-cli` is simply not present. The doc notes
+  this instead of implying the old command still works under this project's own install path.
 
 ### Hugging Face Space deployed from the canonical tree
 

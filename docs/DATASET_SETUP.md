@@ -75,11 +75,15 @@ export HF_TOKEN=hf_your_token_here     # Linux/Mac, PowerShell: $env:HF_TOKEN = 
 set HF_TOKEN=hf_your_token_here        # Windows cmd.exe
 ```
 
-> The older `huggingface-cli login` also still works (deprecated with a warning; not removed
-> upstream until `huggingface_hub` v1.0.0), but `hf` is the current command going forward. Some
-> in-repo runtime error messages (e.g. `src/data/dataset_loader.py`'s gated-dataset error) still
-> print `huggingface-cli login` as the suggested fix — that wording predates this doc update;
-> `hf auth login` is the direct replacement.
+> `huggingface-cli` was **completely removed** in `huggingface_hub` v1.0.0 (Oct 2025) — no
+> compatibility shim exists, and it will not be present if you installed via this project's
+> `neural` extra: that pin (`huggingface_hub>=0.34.0`, no upper bound) resolves to the latest
+> release today, which is a 1.x version. `huggingface-cli login` only still works on an older,
+> separately-managed `huggingface_hub<1.0` install; `hf auth login` is the only supported command
+> for anything installed through this repository. Some in-repo runtime error messages (e.g.
+> `src/data/dataset_loader.py`'s gated-dataset error) still print the removed `huggingface-cli
+> login` wording — that predates this doc update and this project's move to an unbounded
+> `huggingface_hub` floor; `hf auth login` is the direct replacement.
 
 #### Step 5: Load PRIMUS
 ```python

@@ -109,7 +109,9 @@ neural = [
     # unbounded transformers>=4.30.0 / gradio<6.0.0 resolve to versions that themselves require
     # huggingface-hub>=0.34.0 (transformers) and >=0.33.5 (gradio) - copying the old cap would
     # make this extra unsatisfiable. >=0.34.0 is also the release that shipped the `hf` CLI
-    # docs/DATASET_SETUP.md now documents.
+    # docs/DATASET_SETUP.md now documents. No upper bound, so this floor resolves to the latest
+    # release (1.x as of writing) - huggingface-cli was fully removed in huggingface_hub 1.0.0
+    # (Oct 2025), so installing this extra will not provide it; `hf` is the only CLI available.
     "huggingface_hub>=0.34.0",
 ]
 experiment = [
