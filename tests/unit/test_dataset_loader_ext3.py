@@ -291,6 +291,25 @@ class TestPRIMUSLoaderLoad:
             with pytest.raises(RuntimeError, match="gated dataset"):
                 loader.load()
 
+    def test_load_gated_dataset_error_message_uses_current_hf_cli(self, caplog):
+        """The gated-dataset remediation message must name a command that still
+        exists. `huggingface-cli` was removed with no shim in huggingface_hub
+        v1.0 (2025-10-27); the current command is `hf auth login`.
+        """
+        loader = PRIMUSLoader(cache_dir="/tmp/test")
+        with patch.dict("sys.modules", {"datasets": MagicMock()}):
+            import sys
+
+            sys.modules["datasets"].load_dataset.side_effect = RuntimeError(
+                "This is a gated dataset and requires authentication"
+            )
+            with caplog.at_level("ERROR"):
+                with pytest.raises(RuntimeError, match="gated dataset"):
+                    loader.load()
+
+        assert "hf auth login" in caplog.text
+        assert "huggingface-cli login" not in caplog.text
+
     def test_load_generic_exception(self):
         """Lines 325-327: generic exception re-raised."""
         loader = PRIMUSLoader(cache_dir="/tmp/test")

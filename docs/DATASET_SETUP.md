@@ -44,7 +44,7 @@ PRIMUS is a **gated dataset** that requires HuggingFace authentication.
 #### Step 4: Authenticate CLI
 ```bash
 # Option 1: Interactive login
-huggingface-cli login
+hf auth login
 
 # Option 2: Set environment variable
 set HF_TOKEN=hf_your_token_here  # Windows
