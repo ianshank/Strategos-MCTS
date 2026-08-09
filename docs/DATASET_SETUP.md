@@ -42,14 +42,48 @@ PRIMUS is a **gated dataset** that requires HuggingFace authentication.
 6. Copy the token (starts with `hf_`)
 
 #### Step 4: Authenticate CLI
-```bash
-# Option 1: Interactive login
-huggingface-cli login
 
-# Option 2: Set environment variable
-set HF_TOKEN=hf_your_token_here  # Windows
-export HF_TOKEN=hf_your_token_here  # Linux/Mac
+If you've installed the `neural` extra (`pip install -e ".[neural]"`), the `hf` CLI is already
+available — it ships with `huggingface_hub` as of the `>=0.34.0` this project pins. Otherwise,
+install the standalone `hf` CLI, which runs independent of any project's Python environment. If
+you'd rather not pipe a remote script straight into your shell, download and inspect it first:
+
+```bash
+curl -LsSf https://hf.co/cli/install.sh -o install-hf-cli.sh   # download
+less install-hf-cli.sh                                         # inspect, then:
+bash install-hf-cli.sh                                          # macOS/Linux
 ```
+
+or accept the same trust as any other one-line install:
+
+```bash
+curl -LsSf https://hf.co/cli/install.sh | bash        # macOS/Linux
+# powershell -ExecutionPolicy ByPass -c "irm https://hf.co/cli/install.ps1 | iex"   # Windows
+```
+
+Then authenticate:
+
+```bash
+# Option 1: Interactive login (opens a browser)
+hf auth login
+
+# Option 2: Non-interactive, passing a token directly
+hf auth login --token hf_your_token_here
+
+# Option 3: Set the environment variable directly (no CLI login needed)
+export HF_TOKEN=hf_your_token_here     # Linux/Mac, PowerShell: $env:HF_TOKEN = "hf_your_token_here"
+set HF_TOKEN=hf_your_token_here        # Windows cmd.exe
+```
+
+> `huggingface-cli` was **completely removed** in `huggingface_hub` v1.0.0 (Oct 2025) — no
+> compatibility shim exists, and it will not be present if you installed via this project's
+> `neural` extra: that pin (`huggingface_hub>=0.34.0`, no upper bound) resolves to the latest
+> release today, which is a 1.x version. `huggingface-cli login` only still works on an older,
+> separately-managed `huggingface_hub<1.0` install; `hf auth login` is the only supported command
+> for anything installed through this repository. Some in-repo runtime error messages (e.g.
+> `src/data/dataset_loader.py`'s gated-dataset error) still print the removed `huggingface-cli
+> login` wording — that predates this doc update and this project's move to an unbounded
+> `huggingface_hub` floor; `hf auth login` is the direct replacement.
 
 #### Step 5: Load PRIMUS
 ```python
