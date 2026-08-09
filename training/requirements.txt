@@ -31,7 +31,7 @@ peft>=0.4,<0.21
 
 # Tokenizers
 sentencepiece~=0.2.2  # Required for DeBERTa tokenizer
-tiktoken~=0.5.0  # Required for modern tokenizers (OpenAI models)
+tiktoken>=0.5,<0.14  # Required for modern tokenizers (OpenAI models)
 
 
 # =============================================================================
