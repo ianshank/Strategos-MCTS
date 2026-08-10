@@ -80,10 +80,8 @@ set HF_TOKEN=hf_your_token_here        # Windows cmd.exe
 > `neural` extra: that pin (`huggingface_hub>=0.34.0`, no upper bound) resolves to the latest
 > release today, which is a 1.x version. `huggingface-cli login` only still works on an older,
 > separately-managed `huggingface_hub<1.0` install; `hf auth login` is the only supported command
-> for anything installed through this repository. Some in-repo runtime error messages (e.g.
-> `src/data/dataset_loader.py`'s gated-dataset error) still print the removed `huggingface-cli
-> login` wording — that predates this doc update and this project's move to an unbounded
-> `huggingface_hub` floor; `hf auth login` is the direct replacement.
+> for anything installed through this repository, including the in-repo runtime error message
+> (`src/data/dataset_loader.py`'s gated-dataset error), which was updated alongside this doc.
 
 #### Step 5: Load PRIMUS
 ```python

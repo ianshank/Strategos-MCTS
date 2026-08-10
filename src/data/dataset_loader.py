@@ -321,7 +321,7 @@ class PRIMUSLoader(DatasetLoader):
                     f"1. Create account at https://huggingface.co/\n"
                     f"2. Accept dataset terms at https://huggingface.co/datasets/{dataset_name}\n"
                     f"3. Create token at https://huggingface.co/settings/tokens\n"
-                    f"4. Run: huggingface-cli login"
+                    f"4. Run: hf auth login"
                 )
             else:
                 logger.error(f"Failed to load PRIMUS: {e}")
