@@ -159,10 +159,13 @@ all = [
 ]
 
 [project.scripts]
+action-pins = "src.tools.action_pins:main"
 benchmark = "src.benchmark.cli:main"
+claim-ledger = "src.tools.claim_ledger:main"
 harness = "src.framework.harness.cli:main"
 policy-lift = "src.benchmark.policy_lift:main"
 self-play-convergence = "src.training.self_play_convergence:main"
+status-artifact = "src.tools.status_artifact:main"
 validate-context-docs = "src.tools.context_docs:main"
 
 [project.urls]

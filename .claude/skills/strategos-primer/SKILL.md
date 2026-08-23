@@ -109,22 +109,50 @@ These are the rules a change is judged against — violating one is how a PR fai
 
 ## Workflows & commands
 
-Five console scripts (declared in `pyproject.toml [project.scripts]`):
+Console scripts (declared in `pyproject.toml [project.scripts]`):
 
 ```bash
+action-pins            # GitHub Actions commit-SHA pin ratchet (--write-baseline to re-tighten)
 benchmark              # = python -m src.benchmark  — system-vs-system evaluation
+claim-ledger           # validate docs/CLAIM_LEDGER.md: schema, cited paths, promotion rule
 harness                # autonomous agent loop: run | dry-run | replay | validate-spec | spec-trace | spec-new
 policy-lift            # measure MCTS policy improvement (the M5 ≥20%-lift acceptance metric)
 self-play-convergence  # self-play training convergence run
+status-artifact        # write artifacts/status.json (provenance-stamped; --strict to fail on drift)
 validate-context-docs  # deterministic doc-vs-tree validation (see /validate-context)
 ```
 
 Reusable project skills (invoke by name) cover the routine loops so you don't reconstruct them:
 
-- **`/quality-gate`** — the full local CI-equivalent gate (black → ruff → mypy → pytest+branch-cov →
-  secret grep). Run before every push; green locally means green in CI.
+- **`/quality-gate`** — the full local CI-equivalent gate (black → ruff → mypy → specs → docs →
+  claims → pins → pytest+branch-cov → secret grep). Run before every push; green locally means green
+  in CI.
 - **`/validate-specs`** — validate `specs/*.SPEC.md` against harness spec schema v2.
 - **`/coverage-baseline`** — regenerate the evidence-backed `docs/STATUS.md` baseline.
+- **`/validate-claims`** — grade a capability claim against the tree and write the ledger row, with
+  the promotion rule applied rather than argued.
+- **`/promotion-gate`** — the checklist a result must pass before any prose calls a capability
+  proven (provenance, cost denominator, seed count, gated comparison).
+
+## The evidence chain
+
+The project distinguishes *built* from *proven* mechanically, not editorially. Read
+`docs/plans/EVIDENCE_FIRST_PROGRAM.md` §4 for the contract; the short version:
+
+- Every capability claim in `README.md` and `CHARTER.md` §2 has exactly one row in
+  `docs/CLAIM_LEDGER.md`, graded `PROVEN` / `PARTIAL` / `UNPROVEN` / `FALSE`.
+- `PROVEN` is **derived**: `claim-ledger` requires a non-empty `Verify` command and an `Evidence`
+  path that resolves on disk. There is no flag that relaxes this, and CI demonstrates the gate
+  failing on a falsified row rather than assuming it works.
+- Numbers reach `artifacts/status.json` only with a provenance label from a closed vocabulary
+  (`mock`, `static-analysis`, `random-weights`, `trained-weights`), so "the benchmark ran" can never be read
+  as "the model is good".
+- `docs/capability_maturity.json` places each capability on the ladder `imports → tested →
+  integrated → trains → benchmarked → gated`, and a stage above what its supporting claims support
+  is a build failure.
+
+When you are about to write "works", "validated", or "proven" in any document, check the ledger row
+first. If the row does not support the word, change the word or produce the evidence.
 
 ## Spec-driven development in one screen
 

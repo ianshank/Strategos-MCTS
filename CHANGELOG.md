@@ -7,6 +7,121 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Evidence-First Program: roadmap re-gated behind a claim ledger
+
+Spec: `specs/evidence_claim_ledger.SPEC.md` (schema v2, approved).
+
+An audit of the tree ahead of the H2 scaling roadmap found three findings that make the roadmap's
+sequencing unsafe rather than merely ambitious, and one documentation claim that is false:
+
+- The four MCTS engines implement three mutually inconsistent value-perspective conventions.
+  `core.MCTSNode.backpropagate` never negates; `parallel_mcts` and `progressive_widening` gate
+  *selection* on their `two_player` flag but negate on *backup* unconditionally, so a
+  `two_player=False` single-agent search silently runs a negamax backup. Only `neural_mcts` is
+  self-consistent. `CHARTER.md` §2's engine-agreement claim is therefore **false as written**, and
+  is recorded as such in the new ledger rather than quietly corrected.
+- No candidate-versus-champion promotion gate exists anywhere in the tree. `SelfPlayEvaluator`
+  (`src/training/agent_trainer.py`) is a working arena with an `is_better` verdict that no caller
+  invokes, so every self-play checkpoint is promoted by default.
+- No comparison in the repository is cost-normalised, and none includes a no-search arm, so the
+  project cannot currently attribute a win to search rather than to spend.
+
+The first two were already named in existing draft specs (`hygiene_mcts_value_semantics`,
+`hygiene_mcts_engines`); the failure was sequencing, not analysis.
+
+#### Added
+
+- **`docs/plans/EVIDENCE_FIRST_PROGRAM.md`.** Milestones E0–E5 with an explicit evidence-chain
+  contract (reproducibility, cost-normalisation, adversarial verification, separation of duties),
+  a peer review of the external council review that prompted it — including two of its claims this
+  audit found to be **wrong** — and kill criteria for the program itself.
+- **`docs/CLAIM_LEDGER.md`.** Thirty-five rows covering every `CHARTER.md` §2 mission bullet and
+  README capability bullet, plus the process claims, each graded `PROVEN` / `PARTIAL` /
+  `UNPROVEN` / `FALSE` with a verification command and an evidence path. `PROVEN` requires a
+  resolvable artifact, so the grade cannot be awarded by editing prose.
+- **`specs/evidence_claim_ledger.SPEC.md`.** The one new spec this program authors; E1's contract
+  for the ledger validator, the provenance-stamped `artifacts/status.json` generator, the new CI
+  workflow invariants, and the mock-fallback refusal in production configurations.
+
+#### Changed
+
+- **`docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`.** Phase 1.2 onward (distributed self-play,
+  MuZero/EfficientZero, inference optimisation, enterprise DX) is re-gated behind E5 rather than
+  cancelled, and the document now delegates the sequenced-work axis to the program plan above. No
+  second planning system is introduced: `CHARTER.md` §3's one-plan rule still holds, with
+  `docs/STATUS.md` remaining the sole source of measured test and coverage figures.
+
+### Evidence-First E1: the chain is enforced in CI
+
+Spec: `specs/evidence_claim_ledger.SPEC.md` (AC-1 … AC-10). Implements the contract the section
+above specifies. Two findings surfaced *while* implementing it, both fixed here: a workflow that
+handed paid provider credentials to pull-request code, and a crash in the maturity generator on an
+unrecognised grade.
+
+#### Added
+
+- **`src/tools/claim_ledger.py`** (console script `claim-ledger`, `make claims`). Validates
+  `docs/CLAIM_LEDGER.md` structurally: one row per claim, a closed grade vocabulary, a resolvable
+  evidence path and a non-empty verify command for every `PROVEN` row, and a named missing link for
+  every `PARTIAL`. There is no flag that relaxes the promotion rule, and CI proves the gate can
+  fail by falsifying a `PROVEN` row in a scratch copy and asserting rejection.
+- **Claim-surface completeness ratchet** (`docs/claim_surface_baseline.json`, `make claims-baseline`).
+  The ledger is only trustworthy if it is complete, so `claim-ledger` now also counts claim-shaped
+  bullets on the declared reader-facing surfaces and refuses to let the ungraded surplus grow.
+  CHARTER.md §2 is exact today — 10 mission bullets, 10 rows — so a new mission bullet without a
+  graded row fails CI. README.md's Key Features section carries a recorded surplus of 5, and slack
+  in the baseline is itself a failure, so the number cannot be quietly loosened. Recorded as `CL-36`,
+  `PARTIAL`.
+- **`src/tools/status_artifact.py`** (console script `status-artifact`, `make status`). Emits a
+  deterministic, provenance-stamped `artifacts/status.json`: every result entry must carry a label
+  from the closed vocabulary in `src/config/constants.py` (`mock`, `static-analysis`,
+  `random-weights`, `trained-weights`), enforced in `__post_init__` so an unlabelled number cannot
+  reach the artifact. Includes the capability-maturity ladder from `docs/capability_maturity.json`,
+  where a stage above what the supporting claim grades allow is a build failure.
+- **`src/tools/action_pins.py`** (console script `action-pins`, `make pins` / `make pins-baseline`).
+  A supply-chain ratchet over `.github/action_pin_baseline.json`: tag-pinned action counts may only
+  decrease, an action absent from the baseline must be SHA-pinned on first use, and baseline slack
+  is itself a violation, so raising the baseline cannot launder a new unpinned reference. Current
+  measured state: 65 references, 0 pinned — recorded as `CL-33`, `UNPROVEN`.
+- **`Settings.validate_fail_loud_posture`** (`src/config/settings.py`). `DEPLOYMENT_ENV` is now a
+  first-class setting; declaring `staging` or `production` makes `ALLOW_MOCK_LLM_FALLBACK=true` a
+  startup error with a remediation message, instead of a silently permissive service.
+- **`.claude/hooks/evidence_gate.py`** (PostToolUse). Scans the three live claim surfaces
+  (`README.md`, `CHARTER.md`, `docs/STATUS.md`) after an edit and warns when promotion language is
+  not tied to a ledger row that supports it. Advisory and fail-open by design; the vocabulary is
+  deliberately narrow after measuring seven false positives against the live tree.
+- **`.claude/agents/eval-warden.md`**, **`.claude/agents/selfplay-referee.md`**,
+  **`.claude/skills/validate-claims/`**, **`.claude/skills/promotion-gate/`**. The reviewer roles
+  and the two reusable loops the program needs; separation of duties is what makes E1 more than a
+  linter.
+- **Test modules**: `tests/unit/tools/test_claim_ledger.py`, `test_status_artifact.py`,
+  `test_action_pins.py`, `tests/unit/config/test_fail_loud_posture.py`,
+  `tests/unit/tooling/test_evidence_gate.py`, and a "Supply chain and privilege invariants" section
+  in `tests/unit/test_ci_workflow_invariants.py`. Each gate is falsified in-test against a
+  reconstruction of the shape it forbids, rather than only asserted on the current tree.
+
+#### Fixed
+
+- **`e2e_with_langsmith.yml` no longer triggers on `pull_request`.** It exported
+  `LANGSMITH_API_KEY`, `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` into a job running
+  pull-request-authored code, which a one-line step could have exfiltrated. Push and manual
+  dispatch retain the coverage. Recorded as `CL-32`.
+- **`src/tools/status_artifact.py` crashed on an unrecognised claim grade** (`ValueError` from
+  `list.index`) instead of reporting it. Now a fail-closed problem entry. Found by a test, not in
+  review.
+
+#### Changed
+
+- **Least-privilege tokens.** `ci.yml`, `docker-deployment.yml` and `e2e_with_langsmith.yml` gained
+  a top-level `permissions: contents: read`; write scopes remain only on the specific jobs that
+  need them. Recorded as `CL-31` and pinned by a per-workflow invariant test.
+- **`README.md` claim wording narrowed to what the tree supports.** "Full integration with Weights
+  & Biases" and "zero required C dependencies" were both stronger than the code: the second was
+  contradicted outright by unconditional NumPy/Torch imports in `src/games/connect_four/`. Both
+  bullets now cite their ledger rows (`CL-19`, `CL-24`), and `CL-24` moves from `FALSE` to
+  `PARTIAL` because the wording changed — not because the dependency did.
+- **`make gate`** now runs `claims` and `pins` alongside the existing steps, in CI order.
+
 ### Hugging Face install/configure hardening
 
 `huggingface_hub` was previously only a transitive dependency (via `datasets` /

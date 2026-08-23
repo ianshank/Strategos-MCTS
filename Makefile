@@ -16,6 +16,9 @@ LINE_LENGTH ?= 120
 COV_MIN     ?= 85
 EXTRAS      ?= dev,neural,api
 PYTEST_ARGS ?=
+# Extra flags for `make status`, e.g. STATUS_ARGS="--coverage-json coverage.json"
+# to stamp a measured coverage total into the artifact.
+STATUS_ARGS ?=
 
 # Mirrors the `test` job's env block in ci.yml. Unit tests must not touch the
 # network (CHARTER.md INV-4), and settings validation rejects an empty API key.
@@ -29,7 +32,7 @@ TEST_ENV := WANDB_MODE=disabled \
 
 .DEFAULT_GOAL := help
 .PHONY: help install format format-check lint lint-fix typecheck test test-all \
-        coverage specs docs secrets gate clean
+        coverage specs docs claims claims-baseline status pins pins-baseline secrets gate clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -72,6 +75,21 @@ specs: ## Validate every spec against schema v2 (CI step)
 docs: ## Verify documentation claims resolve against the tree (CHARTER INV-10)
 	$(PYTHON) -m src.tools.context_docs
 
+claims: ## Validate the capability claim ledger (evidence-chain R1, CI step)
+	$(PYTHON) -m src.tools.claim_ledger
+
+claims-baseline: ## Re-tighten the claim-surface baseline after grading a new claim
+	$(PYTHON) -m src.tools.claim_ledger --write-surface-baseline
+
+status: ## Write the provenance-stamped status artifact (needs `make claims` green)
+	$(PYTHON) -m src.tools.status_artifact --strict $(STATUS_ARGS)
+
+pins: ## Check the GitHub Actions commit-SHA pin ratchet (CI step)
+	$(PYTHON) -m src.tools.action_pins
+
+pins-baseline: ## Re-tighten the pin baseline after pinning an action to a SHA
+	$(PYTHON) -m src.tools.action_pins --write-baseline
+
 secrets: ## Fast secret grep, matching the spec-validate CI step
 	@if git grep -nE "sk-[A-Za-z0-9]{20,}" -- src/ kubernetes/; then \
 		echo "FAIL: hardcoded key material"; exit 1; \
@@ -80,7 +98,7 @@ secrets: ## Fast secret grep, matching the spec-validate CI step
 		&& gitleaks detect --config .gitleaks.toml --source . --no-git -v \
 		|| echo "gitleaks not installed locally — that layer runs in CI"
 
-gate: format-check lint typecheck specs docs test secrets ## Full local gate, in CI order
+gate: format-check lint typecheck specs docs claims status pins test secrets ## Full local gate, in CI order
 	@echo "Quality gate passed."
 
 clean: ## Remove build/test artifacts

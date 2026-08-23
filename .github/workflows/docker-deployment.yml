@@ -56,6 +56,13 @@ on:
           - staging
           - production
 
+# Least privilege by default; see the equivalent block in ci.yml. This workflow builds and
+# publishes images, so `packages: write` is granted per job (build-images, and the security
+# scan's `security-events: write`) rather than to the whole file. Enforced by
+# tests/unit/test_ci_workflow_invariants.py.
+permissions:
+  contents: read
+
 env:
   REGISTRY: ghcr.io
   # Docker repository names must be lowercase; ${{ github.repository }} contains a
