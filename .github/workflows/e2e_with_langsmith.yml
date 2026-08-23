@@ -3,9 +3,17 @@ name: E2E Tests with LangSmith Tracing
 on:
   push:
     branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+  # Deliberately NOT triggered by `pull_request`. Every traced job below receives
+  # LANGSMITH_API_KEY, OPENAI_API_KEY and ANTHROPIC_API_KEY, and a workflow that hands
+  # provider credentials to code proposed in a pull request is a credential-exfiltration
+  # path: the PR only has to add one step that echoes the environment. Post-merge pushes
+  # to main/develop and manual dispatch keep the coverage, on code that has been reviewed.
+  # Enforced by tests/unit/test_ci_workflow_invariants.py.
   workflow_dispatch:
+
+# Least privilege by default; see the equivalent block in ci.yml.
+permissions:
+  contents: read
 
 env:
   PYTHON_VERSION: "3.11"

@@ -7,6 +7,14 @@ on:
     branches: [ main, develop ]
   workflow_dispatch:
 
+# Least privilege by default. Without a top-level block, jobs inherit whatever the
+# repository default is — historically write-all — so a compromised action step in any
+# job could push commits or publish packages. Jobs that genuinely need more (docker-build
+# needs `packages: write`) declare it locally, which keeps the elevated scope visible in
+# review instead of ambient. Enforced by tests/unit/test_ci_workflow_invariants.py.
+permissions:
+  contents: read
+
 env:
   PYTHON_VERSION: "3.11"
 
@@ -75,6 +83,50 @@ jobs:
             exit 0
           fi
           harness validate-spec "${specs[@]}"
+
+      - name: Validate the capability claim ledger
+        # docs/CLAIM_LEDGER.md grades every public capability claim against evidence.
+        # PROVEN requires a resolvable evidence artefact and a verification command,
+        # enforced structurally with no escape hatch (evidence-chain R1 in
+        # docs/plans/EVIDENCE_FIRST_PROGRAM.md). Prose edits cannot promote a grade.
+        run: python -m src.tools.claim_ledger
+
+      - name: Prove the claim-ledger gate can fail
+        # A gate nobody has watched fail is an assumption. This falsifies a PROVEN row
+        # in a scratch copy and asserts the validator rejects it, so the step above is
+        # demonstrated rather than trusted. Runs on the copy only; the tree is untouched.
+        run: |
+          set -euo pipefail
+          scratch="$(mktemp -d)"
+          cp -r docs specs src pyproject.toml "$scratch/"
+          python - "$scratch/docs/CLAIM_LEDGER.md" <<'PY'
+          import sys
+          path = sys.argv[1]
+          # Strip the Evidence cell from the first PROVEN row.
+          rows = open(path, encoding="utf-8").read().splitlines()
+          for index, row in enumerate(rows):
+              cells = row.split("|")
+              if len(cells) == 9 and cells[4].strip() == "PROVEN":
+                  cells[6] = " - "
+                  rows[index] = "|".join(cells)
+                  break
+          else:
+              raise SystemExit("no PROVEN row found to falsify")
+          open(path, "w", encoding="utf-8").write("\n".join(rows) + "\n")
+          PY
+          if python -m src.tools.claim_ledger --repo-root "$scratch"; then
+            echo "::error::the claim-ledger gate accepted a PROVEN row with no evidence"
+            exit 1
+          fi
+          echo "OK: the claim-ledger gate rejects an unsubstantiated PROVEN grade"
+
+      - name: Check the GitHub Actions pin ratchet
+        # A tag such as @v4 is a mutable pointer, so a tag-pinned third-party action is an
+        # unreviewed code-execution path into CI. The tree is not fully pinned yet, so this
+        # enforces a ratchet against .github/action_pin_baseline.json rather than shipping a
+        # gate that would have to start disabled: the count may only go down, and a newly
+        # introduced action must be pinned to a commit SHA on first use.
+        run: python -m src.tools.action_pins
 
       - name: Spec traceability (PRs only)
         # A PR touching src/** must run on a spec/<id> branch whose spec is
@@ -285,6 +337,7 @@ jobs:
           pytest tests/unit/ \
             --cov=src \
             --cov-report=xml:coverage.xml \
+            --cov-report=json:coverage.json \
             --cov-report=html:htmlcov \
             --cov-report=term-missing \
             --cov-fail-under=85 \
@@ -301,6 +354,24 @@ jobs:
           # Scoped to this job only: chess-tests and integration-test install narrower
           # sets and must keep degrading to skips.
           STRICT_OPTIONAL_DEPS: "1"
+
+      - name: Generate the status artifact
+        # artifacts/status.json records WHAT this commit can prove and HOW each number
+        # was produced. --strict fails the job when the claim ledger is invalid or the
+        # capability maturity map claims a stage its own ledger rows contradict.
+        # Deliberately after the test step: the measured coverage total is an input.
+        run: python -m src.tools.status_artifact --strict --coverage-json coverage.json
+
+      - name: Upload the status artifact
+        # Always uploaded, including on failure: a run that could not prove its claims
+        # is precisely the run whose artifact a reviewer needs to read.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: status-artifact
+          path: artifacts/status.json
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

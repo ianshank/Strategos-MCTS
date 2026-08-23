@@ -22,6 +22,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from src.config.constants import (
     DEFAULT_APP_VERSION,
     DEFAULT_CUDA_MEMORY_FRACTION,
+    DEFAULT_DEPLOYMENT_ENV,
+    DEPLOYMENT_ENVS,
+    FAIL_LOUD_ENFORCED_ENVS,
     MAX_CUDA_MEMORY_FRACTION,
     MIN_CUDA_MEMORY_FRACTION,
     SUPPORTED_CUDA_BACKENDS,
@@ -418,12 +421,25 @@ class Settings(BaseSettings):
     # Safety / Fallback Gating
     # ========================================
 
+    DEPLOYMENT_ENV: str = Field(
+        default=DEFAULT_DEPLOYMENT_ENV,
+        description=(
+            "Declared deployment target: one of "
+            + ", ".join(DEPLOYMENT_ENVS)
+            + ". Defaults to the permissive value so introducing this field changes no existing "
+            "deployment's behaviour. Setting it to a fail-loud-enforced environment ("
+            + ", ".join(FAIL_LOUD_ENFORCED_ENVS)
+            + ") makes the mock-fallback overrides below unavailable rather than merely defaulted off."
+        ),
+    )
+
     ALLOW_MOCK_LLM_FALLBACK: bool = Field(
         default=False,
         description=(
             "When True, the framework service silently falls back to an in-process mock LLM "
             "if a real client cannot be created. Default False fails loud so production never "
-            "serves mock output. Enable only in tests/dev."
+            "serves mock output. Enable only in tests/dev: the combination of True and a "
+            "DEPLOYMENT_ENV in " + ", ".join(FAIL_LOUD_ENFORCED_ENVS) + " is refused at startup."
         ),
     )
 
@@ -756,6 +772,45 @@ class Settings(BaseSettings):
         # surface to clients as a misleading 401). See docs/SECRETS_MANAGEMENT.md.
         if self.AUTH_MODE == "jwt" and self.JWT_SECRET is None:
             raise ValueError("JWT_SECRET is required when AUTH_MODE='jwt'. Set the JWT_SECRET environment variable.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_fail_loud_posture(self) -> "Settings":
+        """Refuse mock-output fallbacks in environments where they would be an incident.
+
+        ``CHARTER.md`` promises the service fails loud rather than silently serving mock output.
+        Until now that promise rested on a *default*: ``ALLOW_MOCK_LLM_FALLBACK`` defaults to
+        ``False``, but any operator could set it to ``True`` in production with one environment
+        variable, and every container manifest passed the environment through untouched. A safety
+        property that one env var can switch off is a preference, not a property.
+
+        This validator makes it structural for the environments that matter, and deliberately does
+        **not** change any default: a deployment that never sets :attr:`DEPLOYMENT_ENV` behaves
+        exactly as before. Only the explicit combination of "this is production" and "serve mocks
+        if the real client fails" is rejected, with the remedy named in the message.
+
+        Spec: ``specs/evidence_claim_ledger.SPEC.md`` AC-9.
+        """
+        declared = self.DEPLOYMENT_ENV.strip().lower()
+
+        if declared not in DEPLOYMENT_ENVS:
+            raise ValueError(
+                f"DEPLOYMENT_ENV={self.DEPLOYMENT_ENV!r} is not recognised. "
+                f"Expected one of: {', '.join(DEPLOYMENT_ENVS)}. "
+                "An unrecognised value is rejected rather than treated as non-production, because "
+                "a typo must not silently disable the fail-loud enforcement below."
+            )
+
+        if declared in FAIL_LOUD_ENFORCED_ENVS and self.ALLOW_MOCK_LLM_FALLBACK:
+            raise ValueError(
+                f"ALLOW_MOCK_LLM_FALLBACK=true is refused when DEPLOYMENT_ENV={declared!r} "
+                f"(enforced in: {', '.join(FAIL_LOUD_ENFORCED_ENVS)}). Serving mock model output "
+                "from a deployment users trust is a correctness incident, not a degraded mode. "
+                "Remedy: leave ALLOW_MOCK_LLM_FALLBACK unset so the service fails loud, or set "
+                f"DEPLOYMENT_ENV to one of {', '.join(e for e in DEPLOYMENT_ENVS if e not in FAIL_LOUD_ENFORCED_ENVS)} "
+                "if this really is a development or test deployment."
+            )
+
         return self
 
     def get_api_key(self) -> str | None:

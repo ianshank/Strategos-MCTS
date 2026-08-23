@@ -2,7 +2,7 @@
 id: evidence_claim_ledger
 goal: Machine-checked claim ledger and provenance-stamped status artifact, so PROVEN is derived from evidence rather than asserted in prose
 module: src/tools/
-status: approved
+status: implemented
 ---
 
 # Goal

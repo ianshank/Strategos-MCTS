@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "_comment": [
+    "Declarative capability maturity map consumed by src/tools/status_artifact.py.",
+    "stage must be one of CAPABILITY_MATURITY_STAGES in src/config/constants.py, weakest first:",
+    "imports, tested, integrated, trains, benchmarked, gated.",
+    "'claims' lists the docs/CLAIM_LEDGER.md rows that support the stage. The generator refuses a",
+    "stage above the ceiling implied by the weakest supporting grade (CLAIM_GRADE_MATURITY_CEILING),",
+    "so a capability cannot advertise a stage its own ledger rows contradict. Raising a stage here",
+    "without first raising the grade of its claims is therefore a CI failure, not an edit."
+  ],
+  "capabilities": [
+    {
+      "name": "mcts-search-semantics",
+      "stage": "tested",
+      "claims": ["CL-1", "CL-11"],
+      "notes": "Ceiling is 'tested' while CL-1 is FALSE: three of four engines disagree on the value perspective. Milestone E2."
+    },
+    {
+      "name": "graph-orchestration",
+      "stage": "integrated",
+      "claims": ["CL-2"],
+      "notes": "Typed checkpointed graph with runtime introspection endpoints; no artefact records a served structure."
+    },
+    {
+      "name": "domain-registry",
+      "stage": "integrated",
+      "claims": ["CL-3"],
+      "notes": "One adapter contract across three games; not exercisable on a default install."
+    },
+    {
+      "name": "self-play-training",
+      "stage": "integrated",
+      "claims": ["CL-4"],
+      "notes": "Trainer paths unit-tested. Cannot claim 'trains' until a convergence artefact exists. Milestone E3."
+    },
+    {
+      "name": "policy-lift-measurement",
+      "stage": "integrated",
+      "claims": ["CL-5"],
+      "notes": "One committed smoke artefact on a synthetic domain with a gameable reward; no cost denominator. Milestone E4."
+    },
+    {
+      "name": "system-benchmarking",
+      "stage": "integrated",
+      "claims": ["CL-6"],
+      "notes": "Cost and latency are recorded but quality is never normalised by them. Milestone E4."
+    },
+    {
+      "name": "checkpoint-promotion",
+      "stage": "imports",
+      "claims": ["CL-24"],
+      "notes": "No candidate-versus-champion gate exists; the arena in SelfPlayEvaluator has no caller. Milestone E5."
+    },
+    {
+      "name": "spec-driven-development",
+      "stage": "gated",
+      "claims": ["CL-7", "CL-8"],
+      "notes": "Spec traceability and deterministic doc validation both run in CI and have rejected changes."
+    },
+    {
+      "name": "operational-posture",
+      "stage": "integrated",
+      "claims": ["CL-9", "CL-10"],
+      "notes": "Fail-loud default is correct and tested; no artefact from a running container."
+    }
+  ]
+}
