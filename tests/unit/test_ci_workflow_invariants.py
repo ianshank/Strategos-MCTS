@@ -14,6 +14,8 @@ instead of quietly escaping it — a hardcoded list would rot on the first new j
 is the failure mode these tests exist to prevent.
 
 Spec: ``specs/hygiene_ci_mechanical.SPEC.md`` (AC-1, AC-3, AC-5, AC-8, AC-9, AC-11, AC-12).
+The supply-chain and privilege section at the end of the file comes instead from
+``specs/evidence_claim_ledger.SPEC.md`` AC-8.
 Each section below is headed with the AC it enforces.
 """
 
@@ -21,6 +23,7 @@ from __future__ import annotations
 
 import ast
 import configparser
+import json
 import re
 from fnmatch import fnmatch
 from pathlib import Path
@@ -32,6 +35,9 @@ import pytest
 # regression gate that silently skips itself when a dependency goes missing is exactly
 # the failure mode this module exists to catch.
 import yaml
+
+from src.config.constants import LLM_PROVIDER_CREDENTIAL_ENV_VARS
+from src.tools.action_pins import audit as pin_audit
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW_DIR = REPO_ROOT / ".github" / "workflows"
@@ -998,3 +1004,241 @@ def test_literal_collect_ignores_reads_the_real_guards() -> None:
     # `_require_or_ignore` appends through a variable, so its API-suite entries must
     # NOT appear here — that distinction is the whole point of the helper.
     assert not {Path(f).name for f in found} & set(PROTECTED_API_SUITES)
+
+
+# ============================================================================
+# Supply chain and privilege invariants
+# ============================================================================
+# Spec: specs/evidence_claim_ledger.SPEC.md AC-8.
+#
+# Every check below corresponds to a finding made while auditing this tree, not to a
+# generic hardening checklist. They are grouped here because they share one theme: what
+# a pull request from outside the repository is allowed to reach.
+
+
+def _job_pull_request_events(workflow: dict[str, Any], job: dict[str, Any]) -> bool:
+    """Whether ``job`` can execute on a pull-request event.
+
+    Two things have to be true: the workflow must be triggered by a PR event at all, and the
+    job's own ``if:`` must not exclude PR events. The second half matters — ``ci.yml``'s
+    ``rag-eval`` job carries provider keys but is gated to ``workflow_dispatch``/``schedule``,
+    and flagging it would be a false positive that trains people to ignore this test.
+    """
+    triggers = _triggers(workflow)
+    pr_triggers = {"pull_request", "pull_request_target"} & set(triggers)
+    if not pr_triggers:
+        return False
+
+    condition = str(job.get("if", ""))
+    if not condition:
+        return True
+
+    # An explicit exclusion settles it: `github.event_name != 'pull_request'`.
+    if re.search(r"github\.event_name\s*!=\s*'pull_request(_target)?'", condition):
+        return False
+
+    # An allow-list of events that does not include a PR event also settles it. This is how
+    # ci.yml's rag-eval job restricts itself to workflow_dispatch and schedule.
+    allowed_events = set(re.findall(r"github\.event_name\s*==\s*'([a-z_]+)'", condition))
+    if allowed_events:
+        return bool(allowed_events & pr_triggers)
+
+    # Anything else (a condition about branches, needs outputs, labels, ...) does not restrict
+    # the event, so the job must be assumed reachable from a pull request.
+    return True
+
+
+def _secret_references(node: Any) -> list[str]:
+    """Every ``secrets.NAME`` referenced anywhere inside a job definition, at any depth."""
+    return re.findall(r"secrets\.([A-Z0-9_]+)", json.dumps(node))
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("path", _workflow_files(), ids=lambda p: p.name)
+def test_no_workflow_uses_pull_request_target(path: Path) -> None:
+    """AC-8: ``pull_request_target`` runs with a *writable* token in the base-repo context.
+
+    Combined with a checkout of the PR head — the pattern people reach for to make it useful —
+    it executes untrusted code with write access to the repository. This tree does not use it
+    today; this test is what keeps it that way, because the trigger is frequently suggested as
+    the fix for "secrets are not available on fork PRs".
+    """
+    triggers = _triggers(_load(path))
+    assert "pull_request_target" not in triggers, (
+        f"{path.name} uses pull_request_target, which grants a writable token to a workflow "
+        "evaluated in the base-repo context. Use `pull_request` and accept that forks have no "
+        "secrets, or move the privileged half into a separate workflow_run workflow."
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("path", _workflow_files(), ids=lambda p: p.name)
+def test_every_workflow_declares_top_level_permissions(path: Path) -> None:
+    """AC-8: without a ``permissions:`` block, a job inherits the repository default.
+
+    On older repositories that default is write-all, so any compromised or merely careless
+    action step can push commits, publish packages, or edit releases. Declaring the block at the
+    top makes the grant explicit and makes each job-level widening visible in review.
+    """
+    workflow = _load(path)
+    permissions = workflow.get("permissions")
+    assert permissions is not None, (
+        f"{path.name} declares no top-level `permissions:` block, so its jobs inherit the "
+        "repository default token scope. Add `permissions: {contents: read}` and grant more "
+        "only on the specific jobs that need it."
+    )
+    assert permissions != "write-all", f"{path.name} grants write-all at the top level"
+
+
+@pytest.mark.unit
+def test_top_level_permissions_are_read_only() -> None:
+    """AC-8: the *default* grant is read-only; elevation is per job.
+
+    Asserted across all workflows at once so the failure message can list every offender rather
+    than surfacing them one parametrized case per run.
+    """
+    offenders: list[str] = []
+    for path in _workflow_files():
+        permissions = _load(path).get("permissions")
+        if not isinstance(permissions, dict):
+            continue
+        for scope, level in permissions.items():
+            if level not in ("read", "none"):
+                offenders.append(f"{path.name}: {scope}: {level}")
+    assert not offenders, (
+        "top-level permissions must be read-only; move write scopes onto the individual jobs "
+        f"that need them: {offenders}"
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("wf,job_id,job", _all_jobs(), ids=_job_ids())
+def test_pull_request_jobs_receive_no_provider_credentials(wf: str, job_id: str, job: dict[str, Any]) -> None:
+    """AC-8: a job that can run PR code must not hold paid provider credentials.
+
+    This is the concrete exfiltration path, not a hypothetical one: a job that both checks out
+    the pull request's code and exports ``OPENAI_API_KEY`` can be drained by a PR that adds one
+    step printing its environment. ``e2e_with_langsmith.yml`` was exactly this shape, which is
+    why its ``pull_request`` trigger was removed rather than its jobs re-gated one by one.
+    """
+    workflow = _load(WORKFLOW_DIR / wf)
+    if not _job_pull_request_events(workflow, job):
+        return
+
+    exposed = sorted(set(_secret_references(job)) & set(LLM_PROVIDER_CREDENTIAL_ENV_VARS))
+    assert not exposed, (
+        f"{wf}::{job_id} can run on a pull_request event and references {exposed}. Code proposed "
+        "in a pull request must never be handed paid provider credentials. Either gate the job on "
+        "`github.event_name != 'pull_request'`, or drop the workflow's pull_request trigger."
+    )
+
+
+@pytest.mark.unit
+def test_action_pin_ratchet_holds() -> None:
+    """AC-8: unpinned action references may only decrease.
+
+    A tag such as ``@v4`` is mutable, so a tag-pinned third-party action is an unreviewed
+    code-execution path into CI. The tree is not fully pinned yet, so rather than a gate that
+    would have to ship disabled, the committed baseline records where it stands and this test
+    forbids the number growing. See ``src/tools/action_pins.py`` for the rules.
+    """
+    report = pin_audit(REPO_ROOT)
+    assert report.ok, "action pin ratchet violated:\n" + "\n".join(f"  - {v}" for v in report.violations)
+
+
+@pytest.mark.unit
+def test_action_pin_baseline_covers_every_action_in_use() -> None:
+    """AC-8: the baseline is complete, so a newly introduced action cannot slip in unpinned.
+
+    Without this, an action absent from the baseline would be caught only by the ratchet's
+    unknown-action rule; asserting completeness here makes the intent explicit and gives a
+    clearer failure than a generic violation string.
+    """
+    report = pin_audit(REPO_ROOT)
+    uncovered = sorted(set(report.counts) - set(report.baseline))
+    assert (
+        not uncovered
+    ), f"these actions are used without a commit-SHA pin and are absent from the baseline: {uncovered}"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "label,triggers,condition,expected",
+    [
+        ("no PR trigger at all", {"push": None}, "", False),
+        ("PR trigger, unconditional job", {"pull_request": None}, "", True),
+        ("PR trigger, explicitly excluded", {"pull_request": None}, "github.event_name != 'pull_request'", False),
+        (
+            "PR trigger, allow-list of other events",
+            {"pull_request": None},
+            "github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'",
+            False,
+        ),
+        (
+            "PR trigger, allow-list that includes it",
+            {"pull_request": None},
+            "github.event_name == 'pull_request'",
+            True,
+        ),
+        (
+            "PR trigger, condition unrelated to the event",
+            {"pull_request": None},
+            "needs.check-secrets.outputs.has_langsmith == 'true'",
+            True,
+        ),
+        ("PR trigger, branch condition only", {"pull_request": None}, "github.ref == 'refs/heads/main'", True),
+        ("pull_request_target counts as a PR trigger", {"pull_request_target": None}, "", True),
+    ],
+)
+def test_pull_request_reachability_helper(label: str, triggers: dict, condition: str, expected: bool) -> None:
+    """AC-8: the credential invariant is only as good as its reachability analysis.
+
+    Pinned with a table because the interesting cases are the *exemptions*: if this helper were
+    too eager, ci.yml's dispatch-gated rag-eval job would fail the credential check and the test
+    would get deleted; if it were too lax, the check would pass vacuously. Both failure modes are
+    silent without this table.
+    """
+    job: dict[str, Any] = {"if": condition} if condition else {}
+    assert _job_pull_request_events({"on": triggers}, job) is expected, label
+
+
+@pytest.mark.unit
+def test_credential_invariant_would_catch_a_reintroduced_exposure() -> None:
+    """AC-8: falsifies the credential check rather than trusting that it passes.
+
+    Reconstructs the shape ``e2e_with_langsmith.yml`` had before this change — a PR-triggered
+    workflow whose job exports ``OPENAI_API_KEY`` — and asserts the analysis flags it. Without
+    this, a helper that silently returned "not reachable" would make the real test green forever.
+    """
+    workflow = {"on": {"pull_request": {"branches": ["main"]}}}
+    job = {"steps": [{"name": "run", "env": {"OPENAI_API_KEY": "${{ secrets.OPENAI_API_KEY }}"}}]}
+
+    assert _job_pull_request_events(workflow, job) is True
+    exposed = set(_secret_references(job)) & set(LLM_PROVIDER_CREDENTIAL_ENV_VARS)
+    assert exposed == {"OPENAI_API_KEY"}
+
+
+@pytest.mark.unit
+def test_secret_reference_scan_reaches_nested_definitions() -> None:
+    """AC-8: secrets appear in step env, job env, and `with:` inputs — all must be visible."""
+    job = {
+        "env": {"A": "${{ secrets.WANDB_API_KEY }}"},
+        "steps": [
+            {"with": {"token": "${{ secrets.ANTHROPIC_API_KEY }}"}},
+            {"env": {"B": "${{ secrets.CODECOV_TOKEN }}"}},
+        ],
+    }
+    assert set(_secret_references(job)) == {"WANDB_API_KEY", "ANTHROPIC_API_KEY", "CODECOV_TOKEN"}
+
+
+@pytest.mark.unit
+def test_e2e_langsmith_workflow_has_no_pull_request_trigger() -> None:
+    """AC-8: pins the specific fix, so a well-meaning "restore PR coverage" edit fails loudly.
+
+    The generic credential invariant above would also catch it, but only while the job keeps
+    referencing a provider key. This asserts the decision itself.
+    """
+    triggers = _triggers(_load(WORKFLOW_DIR / "e2e_with_langsmith.yml"))
+    assert "pull_request" not in triggers
+    assert "pull_request_target" not in triggers
+    assert "push" in triggers, "removing the PR trigger must not leave the suite with no automatic trigger"

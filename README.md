@@ -84,7 +84,7 @@ graph TB
 
 ### 📊 Observability & RAG
 - **RAG Integration**: Pinecone vector database for retrieving domain knowledge.
-- **Experiment Tracking**: Full integration with Weights & Biases.
+- **Experiment Tracking**: Weights & Biases integration, guarded so runs work with tracking disabled (`CL-19` in [`docs/CLAIM_LEDGER.md`](docs/CLAIM_LEDGER.md)). Unit-tested with W&B off; no committed run artefact yet.
 - **Production Monitoring**: Prometheus/Grafana metrics for latency, memory, and model performance.
 
 ### 🔌 Serving, Streaming & Visualization
@@ -98,7 +98,7 @@ graph TB
 
 ### 🔁 Neural Self-Play & Fast Gameplay (M5+)
 - **Generalized `SelfPlayTrainer`** (`src/training/self_play_trainer.py`) supporting DistributedDataParallel (DDP), FP16 mixed precision, `torch.compile`, pinned memory, and non-pickle checkpoint sidecars.
-- **Fast Gameplay Domains** (`docs/GAME_DOMAINS.md`): Connect Four (`src/games/connect_four/`), Othello / Reversi (`src/games/othello/`), Chess, and single-agent reasoning/planning domains with zero required C dependencies.
+- **Fast Gameplay Domains** (`docs/GAME_DOMAINS.md`): Connect Four (`src/games/connect_four/`), Othello / Reversi (`src/games/othello/`), Chess, and single-agent reasoning/planning domains. NumPy and PyTorch are required to import the domains today — the `neural` extra is not optional for gameplay (`CL-24` in [`docs/CLAIM_LEDGER.md`](docs/CLAIM_LEDGER.md)).
 - **GPU Hardware Introspection** (`docs/GPU_TRAINING_GUIDE.md`): `src/utils/gpu_utils.py` for pre-flight memory validation, `GPUMemoryTracker`, and CUDA allocation fraction enforcement.
 - **Operational Training Profiles**: `--profile {smoke,dev,full}` presets for instant plumbing validation, dev testing, and full self-play training.
 - **Policy-comparison benchmark** (`src/benchmark/policy_comparison.py`) with a domain-type-aware decision-quality lift metric and a **meta-controller learning loop** (`docs/META_CONTROLLER_TRAINING.md`).

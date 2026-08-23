@@ -5,6 +5,41 @@ Newest first.
 
 ---
 
+## 2026-08-22 — `DEPLOYMENT_ENV` and the fail-loud posture refusal (`evidence_claim_ledger`)
+
+`Settings` gains a `DEPLOYMENT_ENV` field (one of `development`, `test`, `staging`, `production`;
+default `development`) and a model validator, `validate_fail_loud_posture`.
+
+### Two new startup errors
+
+1. **An unrecognised `DEPLOYMENT_ENV` value is rejected.** Previously no such setting existed, so
+   a typo in a manifest was impossible; now `DEPLOYMENT_ENV=prod` fails at construction rather
+   than being silently treated as non-production. Use the exact literal `production`.
+2. **`ALLOW_MOCK_LLM_FALLBACK=true` is refused when `DEPLOYMENT_ENV` is `staging` or `production`.**
+   The error names the remedy. Previously the flag was honoured everywhere, so a staging deployment
+   could serve mock output that was indistinguishable from a real answer.
+
+### Who is affected
+
+**No existing deployment changes behaviour on upgrade.** The default is `development`, no manifest
+in the tree declares the variable, and the refusal only binds once it is declared. This is the
+migration's deliberate limit and it is recorded honestly: `CL-9` in `docs/CLAIM_LEDGER.md` stays
+`PARTIAL`, not `PROVEN`, because an operator who never sets `DEPLOYMENT_ENV` still gets the
+permissive posture.
+
+**Action required for production operators:** set `DEPLOYMENT_ENV=production` in your deployment
+environment (Docker `-e`, k8s `env:`, or Space secret) and leave `ALLOW_MOCK_LLM_FALLBACK` unset.
+If a startup error appears after doing so, it is reporting a pre-existing misconfiguration that was
+previously silent.
+
+### Not a breaking change for tests
+
+`DEPLOYMENT_ENV` is unset in the test environment, so the permissive branch applies and existing
+fixtures that enable the mock fallback continue to work. Tests that need the strict behaviour set
+the variable explicitly — see `tests/unit/config/test_fail_loud_posture.py`.
+
+---
+
 ## 2026-07-31 — MCTS negamax value-semantics fix (`hygiene_mcts_value_semantics`)
 
 Fixes three proven, executable-proof-verified selection bugs in

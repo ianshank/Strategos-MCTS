@@ -427,3 +427,219 @@ DEFAULT_APP_VERSION: Final[str] = "2025-11-25-FIX-REDUX"
 # answer — the prior implementation returned hardcoded confidences under a banner
 # advertising trained models.
 DEGRADED_RESPONSE_PREFIX: Final[str] = "⚠️ **Degraded mode.**"
+
+# ============================================================================
+# Evidence Ledger (docs/CLAIM_LEDGER.md)
+# ============================================================================
+
+# Grade vocabulary for capability claims. Lives here rather than in the
+# validator so the ledger's own prose, the validator, and the status artifact
+# generator cannot disagree about what grades exist.
+CLAIM_GRADE_PROVEN: Final[str] = "PROVEN"
+CLAIM_GRADE_PARTIAL: Final[str] = "PARTIAL"
+CLAIM_GRADE_UNPROVEN: Final[str] = "UNPROVEN"
+CLAIM_GRADE_FALSE: Final[str] = "FALSE"
+
+# Ordered worst-to-best so report output is stable and comparisons are total.
+CLAIM_GRADES: Final[tuple[str, ...]] = (
+    CLAIM_GRADE_FALSE,
+    CLAIM_GRADE_UNPROVEN,
+    CLAIM_GRADE_PARTIAL,
+    CLAIM_GRADE_PROVEN,
+)
+
+# The promotion rule of docs/plans/EVIDENCE_FIRST_PROGRAM.md section 4 (R1),
+# expressed as data: PROVEN is the only grade that requires a resolvable
+# evidence artefact, and there is deliberately no flag that relaxes it.
+CLAIM_GRADES_REQUIRING_EVIDENCE: Final[tuple[str, ...]] = (CLAIM_GRADE_PROVEN,)
+
+# Grades that assert something is missing or wrong must say what, in Notes, or
+# the ledger degrades into an unactionable list of adjectives.
+CLAIM_GRADES_REQUIRING_NOTES: Final[tuple[str, ...]] = (
+    CLAIM_GRADE_PARTIAL,
+    CLAIM_GRADE_UNPROVEN,
+    CLAIM_GRADE_FALSE,
+)
+
+# Grades that require a runnable verification command.
+CLAIM_GRADES_REQUIRING_VERIFY: Final[tuple[str, ...]] = (
+    CLAIM_GRADE_PROVEN,
+    CLAIM_GRADE_PARTIAL,
+)
+
+# A FALSE row must cite where the tree contradicts the claim. A bare "file.py"
+# is not a citation; a line anchor or a rooted path is.
+CLAIM_FALSE_CITATION_MIN_TOKENS: Final[int] = 1
+
+CLAIM_ID_PREFIX: Final[str] = "CL-"
+
+# Sentinel meaning "this cell asserts no path or command". Chosen as a single
+# ASCII hyphen so it survives copy/paste and diffing; an em dash would not.
+CLAIM_CELL_EMPTY_SENTINEL: Final[str] = "-"
+
+CLAIM_LEDGER_RELATIVE_PATH: Final[str] = "docs/CLAIM_LEDGER.md"
+
+# Header cells of a ledger table, in order. A table whose header does not match
+# exactly is not treated as a ledger table, so the document can carry
+# explanatory tables (the Grades legend) without confusing the parser.
+CLAIM_LEDGER_COLUMNS: Final[tuple[str, ...]] = (
+    "Id",
+    "Claim",
+    "Source",
+    "Grade",
+    "Verify",
+    "Evidence",
+    "Notes",
+)
+
+# ----------------------------------------------------------------------------
+# Claim-surface coverage ratchet
+# ----------------------------------------------------------------------------
+# The ledger is only trustworthy if it is complete: a capability bullet added to
+# a reader-facing surface without a ledger row would be an ungraded claim. The
+# ratchet measures the gap per surface and refuses to let it grow, mirroring the
+# GitHub Actions pin ratchet above.
+CLAIM_SURFACE_BASELINE_RELATIVE_PATH: Final[str] = "docs/claim_surface_baseline.json"
+
+CLAIM_SURFACE_BASELINE_SCHEMA_VERSION: Final[int] = 1
+
+# A claim-shaped bullet is a list item whose first token is bold. Both surfaces
+# use that convention for capability bullets and plain bullets for prose asides,
+# so the pattern separates claims from commentary without a curated list.
+CLAIM_SURFACE_BULLET_PATTERN: Final[str] = r"^[ \t]*[-*][ \t]+\*\*"
+
+# Baseline keys, named so a stale file fails loudly instead of defaulting to 0.
+CLAIM_SURFACE_KEY_SURFACES: Final[str] = "surfaces"
+CLAIM_SURFACE_KEY_PATH: Final[str] = "path"
+CLAIM_SURFACE_KEY_SECTION: Final[str] = "section"
+CLAIM_SURFACE_KEY_SURPLUS: Final[str] = "ungraded_surplus"
+CLAIM_SURFACE_KEY_BULLETS: Final[str] = "claim_bullets"
+CLAIM_SURFACE_KEY_ROWS: Final[str] = "ledger_rows"
+
+
+# ============================================================================
+# Status Artifact (artifacts/status.json)
+# ============================================================================
+
+STATUS_ARTIFACT_RELATIVE_PATH: Final[str] = "artifacts/status.json"
+
+# Bumped whenever the artifact's shape changes in a way a consumer would notice.
+STATUS_ARTIFACT_SCHEMA_VERSION: Final[int] = 1
+
+# How a reported result was produced. Required on every result entry: an
+# artifact that omits provenance cannot be distinguished from a mock run, which
+# is the failure mode this whole subsystem exists to prevent.
+EVIDENCE_PROVENANCE_MOCK: Final[str] = "mock"
+EVIDENCE_PROVENANCE_STATIC: Final[str] = "static-analysis"
+EVIDENCE_PROVENANCE_RANDOM_WEIGHTS: Final[str] = "random-weights"
+EVIDENCE_PROVENANCE_TRAINED_WEIGHTS: Final[str] = "trained-weights"
+
+EVIDENCE_PROVENANCES: Final[tuple[str, ...]] = (
+    EVIDENCE_PROVENANCE_MOCK,
+    EVIDENCE_PROVENANCE_STATIC,
+    EVIDENCE_PROVENANCE_RANDOM_WEIGHTS,
+    EVIDENCE_PROVENANCE_TRAINED_WEIGHTS,
+)
+
+# Capability maturity ladder, weakest to strongest. "tested" means unit-tested
+# in isolation; "gated" means a promotion gate has rejected at least one
+# candidate. The ladder is ordered so a capability's stage is a single index.
+CAPABILITY_MATURITY_STAGES: Final[tuple[str, ...]] = (
+    "imports",
+    "tested",
+    "integrated",
+    "trains",
+    "benchmarked",
+    "gated",
+)
+
+# Optional-dependency extras probed when recording the environment, mapped to a
+# representative import name. Declared as data so adding an extra is a one-line
+# change and the prober needs no per-extra branch.
+OPTIONAL_EXTRA_PROBE_MODULES: Final[tuple[tuple[str, str], ...]] = (
+    ("neural", "torch"),
+    ("api", "fastapi"),
+    ("dev", "pytest"),
+)
+
+# Per-grade ceiling on the maturity stage a capability may claim. A capability
+# whose supporting claims include a contradicted (FALSE) row cannot honestly be
+# described as integrated, however much of it is unit-tested; a PARTIAL row
+# cannot support "benchmarked". PROVEN imposes no ceiling. Expressed as data so
+# the rule is auditable in one place instead of encoded in the generator.
+CLAIM_GRADE_MATURITY_CEILING: Final[tuple[tuple[str, str], ...]] = (
+    (CLAIM_GRADE_FALSE, "tested"),
+    (CLAIM_GRADE_UNPROVEN, "integrated"),
+    (CLAIM_GRADE_PARTIAL, "integrated"),
+    (CLAIM_GRADE_PROVEN, CAPABILITY_MATURITY_STAGES[-1]),
+)
+
+# Declarative capability -> stage map consumed by src/tools/status_artifact.py.
+CAPABILITY_MATURITY_RELATIVE_PATH: Final[str] = "docs/capability_maturity.json"
+
+# Key under which the coverage gate threshold lives in pyproject.toml, as a
+# dotted path. Read rather than duplicated so the artifact can never disagree
+# with the enforced gate.
+COVERAGE_GATE_PYPROJECT_PATH: Final[tuple[str, ...]] = ("tool", "coverage", "report", "fail_under")
+
+# ============================================================================
+# Deployment Posture
+# ============================================================================
+
+# Names the operator may give the deployment target. Kept as data so the safety
+# validator in src/config/settings.py has one list to consult rather than a
+# string comparison scattered across call sites.
+DEPLOYMENT_ENV_DEVELOPMENT: Final[str] = "development"
+DEPLOYMENT_ENV_TEST: Final[str] = "test"
+DEPLOYMENT_ENV_STAGING: Final[str] = "staging"
+DEPLOYMENT_ENV_PRODUCTION: Final[str] = "production"
+
+# Default is the permissive one on purpose: introducing this field must not
+# change the behaviour of any existing deployment. A deployment only becomes
+# subject to the production rules below when an operator says it is production.
+DEFAULT_DEPLOYMENT_ENV: Final[str] = DEPLOYMENT_ENV_DEVELOPMENT
+
+DEPLOYMENT_ENVS: Final[tuple[str, ...]] = (
+    DEPLOYMENT_ENV_DEVELOPMENT,
+    DEPLOYMENT_ENV_TEST,
+    DEPLOYMENT_ENV_STAGING,
+    DEPLOYMENT_ENV_PRODUCTION,
+)
+
+# Environments in which serving mock model output would be a correctness
+# incident rather than a convenience. CHARTER.md's fail-loud posture was
+# previously a *default* an operator could override with one env var; in these
+# environments the override is refused at construction time instead.
+FAIL_LOUD_ENFORCED_ENVS: Final[tuple[str, ...]] = (
+    DEPLOYMENT_ENV_STAGING,
+    DEPLOYMENT_ENV_PRODUCTION,
+)
+
+# ============================================================================
+# GitHub Actions Supply-Chain Pinning
+# ============================================================================
+
+WORKFLOW_DIR_RELATIVE_PATH: Final[str] = ".github/workflows"
+WORKFLOW_FILE_GLOBS: Final[tuple[str, ...]] = ("*.yml", "*.yaml")
+
+# A git commit SHA is 40 hex characters. Short SHAs are excluded deliberately: they are
+# ambiguous and GitHub does not treat them as immutable references.
+ACTION_PIN_SHA_LENGTH: Final[int] = 40
+
+# `uses: ./path` is a composite action inside this repository and `uses: docker://image`
+# is a container reference; neither is a tag-mutable third-party action fetched from a
+# registry outside our control, so the pin ratchet does not apply to them.
+ACTION_USES_LOCAL_PREFIXES: Final[tuple[str, ...]] = ("./", "../", "docker://")
+
+ACTION_PIN_BASELINE_RELATIVE_PATH: Final[str] = ".github/action_pin_baseline.json"
+ACTION_PIN_BASELINE_SCHEMA_VERSION: Final[int] = 1
+
+# Environment variables that carry paid model-provider credentials. Named centrally so the
+# CI invariant that forbids exposing them to pull-request code, and any future redaction
+# helper, agree on one list rather than each keeping its own.
+LLM_PROVIDER_CREDENTIAL_ENV_VARS: Final[tuple[str, ...]] = (
+    "ANTHROPIC_API_KEY",
+    "LANGSMITH_API_KEY",
+    "OPENAI_API_KEY",
+    "WANDB_API_KEY",
+)

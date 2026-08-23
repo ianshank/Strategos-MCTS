@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "_README": "Ungraded claim-surface surplus per reader-facing surface. A claim-shaped bullet is a list item whose first token is bold. 'ungraded_surplus' is the gated number: it may only decrease, and slack means the baseline is stale. The surface list is curated by hand; regeneration only refreshes the counts of surfaces already declared here. Regenerate with: make claims-baseline",
+  "surfaces": [
+    {
+      "path": "CHARTER.md",
+      "section": "2. Mission",
+      "claim_bullets": 10,
+      "ledger_rows": 10,
+      "ungraded_surplus": 0
+    },
+    {
+      "path": "README.md",
+      "section": "Key Features",
+      "claim_bullets": 22,
+      "ledger_rows": 17,
+      "ungraded_surplus": 5
+    }
+  ]
+}
