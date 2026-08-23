@@ -1,5 +1,25 @@
 # Next-Steps Implementation Plan — 2026 H2
 
+> ## ⚠️ Re-gated 2026-08-22 — read `docs/plans/EVIDENCE_FIRST_PROGRAM.md` first
+>
+> This document remains the charter-designated home of the *sequenced work* axis, but the phased
+> roadmap in §2 below is **no longer the next work**. It is re-gated behind the Evidence-First
+> Program, which sequences milestones E0–E5: a machine-checked claim ledger, unified MCTS value
+> semantics, a Connect Four golden path, a cost-normalised Pareto report, and a promotion gate that
+> has demonstrably rejected a checkpoint.
+>
+> The reason is specific, not stylistic. An audit of the tree found that the three classic MCTS
+> engines implement three mutually inconsistent value-perspective conventions while `CHARTER.md` §2
+> asserts they agree; that no candidate-versus-champion promotion gate exists anywhere in the tree,
+> so every self-play checkpoint is promoted by default; and that no comparison in the repository is
+> cost-normalised or includes a no-search arm. Each Phase below multiplies the cost of a wrong
+> answer the current tree cannot detect. See `docs/plans/EVIDENCE_FIRST_PROGRAM.md` §1 and §2 for
+> the evidence, and §8 for this program's own kill criteria.
+>
+> **Nothing below is cancelled.** Phase 1.2 onward resumes when the E5 promotion gate has fired at
+> least one live rejection. At that point distributed self-play has a referee, inference
+> optimisation has a denominator, and architecture changes have an acceptance test.
+>
 > **Implementation Progress (Updated 2026-07-23):**
 > Phases 0–5 from the early H2 roadmap (tech debt cleanup, coverage baselining, Gradio UI, single-node GPU training, and ADK integration) have been **successfully implemented and merged**. For current test/coverage figures see `docs/STATUS.md` (the source of truth; re-measured 2026-07-25 after the code-hygiene pass). The `SelfPlayTrainer` and `UnifiedTrainingOrchestrator` are stable on single-GPU (AMP, `torch.compile`). 
 > 

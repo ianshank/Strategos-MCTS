@@ -2,7 +2,7 @@
 id: hygiene_determinism
 goal: One rank-aware seeding utility; reproducible Dirichlet root noise
 module: src/utils/
-status: draft
+status: approved
 ---
 
 # Goal

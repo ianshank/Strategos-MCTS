@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Evidence-First Program: roadmap re-gated behind a claim ledger
+
+Spec: `specs/evidence_claim_ledger.SPEC.md` (schema v2, approved).
+
+An audit of the tree ahead of the H2 scaling roadmap found three findings that make the roadmap's
+sequencing unsafe rather than merely ambitious, and one documentation claim that is false:
+
+- The four MCTS engines implement three mutually inconsistent value-perspective conventions.
+  `core.MCTSNode.backpropagate` never negates; `parallel_mcts` and `progressive_widening` gate
+  *selection* on their `two_player` flag but negate on *backup* unconditionally, so a
+  `two_player=False` single-agent search silently runs a negamax backup. Only `neural_mcts` is
+  self-consistent. `CHARTER.md` §2's engine-agreement claim is therefore **false as written**, and
+  is recorded as such in the new ledger rather than quietly corrected.
+- No candidate-versus-champion promotion gate exists anywhere in the tree. `SelfPlayEvaluator`
+  (`src/training/agent_trainer.py`) is a working arena with an `is_better` verdict that no caller
+  invokes, so every self-play checkpoint is promoted by default.
+- No comparison in the repository is cost-normalised, and none includes a no-search arm, so the
+  project cannot currently attribute a win to search rather than to spend.
+
+The first two were already named in existing draft specs (`hygiene_mcts_value_semantics`,
+`hygiene_mcts_engines`); the failure was sequencing, not analysis.
+
+#### Added
+
+- **`docs/plans/EVIDENCE_FIRST_PROGRAM.md`.** Milestones E0–E5 with an explicit evidence-chain
+  contract (reproducibility, cost-normalisation, adversarial verification, separation of duties),
+  a peer review of the external council review that prompted it — including two of its claims this
+  audit found to be **wrong** — and kill criteria for the program itself.
+- **`docs/CLAIM_LEDGER.md`.** Thirty rows covering every `CHARTER.md` §2 mission bullet and README
+  capability bullet, each graded `PROVEN` / `PARTIAL` / `UNPROVEN` / `FALSE` with a verification
+  command and an evidence path. `PROVEN` requires a resolvable artifact, so the grade cannot be
+  awarded by editing prose.
+- **`specs/evidence_claim_ledger.SPEC.md`.** The one new spec this program authors; E1's contract
+  for the ledger validator, the provenance-stamped `artifacts/status.json` generator, the new CI
+  workflow invariants, and the mock-fallback refusal in production configurations.
+
+#### Changed
+
+- **`docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`.** Phase 1.2 onward (distributed self-play,
+  MuZero/EfficientZero, inference optimisation, enterprise DX) is re-gated behind E5 rather than
+  cancelled, and the document now delegates the sequenced-work axis to the program plan above. No
+  second planning system is introduced: `CHARTER.md` §3's one-plan rule still holds, with
+  `docs/STATUS.md` remaining the sole source of measured test and coverage figures.
+
 ### Hugging Face install/configure hardening
 
 `huggingface_hub` was previously only a transitive dependency (via `datasets` /

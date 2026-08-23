@@ -1,0 +1,77 @@
+# Claim Ledger
+
+> **Purpose.** Every capability claim this project makes in public prose (`README.md`) or in its
+> governing document (`CHARTER.md` §2) gets exactly one row here, graded against executable
+> evidence. This file is the machine-checked expression of `CHARTER.md` §1: "the difference between
+> *built* and *proven* is never blurred."
+>
+> **This file is validated, not trusted.** `claim-ledger` (engine: `src/tools/claim_ledger.py`)
+> parses it, checks the schema, resolves every cited path, and enforces the promotion rule below.
+> CI fails on any error. Editing a grade by hand does not change what the tree can prove.
+>
+> **Governing plan:** `docs/plans/EVIDENCE_FIRST_PROGRAM.md` §4 (the evidence-chain contract).
+
+## Grades
+
+| Grade | Meaning | Requirement enforced by the validator |
+|---|---|---|
+| `PROVEN` | A named command reproduces the claim from this tree, and an evidence artefact exists. | `Verify` non-empty **and** `Evidence` resolves on disk. |
+| `PARTIAL` | Some component of the claim is demonstrated; the whole is not. | `Verify` non-empty; `Notes` must state what is missing. |
+| `UNPROVEN` | Code exists; no command demonstrates the claimed outcome. | `Verify` may be `-`; `Notes` must state the missing link. |
+| `FALSE` | The tree contradicts the claim. | `Notes` must cite the contradicting location. |
+
+**Promotion rule (R1).** A row may only reach `PROVEN` when the validator can resolve its evidence
+artefact at the recorded commit. `PROVEN` is therefore a derived grade — an author cannot assert
+it. Grade changes are reserved to the `eval-warden` agent, which may not write under `src/`
+(`docs/plans/EVIDENCE_FIRST_PROGRAM.md` §4 R4).
+
+**Column contract.** `Id` matches `CL-<n>` and is unique. `Source` is the repo-relative file whose
+prose makes the claim. `Verify` is a single shell command runnable from the repository root, or `-`.
+`Evidence` is a repo-relative artefact path, or `-`.
+
+---
+
+## Charter §2 mission bullets
+
+| Id | Claim | Source | Grade | Verify | Evidence | Notes |
+|---|---|---|---|---|---|---|
+| CL-1 | Neural MCTS search with correct game-theoretic semantics, with negamax sign handling and PUCT selection that agree across the core, parallel, and progressive-widening engines. | CHARTER.md | FALSE | `pytest tests/unit/framework/mcts/test_value_semantics_regression.py -q` | - | Contradicted by the tree. `src/framework/mcts/core.py:377-393` never negates on backup and has no `two_player` knob; `src/framework/mcts/parallel_mcts.py:535-539` and `src/framework/mcts/progressive_widening.py:470-471` negate unconditionally while their selection honours `two_player` (`parallel_mcts.py:492`, `progressive_widening.py:350`). Only `NeuralMCTS` is self-consistent. The existing regression test passes because both engines are only exercised in their default two-player configuration. Cleared by milestone E2. |
+| CL-2 | LangGraph orchestration with introspection: a typed, checkpointed agent graph whose structure is inspectable at runtime. | CHARTER.md | PARTIAL | `pytest tests/unit/api -q -k graph` | - | The endpoints exist and are on by default in `src/api/rest_server.py`; the demo clause in the charter is a manual `GET`, not a command with an exit code. Missing link: no artefact records a served graph structure for a known commit. |
+| CL-3 | Multi-domain play through a domain registry: Connect Four, Othello, and Chess register against one adapter contract. | CHARTER.md | PARTIAL | `pytest tests/unit/framework/mcts/test_domain_adapters.py -q` | - | Registration and the adapter contract are tested. Missing link: the registry test itself needs the `neural` extra, and `src/games/connect_four/state.py:5-13` imports NumPy and Torch unconditionally, so no domain is exercisable on the default install. |
+| CL-4 | Self-play training on one node: a generalized self-play trainer supporting DDP, mixed precision, and compiled models. | CHARTER.md | PARTIAL | `pytest tests/unit/training -q -k self_play` | - | The trainer and its DDP/AMP/compile paths are unit-tested. Missing link: no run artefact demonstrates convergence, and `src/training/self_play_convergence.py:279-338` states it never computes lift. |
+| CL-5 | Policy-improvement measurement: a decision-quality lift metric that says what search actually bought. | CHARTER.md | PARTIAL | `python -m src.benchmark.policy_lift --help` | benchmarks/results/reasoning_smoke_lift.json | The harness runs and one artefact is committed, but that artefact is a synthetic-domain smoke result whose own module documents the reward as gameable. Missing link: no adversarial-domain lift artefact, and no cost denominator. Cleared by E4. |
+| CL-6 | System-versus-system benchmarking: a harness that scores different agent systems on a shared task set. | CHARTER.md | PARTIAL | `python -m src.benchmark --dry-run` | - | Dry-run works and cost/latency are recorded per `src/benchmark/evaluation/cost_calculator.py:33-98`. Missing link: quality is never normalised by cost (`src/benchmark/evaluation/harness.py:275-294`), and there is no committed cross-system artefact. |
+| CL-7 | Spec-driven development toolchain: every change under `src/` is traceable to a written contract, mechanically. | CHARTER.md | PROVEN | `harness validate-spec specs/charter_alignment.SPEC.md` | specs/charter_alignment.SPEC.md | Enforced in CI by `harness spec-trace` against the PR diff; the rule set is implemented in `src/framework/harness/intent/spec_trace.py`. |
+| CL-8 | Deterministic documentation validation: documentation claims are checked against the tree, not trusted. | CHARTER.md | PROVEN | `python -m src.tools.context_docs` | src/tools/context_docs.py | Exit 0 means every cited path and pinned value still holds; wrapped by `tests/unit/tools/test_context_docs.py`. |
+| CL-9 | Fail-loud operational posture: with the mock-LLM fallback unset, the service errors rather than silently serving mock output. | CHARTER.md | PARTIAL | `pytest tests/unit/test_framework_service.py -q` | - | The default is correct: `src/config/settings.py:421-428` defaults `ALLOW_MOCK_LLM_FALLBACK` to false and `src/api/framework_service.py:301-327` raises when unset. Missing link: nothing structurally prevents an operator setting it true in production. `Dockerfile.space:66-80` documents the flag as unset rather than enforcing it. Cleared by E1. |
+| CL-10 | Operational observability: liveness, readiness, and Prometheus metrics endpoints. | CHARTER.md | PARTIAL | `pytest tests/unit/api -q -k health` | - | Endpoints are implemented in `src/api/rest_server.py` and unit-tested. Missing link: no artefact from a running container. |
+
+## README capability bullets
+
+| Id | Claim | Source | Grade | Verify | Evidence | Notes |
+|---|---|---|---|---|---|---|
+| CL-11 | HRM (Hierarchical Reasoning Module): DeBERTa-based agent for complex problem decomposition. | README.md | UNPROVEN | - | - | The module exists under `src/agents/`. Missing link: no benchmark shows decomposition quality, and the published ARC-Prize ablations make the architectural premise contestable. Scheduled as an E4 ablation arm with refinement steps swept and architecture held fixed. |
+| CL-12 | TRM (Task Refinement Module): iterative agent for refining and optimizing solutions. | README.md | UNPROVEN | - | - | As CL-11. The external analysis of the reference TRM checkpoint attributes most measured gain to test-time augmentation and voting rather than recursion, so the refinement-step sweep is the falsifying experiment. |
+| CL-13 | Neural MCTS: AlphaZero-style tree search guided by policy/value networks. | README.md | PARTIAL | `pytest tests/unit/test_neural_mcts_signs.py -q` | - | Sign semantics and PUCT are tested for `NeuralMCTS` specifically. Missing link: no run shows search improving on the raw network policy. Cleared by E2 (invariant) and E4 (measurement). |
+| CL-14 | Meta-Controller: neural router (GRU/BERT) that dynamically assigns tasks to the best agent. | README.md | UNPROVEN | - | - | Trainer and data collector exist per `src/training/meta_controller_data_collector.py`. Missing link: no measurement that routing beats a fixed assignment. |
+| CL-15 | Deep Research Agent Swarm: multi-agent literature discovery pipeline (Planner, Fetcher, Critic, Synthesizer). | README.md | PARTIAL | `ls .claude/agents` | .claude/agents/research-planner.md | The four agent definitions are committed and the command exists at `.claude/commands/deep-research.md`. Missing link: no evaluation of output quality; this is tooling, not a measured capability. |
+| CL-16 | Multi-GPU distributed training: PyTorch DistributedDataParallel via `torchrun` with rank-0 I/O fencing. | README.md | PARTIAL | `pytest tests/unit/utils -q -k distributed` | - | `src/utils/distributed.py` is unit-tested including rank-0 fencing. Missing link: no multi-GPU scaling measurement; the roadmap's own ">80% linear scaling to 4 GPUs" target has never been run. |
+| CL-17 | Docker support: fully containerized training and inference environments. | README.md | PARTIAL | `docker build -f Dockerfile .` | - | Four Dockerfiles build in CI. Missing link: no artefact shows a trained result produced inside a container. |
+| CL-18 | RAG integration: Pinecone vector database for retrieving domain knowledge. | README.md | UNPROVEN | - | - | Client code and evaluation docs exist. Missing link: retrieval quality is unmeasured, and the path requires external credentials, so it is untestable in CI by construction. |
+| CL-19 | Experiment tracking: full integration with Weights and Biases. | README.md | PARTIAL | `pytest tests/unit -q -k wandb` | - | Guarded integration is unit-tested with W&B disabled. Missing link: "full integration" is stronger than the tree supports; `CHARTER.md` §2 lists MLflow tracking as named-but-not-a-capability, and the README wording should be narrowed to match. |
+| CL-20 | Production monitoring: Prometheus/Grafana metrics for latency, memory, and model performance. | README.md | PARTIAL | `pytest tests/unit -q -k prometheus` | - | Metrics registration is tested and the double-registration defect is fixed per `docs/STATUS.md`. Missing link: no dashboard or scrape artefact is committed under `monitoring/`. |
+| CL-21 | Streaming: token and node-level LangGraph event streaming over SSE. | README.md | PARTIAL | `pytest tests/unit/api -q -k streaming` | - | Implemented in `src/api/streaming.py` behind `ENABLE_STREAMING` and unit-tested. Missing link: no end-to-end artefact. |
+| CL-22 | MCTS versus single-shot comparison available from the API, the demo, and the Gradio UI. | README.md | PARTIAL | `pytest tests/unit -q -k compare` | - | The surface exists behind `ENABLE_DEMO_COMPARISON`. Missing link: the comparison produces no cost-normalised, interval-bearing result — it is a demo, not a measurement. Cleared by E4. |
+| CL-23 | Generalized `SelfPlayTrainer` supporting DDP, FP16 mixed precision, `torch.compile`, pinned memory, and non-pickle checkpoint sidecars. | README.md | PARTIAL | `pytest tests/unit/training -q -k self_play_trainer` | - | Every listed mechanism is present and tested at the component level in `src/training/self_play_trainer.py`. Missing link: no candidate-versus-champion promotion gate exists anywhere in the loop, so no checkpoint is ever refused. Cleared by E5. |
+| CL-24 | Fast gameplay domains — Connect Four, Othello, Chess, and single-agent reasoning/planning — with zero required C dependencies. | README.md | FALSE | `python -c "import src.games.connect_four"` | - | The "zero required C dependencies" qualifier is contradicted: `src/games/connect_four/state.py:5-13` imports NumPy and Torch unconditionally and `src/games/connect_four/__init__.py:5-12` re-exports the state, so the package fails to import on a `[dev,api]` install. The intended meaning is presumably "no Stockfish or python-chess build step"; the wording must be narrowed. |
+| CL-25 | GPU hardware introspection: pre-flight memory validation, memory tracking, and CUDA allocation-fraction enforcement. | README.md | PARTIAL | `pytest tests/unit/utils -q -k gpu` | - | `src/utils/gpu_utils.py` is tested with mocked CUDA. Missing link: no artefact from real GPU hardware. |
+| CL-26 | Operational training profiles: `--profile {smoke,dev,full}` presets. | README.md | PROVEN | `self-play-convergence --help` | src/training/training_config.py | The console script is declared in `pyproject.toml` and the three profiles are defined in the cited module; both are checked by the context-doc validator. |
+| CL-27 | Policy-comparison benchmark with a domain-type-aware decision-quality lift metric and a meta-controller learning loop. | README.md | PARTIAL | `pytest tests/unit/benchmark -q -k policy_comparison` | - | The lift metric is implemented with a confidence-interval lower bound as the gate (`src/benchmark/policy_comparison.py:78-91`). Missing link: the existing unit test asserts result structure only and explicitly not improvement; no adversarial-domain result is committed. |
+
+## Process claims
+
+| Id | Claim | Source | Grade | Verify | Evidence | Notes |
+|---|---|---|---|---|---|---|
+| CL-28 | The coverage gate is enforced at 85% branch coverage and is currently exceeded. | docs/STATUS.md | PROVEN | `python -m pytest tests/unit --cov=src --cov-fail-under=85` | pyproject.toml | The threshold literal lives in `pyproject.toml` and is pinned by the context-doc validator, so the documented number cannot drift from the enforced one. |
+| CL-29 | Unit coverage percentage is evidence that the framework works end to end. | - | FALSE | - | - | Recorded deliberately as a claim the project must never make. Component coverage says nothing about self-play convergence, policy-target construction, perspective sign correctness, or whether search improves on the network — which is precisely how CL-1's defect survived at 89.65%. See `docs/plans/EVIDENCE_FIRST_PROGRAM.md` §4 R3. |
+| CL-30 | No workflow exposes privileged context to untrusted pull requests via `pull_request_target`. | .github/workflows/ci.yml | PROVEN | `grep -rL pull_request_target .github/workflows` | .github/workflows/ci.yml | All four workflows trigger on `pull_request`. Gated going forward by a workflow invariant test in E1 so the property cannot regress. Recorded because an external review asserted the opposite; the ledger exists to settle such disputes mechanically. |

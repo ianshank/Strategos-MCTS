@@ -2,7 +2,7 @@
 id: hygiene_mcts_engines
 goal: One backpropagation/selection/stats implementation shared by the MCTS engines
 module: src/framework/mcts/
-status: draft
+status: approved
 ---
 
 # Goal
