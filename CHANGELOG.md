@@ -122,6 +122,42 @@ unrecognised grade.
   `PARTIAL` because the wording changed — not because the dependency did.
 - **`make gate`** now runs `claims` and `pins` alongside the existing steps, in CI order.
 
+### Fixed — the training container never became healthy in CI smoke tests
+
+The `docker-deployment.yml` Container Smoke Tests job had been red on every `main`
+run for three weeks: `test_training_container_healthy` failed with "Container
+mcts-training-demo did not become healthy". The image was fine; the healthcheck
+contract was wrong.
+
+`healthcheck.py` mapped a DEGRADED overall status to exit code 2, but Docker's
+HEALTHCHECK treats only exit 0 as healthy (exit 2 is reserved and counts as a
+failure). The CI smoke environment runs the image with no GPU, no LLM provider
+key, no Pinecone host and no OTEL endpoint, so every check reported DEGRADED
+(non-critical) and the script exited 2 — so the container could never reach
+"healthy".
+
+- **`healthcheck.py`**: DEGRADED now exits 0 (the container is operational;
+only optional services are down). UNHEALTHY still exits 1, so critical failures
+still gate. The structured JSON report still distinguishes HEALTHY from
+DEGRADED, so operators do not lose the degraded signal. Exit codes are produced
+by a new testable `exit_code_for_status` helper rather than inline `sys.exit`
+calls.
+- **`docker-deployment.yml`**: the CI `docker run` now overrides the image's
+HEALTHCHECK timing with `--health-interval=10s --health-start-period=5s` so the
+first probe lands well inside the test's window. The Dockerfile keeps its
+`60s`/`30s` timing for real deployments, where `healthcheck.py` may make provider
+calls and should not run too often.
+- **`tests/deployment/test_docker_smoke.py`**: the wait window is `90s` (was 30s,
+shorter than the image's default start-period). The pass condition remains
+Docker's own `State.Health.Status == "healthy"` — a direct exec of the script is
+used only for failure diagnostics, so removing or breaking the Dockerfile
+`HEALTHCHECK` would still fail. An exited container (even code 0) is no longer
+treated as healthy.
+- **`tests/unit/test_healthcheck_exit_codes.py`** (new): regression coverage for
+the exit-code mapping — `HEALTHY→0`, `DEGRADED→0`, `UNHEALTHY→1`, `DEGRADED≠2` —
+plus a `main()`-level test asserting a DEGRADED report exits 0, which is the
+exact CI smoke environment.
+
 ### Hugging Face install/configure hardening
 
 `huggingface_hub` was previously only a transitive dependency (via `datasets` /
