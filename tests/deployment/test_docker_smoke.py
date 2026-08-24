@@ -213,7 +213,10 @@ def test_training_container_running(docker_client, training_container_name):
 # healthy container is reported well inside this window. The previous 30s
 # window was shorter than the image's default start-period (60s) and raced
 # the first probe; 90s gives margin without slowing the common case.
-_HEALTH_WAIT_SECONDS = 90
+#
+# Override via HEALTH_WAIT_SECONDS env var for local debugging or slow CI runners.
+_HEALTH_WAIT_SECONDS_DEFAULT = 90
+_HEALTH_WAIT_SECONDS = int(os.environ.get("HEALTH_WAIT_SECONDS", str(_HEALTH_WAIT_SECONDS_DEFAULT)))
 
 
 @pytest.mark.smoke
@@ -246,9 +249,13 @@ def test_training_container_healthy(docker_client, training_container_name):
                 # stay running. An exited container — even with code 0 — is a
                 # failure here: treating exit 0 as healthy would let a missing or
                 # broken Dockerfile HEALTHCHECK still pass, defeating the test.
-                continue
-            # Docker's own healthcheck is the pass condition.
-            if container.attrs.get("State", {}).get("Health", {}).get("Status") == "healthy":
+                #
+                # NOTE: we fall through to time.sleep below rather than `continue`,
+                # which would skip the sleep and create a tight loop hammering the
+                # Docker daemon (Copilot review finding).
+                pass
+            elif container.attrs.get("State", {}).get("Health", {}).get("Status") == "healthy":
+                # Docker's own healthcheck is the pass condition.
                 healthy = True
                 break
         except Exception:
@@ -263,11 +270,11 @@ def test_training_container_healthy(docker_client, training_container_name):
     # output, plus Docker's recorded health log.
     diagnostics = _collect_health_diagnostics(docker_client, training_container_name)
     pytest.fail(
-        f"Container {training_container_name} did not become healthy within " f"{_HEALTH_WAIT_SECONDS}s.\n{diagnostics}"
+        f"Container {training_container_name} did not become healthy within {_HEALTH_WAIT_SECONDS}s.\n{diagnostics}"
     )
 
 
-def _collect_health_diagnostics(client, container_name: str) -> str:
+def _collect_health_diagnostics(client: "docker.DockerClient", container_name: str) -> str:
     """Gather container status, Docker health log and a direct healthcheck run.
 
     Returned as a formatted block for inclusion in a pytest.fail message. This

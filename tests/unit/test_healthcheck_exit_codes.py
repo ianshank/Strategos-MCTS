@@ -18,17 +18,17 @@ from DEGRADED so the degraded signal is not lost.
 
 from __future__ import annotations
 
-import asyncio
-import sys
-from pathlib import Path
+from datetime import UTC, datetime
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-import healthcheck  # noqa: E402
+import healthcheck
 
 pytestmark = pytest.mark.unit
+
+# Deterministic timestamp for test fixtures — avoids hard-coded date strings
+# that silently rot and makes test output reproducible.
+_TEST_TIMESTAMP = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
 
 
 class TestExitCodeMapping:
@@ -50,6 +50,12 @@ class TestExitCodeMapping:
         """The core regression: exit 2 is reserved by Docker and must not be used."""
         assert healthcheck.exit_code_for_status(healthcheck.HealthStatus.DEGRADED) != 2
 
+    def test_all_enum_members_produce_valid_exit_code(self) -> None:
+        """Guard against enum extensibility: every HealthStatus member must map to 0 or 1."""
+        for status in healthcheck.HealthStatus:
+            code = healthcheck.exit_code_for_status(status)
+            assert code in {0, 1}, f"Unexpected exit code {code} for {status}"
+
 
 def _degraded_report() -> healthcheck.HealthCheckReport:
     """A report where only non-critical optional services are down."""
@@ -64,7 +70,7 @@ def _degraded_report() -> healthcheck.HealthCheckReport:
                 critical=False,
             ),
         ],
-        timestamp="2026-08-23T00:00:00Z",
+        timestamp=_TEST_TIMESTAMP,
         duration_ms=1.0,
     )
 
@@ -72,7 +78,8 @@ def _degraded_report() -> healthcheck.HealthCheckReport:
 class TestMainDegradedIsHealthy:
     """The smoke-test regression: a DEGRADED environment must exit 0."""
 
-    def test_main_exits_zero_when_degraded(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    @pytest.mark.asyncio
+    async def test_main_exits_zero_when_degraded(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A container whose only failures are optional services is operational.
 
         This is the exact CI smoke environment: no GPU, no LLM key, no Pinecone
@@ -93,11 +100,12 @@ class TestMainDegradedIsHealthy:
         monkeypatch.setattr("builtins.print", lambda *a, **k: None)
 
         with pytest.raises(SystemExit) as exc_info:
-            asyncio.run(healthcheck.main())
+            await healthcheck.main()
 
         assert exc_info.value.code == 0
 
-    def test_main_exits_one_when_unhealthy(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    @pytest.mark.asyncio
+    async def test_main_exits_one_when_unhealthy(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A critical failure must still fail the healthcheck (exit 1)."""
         report = healthcheck.HealthCheckReport(
             status=healthcheck.HealthStatus.UNHEALTHY,
@@ -110,7 +118,7 @@ class TestMainDegradedIsHealthy:
                     critical=True,
                 ),
             ],
-            timestamp="2026-08-23T00:00:00Z",
+            timestamp=_TEST_TIMESTAMP,
             duration_ms=1.0,
         )
 
@@ -125,6 +133,32 @@ class TestMainDegradedIsHealthy:
         monkeypatch.setattr("builtins.print", lambda *a, **k: None)
 
         with pytest.raises(SystemExit) as exc_info:
-            asyncio.run(healthcheck.main())
+            await healthcheck.main()
 
         assert exc_info.value.code == 1
+
+
+class TestDegradedReportPreservesSignal:
+    """The structured JSON report must still carry the DEGRADED status.
+
+    The exit-code change (DEGRADED → 0) must not lose the signal that optional
+    integrations are down. Operators rely on the report to distinguish HEALTHY
+    from DEGRADED even though Docker sees both as exit 0.
+    """
+
+    def test_degraded_report_dict_carries_status(self) -> None:
+        """The report's to_dict output must include 'degraded' status."""
+        report = _degraded_report()
+        report_dict = report.to_dict()
+        assert report_dict["status"] == "degraded"
+
+    def test_healthy_report_dict_carries_status(self) -> None:
+        """Sanity: a HEALTHY report must carry 'healthy' status."""
+        report = healthcheck.HealthCheckReport(
+            status=healthcheck.HealthStatus.HEALTHY,
+            checks=[],
+            timestamp=_TEST_TIMESTAMP,
+            duration_ms=0.5,
+        )
+        report_dict = report.to_dict()
+        assert report_dict["status"] == "healthy"
