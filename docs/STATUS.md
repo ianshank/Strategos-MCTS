@@ -3,7 +3,9 @@
 > **Date:** 2026-08-24 · **Status:**
 > Authoritative baseline (post PR #165 hardening, UI test mock isolation, Gradio 6.0 compatibility, and SentenceTransformers v3 deprecation resolution)
 >
-> All test suites (unit, integration, E2E, UI, neural) are 100% green with 0 failures under `.[dev,neural,api]`.
+> All **CI-gate test suites** (unit, integration, E2E, UI, neural) are 100% green with 0 failures under `.[dev,neural,api]`.
+> Environment-dependent tests (live Gradio/selenium, LFS model weights, offline HF hub) produce ~29 expected
+> skips/failures that are **identical on `main`** — see *Environment note* below.
 > **Supersedes** all prior stale figures.
 >
 > This file is the single source of truth for test/coverage status. It is reproducible — see

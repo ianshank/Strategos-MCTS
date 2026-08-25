@@ -534,15 +534,29 @@ def run_dependency_checks(root: Path) -> list[CheckResult]:
     """Run dependency management checks."""
     results = []
 
+    # Accepted specifiers for production pinning: ``==`` is ideal; ``~=`` and
+    # upper-bounded ranges (``>=X,<Y``) are acceptable.  Bare ``>=`` without an
+    # upper cap is risky in production.
+
     # Check 1: Dependencies pinned
     requirements = root / "requirements.txt"
     if check_file_exists(requirements, "Requirements file"):
         content = requirements.read_text()
-        lines = [line for line in content.splitlines() if line and not line.startswith("#")]
+        lines = [line.strip() for line in content.splitlines() if line.strip() and not line.strip().startswith("#")]
         pinned = sum(1 for line in lines if "==" in line)
-        unpinned = sum(1 for line in lines if ">=" in line and "==" not in line)
+        unbounded = sum(1 for line in lines if not any(op in line for op in ("==", ">=", "<=", "~=", "<", ">", "!=")))
 
-        if unpinned == 0 and pinned > 0:
+        if unbounded > 0:
+            results.append(
+                CheckResult(
+                    name="Dependencies Pinned",
+                    status=Status.FAIL,
+                    priority=Priority.P0,
+                    message=f"{unbounded} dependencies have no version constraint",
+                    details="Pin all production dependencies to avoid supply-chain drift",
+                )
+            )
+        elif pinned == len(lines):
             results.append(
                 CheckResult(
                     name="Dependencies Pinned",
@@ -552,12 +566,16 @@ def run_dependency_checks(root: Path) -> list[CheckResult]:
                 )
             )
         else:
+            range_only = len(lines) - pinned
             results.append(
                 CheckResult(
                     name="Dependencies Pinned",
-                    status=Status.PASS,
+                    status=Status.WARN,
                     priority=Priority.P0,
-                    message=f"{len(lines)} dependencies version-bounded ({pinned} pinned, {unpinned} range-bounded)",
+                    message=(
+                        f"{len(lines)} dependencies version-bounded " f"({pinned} pinned, {range_only} range-bounded)"
+                    ),
+                    details="Consider pinning range-bounded deps with == for reproducibility",
                 )
             )
     else:

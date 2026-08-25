@@ -714,9 +714,9 @@ def _build_demo() -> "gr.Blocks":
     """
     with gr.Blocks(
         title="LangGraph Multi-Agent MCTS - Trained Models Demo",
+        theme=theme_soft,
+        css=css_content,
     ) as demo:
-        demo.theme_to_use = theme_soft
-        demo.css_to_use = css_content
         gr.Markdown(f"""
             # 🎯 LangGraph Multi-Agent MCTS Framework
             ## Demo with Neural Meta-Controllers
@@ -924,6 +924,4 @@ if __name__ == "__main__":
         server_name=DEFAULT_SERVER_HOST,
         share=False,
         show_error=True,
-        theme=getattr(_demo, "theme_to_use", None),
-        css=getattr(_demo, "css_to_use", None),
     )

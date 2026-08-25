@@ -139,7 +139,7 @@ def scan_codebase(root_path: Path) -> dict[str, list[tuple[str, str, int]]]:
     all_findings = {}
 
     for root, dirs, files in os.walk(root_path):
-        dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not d.startswith(".")]
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
         for file in files:
             file_path = Path(root) / file
             if should_skip(file_path):
@@ -162,7 +162,7 @@ def check_sensitive_files(root_path: Path) -> list[str]:
     found_files = []
 
     for root, dirs, files in os.walk(root_path):
-        dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not d.startswith(".")]
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
         for file in files:
             file_path = Path(root) / file
             for pattern in SENSITIVE_FILES:
