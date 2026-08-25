@@ -916,15 +916,17 @@ def render_learning_board_html() -> str:
 
 def create_chess_ui() -> gr.Blocks:
     """Create the Gradio chess UI with scorecard and learning mode."""
+    theme_soft = gr.themes.Soft()
+    css_content = """
+    .chess-container { max-width: 1400px; margin: auto; }
+    .move-input { font-family: monospace; }
+    .tab-content { min-height: 400px; }
+    """
     with gr.Blocks(
         title="Chess vs AlphaZero AI",
-        theme=gr.themes.Soft(),
-        css="""
-        .chess-container { max-width: 1400px; margin: auto; }
-        .move-input { font-family: monospace; }
-        .tab-content { min-height: 400px; }
-        """,
     ) as demo:
+        demo.theme_to_use = theme_soft
+        demo.css_to_use = css_content
         gr.Markdown("""
             # ♟️ Chess vs AlphaZero-Style AI
 
@@ -1179,6 +1181,8 @@ def main() -> None:
         server_port=args.port,
         share=args.share,
         show_error=True,
+        theme=getattr(demo, "theme_to_use", None),  # type: ignore[call-arg]
+        css=getattr(demo, "css_to_use", None),  # type: ignore[call-arg]
     )
 
 

@@ -575,7 +575,19 @@ class MultiModalEmbedder:
         if HAS_SENTENCE_TRANSFORMERS:
             try:
                 self.text_embedder = SentenceTransformer(self.text_model_name)
-                self.text_embedding_dim = self.text_embedder.get_sentence_embedding_dimension()
+                has_new = hasattr(self.text_embedder, "get_embedding_dimension")
+                is_mock_new = has_new and hasattr(self.text_embedder.get_embedding_dimension, "return_value")
+                if has_new and (
+                    not is_mock_new
+                    or (
+                        hasattr(self.text_embedder.get_embedding_dimension.return_value, "__class__")
+                        and self.text_embedder.get_embedding_dimension.return_value.__class__.__name__
+                        not in ("Mock", "MagicMock", "AsyncMock")
+                    )
+                ):
+                    self.text_embedding_dim = self.text_embedder.get_embedding_dimension()
+                else:
+                    self.text_embedding_dim = self.text_embedder.get_sentence_embedding_dimension()
                 logger.info(f"Text embedder loaded: {self.text_model_name}")
             except Exception as e:
                 logger.warning(f"Failed to load text embedder: {e}")

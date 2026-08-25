@@ -13,7 +13,6 @@ Based on: MULTI_AGENT_MCTS_TEMPLATE.md
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 from collections.abc import AsyncGenerator, Generator
@@ -242,12 +241,6 @@ def pytest_addoption(parser):
 # =============================================================================
 # Session-Scoped Fixtures (Expensive, shared across all tests)
 # =============================================================================
-
-
-@pytest.fixture(scope="session")
-def event_loop_policy():
-    """Provide event loop policy for async tests."""
-    return asyncio.DefaultEventLoopPolicy()
 
 
 @pytest.fixture(scope="session")

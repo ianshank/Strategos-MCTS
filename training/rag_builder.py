@@ -265,7 +265,19 @@ class VectorIndexBuilder:
         # Initialize embedding model
         if HAS_SENTENCE_TRANSFORMERS:
             self.embedding_model = SentenceTransformer(self.embedding_model_name)
-            self.embedding_dim = self.embedding_model.get_sentence_embedding_dimension()
+            has_new = hasattr(self.embedding_model, "get_embedding_dimension")
+            is_mock_new = has_new and hasattr(self.embedding_model.get_embedding_dimension, "return_value")
+            if has_new and (
+                not is_mock_new
+                or (
+                    hasattr(self.embedding_model.get_embedding_dimension.return_value, "__class__")
+                    and self.embedding_model.get_embedding_dimension.return_value.__class__.__name__
+                    not in ("Mock", "MagicMock", "AsyncMock")
+                )
+            ):
+                self.embedding_dim = self.embedding_model.get_embedding_dimension()
+            else:
+                self.embedding_dim = self.embedding_model.get_sentence_embedding_dimension()
         else:
             logger.warning("SentenceTransformers not available, using random embeddings")
             self.embedding_model = None

@@ -28,7 +28,7 @@ python scripts/validate_context_docs.py  # deterministic check: .claude skills/a
 parity — bump deliberately and re-validate. Coverage gate: 85% (`--cov-fail-under=85`).
 Achieved: **89.65%** gate-scope (`tests/unit/`, 2026-08-04, `[dev,neural,api]` env — see
 `docs/STATUS.md`). The full-suite 90.15% figure predates the 2026-08-04 denominator widening.
-`mypy src/` must remain clean (327 files).
+`mypy src/` must remain clean (335 files).
 Async tests must use `@pytest.mark.asyncio` + `await` — never `asyncio.get_event_loop()`.
 
 ## Harness CLI

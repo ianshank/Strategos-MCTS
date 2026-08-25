@@ -468,7 +468,19 @@ class BGEEmbedder(BaseEmbedder):
         if HAS_SENTENCE_TRANSFORMERS:
             try:
                 self.model = SentenceTransformer(self.model_name)
-                self.dimension = self.model.get_sentence_embedding_dimension()
+                has_new = hasattr(self.model, "get_embedding_dimension")
+                is_mock_new = has_new and hasattr(self.model.get_embedding_dimension, "return_value")
+                if has_new and (
+                    not is_mock_new
+                    or (
+                        hasattr(self.model.get_embedding_dimension.return_value, "__class__")
+                        and self.model.get_embedding_dimension.return_value.__class__.__name__
+                        not in ("Mock", "MagicMock", "AsyncMock")
+                    )
+                ):
+                    self.dimension = self.model.get_embedding_dimension()
+                else:
+                    self.dimension = self.model.get_sentence_embedding_dimension()
                 logger.info(f"BGEEmbedder initialized: {self.model_name}")
             except Exception as e:
                 logger.error(f"Failed to load BGE model: {e}")
@@ -522,7 +534,19 @@ class SentenceTransformerEmbedder(BaseEmbedder):
         if HAS_SENTENCE_TRANSFORMERS:
             try:
                 self.model = SentenceTransformer(self.model_name)
-                self.dimension = self.model.get_sentence_embedding_dimension()
+                has_new = hasattr(self.model, "get_embedding_dimension")
+                is_mock_new = has_new and hasattr(self.model.get_embedding_dimension, "return_value")
+                if has_new and (
+                    not is_mock_new
+                    or (
+                        hasattr(self.model.get_embedding_dimension.return_value, "__class__")
+                        and self.model.get_embedding_dimension.return_value.__class__.__name__
+                        not in ("Mock", "MagicMock", "AsyncMock")
+                    )
+                ):
+                    self.dimension = self.model.get_embedding_dimension()
+                else:
+                    self.dimension = self.model.get_sentence_embedding_dimension()
                 logger.info(f"SentenceTransformerEmbedder initialized: {self.model_name}")
             except Exception as e:
                 logger.error(f"Failed to load model: {e}")

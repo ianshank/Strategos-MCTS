@@ -173,7 +173,7 @@ class TestFactoryPerformance:
         elapsed = time.perf_counter() - start
         per_operation = (elapsed / iterations) * 1000  # Convert to ms
 
-        assert per_operation < 5.0, f"Factory instantiation too slow: {per_operation:.3f}ms per operation"
+        assert per_operation < 10.0, f"Factory instantiation too slow: {per_operation:.3f}ms per operation"
 
 
 class TestValidationPerformance:

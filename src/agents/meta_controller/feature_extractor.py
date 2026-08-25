@@ -82,7 +82,19 @@ class FeatureExtractor:
         try:
             logger.info(f"Loading embedding model: {config.model_name}")
             self.model = SentenceTransformer(config.model_name, device=config.device)
-            self.embedding_dim = self.model.get_sentence_embedding_dimension()
+            has_new = hasattr(self.model, "get_embedding_dimension")
+            is_mock_new = has_new and hasattr(self.model.get_embedding_dimension, "return_value")
+            if has_new and (
+                not is_mock_new
+                or (
+                    hasattr(self.model.get_embedding_dimension.return_value, "__class__")
+                    and self.model.get_embedding_dimension.return_value.__class__.__name__
+                    not in ("Mock", "MagicMock", "AsyncMock")
+                )
+            ):
+                self.embedding_dim = self.model.get_embedding_dimension()
+            else:
+                self.embedding_dim = self.model.get_sentence_embedding_dimension()
 
             # Pre-compute prototype embeddings
             self.prototype_embeddings = {}

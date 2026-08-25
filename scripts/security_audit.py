@@ -11,6 +11,7 @@ Scans the codebase for potential security issues:
 CRITICAL: This script identifies sensitive data that should NOT be committed.
 """
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -32,6 +33,29 @@ SENSITIVE_PATTERNS = {
     "hf_token": r"hf_[a-zA-Z0-9]{32,}",
 }
 
+SKIP_DIRS = {
+    ".git",
+    ".venv",
+    "venv",
+    "env",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".hypothesis",
+    "__pycache__",
+    "node_modules",
+    "wandb",
+    "output",
+    "outputs",
+    "artifacts",
+    "cache",
+    "checkpoints",
+    "models",
+    "htmlcov",
+    ".benchmarks",
+    "langgraph_multi_agent_mcts.egg-info",
+}
+
 # Files/directories to skip
 SKIP_PATTERNS = [
     ".git",
@@ -47,6 +71,7 @@ SKIP_PATTERNS = [
     "*.dll",
     "wandb",
     "output",
+    "outputs",
     "htmlcov",
 ]
 
@@ -113,21 +138,21 @@ def scan_codebase(root_path: Path) -> dict[str, list[tuple[str, str, int]]]:
     """
     all_findings = {}
 
-    for file_path in root_path.rglob("*"):
-        if not file_path.is_file():
-            continue
+    for root, dirs, files in os.walk(root_path):
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not d.startswith(".")]
+        for file in files:
+            file_path = Path(root) / file
+            if should_skip(file_path):
+                continue
 
-        if should_skip(file_path):
-            continue
+            # Skip binary files
+            if file_path.suffix in [".pyc", ".so", ".dll", ".exe", ".bin", ".zip", ".tar", ".gz"]:
+                continue
 
-        # Skip binary files
-        if file_path.suffix in [".pyc", ".so", ".dll", ".exe", ".bin", ".zip", ".tar", ".gz"]:
-            continue
-
-        findings = scan_file_for_secrets(file_path)
-        if findings:
-            rel_path = str(file_path.relative_to(root_path))
-            all_findings[rel_path] = findings
+            findings = scan_file_for_secrets(file_path)
+            if findings:
+                rel_path = str(file_path.relative_to(root_path))
+                all_findings[rel_path] = findings
 
     return all_findings
 
@@ -136,17 +161,17 @@ def check_sensitive_files(root_path: Path) -> list[str]:
     """Check for sensitive files that shouldn't be committed."""
     found_files = []
 
-    for pattern in SENSITIVE_FILES:
-        if "*" in pattern:
-            # Glob pattern
-            for file_path in root_path.rglob(pattern):
-                if not should_skip(file_path):
-                    found_files.append(str(file_path.relative_to(root_path)))
-        else:
-            # Exact file name
-            file_path = root_path / pattern
-            if file_path.exists() and not should_skip(file_path):
-                found_files.append(pattern)
+    for root, dirs, files in os.walk(root_path):
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not d.startswith(".")]
+        for file in files:
+            file_path = Path(root) / file
+            for pattern in SENSITIVE_FILES:
+                if "*" in pattern:
+                    if file_path.match(pattern) and not should_skip(file_path):
+                        found_files.append(str(file_path.relative_to(root_path)))
+                else:
+                    if file == pattern and not should_skip(file_path):
+                        found_files.append(str(file_path.relative_to(root_path)))
 
     return found_files
 

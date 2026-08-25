@@ -707,14 +707,16 @@ def _build_demo() -> "gr.Blocks":
     module-level ``demo`` is only built when gradio is available.
     """
     _settings = get_settings()
+    theme_soft = gr.themes.Soft()
+    css_content = """
+    .agent-box { border: 1px solid #ddd; padding: 10px; border-radius: 5px; margin: 5px 0; }
+    .highlight { background-color: #e3f2fd; padding: 10px; border-radius: 5px; margin: 10px 0; }
+    """
     with gr.Blocks(
         title="LangGraph Multi-Agent MCTS - Trained Models Demo",
-        theme=gr.themes.Soft(),
-        css="""
-        .agent-box { border: 1px solid #ddd; padding: 10px; border-radius: 5px; margin: 5px 0; }
-        .highlight { background-color: #e3f2fd; padding: 10px; border-radius: 5px; margin: 10px 0; }
-        """,
     ) as demo:
+        demo.theme_to_use = theme_soft
+        demo.css_to_use = css_content
         gr.Markdown(f"""
             # 🎯 LangGraph Multi-Agent MCTS Framework
             ## Demo with Neural Meta-Controllers
@@ -918,4 +920,10 @@ if __name__ == "__main__":
 
     # Launch the demo. The framework is constructed lazily by the query handlers,
     # so a missing checkpoint degrades the answer rather than blocking startup.
-    _demo.launch(server_name=DEFAULT_SERVER_HOST, share=False, show_error=True)
+    _demo.launch(
+        server_name=DEFAULT_SERVER_HOST,
+        share=False,
+        show_error=True,
+        theme=getattr(_demo, "theme_to_use", None),
+        css=getattr(_demo, "css_to_use", None),
+    )
