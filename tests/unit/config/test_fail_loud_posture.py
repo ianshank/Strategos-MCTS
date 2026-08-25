@@ -12,8 +12,8 @@ new field changed no existing behaviour.
 
 from __future__ import annotations
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from src.config.constants import (
     DEFAULT_DEPLOYMENT_ENV,

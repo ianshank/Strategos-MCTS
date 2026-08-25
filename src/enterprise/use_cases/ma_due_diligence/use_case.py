@@ -11,8 +11,8 @@ Complete implementation of the M&A due diligence use case that integrates:
 from __future__ import annotations
 
 import logging
-import uuid
 from typing import TYPE_CHECKING, Any
+import uuid
 
 if TYPE_CHECKING:
     from src.adapters.llm.base import LLMClient

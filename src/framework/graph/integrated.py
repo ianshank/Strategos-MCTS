@@ -10,8 +10,8 @@ Provides:
 
 from __future__ import annotations
 
-import uuid
 from typing import TYPE_CHECKING, Any, NamedTuple
+import uuid
 
 # LangGraph is an optional dependency whose typed API shifts across versions. For static
 # analysis treat its symbols as Any (the TYPE_CHECKING branch is the only one mypy sees), so

@@ -18,16 +18,16 @@ Strategies explored by MCTS:
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass, field
 import json
 import math
 import random
 import ssl
 import time
+from typing import Any
 import urllib.error
 import urllib.request
-from collections.abc import Callable
-from dataclasses import dataclass, field
-from typing import Any
 
 from src.config.constants import (
     DEFAULT_ANTHROPIC_API_VERSION,

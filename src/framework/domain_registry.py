@@ -20,9 +20,9 @@ register itself via :func:`register_domain`.
 
 from __future__ import annotations
 
-import importlib
 from collections.abc import Callable
 from dataclasses import dataclass
+import importlib
 
 from src.framework.mcts.neural_mcts import GameState
 from src.framework.mcts.single_agent_domains import (

@@ -40,17 +40,17 @@ Wrapped by ``tests/unit/tools/test_status_artifact.py``.
 from __future__ import annotations
 
 import argparse
-import json
-import logging
-import platform as platform_module
-import subprocess  # nosec B404 - local `git` metadata only; no shell, fixed argv, no user input.
-import sys
-import tomllib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from importlib.util import find_spec
+import json
+import logging
 from pathlib import Path
+import platform as platform_module
+import subprocess  # nosec B404 - local `git` metadata only; no shell, fixed argv, no user input.
+import sys
+import tomllib
 from typing import Any
 
 from src.config.constants import (

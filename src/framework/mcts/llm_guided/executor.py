@@ -11,12 +11,12 @@ Provides safe execution of generated Python code with:
 from __future__ import annotations
 
 import ast
+from contextlib import redirect_stderr, redirect_stdout
 import ctypes
+from dataclasses import dataclass, field
 import io
 import multiprocessing
 import threading
-from contextlib import redirect_stderr, redirect_stdout
-from dataclasses import dataclass, field
 from typing import Any
 
 from src.observability.logging import get_structured_logger

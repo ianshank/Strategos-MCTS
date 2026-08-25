@@ -10,11 +10,11 @@ This is a production demonstration using real trained models.
 """
 
 import asyncio
+from dataclasses import dataclass
 import logging
+from pathlib import Path
 import sys
 import time
-from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 # Configure logging

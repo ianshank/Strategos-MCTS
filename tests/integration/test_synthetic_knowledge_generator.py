@@ -5,8 +5,8 @@ These tests validate the end-to-end generation pipeline.
 """
 
 import json
-import tempfile
 from pathlib import Path
+import tempfile
 
 import pytest
 

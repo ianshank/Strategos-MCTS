@@ -10,8 +10,8 @@ Tests the complete integration of:
 - Feature extraction and normalization
 """
 
-import tempfile
 from pathlib import Path
+import tempfile
 from typing import Any
 
 import pytest

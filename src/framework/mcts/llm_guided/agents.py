@@ -9,9 +9,9 @@ Provides:
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 import json
 import re
-from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Protocol
 
 from pydantic import BaseModel, Field, field_validator

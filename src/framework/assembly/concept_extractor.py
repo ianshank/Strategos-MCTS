@@ -5,8 +5,8 @@ Extracts key concepts from text and builds dependency graphs showing
 prerequisite relationships between concepts.
 """
 
-import re
 from dataclasses import dataclass, field
+import re
 from typing import Any
 
 import networkx as nx

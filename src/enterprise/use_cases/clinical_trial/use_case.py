@@ -8,10 +8,10 @@ approval probability while minimizing cost and timeline.
 from __future__ import annotations
 
 import copy
-import logging
-import uuid
 from dataclasses import dataclass, field
+import logging
 from typing import TYPE_CHECKING, Any
+import uuid
 
 if TYPE_CHECKING:
     from src.adapters.llm.base import LLMClient

@@ -8,9 +8,9 @@ emits ``DONE`` or when the round cap is reached.
 
 from __future__ import annotations
 
-import re
 from collections.abc import Sequence
 from dataclasses import dataclass
+import re
 
 from src.framework.harness.settings import AggregationPolicy
 from src.framework.harness.state import Task

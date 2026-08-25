@@ -32,10 +32,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
-import sys
-import uuid
 from pathlib import Path
+import sys
 from typing import Any
+import uuid
 
 from src.benchmark.config.benchmark_settings import BenchmarkSettings, get_benchmark_settings, reset_benchmark_settings
 from src.benchmark.factory import BenchmarkFactory

@@ -11,13 +11,13 @@ Tests all components:
 """
 
 import io
-import tempfile
 from pathlib import Path
+import tempfile
 from unittest.mock import patch
 
 import numpy as np
-import pytest
 from PIL import Image
+import pytest
 
 from training.multimodal_knowledge_base import (
     CodeBlockExtractor,

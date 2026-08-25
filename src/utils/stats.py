@@ -11,8 +11,8 @@ these gates require; n >= 30 for mean-reward, n >= 100 for win-rate).
 
 from __future__ import annotations
 
-import math
 from collections.abc import Sequence
+import math
 
 # Common two-sided z-scores (avoid scipy dependency).
 _Z_SCORES: dict[float, float] = {

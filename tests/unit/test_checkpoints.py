@@ -13,10 +13,10 @@ contents, so the suite stays valid after a ``git lfs pull``.
 
 from __future__ import annotations
 
+from pathlib import Path
 import pickle
 import sys
 import zipfile
-from pathlib import Path
 
 import pytest
 

@@ -13,8 +13,8 @@ Covers:
 - Framework service integration edge cases
 """
 
-import os
 from contextlib import contextmanager
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

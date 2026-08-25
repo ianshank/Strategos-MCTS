@@ -13,9 +13,9 @@ Tests the complete demo pipeline end-to-end with mocked external services.
 """
 
 import os
+from pathlib import Path
 import tempfile
 import time
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest

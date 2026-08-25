@@ -9,9 +9,9 @@ Tests core functionality of the benchmark suite including:
 """
 
 import json
-import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import unittest
 
 # Mock numpy if not available
 try:

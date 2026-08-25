@@ -10,12 +10,12 @@ Provides:
 - Export to Prometheus format (optional)
 """
 
-import logging
-import time
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+import logging
+import time
 from typing import Any, Optional, TypeVar
 
 import psutil

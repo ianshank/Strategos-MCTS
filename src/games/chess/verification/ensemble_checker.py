@@ -7,8 +7,8 @@ checking agreement between HRM, TRM, and MCTS agents.
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass
+import time
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

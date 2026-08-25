@@ -8,9 +8,9 @@ trailing line, which :func:`iter_jsonl` skips.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator, Mapping
 import json
 import os
-from collections.abc import Callable, Iterator, Mapping
 from pathlib import Path
 from typing import Any
 

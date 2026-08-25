@@ -1,9 +1,9 @@
 """Unit tests for Pinecone RAG builder."""
 
-import sys
-import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+import sys
+import tempfile
 from typing import Any
 from unittest.mock import MagicMock, patch
 

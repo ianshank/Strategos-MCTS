@@ -5,8 +5,8 @@ Replaces simple heuristic-based feature engineering with semantic embeddings.
 Uses sentence-transformers for local embedding generation or OpenAI if configured.
 """
 
-import os
 from dataclasses import dataclass
+import os
 
 import numpy as np
 from sentence_transformers import SentenceTransformer, util

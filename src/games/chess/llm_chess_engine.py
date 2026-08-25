@@ -12,9 +12,9 @@ and LLM-based move analysis.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass, field
 import re
 import time
-from dataclasses import dataclass, field
 from typing import Any
 
 from src.adapters.llm.base import LLMClient

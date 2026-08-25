@@ -13,10 +13,10 @@ Based on: MULTI_AGENT_MCTS_TEMPLATE.md
 
 from __future__ import annotations
 
-import logging
-import os
 from collections.abc import AsyncGenerator, Generator
 from contextlib import contextmanager, suppress
+import logging
+import os
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 

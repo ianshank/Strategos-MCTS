@@ -6,8 +6,8 @@ DomainDetectorConfig, BaseUseCaseConfig, MADueDiligenceConfig, ClinicalTrialConf
 RegulatoryComplianceConfig), EnterpriseSettings, and utility functions.
 """
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from src.enterprise.config.enterprise_settings import (
     AgentConfig,

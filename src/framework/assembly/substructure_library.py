@@ -5,12 +5,12 @@ Tracks frequently used assembly patterns and enables reuse of successful
 reasoning subsequences.
 """
 
+from dataclasses import dataclass, field
 import hashlib
 import json
+from pathlib import Path
 import pickle  # nosec B403 - only used for gated, opt-in legacy migration (see _load_from_disk)
 import time
-from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 from src.config.constants import (

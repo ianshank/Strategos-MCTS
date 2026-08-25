@@ -9,11 +9,11 @@ and continuous learning mode.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass, field
+from datetime import datetime
 import logging
 import tempfile
 import threading
-from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any
 
 import chess.pgn

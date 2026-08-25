@@ -23,11 +23,11 @@ Based on:
 from __future__ import annotations
 
 import asyncio
-import math
-import time
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
+import math
+import time
 from typing import Any, cast
 
 import numpy as np

@@ -8,10 +8,10 @@ to train policy and value networks.
 from __future__ import annotations
 
 import asyncio
-import pickle  # nosec B403 - only used for gated, opt-in legacy migration (see ExperienceBuffer.load)
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
+import pickle  # nosec B403 - only used for gated, opt-in legacy migration (see ExperienceBuffer.load)
 from typing import Any
 
 import torch

@@ -7,8 +7,8 @@ Provides:
 - Clear separation between user-facing and internal errors
 """
 
-import re
 from datetime import datetime
+import re
 from typing import Any
 
 

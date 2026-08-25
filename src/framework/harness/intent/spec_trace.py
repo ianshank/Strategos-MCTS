@@ -27,11 +27,11 @@ beyond the clone (``fetch-depth: 0``) and the installed harness.
 
 from __future__ import annotations
 
-import re
-import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+import re
+import subprocess
 from typing import Final
 
 from src.framework.harness.intent.spec_loader import SpecLoader

@@ -11,10 +11,10 @@ acceptance criteria. Two implementations:
 
 from __future__ import annotations
 
-import logging
-import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+import logging
+import re
 
 from src.framework.harness.state import (
     AcceptanceCriterion,

@@ -18,9 +18,9 @@ import os
 import tempfile
 from unittest.mock import patch
 
-import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
+import pytest
 
 # Optional torch import
 try:

@@ -14,16 +14,16 @@ memory log, so a torn trailing line (e.g. from SIGKILL) is tolerated on read.
 from __future__ import annotations
 
 import asyncio
-import functools
-import hashlib
-import itertools
-import json
-import time
 from collections.abc import Callable, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+import functools
+import hashlib
+import itertools
+import json
 from pathlib import Path
+import time
 from typing import Any
 
 from src.config.constants import DEFAULT_TRACE_DIGEST_HEX_CHARS, GRAPH_TRACE_LOGGER_NAME

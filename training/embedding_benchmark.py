@@ -5,11 +5,11 @@ Compares different embedding models on RAG evaluation datasets.
 Measures: retrieval precision, recall, nDCG@10, latency, cost.
 """
 
+from dataclasses import dataclass, field
 import json
 import logging
-import time
-from dataclasses import dataclass, field
 from pathlib import Path
+import time
 from typing import Any
 
 import numpy as np

@@ -13,12 +13,12 @@ Usage:
 
 import argparse
 import contextlib
-import json
-import sys
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+import json
 from pathlib import Path
+import sys
 
 
 class Status(Enum):

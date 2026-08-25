@@ -12,8 +12,8 @@ Run with: python examples/mcts_determinism_demo.py
 """
 
 import asyncio
-import sys
 from pathlib import Path
+import sys
 
 # Add project root to path
 project_root = Path(__file__).parent.parent

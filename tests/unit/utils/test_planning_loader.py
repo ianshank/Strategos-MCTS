@@ -6,8 +6,8 @@ Tests the planning YAML file loader with validation and query capabilities.
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
+import tempfile
 
 import pytest
 

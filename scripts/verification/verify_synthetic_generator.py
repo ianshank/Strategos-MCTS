@@ -11,8 +11,8 @@ Usage:
 import asyncio
 import logging
 import os
-import sys
 from pathlib import Path
+import sys
 
 # Add project root to path
 project_root = Path(__file__).resolve().parents[2]

@@ -12,8 +12,8 @@ These tests verify that components work together correctly
 in realistic multi-agent scenarios.
 """
 
-import tempfile
 from pathlib import Path
+import tempfile
 from typing import Any
 
 import pytest

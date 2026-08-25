@@ -24,13 +24,13 @@ Usage:
 """
 
 import logging
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
-import yaml
 from rich.console import Console
 from rich.table import Table
+import yaml
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent

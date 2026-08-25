@@ -20,8 +20,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import torch
-import torch.nn as nn
 from torch.amp import autocast
+import torch.nn as nn
 
 from src.observability.logging import get_logger
 

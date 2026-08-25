@@ -9,9 +9,9 @@ Usage:
 """
 
 import os
+from pathlib import Path
 import sys
 import traceback
-from pathlib import Path
 
 # Add project root to path before local imports
 project_root = Path(__file__).resolve().parents[2]

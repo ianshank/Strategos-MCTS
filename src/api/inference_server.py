@@ -10,11 +10,11 @@ Provides REST API for:
 import time
 from typing import Any
 
-import torch
-import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+import torch
+import uvicorn
 
 from src.observability.logging import get_logger
 

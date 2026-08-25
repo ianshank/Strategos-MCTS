@@ -11,12 +11,12 @@ Provides:
 """
 
 import asyncio
+from dataclasses import dataclass, field
+from datetime import datetime
 import gzip
 import hashlib
 import json
 import os
-from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any
 
 import aioboto3

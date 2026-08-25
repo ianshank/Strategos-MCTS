@@ -9,12 +9,12 @@ Tests:
 """
 
 import asyncio
+from dataclasses import dataclass
 import gc
 import os
 import statistics
 import sys
 import time
-from dataclasses import dataclass
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest

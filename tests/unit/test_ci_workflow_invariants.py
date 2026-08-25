@@ -23,10 +23,10 @@ from __future__ import annotations
 
 import ast
 import configparser
-import json
-import re
 from fnmatch import fnmatch
+import json
 from pathlib import Path
+import re
 from typing import Any
 
 import pytest

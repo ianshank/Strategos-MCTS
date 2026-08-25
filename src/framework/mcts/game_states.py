@@ -12,8 +12,8 @@ Based on: MULTI_AGENT_MCTS_TEMPLATE.md Section 5
 from __future__ import annotations
 
 import dataclasses
-import hashlib
 from dataclasses import dataclass, field
+import hashlib
 from typing import Any
 
 import torch

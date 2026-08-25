@@ -8,9 +8,9 @@ error handling, and CORS configuration.
 import time
 from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
+import pytest
 
 from src.api.inference_server import (
     HealthResponse,

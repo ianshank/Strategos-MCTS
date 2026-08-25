@@ -43,8 +43,8 @@ from tests.utils.langsmith_tracing import (
 @pytest.fixture
 def gradio_app(monkeypatch, mock_framework):
     """Import and return the Gradio app for testing."""
-    import sys
     from pathlib import Path
+    import sys
 
     # Add project root to path
     project_root = Path(__file__).parent.parent.parent

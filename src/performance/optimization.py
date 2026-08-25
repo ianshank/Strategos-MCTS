@@ -10,10 +10,10 @@ Provides:
 
 from __future__ import annotations
 
-import gc
-import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+import gc
+import time
 from typing import Any, TypeVar
 
 from src.observability.logging import get_logger

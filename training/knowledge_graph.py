@@ -12,15 +12,15 @@ Features:
 - Automated graph construction from papers/code
 """
 
-import json
-import logging
-import os
-import pickle
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+import json
+import logging
+import os
 from pathlib import Path
+import pickle
 from typing import Any
 
 import networkx as nx

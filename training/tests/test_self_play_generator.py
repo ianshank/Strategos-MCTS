@@ -5,8 +5,8 @@ This module contains comprehensive tests for the AlphaZero-style
 self-play training pipeline.
 """
 
-import sys
 from pathlib import Path
+import sys
 
 import pytest
 import torch

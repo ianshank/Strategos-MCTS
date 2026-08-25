@@ -3,8 +3,8 @@ Unit tests for src/framework/assembly/substructure_library.py.
 """
 
 import json
-import tempfile
 from pathlib import Path
+import tempfile
 
 import pytest
 

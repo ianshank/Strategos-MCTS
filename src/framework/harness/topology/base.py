@@ -10,9 +10,9 @@ small adapter (or use :class:`HarnessAgentAdapter`) before composition.
 from __future__ import annotations
 
 import asyncio
-import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+import logging
 from typing import Any, Protocol, runtime_checkable
 
 from src.framework.harness.settings import AggregationPolicy

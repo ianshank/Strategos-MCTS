@@ -12,8 +12,8 @@ import sys
 import requests
 
 try:
-    import matplotlib.pyplot as plt
     from matplotlib.patches import FancyArrow, Rectangle
+    import matplotlib.pyplot as plt
 except Exception:
     plt = None
 

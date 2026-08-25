@@ -12,9 +12,9 @@ CRITICAL: This script identifies sensitive data that should NOT be committed.
 """
 
 import os
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 
 # Patterns for detecting sensitive data
 SENSITIVE_PATTERNS = {

@@ -24,11 +24,11 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from dataclasses import asdict
 import json
+from pathlib import Path
 import re
 import sys
-from dataclasses import asdict
-from pathlib import Path
 from typing import Any
 
 import numpy as np

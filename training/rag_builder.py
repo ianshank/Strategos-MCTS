@@ -5,14 +5,14 @@ Handles vector index construction, document processing, and retrieval optimizati
 for the PRIMUS-Seed cybersecurity document corpus using Pinecone vector database.
 """
 
+from collections.abc import Iterator
+from dataclasses import dataclass
 import json
 import logging
 import os
-import uuid
-from collections.abc import Iterator
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import uuid
 
 import numpy as np
 import yaml

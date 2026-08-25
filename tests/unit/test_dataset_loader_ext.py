@@ -10,8 +10,8 @@ from __future__ import annotations
 import contextlib
 import csv
 import json
-import tempfile
 from pathlib import Path
+import tempfile
 from unittest.mock import patch
 
 import pytest

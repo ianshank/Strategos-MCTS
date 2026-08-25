@@ -22,11 +22,11 @@ Usage:
 """
 
 import argparse
+from datetime import datetime
 import json
 import logging
-import sys
-from datetime import datetime
 from pathlib import Path
+import sys
 from typing import Any
 
 import numpy as np

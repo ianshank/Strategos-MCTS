@@ -14,9 +14,9 @@ Best Practices 2025:
 - Edge case coverage
 """
 
-import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
+import pytest
 
 # Optional torch import
 try:

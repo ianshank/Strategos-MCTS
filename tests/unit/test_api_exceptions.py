@@ -10,8 +10,8 @@ Tests:
 """
 
 # Import the exception classes
-import sys
 from datetime import datetime
+import sys
 
 sys.path.insert(0, ".")
 from src.api.exceptions import (

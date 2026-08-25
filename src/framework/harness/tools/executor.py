@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 from pathlib import Path
+import time
 
 from src.framework.harness.settings import HarnessSettings
 from src.framework.harness.state import Observation, ToolInvocation

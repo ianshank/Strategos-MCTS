@@ -6,16 +6,16 @@ and builds a searchable index compatible with the RAG system.
 """
 
 import ast
+from collections import defaultdict
+from collections.abc import Iterator
+from dataclasses import asdict, dataclass, field
 import hashlib
 import json
 import logging
 import os
+from pathlib import Path
 import re
 import subprocess
-from collections import defaultdict
-from collections.abc import Iterator
-from dataclasses import asdict, dataclass, field
-from pathlib import Path
 from typing import Any
 
 import yaml

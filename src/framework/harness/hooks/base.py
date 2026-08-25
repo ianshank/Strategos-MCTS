@@ -8,9 +8,9 @@ short-circuit (the default) or accumulate — the behaviour is per-hook via
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+import logging
 
 from src.framework.harness.outcomes import HookViolation
 from src.framework.harness.protocols import HookCost, hook_cost_rank

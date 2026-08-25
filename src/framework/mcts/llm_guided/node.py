@@ -9,11 +9,11 @@ Provides:
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+from enum import Enum
 import hashlib
 import math
 import time
-from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any
 
 import numpy as np

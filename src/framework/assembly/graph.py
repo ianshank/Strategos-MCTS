@@ -4,8 +4,8 @@ Assembly Graph Data Structure (Story 1.3).
 Specialized graph structure for representing and manipulating assembly pathways.
 """
 
-import json
 from dataclasses import dataclass, field
+import json
 from pathlib import Path
 from typing import Any
 

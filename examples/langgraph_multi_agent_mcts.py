@@ -16,8 +16,8 @@ from __future__ import annotations
 import asyncio
 import operator
 import random
-import uuid
 from typing import Annotated, NotRequired, TypedDict
+import uuid
 
 # Optional third-party deps. Guarded so the module (and its public
 # ``LangGraphMultiAgentFramework`` class) can be imported without the heavy

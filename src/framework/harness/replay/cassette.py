@@ -12,10 +12,10 @@ keys with cosmetic differences (ordering, whitespace) don't fragment matching.
 
 from __future__ import annotations
 
-import hashlib
-import json
 from collections.abc import Iterator
 from dataclasses import dataclass
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 

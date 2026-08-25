@@ -9,8 +9,8 @@ temperature) through ``HarnessFactory`` and ``register_builtin_tools``.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
+import sys
 from typing import Any
 
 import pytest

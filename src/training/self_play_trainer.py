@@ -20,9 +20,9 @@ value targets) are bypassed. Defaults to ``False`` (two-player zero-sum, unchang
 from __future__ import annotations
 
 import collections
-import json
 from collections.abc import Callable
 from dataclasses import dataclass
+import json
 from pathlib import Path
 from typing import Any
 

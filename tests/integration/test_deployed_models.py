@@ -6,8 +6,8 @@ Tests the production readiness of deployed models exported to `models/production
 Verifies model loading, inference, and basic performance criteria.
 """
 
-import time
 from pathlib import Path
+import time
 
 import pytest
 

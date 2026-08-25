@@ -1,9 +1,9 @@
 """Unit tests for data pipeline module."""
 
 # Import modules to test
+from pathlib import Path
 import sys
 import tempfile
-from pathlib import Path
 
 import pytest
 import yaml

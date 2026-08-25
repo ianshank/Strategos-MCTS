@@ -5,10 +5,10 @@ Trains neural routers and ensemble aggregators for optimal multi-agent coordinat
 Collects execution traces and learns routing policies from agent performance data.
 """
 
-import json
-import logging
 from collections import deque
 from dataclasses import dataclass, field
+import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -16,9 +16,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import yaml
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset
+import yaml
 
 logger = logging.getLogger(__name__)
 

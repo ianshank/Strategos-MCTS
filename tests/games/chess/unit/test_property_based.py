@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import contextlib
 
-import pytest
 from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
+import pytest
 
 from src.games.chess.action_space import ChessActionEncoder
 from src.games.chess.config import ChessActionSpaceConfig

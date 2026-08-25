@@ -7,8 +7,8 @@ for comparison reporting.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
+import math
 
 from src.benchmark.evaluation.models import BenchmarkResult
 from src.observability.logging import get_logger

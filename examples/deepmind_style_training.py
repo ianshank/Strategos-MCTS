@@ -13,8 +13,8 @@ Features demonstrated:
 """
 
 import asyncio
-import sys
 from pathlib import Path
+import sys
 
 # Ensure stdout/stderr are UTF-8 on Windows (default cp1252 cannot encode
 # box-drawing / checkmark characters used in training output).

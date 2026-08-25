@@ -10,9 +10,9 @@ Provides:
 
 from __future__ import annotations
 
-import json
 from dataclasses import asdict, dataclass
 from enum import Enum
+import json
 from typing import Any
 
 from .policies import SelectionPolicy

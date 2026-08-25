@@ -8,8 +8,8 @@ curation here yet — that's an enhancement that can plug into the same lifecycl
 from __future__ import annotations
 
 import asyncio
-import logging
 from dataclasses import dataclass, field
+import logging
 
 from src.framework.harness.memory.markdown import MarkdownMemoryStore
 from src.observability.logging import get_logger

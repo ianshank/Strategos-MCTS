@@ -7,9 +7,9 @@ collection and analysis of benchmark outcomes.
 
 from __future__ import annotations
 
-import json
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
+import json
 from typing import Any
 
 

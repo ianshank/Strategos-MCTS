@@ -15,8 +15,8 @@ fix: ``build_model`` must normalize the assembled model to fp32 regardless of
 the dtype ``from_pretrained`` hands back.
 """
 
-import sys
 from pathlib import Path
+import sys
 
 import pytest
 

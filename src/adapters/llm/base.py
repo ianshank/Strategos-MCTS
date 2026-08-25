@@ -5,12 +5,12 @@ This module defines the protocol and data structures for LLM clients,
 enabling seamless switching between providers (OpenAI, Anthropic, LM Studio, etc.)
 """
 
-import asyncio
-import time
 from abc import ABC, abstractmethod
+import asyncio
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import datetime
+import time
 from typing import Any, Protocol, runtime_checkable
 
 from src.observability.logging import get_logger

@@ -8,9 +8,9 @@ This script tests:
 4. Error handling and buffering
 """
 
+from datetime import datetime
 import os
 import sys
-from datetime import datetime
 
 
 def print_section(title):

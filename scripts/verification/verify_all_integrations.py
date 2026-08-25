@@ -9,9 +9,9 @@ Verifies all optional integrations:
 Run this script to check the status of all integrations at once.
 """
 
+from datetime import datetime
 import os
 import sys
-from datetime import datetime
 
 
 class Colors:
@@ -202,8 +202,8 @@ def check_wandb() -> tuple[bool, bool, dict[str, any]]:
         print_status("INFO", "Testing in offline mode...")
 
         # Suppress wandb output temporarily
-        import io
         from contextlib import redirect_stderr, redirect_stdout
+        import io
 
         with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
             _run = wandb.init(  # noqa: F841 - run object managed by wandb.finish()

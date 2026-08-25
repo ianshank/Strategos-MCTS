@@ -26,13 +26,13 @@ healthy on a CPU-only host or in a smoke-test environment.
 """
 
 import asyncio
+from dataclasses import dataclass, field
+from enum import Enum
 import json
 import logging
 import os
 import sys
 import time
-from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any, Final
 
 # Configure logging

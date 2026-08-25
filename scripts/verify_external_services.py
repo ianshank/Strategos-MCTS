@@ -27,16 +27,15 @@ Usage:
 """
 
 import asyncio
-import logging
-import os
-import sys
 from dataclasses import dataclass, field
 from enum import Enum
+import logging
+import os
 from pathlib import Path
+import sys
 from typing import Any
 
 import httpx
-import yaml
 from pydantic import BaseModel, Field, field_validator
 from rich.console import Console
 from rich.logging import RichHandler
@@ -47,6 +46,7 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
+import yaml
 
 # ============================================================================
 # Configuration

@@ -2,8 +2,8 @@
 Unit tests for src/framework/assembly/graph.py (AssemblyGraph, AssemblyNode).
 """
 
-import tempfile
 from pathlib import Path
+import tempfile
 
 import pytest
 

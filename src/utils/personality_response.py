@@ -14,9 +14,9 @@ Following 2025 best practices:
 - Logging for observability
 """
 
+from dataclasses import dataclass, field
 import logging
 import re
-from dataclasses import dataclass, field
 from typing import ClassVar
 
 from src.observability.logging import get_logger

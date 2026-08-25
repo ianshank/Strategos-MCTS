@@ -13,9 +13,9 @@ Tests all components of the production feedback loop:
 - ABTestFramework
 """
 
+from pathlib import Path
 import tempfile
 import time
-from pathlib import Path
 
 import numpy as np
 import pytest

@@ -5,8 +5,8 @@ Covers AgentContext, AgentResult, NoOpMetricsCollector, AsyncAgentBase lifecycle
 LLMHRMAgent, LLMTRMAgent, ParallelAgent, and SequentialAgent.
 """
 
-import uuid
 from unittest.mock import AsyncMock, MagicMock
+import uuid
 
 import pytest
 
