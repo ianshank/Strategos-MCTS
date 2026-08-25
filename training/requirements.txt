@@ -127,7 +127,7 @@ colorlog~=6.7.0  # Colored logging
 tenacity~=8.2.0  # Retry logic for external services
 
 # HTTP & API
-requests~=2.31.0  # HTTP library
+requests~=2.34.2  # HTTP library
 PyGithub~=2.1.1  # GitHub API access for code corpus builder
 
 
