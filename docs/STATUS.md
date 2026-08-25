@@ -29,12 +29,12 @@
 | Harness / Spec validation | **48/48 specs valid** ✅ |
 | Wall time (full suite parallel) | ~94s (1m 34s) |
 
-The gate-enforcing total is the **89.65%** "Gate-scope branch coverage" row — well above 85%.
-(The 90.15% below it is the full-suite headline, which CI does not enforce and which is stale;
-see CHARTER.md INV-5 for why the two differ.) This reflects Phases 0–5 (through the M5
-self-play stack), the July 2026 test hardening pass, the GPU training & gameplay domain extensions
-(Connect Four, Othello, GPU hardware utils, training profiles), and the 2026-07-25 code-hygiene pass
-(huggingface_space fork removal, dead-test deletion, repo-wide lint gates).
+The gate-enforcing total is the **92.78%** "Gate-scope branch coverage" row — well above 85%.
+This reflects Phases 0–5 (through the M5 self-play stack), the July 2026 test hardening pass,
+the GPU training & gameplay domain extensions (Connect Four, Othello, GPU hardware utils,
+training profiles), the 2026-07-25 code-hygiene pass (huggingface_space fork removal, dead-test
+deletion, repo-wide lint gates), and the 2026-08-24 PR #165 hardening (UI mock isolation,
+Gradio 6.0 compatibility, SentenceTransformers v3 deprecation resolution).
 
 > **Environment note:** this baseline was measured under exactly `pip install -e ".[dev,neural,api]"`
 > (the CI test-job dependency set — `api` was added when the three `--ignore` flags were removed).
@@ -44,8 +44,6 @@ self-play stack), the July 2026 test hardening pass, the GPU training & gameplay
 > **identical on `main`** (same failure set on base commit `5cf5708`) — they are properties of the
 > environment, not regressions, and do not affect the gate (`tests/unit/`), which is fully green.
 > Earlier baselines reporting "0 failed" for the full sweep were measured in a fuller environment.
-
-
 
 ## How to reproduce
 

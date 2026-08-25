@@ -155,7 +155,7 @@ class TestFactoryPerformance:
         """
         Test: Factory instantiation should be lightweight.
 
-        Target: < 5ms per factory creation (includes settings load)
+        Target: < 10ms per factory creation (includes settings load)
         """
         import os
 

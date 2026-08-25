@@ -924,9 +924,9 @@ def create_chess_ui() -> gr.Blocks:
     """
     with gr.Blocks(
         title="Chess vs AlphaZero AI",
+        theme=theme_soft,
+        css=css_content,
     ) as demo:
-        demo.theme_to_use = theme_soft
-        demo.css_to_use = css_content
         gr.Markdown("""
             # ♟️ Chess vs AlphaZero-Style AI
 
@@ -1181,8 +1181,6 @@ def main() -> None:
         server_port=args.port,
         share=args.share,
         show_error=True,
-        theme=getattr(demo, "theme_to_use", None),  # type: ignore[call-arg]
-        css=getattr(demo, "css_to_use", None),  # type: ignore[call-arg]
     )
 
 

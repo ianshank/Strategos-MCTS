@@ -105,18 +105,18 @@ milestones:
       - Domain-specific state adapters
       - Performance optimization module
 
-# Metrics below are code-verified; see docs/STATUS.md for the reproducible baseline (2026-06-30).
+# Metrics below are code-verified; see docs/STATUS.md for the reproducible baseline (2026-08-24).
 quality_metrics:
   source_of_truth: docs/STATUS.md
-  measured_on: "2026-07-25"
+  measured_on: "2026-08-24"
   test_coverage:
-    current: 90.15  # branch coverage on src/, full non-slow suite, [dev,neural] env (fail_under = 85.0)
+    current: 92.78  # gate-scope branch coverage on src/, tests/unit/ only, [dev,neural,api] env (fail_under = 85.0)
     target: 90
   test_pass_rate:
-    unit: 8445 passed / 0 failed  # python -m pytest tests/unit with CI ignores (see docs/STATUS.md)
+    unit: 9529 passed / 0 failed  # python -m pytest tests/unit with CI ignores (see docs/STATUS.md)
   code_quality:
     linting: passing
-    type_checking: passing   # mypy src/ clean, 327 files
+    type_checking: passing   # mypy src/ clean, 335 files
     formatting: passing
 
 subagents:
