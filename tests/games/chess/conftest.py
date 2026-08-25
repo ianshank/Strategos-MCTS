@@ -7,11 +7,11 @@ against the chess web UI.
 
 from __future__ import annotations
 
+from collections.abc import Generator
 import os
 import subprocess
 import sys
 import time
-from collections.abc import Generator
 from typing import TYPE_CHECKING
 
 import pytest

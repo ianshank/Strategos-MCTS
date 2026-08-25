@@ -3,8 +3,8 @@ Tests for meta-controller training data generation (Story 2.4).
 """
 
 import json
-import sys
 from pathlib import Path
+import sys
 
 import pytest
 

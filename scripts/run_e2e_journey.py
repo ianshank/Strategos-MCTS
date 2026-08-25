@@ -22,9 +22,9 @@ import argparse
 import asyncio
 import logging
 import os
+from pathlib import Path
 import sys
 import time
-from pathlib import Path
 from typing import Any
 
 from src.config.settings import MCTSImplementation, get_settings

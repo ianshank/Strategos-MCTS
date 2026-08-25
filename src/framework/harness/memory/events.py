@@ -12,11 +12,11 @@ materialises ``MEMORY.md`` as a derived view; humans should treat
 from __future__ import annotations
 
 import asyncio
-import json
-import os
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
+import json
+import os
 from pathlib import Path
 from typing import Any
 

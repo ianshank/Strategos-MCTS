@@ -7,9 +7,9 @@ determinism/torch-free constraints underpinning AC-3.
 
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
 import subprocess
 import sys
-from dataclasses import FrozenInstanceError
 
 import pytest
 

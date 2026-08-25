@@ -7,9 +7,9 @@ for analysis and evaluation.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import os
 import shutil
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:

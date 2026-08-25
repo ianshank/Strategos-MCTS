@@ -9,10 +9,10 @@ Based on: MULTI_AGENT_MCTS_TEMPLATE.md Section 10
 
 from __future__ import annotations
 
-import numpy as np
-import pytest
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
+import numpy as np
+import pytest
 
 # Skip if hypothesis not installed
 pytest.importorskip("hypothesis")

@@ -7,10 +7,10 @@ for routine decisions and LLM for complex reasoning tasks.
 
 from __future__ import annotations
 
-import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
+import time
 from typing import Any, Literal
 
 import torch

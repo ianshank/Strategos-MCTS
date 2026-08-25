@@ -5,8 +5,8 @@ Verification script for Continual Learning system installation.
 Checks that all components are properly installed and can be imported.
 """
 
-import sys
 from pathlib import Path
+import sys
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))

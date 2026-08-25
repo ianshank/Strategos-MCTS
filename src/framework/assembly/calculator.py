@@ -5,8 +5,8 @@ Implements assembly index calculation for strings and graphs
 based on Assembly Theory principles.
 """
 
-import hashlib
 from collections import defaultdict
+import hashlib
 
 import networkx as nx
 

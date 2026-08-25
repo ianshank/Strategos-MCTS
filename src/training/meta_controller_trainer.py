@@ -18,11 +18,11 @@ Best Practices 2025:
 
 from __future__ import annotations
 
-import logging
-import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+import logging
 from pathlib import Path
+import time
 from typing import TYPE_CHECKING, Any
 
 from src.observability.logging import get_logger

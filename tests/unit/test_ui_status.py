@@ -9,9 +9,9 @@ asserts trained-model operation only when the weights are genuinely readable.
 
 from __future__ import annotations
 
-import zipfile
 from pathlib import Path
 from types import SimpleNamespace
+import zipfile
 
 import pytest
 

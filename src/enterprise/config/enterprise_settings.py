@@ -18,8 +18,8 @@ Example:
 
 from __future__ import annotations
 
-import logging
 from enum import Enum
+import logging
 from typing import Any
 
 from pydantic import Field, field_validator, model_validator

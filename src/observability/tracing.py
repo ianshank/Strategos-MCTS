@@ -10,9 +10,9 @@ Provides:
 - httpx instrumentation for LLM calls
 """
 
+from contextlib import asynccontextmanager, contextmanager
 import functools
 import os
-from contextlib import asynccontextmanager, contextmanager
 from typing import Any, Optional
 
 from opentelemetry import trace

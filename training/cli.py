@@ -12,8 +12,8 @@ Usage:
 import argparse
 import dataclasses
 import logging
-import sys
 from pathlib import Path
+import sys
 
 import yaml
 

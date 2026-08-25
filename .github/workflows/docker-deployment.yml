@@ -230,8 +230,17 @@ jobs:
 
       - name: Start demo container
         run: |
+          # Override the image's HEALTHCHECK timing for the smoke-test window.
+          # The Dockerfile ships start-period=60s / interval=30s for real
+          # deployments (where healthcheck.py may make provider calls and should
+          # not run too often), but the smoke test only waits ~90s, so the first
+          # probe must land inside that window. These flags override only this run.
           docker run -d \
             --name mcts-training-demo \
+            --health-interval=10s \
+            --health-start-period=5s \
+            --health-timeout=10s \
+            --health-retries=6 \
             -e DEMO_MODE=1 \
             -e PINECONE_API_KEY=test \
             -e WANDB_API_KEY=test \

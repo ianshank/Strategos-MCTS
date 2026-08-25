@@ -8,8 +8,8 @@ Based on: NEXT_STEPS_PLAN.md Phase 3.4
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
+import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest

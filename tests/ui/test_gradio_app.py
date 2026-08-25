@@ -20,8 +20,48 @@ def _get_free_port() -> int:
 @pytest.fixture(scope="session")
 def gradio_client():
     """Launch the Gradio demo once for all UI tests and provide a client."""
-    if app.framework is None:
-        app.initialize_framework()
+    from dataclasses import dataclass
+    from unittest.mock import AsyncMock, MagicMock
+
+    @dataclass
+    class MockAgentResult:
+        agent_name: str = "MCTS (Monte Carlo Tree Search)"
+        response: str = (
+            "[MCTS Analysis] This is a complete mock response for testing purposes. It contains enough content to pass character limit assertions."
+        )
+        confidence: float = 0.88
+        reasoning_steps: list = None
+        execution_time_ms: float = 125.5
+
+        def __post_init__(self):
+            if self.reasoning_steps is None:
+                self.reasoning_steps = ["Step 1", "Step 2", "Step 3"]
+
+    @dataclass
+    class MockControllerDecision:
+        selected_agent: str = "mcts"
+        confidence: float = 0.73
+        routing_probabilities: dict = None
+        features_used: dict = None
+
+        def __post_init__(self):
+            if self.routing_probabilities is None:
+                self.routing_probabilities = {"hrm": 0.2, "trm": 0.1, "mcts": 0.7}
+            if self.features_used is None:
+                self.features_used = {
+                    "hrm_confidence": 0.35,
+                    "trm_confidence": 0.25,
+                    "mcts_value": 0.40,
+                    "consensus_score": 0.65,
+                    "query_length": 75,
+                    "is_technical": True,
+                }
+
+    mock = MagicMock()
+    mock.process_query = AsyncMock(return_value=(MockAgentResult(), MockControllerDecision()))
+    mock.device = "cpu"
+
+    app.framework = mock
 
     port = _get_free_port()
     _, _, _ = app.demo.launch(

@@ -10,8 +10,8 @@ These augmentations help increase training data diversity and improve
 model robustness for tactical analysis tasks.
 """
 
-import random
 from dataclasses import dataclass
+import random
 
 from src.observability.logging import get_logger
 

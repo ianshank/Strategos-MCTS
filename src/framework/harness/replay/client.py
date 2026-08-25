@@ -13,9 +13,9 @@ one of three modes (chosen at construction):
 
 from __future__ import annotations
 
-import logging
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+import logging
 from pathlib import Path
 from typing import Any, Literal
 

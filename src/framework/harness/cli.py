@@ -23,9 +23,9 @@ import asyncio
 import json
 import logging
 import os
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 from src.framework.harness.factories import HarnessFactory
 from src.framework.harness.intent import SpecLoader, SpecParseError, SpecValidator

@@ -28,10 +28,10 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 import re
 import subprocess
 import sys
-from pathlib import Path
 
 # Post-pilot flip: change to "block" in a reviewed PR (Phase 2 exit action).
 _DEFAULT_MODE = "warn"

@@ -207,10 +207,31 @@ def test_training_container_running(docker_client, training_container_name):
         pytest.skip(f"Container {training_container_name} not found")
 
 
+# How long to wait for Docker to report the container as healthy. The CI
+# docker run overrides the image's HEALTHCHECK to --health-interval=10s /
+# --health-start-period=5s, so the first probe lands within seconds and a
+# healthy container is reported well inside this window. The previous 30s
+# window was shorter than the image's default start-period (60s) and raced
+# the first probe; 90s gives margin without slowing the common case.
+#
+# Override via HEALTH_WAIT_SECONDS env var for local debugging or slow CI runners.
+_HEALTH_WAIT_SECONDS_DEFAULT = 90
+_HEALTH_WAIT_SECONDS = int(os.environ.get("HEALTH_WAIT_SECONDS", str(_HEALTH_WAIT_SECONDS_DEFAULT)))
+
+
 @pytest.mark.smoke
 @pytest.mark.integration
 def test_training_container_healthy(docker_client, training_container_name):
-    """Test that training container passes health check."""
+    """Test that training container passes the Docker HEALTHCHECK.
+
+    The pass condition is Docker's own ``State.Health.Status == "healthy"``,
+    not a direct exec of the healthcheck script. This is deliberate: if the
+    test exec'd the script itself, removing or breaking the Dockerfile
+    ``HEALTHCHECK`` directive would still pass, defeating the point of the
+    check. The direct exec is used only to produce diagnostics on failure so
+    the failure message names the real cause (e.g. the script exits non-zero)
+    rather than a timing race.
+    """
     try:
         container = docker_client.containers.get(training_container_name)
         if container.status == "exited":
@@ -218,30 +239,79 @@ def test_training_container_healthy(docker_client, training_container_name):
     except docker.errors.NotFound:
         pytest.skip(f"Container {training_container_name} not found")
 
-    # Wait for it to become healthy or running
-    # Note: Our demo container might exit successfully (code 0) which is also "healthy" logic-wise
-    # but for this test we want it running.
-
     start_time = time.time()
     healthy = False
-    while time.time() - start_time < 30:
+    while time.time() - start_time < _HEALTH_WAIT_SECONDS:
         try:
             container = docker_client.containers.get(training_container_name)
-            if container.status == "running":
-                # Check docker health check if configured
-                if container.attrs.get("State", {}).get("Health", {}).get("Status") == "healthy":
-                    healthy = True
-                    break
-            elif container.status == "exited" and container.attrs["State"]["ExitCode"] == 0:
-                # Successfully finished
+            if container.status != "running":
+                # The container is launched with `tail -f /dev/null`, so it must
+                # stay running. An exited container — even with code 0 — is a
+                # failure here: treating exit 0 as healthy would let a missing or
+                # broken Dockerfile HEALTHCHECK still pass, defeating the test.
+                #
+                # NOTE: we fall through to time.sleep below rather than `continue`,
+                # which would skip the sleep and create a tight loop hammering the
+                # Docker daemon (Copilot review finding).
+                pass
+            elif container.attrs.get("State", {}).get("Health", {}).get("Status") == "healthy":
+                # Docker's own healthcheck is the pass condition.
                 healthy = True
                 break
         except Exception:
             pass
         time.sleep(2)
 
-    if not healthy:
-        pytest.fail(f"Container {training_container_name} did not become healthy")
+    if healthy:
+        return
+
+    # Diagnostics only — the direct exec is NOT a pass condition. It surfaces the
+    # real reason Docker never reported "healthy": the script's exit code and
+    # output, plus Docker's recorded health log.
+    diagnostics = _collect_health_diagnostics(docker_client, training_container_name)
+    pytest.fail(
+        f"Container {training_container_name} did not become healthy within {_HEALTH_WAIT_SECONDS}s.\n{diagnostics}"
+    )
+
+
+def _collect_health_diagnostics(client: "docker.DockerClient", container_name: str) -> str:
+    """Gather container status, Docker health log and a direct healthcheck run.
+
+    Returned as a formatted block for inclusion in a pytest.fail message. This
+    is diagnostic only and never gates the test — the pass condition is Docker's
+    ``State.Health.Status``.
+    """
+    lines = ["--- health diagnostics ---"]
+    try:
+        container = client.containers.get(container_name)
+        state = container.attrs.get("State", {})
+        lines.append(f"container status: {container.status}")
+        lines.append(f"exit code: {state.get('ExitCode')}")
+        health = state.get("Health")
+        if health is None:
+            lines.append("docker health: no HEALTHCHECK defined for this image")
+        else:
+            lines.append(f"docker health status: {health.get('Status')}")
+            for entry in (health.get("Log") or [])[-5:]:
+                lines.append(
+                    f"  health log: exit={entry.get('ExitCode')} " f"out={str(entry.get('Output', '')).strip()[:200]}"
+                )
+    except Exception as exc:  # pragma: no cover - diagnostics best-effort
+        lines.append(f"could not inspect container: {exc}")
+
+    # Direct exec of the healthcheck script, for signal only.
+    try:
+        exit_code, output = exec_in_container(
+            client,
+            container_name,
+            ["python", "/app/healthcheck.py"],
+        )
+        lines.append(f"direct healthcheck exec exit code: {exit_code}")
+        lines.append(f"direct healthcheck output: {output.strip()[:500]}")
+    except Exception as exc:  # pragma: no cover - diagnostics best-effort
+        lines.append(f"could not exec healthcheck script: {exc}")
+
+    return "\n".join(lines)
 
 
 # ============================================================================

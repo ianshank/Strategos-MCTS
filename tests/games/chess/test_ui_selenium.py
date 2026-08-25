@@ -16,12 +16,12 @@ Usage:
 
 from __future__ import annotations
 
+from collections.abc import Generator
+from dataclasses import dataclass
 import os
 import subprocess
 import sys
 import time
-from collections.abc import Generator
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import pytest

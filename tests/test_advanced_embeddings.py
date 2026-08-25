@@ -3,8 +3,8 @@ Tests for Advanced Embedding System
 """
 
 import os
-import tempfile
 from pathlib import Path
+import tempfile
 
 import numpy as np
 import pytest

@@ -7,8 +7,8 @@ caller-provided RAG snippets. Memory excerpts are passed through the
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Awaitable, Callable
+import logging
 
 from src.framework.harness.context.compressor import EpisodicCompressor
 from src.framework.harness.protocols import MemoryStore

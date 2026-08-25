@@ -10,6 +10,9 @@ Provides:
 - Safe sanitization (no secrets in logs)
 """
 
+from contextvars import ContextVar
+from datetime import datetime
+from functools import wraps
 import json
 import logging
 import logging.config
@@ -17,11 +20,8 @@ import os
 import re
 import time
 import traceback
-import uuid
-from contextvars import ContextVar
-from datetime import datetime
-from functools import wraps
 from typing import Any, Final
+import uuid
 
 import psutil
 

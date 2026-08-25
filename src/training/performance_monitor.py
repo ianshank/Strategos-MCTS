@@ -9,9 +9,9 @@ Tracks and analyzes system performance including:
 - Throughput statistics
 """
 
-import time
 from collections import deque
 from dataclasses import dataclass, field
+import time
 from typing import Any
 
 import numpy as np

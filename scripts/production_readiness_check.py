@@ -13,12 +13,12 @@ Usage:
 
 import argparse
 import contextlib
-import json
-import sys
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+import json
 from pathlib import Path
+import sys
 
 
 class Status(Enum):
@@ -64,10 +64,23 @@ def run_security_checks(root: Path) -> list[CheckResult]:
     results = []
 
     # Check 1: Validation models integrated
-    main_file = root / "langgraph_multi_agent_mcts.py"
-    if check_file_exists(main_file, "Main framework file"):
-        content = main_file.read_text()
-        if "VALIDATION_AVAILABLE" in content and "validate_query" in content:
+    val_file = root / "src" / "models" / "validation.py"
+    app_file = root / "app.py"
+    builder_file = root / "src" / "framework" / "graph" / "builder.py"
+    legacy_file = root / "langgraph_multi_agent_mcts.py"
+
+    if (val_file.exists() and (app_file.exists() or builder_file.exists())) or legacy_file.exists():
+        has_validation = False
+        if val_file.exists():
+            val_content = val_file.read_text(encoding="utf-8", errors="ignore")
+            if "validate_query" in val_content:
+                has_validation = True
+        elif legacy_file.exists():
+            leg_content = legacy_file.read_text(encoding="utf-8", errors="ignore")
+            if "validate_query" in leg_content:
+                has_validation = True
+
+        if has_validation:
             results.append(
                 CheckResult(
                     name="Validation Models Integrated",
@@ -83,7 +96,7 @@ def run_security_checks(root: Path) -> list[CheckResult]:
                     status=Status.FAIL,
                     priority=Priority.P0,
                     message="Validation models NOT integrated into main framework",
-                    details="Check langgraph_multi_agent_mcts.py for validation imports",
+                    details="Check src/models/validation.py for validation definitions",
                 )
             )
     else:
@@ -92,7 +105,7 @@ def run_security_checks(root: Path) -> list[CheckResult]:
                 name="Validation Models Integrated",
                 status=Status.FAIL,
                 priority=Priority.P0,
-                message="Main framework file not found",
+                message="Framework validation files not found",
             )
         )
 
@@ -521,15 +534,29 @@ def run_dependency_checks(root: Path) -> list[CheckResult]:
     """Run dependency management checks."""
     results = []
 
+    # Accepted specifiers for production pinning: ``==`` is ideal; ``~=`` and
+    # upper-bounded ranges (``>=X,<Y``) are acceptable.  Bare ``>=`` without an
+    # upper cap is risky in production.
+
     # Check 1: Dependencies pinned
     requirements = root / "requirements.txt"
     if check_file_exists(requirements, "Requirements file"):
         content = requirements.read_text()
-        lines = [line for line in content.splitlines() if line and not line.startswith("#")]
+        lines = [line.strip() for line in content.splitlines() if line.strip() and not line.strip().startswith("#")]
         pinned = sum(1 for line in lines if "==" in line)
-        unpinned = sum(1 for line in lines if ">=" in line and "==" not in line)
+        unbounded = sum(1 for line in lines if not any(op in line for op in ("==", ">=", "<=", "~=", "<", ">", "!=")))
 
-        if unpinned == 0 and pinned > 0:
+        if unbounded > 0:
+            results.append(
+                CheckResult(
+                    name="Dependencies Pinned",
+                    status=Status.FAIL,
+                    priority=Priority.P0,
+                    message=f"{unbounded} dependencies have no version constraint",
+                    details="Pin all production dependencies to avoid supply-chain drift",
+                )
+            )
+        elif pinned == len(lines):
             results.append(
                 CheckResult(
                     name="Dependencies Pinned",
@@ -538,23 +565,17 @@ def run_dependency_checks(root: Path) -> list[CheckResult]:
                     message=f"All {pinned} dependencies are pinned to specific versions",
                 )
             )
-        elif pinned > unpinned:
+        else:
+            range_only = len(lines) - pinned
             results.append(
                 CheckResult(
                     name="Dependencies Pinned",
                     status=Status.WARN,
                     priority=Priority.P0,
-                    message=f"{unpinned} dependencies not pinned (>= instead of ==)",
-                    details="Pin all dependencies for reproducible builds",
-                )
-            )
-        else:
-            results.append(
-                CheckResult(
-                    name="Dependencies Pinned",
-                    status=Status.FAIL,
-                    priority=Priority.P0,
-                    message=f"Most dependencies NOT pinned ({unpinned} unpinned)",
+                    message=(
+                        f"{len(lines)} dependencies version-bounded " f"({pinned} pinned, {range_only} range-bounded)"
+                    ),
+                    details="Consider pinning range-bounded deps with == for reproducibility",
                 )
             )
     else:

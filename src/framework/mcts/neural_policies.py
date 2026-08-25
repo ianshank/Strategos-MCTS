@@ -19,11 +19,11 @@ Based on:
 
 from __future__ import annotations
 
-import logging
-import math
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
+import logging
+import math
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import numpy as np

@@ -11,9 +11,9 @@ Best Practices 2025:
 - Combine with example-based tests for completeness
 """
 
-import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
+import pytest
 
 from src.framework.mcts.core import MCTSNode, MCTSState
 

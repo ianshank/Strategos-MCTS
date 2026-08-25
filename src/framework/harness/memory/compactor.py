@@ -8,15 +8,15 @@ within commutative phases (intent / plan / verify groupings).
 from __future__ import annotations
 
 import asyncio
+from collections import defaultdict
+from collections.abc import Iterable, Iterator
 import contextlib
+from dataclasses import dataclass, field
 import errno
 import logging
 import os
-import time
-from collections import defaultdict
-from collections.abc import Iterable, Iterator
-from dataclasses import dataclass, field
 from pathlib import Path
+import time
 
 from src.framework.harness.memory.events import MemoryEvent, MemoryEventLog
 from src.observability.logging import get_logger

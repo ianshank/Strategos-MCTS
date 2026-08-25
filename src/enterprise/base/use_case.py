@@ -13,9 +13,9 @@ Design Principles:
 
 from __future__ import annotations
 
-import logging
 from abc import abstractmethod
 from dataclasses import dataclass, field
+import logging
 from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
 if TYPE_CHECKING:

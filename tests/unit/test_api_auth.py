@@ -9,12 +9,12 @@ Tests:
 - Security aspects (no sensitive data exposure)
 """
 
+from datetime import datetime
 import hashlib
 
 # Import the authentication classes
 import sys
 import time
-from datetime import datetime
 from unittest.mock import patch
 
 import pytest

@@ -15,9 +15,9 @@ Three properties carry the weight here, and each is tested by attempting to viol
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timezone
 import json
 import logging
-from datetime import UTC, datetime, timezone
 from pathlib import Path
 
 import pytest

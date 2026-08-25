@@ -15,9 +15,9 @@ The loop is intentionally thin — all heavy lifting lives in the runner.
 
 from __future__ import annotations
 
-import logging
 from collections import deque
 from dataclasses import dataclass, field
+import logging
 from pathlib import Path
 from typing import Literal
 

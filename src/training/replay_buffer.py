@@ -8,9 +8,9 @@ Implements:
 - Data augmentation support
 """
 
-import random
 from collections import deque
 from dataclasses import dataclass
+import random
 
 import numpy as np
 import torch

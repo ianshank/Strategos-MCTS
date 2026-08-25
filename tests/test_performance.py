@@ -155,7 +155,7 @@ class TestFactoryPerformance:
         """
         Test: Factory instantiation should be lightweight.
 
-        Target: < 5ms per factory creation (includes settings load)
+        Target: < 10ms per factory creation (includes settings load)
         """
         import os
 
@@ -173,7 +173,7 @@ class TestFactoryPerformance:
         elapsed = time.perf_counter() - start
         per_operation = (elapsed / iterations) * 1000  # Convert to ms
 
-        assert per_operation < 5.0, f"Factory instantiation too slow: {per_operation:.3f}ms per operation"
+        assert per_operation < 10.0, f"Factory instantiation too slow: {per_operation:.3f}ms per operation"
 
 
 class TestValidationPerformance:

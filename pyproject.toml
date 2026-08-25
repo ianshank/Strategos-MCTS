@@ -69,6 +69,7 @@ dev = [
     "mypy>=1.19.0,<1.20.0",
     "types-psutil>=5.9.0",
     "types-requests>=2.31.0",
+    "types-PyYAML>=6.0.0",
     # Cap ruff to the validated minor: ruff introduces new lint rules in minor releases,
     # so an unbounded range causes CI to drift and fail on code that passed locally.
     "ruff>=0.15.0,<0.16.0",
@@ -222,6 +223,7 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
+force-sort-within-sections = true
 
 [tool.ruff.lint.per-file-ignores]
 "app.py" = ["E402"]  # Imports follow logging.basicConfig setup and the guarded optional gradio import

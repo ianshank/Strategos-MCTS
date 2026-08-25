@@ -1,7 +1,7 @@
 """Unit tests for agent training framework."""
 
-import sys
 from pathlib import Path
+import sys
 
 import pytest
 import torch

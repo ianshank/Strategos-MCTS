@@ -13,11 +13,11 @@ files become error issues rather than exceptions.
 
 from __future__ import annotations
 
-import logging
-import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+import logging
 from pathlib import Path
+import re
 from typing import Final, Literal
 
 from src.framework.harness.intent.spec_loader import Spec, SpecLoader, SpecParseError

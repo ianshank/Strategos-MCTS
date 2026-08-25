@@ -15,8 +15,8 @@ Design constraints:
 
 from __future__ import annotations
 
-import json
 from collections.abc import AsyncIterator
+import json
 from typing import Any, Protocol
 
 from src.config.settings import Settings, get_settings

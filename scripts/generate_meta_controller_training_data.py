@@ -31,12 +31,12 @@ Data Format:
 """
 
 import argparse
+from datetime import datetime
 import json
 import logging
+from pathlib import Path
 import random
 import sys
-from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 import numpy as np

@@ -9,11 +9,11 @@ Reference: https://github.com/openai/human-eval
 
 from __future__ import annotations
 
-import json
-import re
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+import json
 from pathlib import Path
+import re
 from typing import Any
 
 from src.observability.logging import get_structured_logger

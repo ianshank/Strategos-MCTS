@@ -9,11 +9,11 @@ and continuous learning mode.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass, field
+from datetime import datetime
 import logging
 import tempfile
 import threading
-from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any
 
 import chess.pgn
@@ -916,14 +916,16 @@ def render_learning_board_html() -> str:
 
 def create_chess_ui() -> gr.Blocks:
     """Create the Gradio chess UI with scorecard and learning mode."""
+    theme_soft = gr.themes.Soft()
+    css_content = """
+    .chess-container { max-width: 1400px; margin: auto; }
+    .move-input { font-family: monospace; }
+    .tab-content { min-height: 400px; }
+    """
     with gr.Blocks(
         title="Chess vs AlphaZero AI",
-        theme=gr.themes.Soft(),
-        css="""
-        .chess-container { max-width: 1400px; margin: auto; }
-        .move-input { font-family: monospace; }
-        .tab-content { min-height: 400px; }
-        """,
+        theme=theme_soft,
+        css=css_content,
     ) as demo:
         gr.Markdown("""
             # ♟️ Chess vs AlphaZero-Style AI

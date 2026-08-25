@@ -16,8 +16,8 @@ with named exceptions, never mid-execution.
 
 from __future__ import annotations
 
-import types
 from collections.abc import Collection, Iterable, Mapping
+import types
 from typing import Any, NotRequired, Required, Union, get_args, get_origin, get_type_hints
 
 # The terminal sentinel used by langgraph.graph.END. Duplicated here as a plain string so

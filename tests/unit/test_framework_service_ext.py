@@ -7,8 +7,8 @@ MockLLMClient, LightweightFramework, and FrameworkService helper methods.
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

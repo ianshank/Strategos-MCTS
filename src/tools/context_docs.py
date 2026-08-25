@@ -43,14 +43,14 @@ Wrapped by ``tests/unit/tools/test_context_docs.py`` so drift fails CI.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
+from dataclasses import dataclass
 import glob as _glob
 import json
 import logging
+from pathlib import Path
 import re
 import sys
-from collections.abc import Callable
-from dataclasses import dataclass
-from pathlib import Path
 
 __all__ = ["Failure", "ContextDocValidator", "validate", "main"]
 

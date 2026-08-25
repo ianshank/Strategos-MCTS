@@ -5,8 +5,8 @@ Implements the LLMClient protocol for LM Studio's OpenAI-compatible API.
 Designed for running local models with configurable endpoint.
 """
 
-import json
 from collections.abc import AsyncIterator
+import json
 from typing import Any
 
 import httpx

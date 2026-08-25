@@ -8,8 +8,8 @@ per-task analysis, and key findings.
 from __future__ import annotations
 
 import logging
-import time
 from pathlib import Path
+import time
 
 from src.benchmark.config.benchmark_settings import BenchmarkSettings, ReportConfig, get_benchmark_settings
 from src.benchmark.evaluation.models import BenchmarkResult

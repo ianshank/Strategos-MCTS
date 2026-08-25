@@ -7,8 +7,8 @@ retry logic, and edge case handling.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
+import json
 from unittest.mock import AsyncMock
 
 import pytest

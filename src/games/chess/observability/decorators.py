@@ -8,9 +8,9 @@ chess gameplay operations.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 import functools
 import time
-from collections.abc import Callable
 from typing import Any, TypeVar
 
 from src.games.chess.constants import truncate_fen

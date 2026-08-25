@@ -17,8 +17,8 @@ Design constraints:
 from __future__ import annotations
 
 import base64
-import zlib
 from typing import Any, Protocol
+import zlib
 
 from src.config.constants import DEFAULT_KROKI_BASE_URL
 from src.config.settings import Settings, get_settings

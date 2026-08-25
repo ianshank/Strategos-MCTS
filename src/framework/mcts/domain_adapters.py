@@ -15,10 +15,10 @@ and can be used with TorchNeuralRolloutPolicy.
 
 from __future__ import annotations
 
-import hashlib
-import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+import hashlib
+import logging
 from typing import TYPE_CHECKING, Any
 
 import numpy as np

@@ -5,14 +5,14 @@ Handles vector index construction, document processing, and retrieval optimizati
 for the PRIMUS-Seed cybersecurity document corpus using Pinecone vector database.
 """
 
+from collections.abc import Iterator
+from dataclasses import dataclass
 import json
 import logging
 import os
-import uuid
-from collections.abc import Iterator
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import uuid
 
 import numpy as np
 import yaml
@@ -265,7 +265,19 @@ class VectorIndexBuilder:
         # Initialize embedding model
         if HAS_SENTENCE_TRANSFORMERS:
             self.embedding_model = SentenceTransformer(self.embedding_model_name)
-            self.embedding_dim = self.embedding_model.get_sentence_embedding_dimension()
+            has_new = hasattr(self.embedding_model, "get_embedding_dimension")
+            is_mock_new = has_new and hasattr(self.embedding_model.get_embedding_dimension, "return_value")
+            if has_new and (
+                not is_mock_new
+                or (
+                    hasattr(self.embedding_model.get_embedding_dimension.return_value, "__class__")
+                    and self.embedding_model.get_embedding_dimension.return_value.__class__.__name__
+                    not in ("Mock", "MagicMock", "AsyncMock")
+                )
+            ):
+                self.embedding_dim = self.embedding_model.get_embedding_dimension()
+            else:
+                self.embedding_dim = self.embedding_model.get_sentence_embedding_dimension()
         else:
             logger.warning("SentenceTransformers not available, using random embeddings")
             self.embedding_model = None

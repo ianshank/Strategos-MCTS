@@ -10,9 +10,9 @@ Uses a mock LLM adapter to verify behaviour without API calls.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass, field
 import subprocess
 import sys
-from dataclasses import dataclass, field
 from typing import Any
 
 import pytest

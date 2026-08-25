@@ -12,19 +12,27 @@ This script performs async health checks covering:
 - OpenTelemetry integration (if available)
 
 Exit codes:
-- 0: Healthy (all checks pass)
-- 1: Unhealthy (critical checks fail)
-- 2: Degraded (some checks fail but service can operate)
+- 0: Operational (Docker-healthy) — all critical checks pass. Covers both
+  HEALTHY (every check passed) and DEGRADED (optional services such as the GPU,
+  LLM provider, Pinecone or OpenTelemetry are absent or unconfigured, but the
+  container is ready to serve). The structured JSON report distinguishes the
+  two so operators can see which optional integrations are down.
+- 1: Unhealthy — one or more critical checks failed; the container cannot serve.
+
+Docker's HEALTHCHECK contract treats only exit 0 as healthy; any non-zero
+exit (including the previously-used code 2) is a check failure. A DEGRADED
+container is operational, so it must exit 0 or the image can never become
+healthy on a CPU-only host or in a smoke-test environment.
 """
 
 import asyncio
+from dataclasses import dataclass, field
+from enum import Enum
 import json
 import logging
 import os
 import sys
 import time
-from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any, Final
 
 # Configure logging
@@ -60,6 +68,29 @@ class HealthStatus(str, Enum):
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
+
+
+def exit_code_for_status(status: HealthStatus) -> int:
+    """Map an overall health status to a process exit code for the Docker HEALTHCHECK.
+
+    Docker treats only exit 0 as healthy; any non-zero exit is a check failure
+    (exit 2 is reserved and *must not* be used — it counts as a failure).
+    A DEGRADED container — critical checks pass but optional services are
+    absent — is operational and must exit 0, otherwise the image can never
+    report healthy on a CPU-only host or in a smoke-test environment where no
+    GPU, LLM key, Pinecone host or OTEL endpoint is configured.
+
+    The structured JSON report still carries the DEGRADED status, so operators
+    do not lose the signal that optional integrations are down.
+
+    Args:
+        status: The overall ``HealthStatus`` returned by ``run_all_checks``.
+
+    Returns:
+        0 for HEALTHY and DEGRADED (operational), 1 for UNHEALTHY
+        (critical failure).
+    """
+    return 1 if status is HealthStatus.UNHEALTHY else 0
 
 
 @dataclass
@@ -623,16 +654,17 @@ async def main():
         print(json.dumps(report.to_dict(), indent=2))
         print("=" * 80 + "\n")
 
-        # Determine exit code
+        # Determine exit code. DEGRADED maps to 0: the container is operational
+        # (only optional services are down), and Docker's HEALTHCHECK treats any
+        # non-zero exit as a failure. See ``exit_code_for_status``.
+        exit_code = exit_code_for_status(report.status)
         if report.status == HealthStatus.HEALTHY:
             print(f"[OK] Status: {report.status.value.upper()} - All checks passed")
-            sys.exit(0)
         elif report.status == HealthStatus.DEGRADED:
             print(f"[WARN] Status: {report.status.value.upper()} - Service operational with degraded functionality")
-            sys.exit(2)
         else:
             print(f"[FAIL] Status: {report.status.value.upper()} - Critical checks failed")
-            sys.exit(1)
+        sys.exit(exit_code)
 
     except KeyboardInterrupt:
         print("\nHealth check interrupted by user", file=sys.stderr)

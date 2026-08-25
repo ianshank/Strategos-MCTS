@@ -5,9 +5,9 @@ Implements the LLMClient protocol for Anthropic's Messages API.
 Supports Claude 3 models with proper content block handling.
 """
 
+from collections.abc import AsyncIterator
 import json
 import logging
-from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx

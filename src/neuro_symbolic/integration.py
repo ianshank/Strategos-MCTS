@@ -16,8 +16,8 @@ Best Practices 2025:
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass, field
+import time
 from typing import Any
 
 from .config import ConstraintConfig, NeuroSymbolicConfig

@@ -15,12 +15,12 @@ Usage:
         run_simulation()
 """
 
-import functools
-import inspect
-import os
 from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import datetime
+import functools
+import inspect
+import os
 from typing import Any
 
 from langsmith import Client, traceable

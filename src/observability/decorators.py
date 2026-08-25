@@ -15,12 +15,12 @@ Based on: MULTI_AGENT_MCTS_TEMPLATE.md Section 11
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
+from dataclasses import dataclass, field
 import functools
 import logging
 import time
 import traceback
-from collections.abc import Callable
-from dataclasses import dataclass, field
 from typing import Any, ParamSpec, TypeVar
 
 from src.config.settings import get_settings

@@ -7,10 +7,10 @@ Maps to spec ``strategos_langgraph_hardening`` AC-5. POSIX-only (uses SIGKILL).
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 import pytest
 

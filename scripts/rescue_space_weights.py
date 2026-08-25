@@ -39,8 +39,8 @@ from __future__ import annotations
 import argparse
 import logging
 import os
-import sys
 from pathlib import Path
+import sys
 
 # Keyless-safe provider selection must be in place before any src.config.settings
 # import runs, so it precedes the first-party imports below (and is why this

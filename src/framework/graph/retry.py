@@ -15,10 +15,10 @@ attempt count is published on a ``ContextVar`` so the execution-trace recorder c
 from __future__ import annotations
 
 import builtins
-import importlib
 from collections.abc import Callable
 from contextvars import ContextVar
 from dataclasses import dataclass
+import importlib
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from src.observability.decorators import retry as _retry_decorator

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from src.games.chess.mcp_chess_tools import (
     CHESS_TOOL_HANDLERS,

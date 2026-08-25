@@ -10,10 +10,10 @@ This module configures OpenTelemetry for distributed tracing across:
 Traces are exported to Jaeger via OTLP (OpenTelemetry Protocol).
 """
 
-import os
 from collections.abc import Callable
 from contextlib import contextmanager
 from functools import wraps
+import os
 from typing import Any
 
 from src.config.constants import DEFAULT_OTLP_HTTP_ENDPOINT

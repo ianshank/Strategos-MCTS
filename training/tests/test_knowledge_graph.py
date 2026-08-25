@@ -4,8 +4,8 @@ Tests for Knowledge Graph System
 
 import asyncio
 import json
-import tempfile
 from pathlib import Path
+import tempfile
 
 import networkx as nx
 import pytest

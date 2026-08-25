@@ -8,9 +8,9 @@ emits real values; in replay mode it deals out values previously captured.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 import random
 import time
-from datetime import UTC, datetime
 from typing import Protocol, runtime_checkable
 from uuid import UUID, uuid4
 

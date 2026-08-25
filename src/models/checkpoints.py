@@ -28,12 +28,12 @@ Design notes
 
 from __future__ import annotations
 
-import logging
-import zipfile
 from dataclasses import dataclass
 from enum import Enum
+import logging
 from pathlib import Path
 from typing import Any
+import zipfile
 
 from src.config.constants import (
     CHECKPOINT_WEIGHT_SUFFIXES,

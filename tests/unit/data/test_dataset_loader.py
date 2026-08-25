@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import csv
 import json
-import tempfile
 from pathlib import Path
+import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest

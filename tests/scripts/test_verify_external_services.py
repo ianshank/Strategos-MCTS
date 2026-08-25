@@ -14,8 +14,8 @@ Tests all verifiers (Pinecone, W&B, GitHub, OpenAI, Neo4j) with mocked responses
 """
 
 import logging
-import sys
 from pathlib import Path
+import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx

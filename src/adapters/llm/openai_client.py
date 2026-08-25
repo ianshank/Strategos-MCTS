@@ -5,9 +5,9 @@ Implements the LLMClient protocol for OpenAI API (and compatible APIs).
 Includes retry logic, circuit breaker pattern, and streaming support.
 """
 
+from collections.abc import AsyncIterator
 import json
 import logging
-from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx

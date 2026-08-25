@@ -7,8 +7,8 @@ silent fallback).
 
 from __future__ import annotations
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from src.config.constants import CANDIDATE_SCORER_IDENTITY, CANDIDATE_SCORER_VALUE, DEFAULT_CANDIDATE_SCORER
 from src.config.graph_settings import (

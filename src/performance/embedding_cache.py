@@ -10,12 +10,12 @@ Provides high-performance caching for embedding computations with:
 
 from __future__ import annotations
 
-import hashlib
-import threading
-import time
 from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass, field
+import hashlib
+import threading
+import time
 from typing import Any
 
 from src.observability.logging import get_logger

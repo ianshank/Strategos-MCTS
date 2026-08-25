@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
+import re
 
 # Allow only safe filename characters; everything else is replaced with ``_``.
 _FILENAME_SAFE = re.compile(r"[^A-Za-z0-9._-]")

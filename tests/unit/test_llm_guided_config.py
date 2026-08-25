@@ -6,8 +6,8 @@ Tests configuration validation, serialization, and preset management.
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
+import tempfile
 
 import pytest
 

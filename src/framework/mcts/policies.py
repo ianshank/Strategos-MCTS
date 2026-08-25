@@ -10,10 +10,10 @@ Provides:
 
 from __future__ import annotations
 
-import math
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from enum import Enum
+import math
 from typing import TYPE_CHECKING
 
 import numpy as np

@@ -12,8 +12,8 @@ slash before prefix comparison, so ``src`` does not overlap ``src2/`` while
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
+import re
 from typing import Final
 
 from src.framework.harness.intent.spec_loader import SpecLoader, SpecParseError

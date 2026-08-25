@@ -7,8 +7,8 @@ and configurable provider pricing.
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
+import logging
 
 from src.benchmark.config.benchmark_settings import CostConfig
 from src.benchmark.evaluation.models import BenchmarkResult

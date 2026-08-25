@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from src.framework.harness import (
     AggregationPolicy,

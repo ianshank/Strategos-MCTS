@@ -38,13 +38,13 @@ Wrapped by ``tests/unit/tools/test_claim_ledger.py`` so drift fails CI.
 from __future__ import annotations
 
 import argparse
-import json
-import logging
-import re
-import sys
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
+import json
+import logging
 from pathlib import Path
+import re
+import sys
 
 from src.config.constants import (
     CLAIM_CELL_EMPTY_SENTINEL,

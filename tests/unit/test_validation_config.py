@@ -14,8 +14,8 @@ Tests:
 
 import os
 import sys
-import warnings
 from unittest.mock import patch
+import warnings
 
 import pytest
 

@@ -22,29 +22,29 @@ Integration:
 """
 
 import asyncio
-import gzip
-import hashlib
-import json
-import logging
-import re
-import sqlite3
 from collections import Counter, deque
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
+import gzip
+import hashlib
+import json
+import logging
 from pathlib import Path
+import re
+import sqlite3
 from typing import Any, Literal
 
+from langsmith import Client as LangSmithClient
 import numpy as np
+from sklearn.cluster import DBSCAN
+from sklearn.decomposition import PCA
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 # Training dependencies (required)
 import torch
 import torch.nn.functional as F  # noqa: N812
 import yaml
-from langsmith import Client as LangSmithClient
-from sklearn.cluster import DBSCAN
-from sklearn.decomposition import PCA
-from sklearn.feature_extraction.text import TfidfVectorizer
 
 # Define capability flags (dependencies are now hard requirements)
 HAS_TORCH = True

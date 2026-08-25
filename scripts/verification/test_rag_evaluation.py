@@ -16,8 +16,8 @@ Usage:
 import asyncio
 import logging
 import os
-import sys
 from pathlib import Path
+import sys
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))

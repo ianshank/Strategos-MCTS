@@ -41,10 +41,10 @@ from tests.utils.langsmith_tracing import (
 
 
 @pytest.fixture
-def gradio_app():
+def gradio_app(monkeypatch, mock_framework):
     """Import and return the Gradio app for testing."""
-    import sys
     from pathlib import Path
+    import sys
 
     # Add project root to path
     project_root = Path(__file__).parent.parent.parent
@@ -52,6 +52,9 @@ def gradio_app():
 
     # Import the app module
     import app as gradio_app_module
+
+    # Inject the mock framework to prevent UI tests from making real LLM/LMStudio calls
+    monkeypatch.setattr(gradio_app_module, "framework", mock_framework)
 
     return gradio_app_module
 

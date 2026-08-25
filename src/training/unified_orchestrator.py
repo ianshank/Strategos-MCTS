@@ -12,15 +12,15 @@ Coordinates:
 - Checkpointing
 """
 
-import time
 from collections.abc import Callable
 from pathlib import Path
+import time
 from typing import Any
 
 import psutil
 import torch
-import torch.nn as nn
 from torch.amp import GradScaler, autocast
+import torch.nn as nn
 
 from ..agents.hrm_agent import HRMLoss, create_hrm_agent
 from ..agents.trm_agent import TRMLoss, create_trm_agent

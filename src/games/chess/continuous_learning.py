@@ -8,12 +8,12 @@ play against each other, learn from outcomes, and continuously improve.
 from __future__ import annotations
 
 import asyncio
-import random
-import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
+import random
+import time
 from typing import TYPE_CHECKING, Any
 
 import numpy as np

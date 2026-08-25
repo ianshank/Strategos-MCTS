@@ -42,9 +42,9 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 
 # The documents whose claims the ledger covers, exactly. Kept as a tuple of
 # repo-relative paths so adding a surface is a one-line, reviewable change.

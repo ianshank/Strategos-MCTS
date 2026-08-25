@@ -8,8 +8,8 @@ exception handlers, middleware, and lifespan management.
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 # rest_server.py calls get_settings() at module level for CORS config.
 # We must ensure settings can be constructed before the import.

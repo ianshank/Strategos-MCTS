@@ -29,9 +29,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 from typing import Any
 
 import numpy as np

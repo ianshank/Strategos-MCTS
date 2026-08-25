@@ -10,9 +10,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import uuid
 from pathlib import Path
 from typing import Any
+import uuid
 
 from src.benchmark.adapters.protocol import BenchmarkSystemProtocol
 from src.benchmark.config.benchmark_settings import BenchmarkSettings, get_benchmark_settings
