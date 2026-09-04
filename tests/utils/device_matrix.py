@@ -47,6 +47,14 @@ DEVICE_MATRIX_ENV: Final[str] = "E2E_DEVICES"
 
 GPU_MARKER_NAME: Final[str] = "gpu"
 
+#: Reported when an accelerator-only parametrization has no accelerator to run on, so the
+#: skip names its cause instead of pytest's bare "got empty parameter set".
+NO_ACCELERATOR_ID: Final[str] = "no-accelerator"
+NO_ACCELERATOR_SKIP_REASON: Final[str] = (
+    f"the device matrix contains no accelerator, so there is nothing to compare against CPU "
+    f"(set {DEVICE_MATRIX_ENV} to a set that includes one)"
+)
+
 
 @dataclass(frozen=True)
 class DeviceCase:
@@ -138,6 +146,13 @@ def device_params(
     junit/summary skip counts see them. A required-but-absent device is *not* marked
     skip here; the consuming fixture fails it with ``DeviceCase.failure_reason`` so the
     failure carries the operator's own configuration in its message.
+
+    The list is never empty. With ``accelerators_only`` and a matrix that contains no
+    accelerator at all — which is what ``E2E_DEVICES=cpu`` produces — an explicitly
+    reasoned placeholder is emitted instead. pytest renders an empty ``params=`` as
+    "got empty parameter set", which says nothing about *why* the case vanished, and in
+    this suite a skip that does not name its reason is the failure being designed
+    against.
     """
     resolved = device_cases() if cases is None else cases
     params: list[Any] = []
@@ -150,6 +165,23 @@ def device_params(
         if case.skip_reason is not None:
             marks.append(pytest.mark.skip(reason=case.skip_reason))
         params.append(pytest.param(case, id=case.name, marks=marks))
+
+    if accelerators_only and not params:
+        # Deliberately carries an *unavailable accelerator* rather than a CPU case: if the
+        # skip mark below were ever removed, the consuming test would fail loudly on a
+        # missing device instead of silently "passing" a cross-device comparison against
+        # CPU on both sides.
+        placeholder = DeviceCase(name=ACCELERATOR_DEVICES[0], available=False, requested=False)
+        params.append(
+            pytest.param(
+                placeholder,
+                id=NO_ACCELERATOR_ID,
+                marks=[
+                    getattr(pytest.mark, GPU_MARKER_NAME),
+                    pytest.mark.skip(reason=NO_ACCELERATOR_SKIP_REASON),
+                ],
+            )
+        )
     return params
 
 

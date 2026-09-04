@@ -31,6 +31,7 @@ from tests.utils.device_matrix import (
     DEVICE_MATRIX_ENV,
     GPU_MARKER_NAME,
     MPS_DEVICE,
+    NO_ACCELERATOR_ID,
     DeviceCase,
     device_available,
     device_cases,
@@ -51,6 +52,21 @@ from tests.utils.e2e_process import (
 pytestmark = [pytest.mark.unit]
 
 REPO_ROOT = Path("/repo")
+
+
+@pytest.fixture(autouse=True)
+def _unpinned_device_matrix(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run these invariants against the *implicit* matrix, whatever the shell holds.
+
+    ``device_params()`` and ``device_cases()`` read the process environment by default, so
+    a developer who exported ``E2E_DEVICES`` (say, after ``E2E_DEVICES=cuda make
+    test-e2e``) would see three of these tests fail while the helpers were entirely
+    correct. A unit test whose verdict depends on ambient state is not an invariant.
+
+    Cases that exercise the override pass their own mapping explicitly, so clearing the
+    variable here narrows nothing.
+    """
+    monkeypatch.delenv(DEVICE_MATRIX_ENV, raising=False)
 
 
 # --------------------------------------------------------------- the matrix itself
@@ -197,6 +213,38 @@ def test_accelerators_only_drops_cpu() -> None:
     ids = [param.id for param in device_params(accelerators_only=True)]
     assert CPU_DEVICE not in ids
     assert ids == list(ACCELERATOR_DEVICES)
+
+
+def test_an_accelerator_free_matrix_still_names_its_reason() -> None:
+    """``E2E_DEVICES=cpu`` must not degrade to pytest's bare "got empty parameter set".
+
+    An empty ``params=`` is reported without any explanation of why the case vanished,
+    which is the unreasoned skip this suite exists to eliminate. One explicitly reasoned
+    placeholder is emitted instead.
+    """
+    cpu_only = (DeviceCase(name=CPU_DEVICE, available=True, requested=True),)
+    params = device_params(cpu_only, accelerators_only=True)
+
+    assert len(params) == 1, "an accelerator-free matrix must still yield exactly one reported case"
+    assert params[0].id == NO_ACCELERATOR_ID
+    marks = {mark.name for mark in params[0].marks}
+    assert "skip" in marks
+    assert GPU_MARKER_NAME in marks, "the placeholder must stay deselectable by -m 'not gpu'"
+
+    reason = next(mark for mark in params[0].marks if mark.name == "skip").kwargs["reason"]
+    assert DEVICE_MATRIX_ENV in reason, "the skip must tell the reader how to get an accelerator into the matrix"
+
+
+def test_the_accelerator_placeholder_carries_an_unavailable_accelerator() -> None:
+    """Its failure direction is deliberate.
+
+    If the skip mark were ever dropped, the consuming test must fail on a missing device
+    rather than quietly comparing CPU against CPU and reporting agreement.
+    """
+    cpu_only = (DeviceCase(name=CPU_DEVICE, available=True, requested=False),)
+    case = device_params(cpu_only, accelerators_only=True)[0].values[0]
+    assert case.is_accelerator
+    assert case.available is False
 
 
 # ------------------------------------------------------------- the hermetic environment
