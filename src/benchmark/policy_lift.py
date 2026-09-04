@@ -48,7 +48,7 @@ from src.config.constants import (
 )
 from src.framework.domain_registry import DomainRegistry, DomainSpec
 from src.models.policy_value_net import MLPPolicyValueNetwork, create_policy_value_network
-from src.observability.logging import get_logger
+from src.observability.logging import configure_cli_logging, get_logger
 from src.training.system_config import MCTSConfig, NeuralNetworkConfig
 
 logger = get_logger(__name__)
@@ -422,6 +422,11 @@ async def run(args: argparse.Namespace) -> int:
 
 
 def main() -> None:
+    # stderr, not stdout: this command prints its JSON artifact to stdout, so log records
+    # interleaved there would corrupt `policy-lift ... | jq`. Without any configuration at
+    # all the gate's own reasoning — which checkpoint, which architecture, which interval —
+    # was discarded entirely.
+    configure_cli_logging()
     args = build_parser().parse_args()
     sys.exit(asyncio.run(run(args)))
 

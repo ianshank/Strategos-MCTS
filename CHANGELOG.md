@@ -73,6 +73,36 @@ that CPU-only and single-GPU paths both keep working rested on CI happening to b
   reported undocumented however it was documented.
 - Corrected `tests/README.md`, which stated a 50% coverage minimum; `pyproject.toml` sets 85%.
 
+#### Fixed — the console scripts were silent
+
+A hygiene audit of this branch found that `setup_logging()` had **zero call sites in
+`src/`**. `get_logger` returns a bare `mcts.*` logger with no handler, so until something
+configures the hierarchy every INFO and DEBUG record is discarded and only WARNING and
+above escapes through `logging.lastResort`, unformatted. `self-play-convergence` and
+`policy-lift` both reached their work without configuring anything: an operator saw no
+resolved device, no seed, no per-iteration losses and no checkpoint paths, which makes a
+failed run undiagnosable after the fact.
+
+Fixed with a named `configure_cli_logging()` helper called from both `main()`s. It writes
+to **stderr**, and that is the load-bearing detail: `setup_logging` defaults to stdout, and
+`policy-lift` prints its JSON artifact there — logging to stdout would have corrupted
+`policy-lift ... | jq`. `setup_logging` gains an opt-in `stream` parameter whose default
+preserves the behaviour every existing caller already gets.
+
+Covered by `tests/unit/observability/test_cli_logging.py` (7 tests, including that
+configuring twice does not stack handlers) and by a process-boundary assertion in
+`tests/e2e/test_operational_entry_points_e2e.py` that the installed script emits structured
+records carrying a correlation id while leaving stdout empty. Both verified by mutation:
+pointing the helper back at stdout, or removing the call, each turns the suite red.
+
+Also from the same audit: `make gate` did not run `test-e2e` even though the Makefile
+header claims exact CI parity and the CI `test` job runs it; `python -m src.tools.context_docs`
+was in `make gate` but in **no** workflow, so the check that exists because orientation docs
+drift was the one check CI could not catch drifting; `tests/e2e/test_user_journeys.py`
+hard-coded `device="cpu"` against the rule this PR added to `tests/README.md`, and now takes
+the fixture; and `CLAUDE.md`'s `mypy --strict` figure was stale (545 → **539**, re-measured,
+now with the per-error-code breakdown so the number is actionable rather than decorative).
+
 #### Found, not fixed
 
 Recorded in the plan's §4 rather than silently worked around:

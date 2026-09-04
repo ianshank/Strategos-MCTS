@@ -48,9 +48,16 @@ pytest tests/unit -v --tb=short -q
 > **Type-check strictness, stated honestly.** The gate is `mypy src/` with the settings in
 > `pyproject.toml` `[tool.mypy]` — which deliberately set `disallow_untyped_defs = false` and
 > `disallow_incomplete_defs = false`. It is **not** `--strict`. This table previously documented
-> `mypy src/ --strict`; measured 2026-08-04, that command reports **545 errors in 92 files**, so it
-> was a claim no command reproduced (CHARTER.md NG-3). Raising strictness is a deliberate ratchet,
-> tracked separately — do not "fix" the 545 by adding blanket ignores.
+> `mypy src/ --strict`; that command reports **539 errors in 92 files** (re-measured 2026-09-04;
+> it was 545 on 2026-08-04, so the figure drifts and must be re-measured rather than trusted), so
+> it was a claim no command reproduced (CHARTER.md NG-3). Raising strictness is a deliberate
+> ratchet, tracked separately — do not "fix" the count by adding blanket ignores.
+>
+> The 539 break down by error code as follows, which is more actionable than the total because
+> two of the six dominate and they are separate axes:
+> `no-untyped-def` 223, `type-arg` 146, `misc` 74, `untyped-decorator` 57, `no-untyped-call` 36,
+> `attr-defined` 3. Reproduce with
+> `mypy src/ --strict 2>&1 | grep -oE '\[[a-z-]+\]$' | sort | uniq -c | sort -rn`.
 
 > **Tooling is pinned for CI/local parity.** `ruff` and `mypy` are pinned to a validated
 > minor in the `[dev]` extra (the CI lint job installs `.[dev]`). Bump them deliberately and

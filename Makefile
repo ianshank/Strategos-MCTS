@@ -101,7 +101,7 @@ secrets: ## Fast secret grep, matching the spec-validate CI step
 		&& gitleaks detect --config .gitleaks.toml --source . --no-git -v \
 		|| echo "gitleaks not installed locally — that layer runs in CI"
 
-gate: format-check lint typecheck specs docs claims status pins test secrets ## Full local gate, in CI order
+gate: format-check lint typecheck specs docs claims status pins test test-e2e secrets ## Full local gate, in CI order
 	@echo "Quality gate passed."
 
 clean: ## Remove build/test artifacts

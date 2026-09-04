@@ -37,6 +37,7 @@ except ImportError:
 __all__ = [
     # Logging
     "setup_logging",
+    "configure_cli_logging",
     "get_logger",
     "CorrelationIdFilter",
     # Tracing

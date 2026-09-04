@@ -29,6 +29,15 @@ import psutil
 _correlation_id: ContextVar[str | None] = ContextVar("correlation_id", default=None)
 _request_metadata: ContextVar[dict | None] = ContextVar("request_metadata", default=None)
 
+# Streams the console handler can be pointed at, named rather than inlined so the choice
+# is a documented contract instead of a literal buried in a dict-config.
+#
+# stdout is the historical default and stays the default. stderr exists for command-line
+# entry points whose stdout is a *data* channel: `policy-lift` prints its JSON artifact
+# there, so a log record interleaved into it would corrupt `policy-lift ... | jq`.
+CONSOLE_STREAM_STDOUT: Final[str] = "ext://sys.stdout"
+CONSOLE_STREAM_STDERR: Final[str] = "ext://sys.stderr"
+
 
 def get_correlation_id() -> str:
     """Get current correlation ID or generate new one."""
@@ -303,6 +312,7 @@ def setup_logging(
     json_output: bool = True,
     include_hostname: bool = True,
     include_process: bool = True,
+    stream: str = CONSOLE_STREAM_STDOUT,
 ) -> None:
     """
     Configure JSON-structured logging for the application.
@@ -315,6 +325,15 @@ def setup_logging(
         json_output: Use JSON formatter (default True).
         include_hostname: Include hostname in logs.
         include_process: Include process/thread info in logs.
+        stream: Where the console handler writes. Defaults to stdout, preserving the
+                behaviour every existing caller already gets. Command-line entry points
+                should pass :data:`CONSOLE_STREAM_STDERR` instead — several of them print
+                machine-readable output (``policy-lift`` emits its JSON artifact) on
+                stdout, and interleaving log records into that stream would corrupt any
+                consumer piping it.
+
+    Returns ``None``. It configures the logging system; it does not hand back a logger.
+    Call :func:`get_logger` or :func:`get_structured_logger` for that.
     """
     if log_level is None:
         log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -344,7 +363,7 @@ def setup_logging(
                 "level": log_level,
                 "formatter": "json" if json_output else "standard",
                 "filters": ["correlation_id"],
-                "stream": "ext://sys.stdout",
+                "stream": stream,
             },
         },
         "loggers": {
@@ -445,6 +464,26 @@ def setup_logging(
         config["loggers"]["mcts"]["handlers"].append("file")
 
     logging.config.dictConfig(config)
+
+
+def configure_cli_logging(log_level: str | None = None) -> None:
+    """Configure logging for a command-line entry point, writing to stderr.
+
+    Console scripts declared in ``pyproject.toml`` reach their ``main()`` with logging
+    unconfigured: ``get_logger`` returns a bare ``mcts.*`` logger with no handler, so every
+    ``logger.info`` in the run is discarded and only WARNING and above leaks out through
+    ``logging.lastResort``, unformatted. An operator running ``self-play-convergence`` saw
+    no output at all — not the resolved device, not the seed, not the per-iteration losses,
+    not the checkpoint paths — which makes a failed run undiagnosable after the fact.
+
+    stderr rather than stdout, deliberately: these commands use stdout as a data channel
+    (``policy-lift`` prints its JSON artifact there), so log records must not interleave
+    with it. Level still comes from ``LOG_LEVEL``; nothing new is introduced to configure.
+
+    Safe to call more than once — ``dictConfig`` replaces the configuration rather than
+    stacking handlers.
+    """
+    setup_logging(log_level=log_level, stream=CONSOLE_STREAM_STDERR)
 
 
 def get_logger(name: str) -> logging.Logger:

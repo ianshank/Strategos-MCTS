@@ -30,7 +30,7 @@ import sys
 
 import pytest
 
-from tests.utils.device_matrix import CUDA_DEVICE, device_available
+from tests.utils.device_matrix import CPU_DEVICE, CUDA_DEVICE, device_available
 
 pytestmark = [pytest.mark.e2e, pytest.mark.smoke]
 
@@ -71,6 +71,51 @@ def test_declared_console_script_is_installed_and_runs(script: str, run_script) 
         f"installed (`pip install -e .`) or its module:function target is wrong.\n{result.describe()}"
     )
     assert result.stdout.strip(), f"{script} --help printed nothing\n{result.describe()}"
+
+
+def test_a_console_script_emits_its_logs_without_polluting_stdout(tmp_path, run_script, e2e_seed) -> None:
+    """A real run must be diagnosable afterwards, and its stdout must stay a data channel.
+
+    Both halves were broken. ``main()`` never configured logging, so ``get_logger`` handed
+    back an unconfigured ``mcts.*`` logger and every INFO record in the run was discarded —
+    an operator saw no resolved device, no seed, no losses, no checkpoint path. And the
+    obvious fix is wrong: ``setup_logging`` defaults to stdout, where ``policy-lift`` prints
+    its JSON artifact, so logging there would corrupt ``policy-lift ... | jq``.
+
+    Driven through the installed console script rather than in-process, because the defect
+    lived in ``main()`` — the one function an in-process test never calls.
+    """
+    result = run_script(
+        [
+            "self-play-convergence",
+            "--domain",
+            "reasoning",
+            "--iterations",
+            "1",
+            "--checkpoint-dir",
+            str(tmp_path / "ck"),
+            "--seed",
+            str(e2e_seed),
+            "--device",
+            CPU_DEVICE,
+            "--num-simulations",
+            "2",
+            "--games-per-iteration",
+            "1",
+        ]
+    )
+    assert result.returncode == 0, result.describe()
+
+    assert result.stderr.strip(), f"the driver produced no diagnostics at all\n{result.describe()}"
+    assert (
+        not result.stdout.strip()
+    ), f"the driver wrote to stdout, which must stay free for command output\n{result.describe()}"
+
+    # Structured, not just present: the records carry the correlation id INV-8 requires.
+    records = [json.loads(line) for line in result.stderr.splitlines() if line.startswith("{")]
+    assert records, f"stderr carried no structured log records\n{result.describe()}"
+    assert all("correlation_id" in record for record in records)
+    assert any(record.get("level") == "INFO" for record in records), "INFO records are still being discarded"
 
 
 def _run_healthcheck(run_script, repo_root: Path, *, require_gpu: bool = False):

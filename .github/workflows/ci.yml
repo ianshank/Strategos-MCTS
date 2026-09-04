@@ -120,6 +120,14 @@ jobs:
           fi
           echo "OK: the claim-ledger gate rejects an unsubstantiated PROVEN grade"
 
+      - name: Validate the context documents against the tree
+        # CHARTER.md INV-10: every repository path and pinned value cited by a governed
+        # document must resolve. `make docs` has always run this locally and it is in
+        # `make gate`, but no workflow ran it — so the check that exists *because*
+        # orientation docs drift was the one check CI could not catch drifting. Two lines,
+        # no new action reference, so the pin ratchet is untouched.
+        run: python -m src.tools.context_docs
+
       - name: Check the GitHub Actions pin ratchet
         # A tag such as @v4 is a mutable pointer, so a tag-pinned third-party action is an
         # unreviewed code-execution path into CI. The tree is not fully pinned yet, so this
