@@ -224,7 +224,11 @@ class UnifiedTrainingOrchestrator:
         )
 
         # Self-play collector
-        self.self_play_collector = SelfPlayCollector(mcts=self.mcts, config=self.config.mcts)
+        self.self_play_collector = SelfPlayCollector(
+            mcts=self.mcts,
+            config=self.config.mcts,
+            action_space_size=self.config.neural_net.action_size,
+        )
         logger.debug("Self-play collector initialized", component="self_play_collector")
 
         # Optimizers
@@ -869,11 +873,14 @@ class UnifiedTrainingOrchestrator:
             )
 
         # Extract key metrics for logging
+        def _to_flt(v: Any) -> float:
+            return float(v.item() if hasattr(v, "item") else (v or 0.0))
+
         result = {
-            "hrm_loss": metrics.get("loss", 0.0),
-            "hrm_halt_step": metrics.get("hrm_halt_step", 0.0),
-            "hrm_ponder_cost": metrics.get("hrm_ponder_cost", 0.0),
-            "hrm_gradient_norm": metrics.get("gradient_norm", 0.0),
+            "hrm_loss": _to_flt(metrics.get("loss", 0.0)),
+            "hrm_halt_step": _to_flt(metrics.get("hrm_halt_step", 0.0)),
+            "hrm_ponder_cost": _to_flt(metrics.get("hrm_ponder_cost", 0.0)),
+            "hrm_gradient_norm": _to_flt(metrics.get("gradient_norm", 0.0)),
         }
 
         training_time = time.perf_counter() - training_start
@@ -982,11 +989,14 @@ class UnifiedTrainingOrchestrator:
             )
 
         # Extract key metrics for logging
+        def _to_flt(v: Any) -> float:
+            return float(v.item() if hasattr(v, "item") else (v or 0.0))
+
         result = {
-            "trm_loss": metrics.get("loss", 0.0),
-            "trm_convergence_step": metrics.get("trm_convergence_step", 0.0),
-            "trm_final_residual": metrics.get("trm_final_residual", 0.0),
-            "trm_gradient_norm": metrics.get("gradient_norm", 0.0),
+            "trm_loss": _to_flt(metrics.get("loss", 0.0)),
+            "trm_convergence_step": _to_flt(metrics.get("trm_convergence_step", 0.0)),
+            "trm_final_residual": _to_flt(metrics.get("trm_final_residual", 0.0)),
+            "trm_gradient_norm": _to_flt(metrics.get("gradient_norm", 0.0)),
         }
 
         training_time = time.perf_counter() - training_start
