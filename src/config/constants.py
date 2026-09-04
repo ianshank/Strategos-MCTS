@@ -640,6 +640,22 @@ ACTION_USES_LOCAL_PREFIXES: Final[tuple[str, ...]] = ("./", "../", "docker://")
 ACTION_PIN_BASELINE_RELATIVE_PATH: Final[str] = ".github/action_pin_baseline.json"
 ACTION_PIN_BASELINE_SCHEMA_VERSION: Final[int] = 1
 
+# ============================================================================
+# Lint Ratchet (ruff rules enforced by a shrinking baseline rather than a gate)
+# ============================================================================
+
+LINT_RATCHET_BASELINE_RELATIVE_PATH: Final[str] = ".lint_ratchet_baseline.json"
+LINT_RATCHET_BASELINE_SCHEMA_VERSION: Final[int] = 1
+
+# Findings are grouped by the first N path components rather than by file. Per-file would
+# make the baseline churn on every rename; a single repo-wide total would let a fix in one
+# package silently pay for a regression in another. Two components ("src/training",
+# "tests/unit") is the level at which ownership and specs are actually drawn here.
+LINT_RATCHET_GROUP_DEPTH: Final[int] = 2
+
+# Ruff emits one JSON object per finding under `--output-format json`.
+RUFF_JSON_OUTPUT_FORMAT: Final[str] = "json"
+
 # Environment variables that carry paid model-provider credentials. Named centrally so the
 # CI invariant that forbids exposing them to pull-request code, and any future redaction
 # helper, agree on one list rather than each keeping its own.

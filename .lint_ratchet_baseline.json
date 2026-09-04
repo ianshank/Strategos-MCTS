@@ -1,0 +1,33 @@
+{
+  "_README": "Ratchet baseline for ruff rules that cannot yet be enforced as a gate. Counts are grouped by the first two path components and may only DECREASE; a group absent from this file must have zero findings. Re-tighten in the same change that fixes call sites: make lint-ratchet-baseline. Rationale per rule is in src/tools/lint_ratchet.py RATCHETED_RULES.",
+  "schema_version": 1,
+  "rules": {
+    "NPY002": {
+      "total": 108,
+      "by_group": {
+        "examples/advanced_mcts_demo.py": 1,
+        "scripts/generate_meta_controller_training_data.py": 5,
+        "src/benchmark": 1,
+        "src/framework": 2,
+        "src/games": 2,
+        "src/training": 5,
+        "tests/e2e": 1,
+        "tests/games": 4,
+        "tests/test_deepmind_framework.py": 4,
+        "tests/unit": 19,
+        "training/advanced_embeddings.py": 1,
+        "training/agent_trainer.py": 2,
+        "training/benchmark_suite.py": 1,
+        "training/continual_learning.py": 7,
+        "training/embedding_benchmark.py": 2,
+        "training/evaluation.py": 5,
+        "training/examples": 15,
+        "training/meta_controller.py": 17,
+        "training/monitoring.py": 3,
+        "training/multimodal_knowledge_base.py": 3,
+        "training/rag_builder.py": 1,
+        "training/tests": 7
+      }
+    }
+  }
+}

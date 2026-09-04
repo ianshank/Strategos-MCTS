@@ -164,6 +164,7 @@ action-pins = "src.tools.action_pins:main"
 benchmark = "src.benchmark.cli:main"
 claim-ledger = "src.tools.claim_ledger:main"
 harness = "src.framework.harness.cli:main"
+lint-ratchet = "src.tools.lint_ratchet:main"
 policy-lift = "src.benchmark.policy_lift:main"
 self-play-convergence = "src.training.self_play_convergence:main"
 status-artifact = "src.tools.status_artifact:main"
@@ -203,6 +204,7 @@ select = [
     "UP",     # pyupgrade
     "ARG",    # flake8-unused-arguments
     "SIM",    # flake8-simplify
+    "NPY",    # NumPy-specific rules (see NPY002 in `ignore` — it is ratcheted, not exempt)
 ]
 ignore = [
     "E501",   # line too long (handled by formatter)
@@ -219,6 +221,14 @@ ignore = [
     "SIM117", # combine with statements (sometimes clearer separate)
     "F541",   # f-string without placeholders (used for future formatting)
     "UP042",  # str+Enum -> StrEnum; project supports Python 3.10 which lacks StrEnum
+    # NPY002 (numpy-legacy-random) is NOT exempt — it is enforced by a shrinking baseline in
+    # `.lint_ratchet_baseline.json` via `make lint-ratchet`, because converting all of its call
+    # sites at once would touch src/training/ and src/framework/mcts/, both claimed by open
+    # approved specs (CHARTER.md NG-4). Ignoring it here keeps `ruff check .` a clean gate while
+    # the count shrinks; see src/tools/lint_ratchet.py for the full argument. Do not "fix" this
+    # by deleting the ratchet — one of these call sites is the known determinism defect
+    # (specs/hygiene_determinism.SPEC.md AC-3).
+    "NPY002", # numpy-legacy-random — ratcheted, see above
 ]
 
 [tool.ruff.lint.isort]

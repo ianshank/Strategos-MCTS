@@ -136,6 +136,16 @@ jobs:
         # introduced action must be pinned to a commit SHA on first use.
         run: python -m src.tools.action_pins
 
+      - name: Check the lint ratchet
+        # ruff's NumPy ruleset was never selected, so NPY002 (numpy-legacy-random) was
+        # unenforced at 108 call sites — one of which is the root Dirichlet noise behind the
+        # known determinism defect (specs/hygiene_determinism.SPEC.md AC-3). Converting them
+        # all touches src/training/ and src/framework/mcts/, both claimed by open approved
+        # specs, so the rule is held to a shrinking baseline instead: counts may only go down,
+        # and an area absent from .lint_ratchet_baseline.json must have zero findings. Same
+        # mechanism as the pin ratchet above, deliberately. No new action reference.
+        run: python -m src.tools.lint_ratchet
+
       - name: Spec traceability (PRs only)
         # A PR touching src/** must run on a spec/<id> branch whose spec is
         # 'approved' on the base branch (the completing PR may flip it to

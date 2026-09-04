@@ -116,6 +116,7 @@ action-pins            # GitHub Actions commit-SHA pin ratchet (--write-baseline
 benchmark              # = python -m src.benchmark  — system-vs-system evaluation
 claim-ledger           # validate docs/CLAIM_LEDGER.md: schema, cited paths, promotion rule
 harness                # autonomous agent loop: run | dry-run | replay | validate-spec | spec-trace | spec-new
+lint-ratchet           # ruff rule ratchet: NPY002 per-area counts may only shrink (--write-baseline)
 policy-lift            # measure MCTS policy improvement (the M5 ≥20%-lift acceptance metric)
 self-play-convergence  # self-play training convergence run
 status-artifact        # write artifacts/status.json (provenance-stamped; --strict to fail on drift)
