@@ -60,12 +60,33 @@ HERMETIC_ENV_DEFAULTS: Final[Mapping[str, str]] = {
 }
 
 #: Secrets a child must never inherit, whatever the parent shell holds.
-STRIPPED_ENV_VARS: Final[tuple[str, ...]] = tuple(LLM_PROVIDER_CREDENTIAL_ENV_VARS) + (
-    "LANGSMITH_API_KEY",
-    "LANGCHAIN_API_KEY",
-    "WANDB_API_KEY",
-    "PINECONE_API_KEY",
-    "BRAINTRUST_API_KEY",
+#:
+#: Deduplicated: ``LLM_PROVIDER_CREDENTIAL_ENV_VARS`` already carries some of these, and a
+#: list with repeats invites the reader to assume it was assembled carefully when it was not.
+#:
+#: The cloud and tracker keys matter as much as the model-provider ones. ``aioboto3`` is a
+#: *core* dependency, not an extra, so AWS credentials are plausibly present in any shell that
+#: runs this suite — and this suite also runs in a post-merge workflow that exports real
+#: secrets. A child that inherited them could reach S3 with production credentials.
+STRIPPED_ENV_VARS: Final[tuple[str, ...]] = tuple(
+    dict.fromkeys(
+        tuple(LLM_PROVIDER_CREDENTIAL_ENV_VARS)
+        + (
+            # Model providers and gateways beyond the shared constant.
+            "LANGCHAIN_API_KEY",
+            "HUGGINGFACE_HUB_TOKEN",
+            "HF_TOKEN",
+            "BENCHMARK_ADK_GOOGLE_API_KEY",
+            "GOOGLE_API_KEY",
+            # Experiment trackers and vector stores.
+            "PINECONE_API_KEY",
+            "BRAINTRUST_API_KEY",
+            # Cloud credentials — see the note above; aioboto3 is a core dependency.
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+            "AWS_SESSION_TOKEN",
+        )
+    )
 )
 
 _KILL_GRACE_SECONDS: Final[float] = 5.0

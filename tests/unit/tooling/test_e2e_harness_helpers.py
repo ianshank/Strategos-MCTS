@@ -250,16 +250,58 @@ def test_the_accelerator_placeholder_carries_an_unavailable_accelerator() -> Non
 # ------------------------------------------------------------- the hermetic environment
 
 
-def test_every_declared_secret_is_stripped_from_a_child_environment() -> None:
-    """The network guard, asserted directly.
+#: Credentials a child must never inherit, named here INDEPENDENTLY of the strip list itself.
+#:
+#: This duplication is deliberate and load-bearing. Building the input from
+#: ``STRIPPED_ENV_VARS`` and then asserting nothing in ``STRIPPED_ENV_VARS`` survives is a
+#: tautology: it proves the function strips what the list names, and can never detect a
+#: credential *missing from the list*. That is not hypothetical — it is exactly how
+#: ``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY`` went unstripped while a test asserting
+#: "every declared secret is stripped" stayed green, with ``aioboto3`` a core dependency.
+SENSITIVE_ENV_VARS_THAT_MUST_NOT_REACH_A_CHILD = (
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "LANGSMITH_API_KEY",
+    "LANGCHAIN_API_KEY",
+    "WANDB_API_KEY",
+    "PINECONE_API_KEY",
+    "BRAINTRUST_API_KEY",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_SESSION_TOKEN",
+)
+
+
+def test_no_sensitive_credential_reaches_a_child_environment() -> None:
+    """The network guard, asserted against an independently-named list.
 
     This suite also runs in a post-merge workflow that exports real provider keys, so a
-    hole here is invisible until it bills someone.
+    hole here is invisible until it bills someone — or, for the AWS pair, until a child
+    process reaches S3 with production credentials.
     """
-    base = dict.fromkeys(STRIPPED_ENV_VARS, "a-real-looking-secret")
+    base = dict.fromkeys(SENSITIVE_ENV_VARS_THAT_MUST_NOT_REACH_A_CHILD, "a-real-looking-secret")
     env = hermetic_env(repo_root=REPO_ROOT, base=base)
-    leaked = sorted(name for name in STRIPPED_ENV_VARS if name in env)
+    leaked = sorted(name for name in SENSITIVE_ENV_VARS_THAT_MUST_NOT_REACH_A_CHILD if name in env)
     assert not leaked, f"these credentials would reach the child process: {leaked}"
+
+
+def test_the_strip_list_covers_every_name_this_test_module_knows_about() -> None:
+    """Fails when a credential is added here but not to the helper — the real regression.
+
+    Kept separate from the behavioural test above so the failure message distinguishes
+    "the stripping is broken" from "the list is incomplete".
+    """
+    missing = sorted(set(SENSITIVE_ENV_VARS_THAT_MUST_NOT_REACH_A_CHILD) - set(STRIPPED_ENV_VARS))
+    assert not missing, f"tests/utils/e2e_process.py STRIPPED_ENV_VARS is missing: {missing}"
+
+
+def test_the_strip_list_has_no_duplicates() -> None:
+    """A list with repeats reads as carefully assembled when it was not.
+
+    It had two, because the shared ``LLM_PROVIDER_CREDENTIAL_ENV_VARS`` constant already
+    carried names the local tuple repeated.
+    """
+    assert len(STRIPPED_ENV_VARS) == len(set(STRIPPED_ENV_VARS)), f"duplicates in {STRIPPED_ENV_VARS}"
 
 
 def test_the_offline_posture_is_pinned() -> None:
@@ -333,6 +375,28 @@ def test_a_failure_describes_itself_completely() -> None:
     assert "exit 2" in rendered
     assert "the last thing it printed" in rendered
     assert "the traceback" in rendered
+
+
+def test_a_timed_out_run_is_not_ok_even_with_a_zero_exit_code() -> None:
+    """``ok`` must consider both halves.
+
+    A killed child can report 0 depending on how the kill lands, so ``returncode == 0``
+    alone is not success. Without this case, deleting ``and not self.timed_out`` from
+    ``ProcessResult.ok`` leaves the whole suite green.
+    """
+    assert (
+        ProcessResult(argv=("x",), returncode=0, stdout="", stderr="", duration_seconds=1.0, timed_out=True).ok is False
+    )
+
+
+def test_describe_keeps_the_END_of_a_long_stream() -> None:
+    """The tail, not the head: a failure's cause is at the end of the log, not the start."""
+    body = "\n".join(f"line-{index}" for index in range(200))
+    rendered = ProcessResult(argv=("x",), returncode=1, stdout=body, stderr="", duration_seconds=1.0).describe(
+        tail_lines=5
+    )
+    assert "line-199" in rendered, "describe() dropped the end of the stream, where the failure is"
+    assert "line-0" not in rendered, "describe() kept the head instead of the tail"
 
 
 def test_a_timeout_is_reported_as_a_timeout_not_as_an_exit_code() -> None:
