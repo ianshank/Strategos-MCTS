@@ -23,7 +23,6 @@ installed console scripts honour it lives in ``tests/e2e/test_operational_entry_
 from __future__ import annotations
 
 import logging
-import sys
 
 import pytest
 
@@ -52,6 +51,11 @@ def _restore_logging_configuration():
     root = logging.getLogger()
     framework = logging.getLogger(FRAMEWORK_LOGGER)
     saved = (root.handlers[:], root.level, framework.handlers[:], framework.level, framework.propagate)
+    # Cleared on ENTRY as well as restored on exit. Restoring alone leaves handlers that an
+    # earlier suite attached in place for the duration of these tests, which made them pass
+    # under `pytest tests/unit/` and fail under the full sweep — an order-dependent test is
+    # not an invariant, and CI hid it only because the gate job runs tests/unit/ in isolation.
+    root.handlers, framework.handlers = [], []
     try:
         yield
     finally:
@@ -72,14 +76,26 @@ def test_a_cli_logger_is_unconfigured_before_setup() -> None:
     assert _console_streams(logging.getLogger(FRAMEWORK_LOGGER)) == []
 
 
-def test_configure_cli_logging_writes_records_to_stderr() -> None:
-    """The console handler must land on stderr, leaving stdout as a data channel."""
+def test_configure_cli_logging_writes_records_to_stderr(capsys: pytest.CaptureFixture) -> None:
+    """The console handler must land on stderr, leaving stdout as a data channel.
+
+    Asserted by *routing an actual record* rather than by comparing the handler's stream to
+    ``sys.stderr`` by identity. ``dictConfig`` resolves ``ext://sys.stderr`` to whatever
+    object is current when it runs, and pytest swaps the std streams around a test, so an
+    identity comparison is a test of capture plumbing rather than of this code — which is
+    precisely why the first version of this file passed alone and failed in the full sweep.
+    """
     configure_cli_logging()
-    streams = _console_streams(logging.getLogger(FRAMEWORK_LOGGER))
-    assert streams, "configure_cli_logging attached no console handler; the CLI would stay silent"
-    assert all(stream is sys.stderr for stream in streams), (
-        f"a CLI log handler is writing to {streams}, not stderr. policy-lift prints its JSON "
-        f"artifact to stdout, so this would corrupt `policy-lift ... | jq`."
+    assert _console_streams(
+        logging.getLogger(FRAMEWORK_LOGGER)
+    ), "configure_cli_logging attached no console handler; the CLI would stay silent"
+
+    get_logger("training.self_play_convergence").warning("routing probe")
+    captured = capsys.readouterr()
+    assert "routing probe" in captured.err
+    assert "routing probe" not in captured.out, (
+        "a CLI log record reached stdout. policy-lift prints its JSON artifact there, so this "
+        "would corrupt `policy-lift ... | jq`."
     )
 
 
@@ -97,25 +113,31 @@ def test_configure_cli_logging_actually_emits_an_info_record(capsys: pytest.Capt
     assert "run starting" not in captured.out, "the record leaked onto stdout"
 
 
-def test_setup_logging_still_defaults_to_stdout() -> None:
+def test_setup_logging_still_defaults_to_stdout(capsys: pytest.CaptureFixture) -> None:
     """Backwards compatibility: the stream argument must not move existing callers.
 
     ``setup_logging`` has other consumers that expect stdout; the new parameter is opt-in.
     """
     setup_logging()
-    streams = _console_streams(logging.getLogger(FRAMEWORK_LOGGER))
-    assert streams and all(stream is sys.stdout for stream in streams)
+    get_logger("compat.probe").warning("default stream probe")
+    captured = capsys.readouterr()
+    assert "default stream probe" in captured.out, "the default stream moved; existing callers would break"
 
 
 @pytest.mark.parametrize(
-    ("stream", "expected"),
-    [(CONSOLE_STREAM_STDOUT, "stdout"), (CONSOLE_STREAM_STDERR, "stderr")],
+    ("stream", "expected_channel"),
+    [(CONSOLE_STREAM_STDOUT, "out"), (CONSOLE_STREAM_STDERR, "err")],
 )
-def test_the_stream_constants_resolve_to_the_named_stream(stream: str, expected: str) -> None:
-    """The two exported constants must name the streams they claim to."""
+def test_the_stream_constants_route_to_the_channel_they_name(
+    stream: str, expected_channel: str, capsys: pytest.CaptureFixture
+) -> None:
+    """The two exported constants must route where they claim to."""
     setup_logging(stream=stream)
-    streams = _console_streams(logging.getLogger(FRAMEWORK_LOGGER))
-    assert streams and all(s is getattr(sys, expected) for s in streams)
+    get_logger("constants.probe").warning("constant probe")
+    captured = capsys.readouterr()
+    other = "err" if expected_channel == "out" else "out"
+    assert "constant probe" in getattr(captured, expected_channel)
+    assert "constant probe" not in getattr(captured, other)
 
 
 def test_configuring_twice_does_not_stack_handlers() -> None:
