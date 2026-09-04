@@ -51,6 +51,10 @@ def mock_settings():
     settings.MCTS_MAX_PARALLEL_ROLLOUTS = 2
     settings.MCTS_IMPL.value = "baseline"
     settings.MCTS_ITERATIONS = TEST_MCTS_ITERATIONS
+    # Explicitly unset: on a MagicMock every unassigned attribute is a truthy child mock,
+    # so leaving this out would make TrainerConfig.resolve_device return a Mock as the
+    # device string instead of exercising the resolution order under test.
+    settings.TORCH_DEVICE_OVERRIDE = None
     settings.S3_BUCKET = None
     settings.S3_PREFIX = "test-prefix"
     settings.WANDB_PROJECT = TEST_PROJECT_NAME
@@ -1811,21 +1815,69 @@ class TestProtocolIsinstance:
 class TestTrainerConfigFromSettingsEdgeCases:
     """Additional edge-case tests for config from_settings."""
 
-    def test_trainer_config_from_settings_with_s3_bucket(self):
-        """Test TrainerConfig.from_settings when S3_BUCKET is set."""
-        from src.framework.component_factory import TrainerConfig
-
+    @staticmethod
+    def _neural_settings(**overrides):
+        """Settings mock selecting the neural implementation, with no device override."""
         mock_settings = MagicMock()
         mock_settings.MCTS_MAX_PARALLEL_ROLLOUTS = 4
         mock_settings.MCTS_IMPL.value = "neural"
         mock_settings.MCTS_ITERATIONS = 200
+        mock_settings.TORCH_DEVICE_OVERRIDE = None
         mock_settings.S3_BUCKET = "my-bucket"
         mock_settings.S3_PREFIX = "experiment-1"
+        for name, value in overrides.items():
+            setattr(mock_settings, name, value)
+        return mock_settings
 
-        config = TrainerConfig.from_settings(mock_settings)
+    def test_trainer_config_from_settings_with_s3_bucket(self):
+        """Test TrainerConfig.from_settings when S3_BUCKET is set."""
+        from src.framework.component_factory import TrainerConfig
 
+        mock_settings = self._neural_settings()
+
+        # The neural implementation asks for the best device the host offers. Pinned here
+        # rather than asserting a literal, because the correct answer differs between a
+        # CUDA box, an Apple-silicon laptop and a CPU-only CI runner — and asserting
+        # "cuda" unconditionally is exactly the defect this resolver replaced.
+        with patch(
+            "src.framework.component_factory.configs.get_default_device_str",
+            return_value="cuda",
+        ) as resolve:
+            config = TrainerConfig.from_settings(mock_settings)
+
+        resolve.assert_called_once_with()
         assert config.device == "cuda"
         assert config.checkpoint_dir == "experiment-1"
+
+    def test_trainer_config_neural_device_follows_available_hardware(self):
+        """A CPU-only host must not be handed a 'cuda' device string."""
+        from src.framework.component_factory import TrainerConfig
+
+        with patch(
+            "src.framework.component_factory.configs.get_default_device_str",
+            return_value="cpu",
+        ):
+            config = TrainerConfig.from_settings(self._neural_settings())
+
+        assert config.device == "cpu", (
+            "TrainerConfig must not hard-select an accelerator that is not present; the "
+            "resulting device string fails at the first tensor move"
+        )
+
+    def test_trainer_config_honours_the_explicit_device_override(self):
+        """TORCH_DEVICE_OVERRIDE wins over auto-detection, as it does elsewhere."""
+        from src.framework.component_factory import TrainerConfig
+
+        mock_settings = self._neural_settings(TORCH_DEVICE_OVERRIDE="cuda:1")
+
+        with patch(
+            "src.framework.component_factory.configs.get_default_device_str",
+            return_value="cpu",
+        ) as resolve:
+            config = TrainerConfig.from_settings(mock_settings)
+
+        assert config.device == "cuda:1"
+        resolve.assert_not_called()
 
     def test_trainer_config_from_settings_baseline_no_s3(self):
         """Test TrainerConfig.from_settings with baseline impl and no S3."""
@@ -1835,6 +1887,7 @@ class TestTrainerConfigFromSettingsEdgeCases:
         mock_settings.MCTS_MAX_PARALLEL_ROLLOUTS = 2
         mock_settings.MCTS_IMPL.value = "baseline"
         mock_settings.MCTS_ITERATIONS = 50
+        mock_settings.TORCH_DEVICE_OVERRIDE = None
         mock_settings.S3_BUCKET = None
         mock_settings.S3_PREFIX = "unused"
 
@@ -1842,6 +1895,20 @@ class TestTrainerConfigFromSettingsEdgeCases:
 
         assert config.device == "cpu"
         assert config.checkpoint_dir == "checkpoints"
+
+    def test_trainer_config_baseline_ignores_the_device_override(self):
+        """The baseline implementation needs no accelerator, override or not."""
+        from src.framework.component_factory import TrainerConfig
+
+        mock_settings = MagicMock()
+        mock_settings.MCTS_MAX_PARALLEL_ROLLOUTS = 2
+        mock_settings.MCTS_IMPL.value = "baseline"
+        mock_settings.MCTS_ITERATIONS = 50
+        mock_settings.TORCH_DEVICE_OVERRIDE = "cuda"
+        mock_settings.S3_BUCKET = None
+        mock_settings.S3_PREFIX = "unused"
+
+        assert TrainerConfig.resolve_device(mock_settings) == "cpu"
 
     def test_metrics_config_from_settings_online_mode(self):
         """Test MetricsConfig.from_settings with online wandb mode."""

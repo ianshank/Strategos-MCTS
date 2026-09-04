@@ -301,6 +301,12 @@ MAX_EXPERIENCE_BUFFER_MAX_SIZE: Final[int] = 100000000
 # to the training device afterwards.
 DEFAULT_TENSOR_LOAD_MAP_LOCATION: Final[str] = "cpu"
 
+# The always-available torch device. Named so component configuration can express
+# "stay on CPU" without a bare string literal, and so the CPU fallback reads the
+# same everywhere. Accelerator selection is not a constant: it is resolved at
+# runtime by src/utils/device.py against the hardware actually present.
+CPU_DEVICE: Final[str] = "cpu"
+
 # ============================================================================
 # Hybrid Agent Parsing Fallbacks
 # ============================================================================
