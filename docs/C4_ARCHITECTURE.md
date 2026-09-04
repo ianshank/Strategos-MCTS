@@ -538,10 +538,14 @@ blocking scan** that fails the job on fixable CRITICAL findings, with accepted e
 in `.trivyignore`. The `summary` job gates every job it reports, including `chess-tests`,
 `integration-test`, `security-scan` and `dependency-audit`. The `spec-validate` job additionally
 carries the evidence-chain gates described below (`claim-ledger`, its falsification step, the
-`action-pins` supply-chain ratchet, and `python -m src.tools.context_docs` — INV-10's
+`action-pins` supply-chain ratchet, `python -m src.tools.context_docs` — INV-10's
 documentation-drift check, which lived in `make gate` but in no workflow until it was wired here,
 making the check that exists *because* orientation docs drift the one check CI could not catch
-drifting). Configuration is
+drifting — and `python -m src.tools.lint_ratchet`, which holds ruff's `NPY002`
+(`numpy-legacy-random`) to a shrinking per-area baseline; the NumPy ruleset was never selected at
+all until 2026-09-04, so 108 legacy global-RNG call sites went unreported, one of them the root
+Dirichlet noise behind the determinism defect in `specs/hygiene_determinism.SPEC.md` AC-3).
+Configuration is
 centralized in `src/config/constants.py` + `src/config/settings.py` (Pydantic Settings) with domain-specific
 constant modules; there are no hardcoded secrets or magic numbers in the routing/adapter layers.
 
@@ -564,6 +568,7 @@ flowchart LR
         L["docs/CLAIM_LEDGER.md<br/>35 graded rows"]
         M["docs/capability_maturity.json<br/>9 capabilities"]
         B[".github/action_pin_baseline.json"]
+        N[".lint_ratchet_baseline.json"]
     end
 
     subgraph Tools["src/tools/ (console scripts)"]
@@ -571,6 +576,7 @@ flowchart LR
         SA["status_artifact<br/>provenance + maturity"]
         AP["action_pins<br/>SHA-pin ratchet"]
         CD["context_docs<br/>doc↔tree paths"]
+        LR["lint_ratchet<br/>ruff rule ratchet"]
     end
 
     subgraph Gates["Enforcement"]
@@ -586,9 +592,11 @@ flowchart LR
     L --> SA
     M --> SA
     B --> AP
+    N --> LR
     CL --> CI
     AP --> CI
     CD --> CI
+    LR --> CI
     SA --> ART
     ART --> CI
     CL --> MK
@@ -605,6 +613,9 @@ The load-bearing properties, each enforced by a test that reconstructs the shape
 | A capability's maturity stage never exceeds its claim grades allow | `CLAIM_GRADE_MATURITY_CEILING` in `src/config/constants.py` | `status-artifact --strict` exits non-zero |
 | Tag-pinned action counts only decrease, and baseline slack is itself a violation | `src/tools/action_pins.py` | `spec-validate` fails; a new unpinned action cannot be laundered by raising the baseline |
 | Every backticked rooted path in `.claude/**` and `CHARTER.md` resolves on disk | `src/tools/context_docs.py` | `spec-validate` fails |
+| A ratcheted ruff rule's per-area counts only decrease, and an area absent from the baseline must have zero findings | `src/tools/lint_ratchet.py` | `spec-validate` fails; a fix in one package cannot pay for a regression in another |
+| Every file in `.claude/hooks/` is registered in `.claude/settings.json`, and every registration resolves | `tests/unit/tooling/test_claude_workspace_registry.py` | the unit gate fails; an unwired hook cannot pass as a control |
+| A gitleaks path exemption may cover only generated content; human-authored files are exempted by literal value | `tests/unit/tooling/test_gitleaks_config.py` | the unit gate fails; re-creates audit finding F-20 otherwise |
 
 Separation of duties is part of the architecture rather than a convention: the author of a claim is
 not its grader. `.claude/agents/eval-warden.md` audits measurements and `.claude/agents/selfplay-referee.md`

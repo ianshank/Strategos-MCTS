@@ -85,8 +85,8 @@ capability. Compared against `main` rather than assumed.
   in the `test` job rather than a job of its own (the action-pin ratchet permits only
   decreases, and a new job would add two references), the directory-based selection, the
   SHA-pinned junit upload, and the newly wired `context_docs` gate.
-- **`docs/STATUS.md`** re-measured: unit **9,645 passed / 31 skipped at 92.77%** branch
-  coverage, e2e **90 passed / 10 skipped**, both 2026-09-04. The full-suite row is marked
+- **`docs/STATUS.md`** re-measured: unit **9,679 passed / 31 skipped at 92.76%** branch
+  coverage, e2e **91 passed / 10 skipped**, both 2026-09-04. The full-suite row is marked
   **not re-measured** rather than silently carried forward. A standing note records that the
   GPU path is unverified, because a skip that is not reported as a skip is how a coverage
   claim becomes false.
@@ -136,6 +136,66 @@ capability. Compared against `main` rather than assumed.
   skill/agent `name` matches its own path, carries a routable description, and is unique
   across the shared namespace. Both wiring invariants were mutation-checked: unregistering
   `device_literal_gate.py` and renaming `spec_gate.py` in the settings each turn the suite red.
+
+#### Added — ruff's NumPy ruleset, and a ratchet for the one rule that cannot be gated yet
+
+`pyproject.toml` never selected ruff's `NPY` family, so **no NumPy-specific rule was enforced
+anywhere in this repository**. Selecting it reports exactly one rule: `NPY002`
+(`numpy-legacy-random`), at **108** call sites that use NumPy's process-global legacy RNG
+instead of an explicit `np.random.Generator`.
+
+That is not a style preference here. `src/framework/mcts/neural_mcts.py:322` is in the list —
+the root Dirichlet noise that makes `NeuralMCTS` irreproducible under a torch-only seed, the
+defect recorded in `docs/plans/EVIDENCE_FIRST_PROGRAM.md` §2.5, surfaced again by this
+branch's e2e work, and specified for repair in `specs/hygiene_determinism.SPEC.md` AC-3. The
+rule that would have caught it was available the whole time and switched off. Three more sit
+on `np.random.seed` calls in the training drivers, which is the same defect in another guise:
+seeding the legacy global RNG does not seed a `Generator` anyone later constructs.
+
+- **`NPY` is now selected**, with every rule but `NPY002` enforced immediately — the tree was
+  already clean against them, so that is real coverage at zero refactor cost.
+- **`NPY002` is ratcheted, not exempted.** `src/tools/lint_ratchet.py` holds it to
+  `.lint_ratchet_baseline.json`: per-area counts may only decrease, and an area absent from the
+  baseline must have zero findings. Grouping by area is what makes it bite — a repo-wide total
+  would let a fix in `src/training` silently pay for a regression in `src/api`. Converting all
+  108 at once would touch `src/training/` and `src/framework/mcts/`, both claimed by open
+  approved specs, so a blanket refactor here would violate NG-4. The determinism debt is now a
+  number that visibly goes down when AC-3 lands.
+- **Deliberately the same mechanism as `src/tools/action_pins.py`** — declarative registry,
+  committed baseline, counts that only shrink, a `--write-baseline` re-tightening step — rather
+  than a second ratchet system with its own conventions. The ruff runner is injected, so the
+  24 unit tests assert exact counts without depending on the host's ruff or the tree's state.
+- Wired into `make lint-ratchet`, `make gate`, the `spec-validate` CI job, the `lint-ratchet`
+  console script, and the `quality-gate` skill. Mutation-checked: adding one legacy call to an
+  existing area and to a new area each fail the ratchet.
+
+#### Fixed — the documented secret scan could not pass, and could not fail
+
+Two independent defects in the same control, both found by installing gitleaks and actually
+running the command the docs give:
+
+- **It exited 1 on 17 findings, every one a placeholder.** `make secrets` and step 8 of the
+  `quality-gate` skill both run a repo-wide working-tree scan; on a clean checkout of `main` it
+  reported 17 leaks. A gate that always fails is worse than no gate — it teaches the reader to
+  run it and ignore it while still counting as coverage on a checklist. CI never caught this
+  because `gitleaks-action` scans a push's *commit range*, so the local command and the CI job
+  were never checking the same thing. Every one of the 17 lines was opened and read, then
+  allowlisted **by literal value** — never by file path, which is the F-20 failure mode
+  `.gitleaks.toml`'s own header records. Several are inputs the redaction tests feed in so the
+  sanitiser can prove it masks them. Compiled bytecode is now excluded on a structural
+  argument (its strings are already scanned at their source). The scan now reports **no leaks**.
+- **A real leak reported as "not installed".** Both call sites used
+  `command -v gitleaks && gitleaks detect ... || echo "not installed"`. In `A && B || C`, a
+  scan that *finds something* exits 1 and takes the `||` branch — so a genuine leak printed
+  "gitleaks not installed locally" and the target exited **0**. The `quality-gate` skill warns
+  about this exact pitfall in step 7, two lines above where step 8 committed it. Both are now
+  `if`/`else`, and `tests/unit/tooling/test_gitleaks_config.py` fails if the shape returns.
+- That module also pins the config's structural invariants deterministically, without needing
+  the binary: the builtin ruleset stays extended rather than replaced, no allowlist entry is a
+  bare credential prefix (the bound is *derived* from the known prefixes, not chosen), no entry
+  contains a wildcard, path exemptions cover only generated content, and the scan stays wired
+  into both CI and the Makefile. Mutation-checked against a `^docs/` path exemption and a bare
+  `sk-` entry.
 
 #### Fixed — the console scripts were silent
 

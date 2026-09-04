@@ -20,17 +20,17 @@
 | Metric | Value |
 |---|---|
 | Full test suite | **10,919 passed, 137 skipped, 0 failed** (2026-08-24, `.[dev,neural,api]`, all suites including E2E & UI) — **not re-measured on 2026-09-04**, so it predates the e2e suite below; re-run rather than trust it |
-| Unit tests (`tests/unit/`, CI gate scope) | **9,645 passed, 31 skipped, 0 failed** (2026-09-04, `.[dev,neural,api]`) ✅ |
-| **Gate-scope branch coverage** (`tests/unit/` — what CI actually enforces) | **92.77%** (2026-09-04, `.[dev,neural,api]`) ✅ |
-| End-to-end suite (`tests/e2e -m "not ui"`, PR-gating) | **90 passed, 10 skipped, 0 failed** (2026-09-04, CPU-only host) ✅ — the 10 skips are the `cuda`/`mps` device cases and the accelerator-vs-CPU comparison, each naming its reason |
+| Unit tests (`tests/unit/`, CI gate scope) | **9,679 passed, 31 skipped, 0 failed** (2026-09-04, `.[dev,neural,api]`) ✅ |
+| **Gate-scope branch coverage** (`tests/unit/` — what CI actually enforces) | **92.76%** (2026-09-04, `.[dev,neural,api]`) ✅ |
+| End-to-end suite (`tests/e2e -m "not ui"`, PR-gating) | **91 passed, 10 skipped, 0 failed** (2026-09-04, CPU-only host) ✅ — the 10 skips are the `cuda`/`mps` device cases and the accelerator-vs-CPU comparison, each naming its reason |
 | `ruff check .` (repo-wide) | **clean** — 0 issues ✅ |
 | `black . --check --line-length 120` (repo-wide) | **clean** ✅ |
-| `mypy src/` (strict pins) | **clean** — no issues in 335 source files ✅ |
+| `mypy src/` (strict pins) | **clean** — no issues in 336 source files ✅ |
 | Production Readiness Score | **21/21 (100.0%)** ✅ |
 | Harness / Spec validation | **48/48 specs valid** ✅ |
 | Wall time (full suite parallel) | ~94s (1m 34s) |
 
-The gate-enforcing total is the **92.77%** "Gate-scope branch coverage" row — well above 85%.
+The gate-enforcing total is the **92.76%** "Gate-scope branch coverage" row — well above 85%.
 
 > **The GPU path is unverified.** The e2e row above was measured on a CPU-only host. The `cuda`
 > and `mps` cases are written and are selected by availability, but **have never been run**, and

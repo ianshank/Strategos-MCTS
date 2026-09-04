@@ -31,7 +31,8 @@ TEST_ENV := WANDB_MODE=disabled \
             STRICT_OPTIONAL_DEPS=1
 
 .DEFAULT_GOAL := help
-.PHONY: help install format format-check lint lint-fix typecheck test test-e2e test-all \
+.PHONY: help install format format-check lint lint-fix lint-ratchet lint-ratchet-baseline \
+        typecheck test test-e2e test-all \
         coverage specs docs claims claims-baseline status pins pins-baseline secrets gate clean
 
 help: ## Show this help
@@ -93,15 +94,27 @@ pins: ## Check the GitHub Actions commit-SHA pin ratchet (CI step)
 pins-baseline: ## Re-tighten the pin baseline after pinning an action to a SHA
 	$(PYTHON) -m src.tools.action_pins --write-baseline
 
+lint-ratchet: ## Check the ruff rule ratchet — NPY002 counts may only shrink (CI step)
+	$(PYTHON) -m src.tools.lint_ratchet
+
+lint-ratchet-baseline: ## Re-tighten the lint ratchet after converting legacy-RNG call sites
+	$(PYTHON) -m src.tools.lint_ratchet --write-baseline
+
 secrets: ## Fast secret grep, matching the spec-validate CI step
 	@if git grep -nE "sk-[A-Za-z0-9]{20,}" -- src/ kubernetes/; then \
 		echo "FAIL: hardcoded key material"; exit 1; \
 	else echo "OK: no key material"; fi
-	@command -v gitleaks >/dev/null \
-		&& gitleaks detect --config .gitleaks.toml --source . --no-git -v \
-		|| echo "gitleaks not installed locally — that layer runs in CI"
+	@# NOT `command -v gitleaks && gitleaks detect ... || echo "not installed"`. In that shape a
+	@# scan that FINDS something takes the `||` branch: a real leak printed "not installed" and
+	@# the target exited 0. An if/else distinguishes "absent" from "found something", and make
+	@# aborts on the non-zero exit inside the branch.
+	@if command -v gitleaks >/dev/null 2>&1; then \
+		gitleaks detect --config .gitleaks.toml --source . --no-git -v; \
+	else \
+		echo "gitleaks not installed locally — that layer runs in CI"; \
+	fi
 
-gate: format-check lint typecheck specs docs claims status pins test test-e2e secrets ## Full local gate, in CI order
+gate: format-check lint lint-ratchet typecheck specs docs claims status pins test test-e2e secrets ## Full local gate, in CI order
 	@echo "Quality gate passed."
 
 clean: ## Remove build/test artifacts

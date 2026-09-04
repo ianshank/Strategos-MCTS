@@ -43,7 +43,21 @@ pytest tests/unit -v --tb=short -q
 | `black . --line-length 120` | Format code |
 | `ruff check . --select I --fix` | Sort imports (ruff owns isort rules) |
 | `ruff check . --fix` | Lint with auto-fix |
+| `make lint-ratchet` | Check the ruff rule ratchet (`NPY002` counts may only shrink) |
+| `make lint-ratchet-baseline` | Re-tighten the ratchet in the same change that fixes call sites |
 | `mypy src/` | Type check (matches CI exactly) |
+| `make secrets` | Fast key grep plus the repo-wide gitleaks scan, if the binary is installed |
+
+> **NumPy lint, and why one rule is ratcheted rather than gated.** Ruff's `NPY` ruleset is
+> selected, so NumPy-specific rules are enforced — except `NPY002` (`numpy-legacy-random`),
+> which is in `ignore` and held instead to a per-area baseline in `.lint_ratchet_baseline.json`
+> by `src/tools/lint_ratchet.py`. The ruleset was never selected at all before 2026-09-04, so
+> **108** legacy global-RNG call sites went unreported; one of them is the root Dirichlet noise
+> in `src/framework/mcts/neural_mcts.py` that makes `NeuralMCTS` irreproducible under a
+> torch-only seed — the defect specified in `specs/hygiene_determinism.SPEC.md` AC-3.
+> Converting all 108 would touch `src/training/` and `src/framework/mcts/`, both claimed by open
+> approved specs (NG-4), so the counts may only shrink instead. Do not "fix" a ratchet violation
+> by raising the baseline: re-tighten only in the change that actually removes call sites.
 
 > **Type-check strictness, stated honestly.** The gate is `mypy src/` with the settings in
 > `pyproject.toml` `[tool.mypy]` — which deliberately set `disallow_untyped_defs = false` and
