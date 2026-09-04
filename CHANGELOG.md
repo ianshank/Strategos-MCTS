@@ -42,6 +42,13 @@ that CPU-only and single-GPU paths both keep working rested on CI happening to b
   own lifespan serving `/graph/structure` and `/graph/mermaid` from a real built graph; and
   the eight declared console scripts plus the container healthcheck run as processes.
   Measured on a CPU-only host: 88 passed, 8 skipped, 55 s.
+- **Invariants on the harness's own helpers** (`tests/unit/tooling/test_e2e_harness_helpers.py`).
+  The device matrix and the subprocess harness are the single point of silent failure for
+  the whole suite: a `device_params()` that returned nothing would collapse the matrix, and
+  the e2e tests would collect no device cases while still reporting success. 35 tests pin
+  the matrix contract, the `E2E_DEVICES` skip-versus-fail semantics, the credential
+  stripping, the timeout bound and the failure rendering; each was verified by mutation
+  rather than assumed.
 - **A CI step and the invariant that protects it.** `ci.yml`'s `test` job now runs
   `pytest tests/e2e -m "not ui"`, selected by directory so a module that forgets its marker
   still runs, and `tests/unit/test_ci_workflow_invariants.py` fails if the step is removed.

@@ -91,6 +91,15 @@ Shared infrastructure:
   `e2e_seed`, `e2e_env`, `run_module`, `run_script`. It stays importable without the
   `neural` extra, because it is imported for the whole directory including the torch-free
   modules.
+- **`tests/unit/tooling/test_e2e_harness_helpers.py`** — 35 invariants on the two helpers
+  above, because they are the single point of *silent* failure for everything else here.
+  If `device_params()` returned an empty list the matrix would collapse, the e2e tests
+  would collect no device cases, and the run would still be green — the exact "green but
+  not checked" defect this program exists to remove. Mutation-checked rather than assumed:
+  collapsing the matrix fails 5 of them, making a required-but-absent device skip instead
+  of fail trips 2, and removing the credential stripping from `hermetic_env` trips 1. This
+  follows the precedent set by the "helpers' own invariants" section of
+  `tests/unit/test_ci_workflow_invariants.py`, and for the same stated reason.
 
 The modules:
 
