@@ -73,6 +73,64 @@ that CPU-only and single-GPU paths both keep working rested on CI happening to b
   reported undocumented however it was documented.
 - Corrected `tests/README.md`, which stated a 50% coverage minimum; `pyproject.toml` sets 85%.
 
+#### Documentation, automation and configuration brought in line
+
+Everything below reflects changes this branch actually made; nothing here claims a
+capability. Compared against `main` rather than assumed.
+
+- **`README.md`** gained the end-to-end suite and the device matrix — it previously did not
+  mention `tests/e2e/` at all — plus the `make test-e2e` line in the CI-reproduction block,
+  and an explicit note that E2E coverage is deliberately unmeasured (evidence-chain R3).
+- **`docs/C4_ARCHITECTURE.md`** CI/CD section now describes the e2e step, *why* it is a step
+  in the `test` job rather than a job of its own (the action-pin ratchet permits only
+  decreases, and a new job would add two references), the directory-based selection, the
+  SHA-pinned junit upload, and the newly wired `context_docs` gate.
+- **`docs/STATUS.md`** re-measured: unit **9,645 passed / 31 skipped at 92.77%** branch
+  coverage, e2e **89 passed / 10 skipped**, both 2026-09-04. The full-suite row is marked
+  **not re-measured** rather than silently carried forward. A standing note records that the
+  GPU path is unverified, because a skip that is not reported as a skip is how a coverage
+  claim becomes false.
+- **`docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`** states Phase 1's gate precisely:
+  G-M1's first half (a two-rank distributed E2E test green in CI) is **met**; its second half
+  (a recorded scaling measurement) is **not**, so the gate has not cleared. The test is
+  CPU-only by design and proves orchestration, not scaling, and `ddp_orchestrator` AC-3
+  (gradient averaging) remains unexercised because identical per-rank seeds make weight
+  equality vacuous.
+- **`.gitignore`** ignores `e2e-junit.xml`, the artifact the new CI step produces.
+- **`.dockerignore` deliberately unchanged.** `tests/` is copied into two images on purpose —
+  `Dockerfile.test:43` exists to run pytest and `Dockerfile.train:90` ships the suite — so
+  excluding it would break both builds. Recorded as a considered non-change.
+
+#### Added — a skill and a hook, both deterministically validated
+
+- **`.claude/skills/e2e-device-matrix/SKILL.md`** — how to run the suite and, more
+  importantly, how to read the result: a table mapping each skip shape to what may and may
+  not be claimed from it, the `E2E_DEVICES` pin-versus-require contract, the procedure that
+  converts the unverified GPU path into a committed artefact, and the rule that
+  cross-device determinism must never be asserted. Picked up by
+  `python -m src.tools.context_docs` (18 → 19 documents, every cited path resolving).
+- **`.claude/hooks/device_literal_gate.py`** — a `PreToolUse` gate for the rule
+  `tests/README.md` states and which was violated inside the very change that wrote it: a
+  hard-coded `device="cpu"` makes a test pass identically everywhere while proving nothing
+  about the accelerator path. Scoped to `tests/e2e/` only — `src/` holds ~40 legitimate
+  device literals (availability ladders, field defaults), and a gate that cries wolf is
+  ignored within a day. Warn by default like `spec_gate.py`, with `block` and bypass modes
+  and a `# device-literal: <reason>` written exception. Registered in
+  `.claude/settings.json` and covered by 31 tests that assert both what it catches and what
+  it must stay quiet about, including that the tree is currently literal-free.
+- **`tests/unit/tooling/test_claude_workspace_registry.py`** — deterministic validation of
+  the `.claude/` **registry**, which nothing covered. `src/tools/context_docs.py` validates
+  each skill and agent *document*; this validates the set they form, catching the inverse
+  failure: an artefact that exists but is not wired. It asserts that every file under
+  `.claude/hooks/` is registered in `settings.json` and every registration resolves to a file
+  on disk (an unregistered hook enforces nothing while reading as a control; a dangling one
+  fails inside a deliberately non-fatal code path, so the gate simply stops firing), that
+  every hook has a `test_<name>.py` beside it, that hook commands are rooted at
+  `${CLAUDE_PROJECT_DIR}`, that `settings.json` wires no unknown event key, and that every
+  skill/agent `name` matches its own path, carries a routable description, and is unique
+  across the shared namespace. Both wiring invariants were mutation-checked: unregistering
+  `device_literal_gate.py` and renaming `spec_gate.py` in the settings each turn the suite red.
+
 #### Fixed — the console scripts were silent
 
 A hygiene audit of this branch found that `setup_logging()` had **zero call sites in

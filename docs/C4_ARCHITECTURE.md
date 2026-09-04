@@ -510,7 +510,20 @@ The `.github/workflows/ci.yml` pipeline includes the local `quality-gate` skill'
 same pinned tool versions (the lint job installs the `[dev]` extra; the type-check job installs
 `[dev,neural]`, which includes it): `black --check` → `ruff check` → `mypy src/` (strictness comes from
 `[tool.mypy]` in `pyproject.toml`, not a `--strict` flag; CI adds `--no-error-summary`) → `pytest` with
-branch coverage (`--cov-fail-under=85`; see `docs/STATUS.md` for the measured figure) → a hardcoded-secret grep.
+branch coverage (`--cov-fail-under=85`; see `docs/STATUS.md` for the measured figure) → **the
+device-parametrized end-to-end suite** (`pytest tests/e2e -m "not ui"`, in the same `test` job,
+deliberately *outside* the `--cov` invocation so E2E coverage cannot move the unit denominator —
+evidence-chain rule R3) → a hardcoded-secret grep.
+
+The e2e step runs in the PR-gating `test` job rather than a job of its own for two reasons: a
+separate job would add `actions/checkout` and `actions/setup-python` references, which the
+`.github/action_pin_baseline.json` ratchet permits only to *decrease*; and the suite is selected by
+**directory**, not by `-m e2e`, so a module whose author forgets its marker still runs.
+`tests/unit/test_ci_workflow_invariants.py` fails if the step is removed. Its junit report is
+uploaded via a **SHA-pinned** `actions/upload-artifact` (the tree's first pinned action) because a
+ninth unpinned use of that action would trip the same ratchet. The report is what carries the
+per-device skip reasons, which is how a CPU-only runner records that the CUDA path was *not*
+verified rather than staying silent about it.
 On top of that gate, CI-only jobs add `bandit` (HIGH-severity gate), `pip-audit` (CRITICAL gate), spec
 validation (`harness validate-spec` — error-level against spec schema v2 via
 `src/framework/harness/intent/spec_validator.py`: required `id`/`goal`/`status` frontmatter with a closed
@@ -524,8 +537,11 @@ job carries `security-events: write`; that upload is advisory and non-blocking) 
 blocking scan** that fails the job on fixable CRITICAL findings, with accepted exceptions recorded
 in `.trivyignore`. The `summary` job gates every job it reports, including `chess-tests`,
 `integration-test`, `security-scan` and `dependency-audit`. The `spec-validate` job additionally
-carries the evidence-chain gates described below (`claim-ledger`, its falsification step, and the
-`action-pins` supply-chain ratchet). Configuration is
+carries the evidence-chain gates described below (`claim-ledger`, its falsification step, the
+`action-pins` supply-chain ratchet, and `python -m src.tools.context_docs` — INV-10's
+documentation-drift check, which lived in `make gate` but in no workflow until it was wired here,
+making the check that exists *because* orientation docs drift the one check CI could not catch
+drifting). Configuration is
 centralized in `src/config/constants.py` + `src/config/settings.py` (Pydantic Settings) with domain-specific
 constant modules; there are no hardcoded secrets or magic numbers in the routing/adapter layers.
 
