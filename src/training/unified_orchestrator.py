@@ -25,14 +25,20 @@ from ..agents.trm_agent import TRMLoss, create_trm_agent
 from ..framework.mcts.neural_mcts import GameState, NeuralMCTS, SelfPlayCollector
 from ..models.policy_value_net import AlphaZeroLoss, create_policy_value_network
 from ..observability.logging import LogContext, get_correlation_id, get_structured_logger, set_correlation_id
-from .orchestrator_components.metrics_mixin import MetricsMixin
 from .orchestrator_components.checkpoint_mixin import CheckpointMixin
+from .orchestrator_components.metrics_mixin import MetricsMixin
 from .orchestrator_components.selfplay_mixin import SelfPlayMixin
 from .orchestrator_components.training_mixin import TrainingMixin
 from .orchestrator_components.utils import _handle_training_failure, _strict_training_errors
 from .performance_monitor import PerformanceMonitor, TimingContext
 from .replay_buffer import PrioritizedReplayBuffer
 from .system_config import SystemConfig
+
+__all__ = [
+    "UnifiedTrainingOrchestrator",
+    "_handle_training_failure",
+    "_strict_training_errors",
+]
 
 logger = get_structured_logger(__name__)
 

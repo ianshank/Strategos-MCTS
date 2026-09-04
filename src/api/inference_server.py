@@ -7,9 +7,9 @@ Provides REST API for:
 - Health checks and monitoring
 """
 
+from pathlib import Path
 import sys
 import time
-from pathlib import Path
 from typing import Any
 
 # Ensure project root is in path when run directly
@@ -21,11 +21,10 @@ from pydantic import BaseModel, Field
 import torch
 import uvicorn
 
-from src.observability.logging import get_logger
-
 from src.config.constants import DEFAULT_SERVER_HOST
 from src.config.settings import get_settings
 from src.framework.mcts.neural_mcts import NeuralMCTS
+from src.observability.logging import get_logger
 from src.training.performance_monitor import PerformanceMonitor
 from src.training.system_config import SystemConfig
 
