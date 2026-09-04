@@ -135,10 +135,11 @@ class TestMisconfigurationWarning:
     def test_warns_once_when_all_dispersions_zero(self, caplog):
         scorer = RiskAverseSubgoalScorer(lambda_weight=1.0, dispersion_source=ZeroDispersionSource())
         candidates = [_rec("A", 1.0, 0.0), _rec("B", 0.9, 0.0)]
-        with caplog.at_level("WARNING", logger="src.framework.mcts.risk_scoring"):
+        with caplog.at_level("WARNING"):
+            caplog.clear()  # discard any records from prior tests
             scorer.select_best(candidates, engine_choice="A")
             scorer.select_best(candidates, engine_choice="A")  # second call must not re-warn
-        warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+        warnings = [r for r in caplog.records if r.levelname == "WARNING" and "risk_scoring" in r.name]
         assert len(warnings) == 1
         assert "pure value ranking" in warnings[0].getMessage()
 

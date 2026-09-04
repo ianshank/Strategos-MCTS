@@ -86,10 +86,14 @@ class TracingManager:
         if self._initialized:
             return
 
-        # Get configuration from environment or parameters
-        service_name = service_name or os.environ.get("OTEL_SERVICE_NAME", DEFAULT_OTEL_SERVICE_NAME)
-        otlp_endpoint = otlp_endpoint or os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", DEFAULT_OTLP_ENDPOINT)
-        exporter_type = exporter_type or os.environ.get("OTEL_EXPORTER_TYPE", "otlp")
+        # Get configuration from environment or parameters.
+        # Explicit None-checks instead of `x or y` so mypy narrows str | None → str.
+        if service_name is None:
+            service_name = os.environ.get("OTEL_SERVICE_NAME", DEFAULT_OTEL_SERVICE_NAME)
+        if otlp_endpoint is None:
+            otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", DEFAULT_OTLP_ENDPOINT)
+        if exporter_type is None:
+            exporter_type = os.environ.get("OTEL_EXPORTER_TYPE", "otlp")
 
         # Build resource attributes
         resource_attrs = {

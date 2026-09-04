@@ -675,9 +675,9 @@ class SymbolicReasoner:
                     if child_confs:
                         import math
 
-                        product = math.prod(child_confs)
+                        product = float(math.prod(child_confs))
                         child_conf = product ** (1 / len(child_confs))
-                        return rule_conf * child_conf
+                        return float(rule_conf * child_conf)
                 return rule_conf
             return 1.0  # Fact
 

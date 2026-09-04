@@ -463,6 +463,9 @@ class MetaControllerTrainingOrchestrator:
 
         epoch_time = time.time() - start_time
 
+        lr: int | float = 0
+        if self._optimizer is not None:
+            lr = self._optimizer.param_groups[0]["lr"]
         return TrainingMetrics(
             epoch=self._current_epoch + 1,
             train_loss=train_loss,
@@ -470,7 +473,7 @@ class MetaControllerTrainingOrchestrator:
             val_loss=val_loss,
             val_accuracy=val_acc,
             calibration_error=calibration_error,
-            learning_rate=self._optimizer.param_groups[0]["lr"] if self._optimizer else 0,
+            learning_rate=lr,
             epoch_time_seconds=epoch_time,
         )
 
@@ -585,11 +588,17 @@ class MetaControllerTrainingOrchestrator:
         """Save model checkpoint."""
         assert self._model is not None, "Model not initialized"
         path = self.config.checkpoint_dir / filename
+        opt_state = None
+        if self._optimizer is not None:
+            opt_state = self._optimizer.state_dict()
+        sched_state = None
+        if self._scheduler is not None:
+            sched_state = self._scheduler.state_dict()
         checkpoint = {
             "epoch": self._current_epoch,
             "model_state_dict": self._model.state_dict(),
-            "optimizer_state_dict": self._optimizer.state_dict() if self._optimizer else None,
-            "scheduler_state_dict": self._scheduler.state_dict() if self._scheduler else None,
+            "optimizer_state_dict": opt_state,
+            "scheduler_state_dict": sched_state,
             "config": self.config.__dict__,
             "best_val_loss": self._best_val_loss,
             "training_history": self._training_history,

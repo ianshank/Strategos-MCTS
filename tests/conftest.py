@@ -506,6 +506,20 @@ def reset_correlation_id():
         set_correlation_id(None)
 
 
+@pytest.fixture(autouse=True)
+def ensure_mcts_logging_propagation() -> Generator[None, None, None]:
+    """Ensure the 'mcts' logger propagates to the root logger during tests.
+
+    Tests that invoke ``setup_logging()`` mutate process-wide logging state by setting
+    ``propagate=False`` on the 'mcts' logger hierarchy. Without restoring propagation,
+    subsequent tests relying on pytest's ``caplog`` fixture (which captures from the root
+    logger) fail to capture records emitted by ``get_logger()``.
+    """
+    logging.getLogger("mcts").propagate = True
+    yield
+    logging.getLogger("mcts").propagate = True
+
+
 @pytest.fixture
 def correlation_id() -> str:
     """Generate and set a correlation ID for the test."""
