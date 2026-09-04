@@ -21,6 +21,7 @@ Tunables are named constants with an environment override, never inline literals
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 import contextlib
 from dataclasses import dataclass
 import logging
@@ -192,6 +193,19 @@ def launch(argv: Sequence[str], *, env: Mapping[str, str], cwd: Path) -> subproc
     )
 
 
+def _drain(proc: subprocess.Popen[str], *, budget: float, started_at: float) -> tuple[str, str, bool]:
+    """Read one child to EOF under the shared deadline; kill its group if the deadline passes."""
+    remaining = max(0.0, budget - (time.monotonic() - started_at))
+    try:
+        out, err = proc.communicate(timeout=remaining)
+        return out, err, False
+    except subprocess.TimeoutExpired:
+        _kill_process_group(proc)
+        # The group is dead, so this cannot block: the pipes are closed by the kernel.
+        out, err = proc.communicate()
+        return out, err, True
+
+
 def wait_all(
     procs: Iterable[subprocess.Popen[str]],
     *,
@@ -202,33 +216,47 @@ def wait_all(
 
     Killing *all* of them matters for distributed runs: one rank blocked in a collective
     keeps the others blocked, so a per-child timeout alone would leave the port held.
+
+    **Every child is drained concurrently, one thread each.** ``communicate()`` multiplexes a
+    single child's own stdout and stderr, so it cannot deadlock that child against itself — but
+    it does not touch a *sibling's* pipes. Draining sequentially therefore leaves every later
+    child's pipes unread, and a child that writes more than one pipe buffer (64 KiB on Linux)
+    blocks in ``write()`` until someone reads. In a distributed run the rank being drained is
+    itself waiting in a collective on the rank that is now blocked writing, and neither can
+    proceed: the run dies at the deadline with both ranks killed and no captured output to
+    explain why.
+
+    That is not hypothetical. With the previous sequential loop, two children — the first
+    waiting on a file the second writes only after emitting 512 KiB of stderr — both exited
+    ``-SIGTERM`` at the deadline with empty streams. Concurrent draining completes the same
+    pair in well under a second. `torch.distributed` on `gloo` is exactly this shape and can be
+    far noisier than 64 KiB, so the harness would have failed as an unexplained flake in the
+    one test it exists to make trustworthy. Reported by a reviewer on PR #166 and reproduced
+    before being fixed; ``tests/unit/tooling/test_e2e_harness_helpers.py`` keeps the
+    reproduction as a regression test.
     """
     budget = subprocess_timeout_seconds() if timeout is None else timeout
     t0 = time.monotonic() if started_at is None else started_at
     procs = list(procs)
-    results: list[ProcessResult | None] = [None] * len(procs)
-    timed_out = False
-    for index, proc in enumerate(procs):
-        remaining = max(0.0, budget - (time.monotonic() - t0))
-        try:
-            out, err = proc.communicate(timeout=remaining)
-        except subprocess.TimeoutExpired:
-            timed_out = True
-            _kill_process_group(proc)
-            out, err = proc.communicate()
-            results[index] = ProcessResult(
-                tuple(proc.args), proc.returncode, out, err, time.monotonic() - t0, timed_out=True
-            )
-            continue
-        results[index] = ProcessResult(tuple(proc.args), proc.returncode, out, err, time.monotonic() - t0)
-    if timed_out:
-        # A sibling may have finished normally; that is still a failed run as a group.
+    if not procs:
+        return []
+
+    with ThreadPoolExecutor(max_workers=len(procs), thread_name_prefix="e2e-drain") as pool:
+        drained = list(pool.map(lambda proc: _drain(proc, budget=budget, started_at=t0), procs))
+
+    if any(hit_deadline for _, _, hit_deadline in drained):
+        # A sibling may have finished normally; that is still a failed run as a group, and a
+        # survivor left holding the rendezvous port would break the next test.
         for proc in procs:
             _kill_process_group(proc)
-    finished = [r for r in results if r is not None]
-    for result in finished:
+
+    results = [
+        ProcessResult(tuple(proc.args), proc.returncode, out, err, time.monotonic() - t0, timed_out=hit_deadline)
+        for proc, (out, err, hit_deadline) in zip(procs, drained)
+    ]
+    for result in results:
         logger.debug("finished: %s", result.describe(tail_lines=10))
-    return finished
+    return results
 
 
 def run_command(

@@ -18,9 +18,12 @@ Everything here is pure: no subprocess is spawned and no device is required.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+import subprocess
+import sys
+import time
 
-from _pytest.outcomes import Failed
 import pytest
 
 from tests.utils.device_matrix import (
@@ -47,11 +50,17 @@ from tests.utils.e2e_process import (
     ProcessResult,
     hermetic_env,
     subprocess_timeout_seconds,
+    wait_all,
 )
 
 pytestmark = [pytest.mark.unit]
 
 REPO_ROOT = Path("/repo")
+
+#: The exception ``pytest.fail`` raises. Taken from the public API rather than
+#: ``_pytest.outcomes.Failed``: the private module is not a stability contract and has moved
+#: between pytest releases, which would break this suite on an unrelated upgrade.
+Failed = pytest.fail.Exception
 
 
 @pytest.fixture(autouse=True)
@@ -331,7 +340,9 @@ def test_repo_root_is_prepended_to_pythonpath() -> None:
     assert fresh["PYTHONPATH"] == str(REPO_ROOT)
 
     inherited = hermetic_env(repo_root=REPO_ROOT, base={"PYTHONPATH": "/existing"})
-    assert inherited["PYTHONPATH"].split(":")[0] == str(REPO_ROOT)
+    # os.pathsep, not ":" — hermetic_env joins with it, so hardcoding the POSIX separator
+    # would assert a different property than the one the implementation guarantees.
+    assert inherited["PYTHONPATH"].split(os.pathsep)[0] == str(REPO_ROOT)
     assert "/existing" in inherited["PYTHONPATH"]
 
 
@@ -411,3 +422,79 @@ def test_empty_streams_render_as_a_placeholder() -> None:
     result = ProcessResult(argv=("true",), returncode=0, stdout="", stderr="", duration_seconds=0.1)
     assert result.ok is True
     assert "<empty>" in result.describe()
+
+
+# ------------------------------------------------- concurrent draining (PR #166 review)
+
+#: Comfortably more than one pipe buffer, so the writing child must block unless something is
+#: reading it. Linux defaults to 64 KiB and macOS to 16-64 KiB; 512 KiB clears every one of
+#: them with room to spare, and is small enough to stay instant once the drain is concurrent.
+OVERFLOWING_STDERR_BYTES = 512 * 1024
+
+#: Long enough that a serialized drain cannot finish inside it, short enough to keep the suite
+#: fast. The fixed implementation completes the same pair in well under a second.
+DRAIN_DEADLINE_SECONDS = 20.0
+
+
+def test_siblings_are_drained_concurrently_not_one_after_another(tmp_path: Path) -> None:
+    """The mutual-dependency deadlock a reviewer found on PR #166, kept as a regression test.
+
+    ``communicate()`` multiplexes one child's own stdout and stderr, so a single child cannot
+    deadlock against itself. It does not touch a *sibling's* pipes. Draining sequentially
+    therefore leaves later children unread, and one that writes past a pipe buffer blocks in
+    ``write()`` until someone reads it.
+
+    This reconstructs the exact shape of the two-rank DDP test: child A blocks until child B
+    signals, and B signals only *after* emitting far more stderr than a pipe holds. Under the
+    old sequential loop both children exited ``-SIGTERM`` at the deadline with empty streams —
+    a flake with no evidence in the log, in the one test the e2e suite exists to make
+    trustworthy. Nothing about the children is wrong; the harness was the bug.
+
+    Deliberately driven through real subprocesses: a mock cannot exhibit a pipe-buffer
+    deadlock, which is the entire property under test.
+    """
+    flag = tmp_path / "b_reached_the_barrier"
+
+    waits_for_the_flag = f"""
+import pathlib, time
+target = pathlib.Path({str(flag)!r})
+while not target.exists():
+    time.sleep(0.01)
+print("released")
+"""
+    floods_stderr_then_signals = f"""
+import pathlib, sys
+sys.stderr.write("x" * {OVERFLOWING_STDERR_BYTES})
+sys.stderr.flush()
+pathlib.Path({str(flag)!r}).write_text("go")
+"""
+
+    procs = [
+        subprocess.Popen(  # noqa: S603 - argv is built here
+            [sys.executable, "-c", source],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+        )
+        for source in (waits_for_the_flag, floods_stderr_then_signals)
+    ]
+
+    started = time.monotonic()
+    results = wait_all(procs, timeout=DRAIN_DEADLINE_SECONDS, started_at=started)
+    elapsed = time.monotonic() - started
+
+    assert not any(result.timed_out for result in results), (
+        "a child hit the deadline. The blocked writer was never drained, so the child waiting "
+        "on it could not proceed — the sequential-drain deadlock.\n"
+        + "\n\n".join(result.describe() for result in results)
+    )
+    assert all(result.returncode == 0 for result in results), "\n\n".join(r.describe() for r in results)
+    assert "released" in results[0].stdout, "the waiter never saw the signal, so the pair did not interleave"
+    assert len(results[1].stderr) == OVERFLOWING_STDERR_BYTES, "the flooded stream was truncated"
+    assert elapsed < DRAIN_DEADLINE_SECONDS, f"the pair took {elapsed:.1f}s; draining was not concurrent"
+
+
+def test_waiting_on_no_children_is_not_an_error() -> None:
+    """A thread pool sized from an empty list would raise; the empty case must be a no-op."""
+    assert wait_all([]) == []

@@ -85,7 +85,7 @@ capability. Compared against `main` rather than assumed.
   in the `test` job rather than a job of its own (the action-pin ratchet permits only
   decreases, and a new job would add two references), the directory-based selection, the
   SHA-pinned junit upload, and the newly wired `context_docs` gate.
-- **`docs/STATUS.md`** re-measured: unit **9,679 passed / 31 skipped at 92.76%** branch
+- **`docs/STATUS.md`** re-measured: unit **9,682 passed / 31 skipped at 92.76%** branch
   coverage, e2e **91 passed / 10 skipped**, both 2026-09-04. The full-suite row is marked
   **not re-measured** rather than silently carried forward. A standing note records that the
   GPU path is unverified, because a skip that is not reported as a skip is how a coverage
@@ -196,6 +196,38 @@ running the command the docs give:
   contains a wildcard, path exemptions cover only generated content, and the scan stays wired
   into both CI and the Makefile. Mutation-checked against a `^docs/` path exemption and a bare
   `sk-` entry.
+
+#### Fixed — review findings on this branch's own code (PR #166)
+
+- **The subprocess harness could deadlock, and would have looked like a flake.** `wait_all`
+  drained children **sequentially**. `communicate()` multiplexes one child's own stdout and
+  stderr, so a single child cannot deadlock against itself — but it never touches a
+  *sibling's* pipes. Every later child therefore went unread, and one writing past a pipe
+  buffer (64 KiB on Linux) blocked in `write()`. In a distributed run the rank being drained
+  is itself waiting in a collective on the rank now blocked writing, and neither can proceed.
+  **Reproduced before fixing**: two children — the first waiting on a file the second writes
+  only after emitting 512 KiB of stderr — both exited `-SIGTERM` at the 15 s deadline with
+  empty streams and no evidence of the cause. `torch.distributed` on `gloo` is exactly this
+  shape and is easily noisier than 64 KiB, so the harness would have failed as an unexplained
+  flake in the one test the e2e suite exists to make trustworthy. Now one drain thread per
+  child; the same pair completes in **0.1 s**. The reproduction is kept as a regression test
+  driven through real subprocesses, because a mock cannot exhibit a pipe-buffer deadlock.
+  `wait_all([])` is also pinned, since a thread pool sized from an empty list would raise.
+- **`src/observability/__init__.py` advertised a symbol it did not bind.**
+  `configure_cli_logging` was added to `__all__` without being imported, so
+  `from src.observability import configure_cli_logging` raised `ImportError` while the name
+  appeared exported. `__all__` is documentation and an `import *` filter; it binds nothing.
+  Fixed, and pinned over the *whole* of `__all__` so the next export added without a binding
+  fails in the suite rather than at a caller.
+- **A test asserted a hard-coded `:` PYTHONPATH separator** while `hermetic_env` joins with
+  `os.pathsep` — the test was checking a different property than the implementation
+  guarantees. Now uses `os.pathsep`.
+- **A test imported `Failed` from the private `_pytest.outcomes`.** Not a stability contract
+  and it has moved between releases, so an unrelated pytest upgrade would break the suite.
+  Now `pytest.fail.Exception`, the public API.
+
+All four were raised by an automated reviewer, verified against the tree before being acted
+on, and mutation-checked afterwards.
 
 #### Fixed — the console scripts were silent
 

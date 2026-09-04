@@ -150,3 +150,23 @@ def test_configuring_twice_does_not_stack_handlers() -> None:
     first = len(logging.getLogger(FRAMEWORK_LOGGER).handlers)
     configure_cli_logging()
     assert len(logging.getLogger(FRAMEWORK_LOGGER).handlers) == first
+
+
+def test_every_name_the_package_advertises_can_actually_be_imported() -> None:
+    """`__all__` is a promise; an entry with no binding is an `ImportError` waiting to happen.
+
+    `configure_cli_logging` was added to `src/observability/__init__.__all__` without being
+    imported into the module, so `from src.observability import configure_cli_logging` raised
+    even though the symbol was advertised — `__all__` is documentation to a reader and to
+    `import *`, but it binds nothing. Found by a reviewer on PR #166.
+
+    Written over the whole of `__all__` rather than for that one name, so the next export
+    added without a binding fails here instead of at a caller.
+    """
+    import src.observability as package
+
+    missing = [name for name in package.__all__ if not hasattr(package, name)]
+    assert not missing, (
+        f"src/observability/__init__.py advertises {missing} in __all__ but binds nothing for them; "
+        "`from src.observability import <name>` would raise ImportError. Add the import."
+    )
