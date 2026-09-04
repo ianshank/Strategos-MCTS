@@ -30,13 +30,16 @@ import pytest
 
 pytestmark = [pytest.mark.e2e, pytest.mark.api]
 
-fastapi_testclient = pytest.importorskip("fastapi.testclient", reason="the api extra is required for the REST e2e")
+# Imported normally, not via `pytest.importorskip`. The `api` extra is guarded for this
+# module by `_require_or_ignore` in tests/conftest.py, which under STRICT_OPTIONAL_DEPS
+# (as the CI test job sets) aborts collection with an actionable message instead of
+# skipping. importorskip would skip silently even in strict mode, quietly shrinking the
+# PR-gating e2e suite — a suite that can shrink without going red gates nothing.
+from fastapi.testclient import TestClient
 
-from src.api.rest_server import app  # noqa: E402
-from src.config.settings import reset_settings  # noqa: E402
-from src.framework.factories import LLMClientFactory  # noqa: E402
-
-TestClient = fastapi_testclient.TestClient
+from src.api.rest_server import app
+from src.config.settings import reset_settings
+from src.framework.factories import LLMClientFactory
 
 #: Injected through ``API_KEYS``, which the lifespan reads to build the authenticator.
 E2E_API_KEY = "e2e-rest-key"
