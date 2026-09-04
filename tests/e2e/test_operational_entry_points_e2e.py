@@ -1,6 +1,6 @@
 """The entry points an operator actually types, run as processes.
 
-Two surfaces that are declared in the tree but which nothing in ``tests/`` had ever
+Three surfaces that are declared in the tree but which nothing in ``tests/`` had ever
 invoked the way a user does:
 
 * **The installed console scripts.** ``pyproject.toml [project.scripts]`` declares eight
@@ -9,6 +9,10 @@ invoked the way a user does:
   stays invisible until someone types the command. The script list is read from
   ``pyproject.toml`` so this test covers a new script automatically rather than rotting
   against a hardcoded list.
+* **The ``python -m`` module invocation.** ``CLAUDE.md`` gives the benchmark to operators
+  as ``python -m src.benchmark ...``, seven times. That resolves through
+  ``src/benchmark/__main__.py``, a different path from the console script, and nothing
+  covered it — so the documented command could be dead while the script sweep stayed green.
 * **The container healthcheck.** ``healthcheck.py`` is a standalone script wired as the
   image's ``HEALTHCHECK``. Its exit-code contract is unit-tested in-process
   (``tests/unit/test_healthcheck_exit_codes.py``, ``tests/unit/test_healthcheck_cuda.py``);
@@ -71,6 +75,30 @@ def test_declared_console_script_is_installed_and_runs(script: str, run_script) 
         f"installed (`pip install -e .`) or its module:function target is wrong.\n{result.describe()}"
     )
     assert result.stdout.strip(), f"{script} --help printed nothing\n{result.describe()}"
+
+
+def test_the_documented_module_invocation_of_the_benchmark_runs(run_module) -> None:
+    """``python -m src.benchmark --dry-run`` — the form the docs actually give an operator.
+
+    ``CLAUDE.md`` documents seven ``python -m src.benchmark ...`` invocations and the
+    ``[project.scripts]`` sweep above covers none of them: a console script and a
+    ``__main__`` module are separate resolution paths, and only the console scripts had a
+    test. A broken ``src/benchmark/__main__.py`` would leave every documented command dead
+    while the script sweep stayed green.
+
+    ``--dry-run`` is the right probe because it exercises the whole wiring an operator
+    depends on — argument parsing, ``BenchmarkFactory``, the task registry, adapter
+    selection — and then stops before any LLM call, so it stays hermetic and fast.
+    """
+    result = run_module("src.benchmark", ["--dry-run"])
+    assert result.returncode == 0, (
+        "`python -m src.benchmark --dry-run` failed. CLAUDE.md documents this invocation, so "
+        f"a failure here means the documented entry point is broken.\n{result.describe()}"
+    )
+    # A dry run's whole purpose is to show the plan; empty output would be a silent success.
+    assert (
+        "Total executions:" in result.stdout
+    ), f"the dry run printed no execution plan, so an operator could not preview anything\n{result.describe()}"
 
 
 def test_a_console_script_emits_its_logs_without_polluting_stdout(tmp_path, run_script, e2e_seed) -> None:

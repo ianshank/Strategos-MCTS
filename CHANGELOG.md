@@ -86,7 +86,7 @@ capability. Compared against `main` rather than assumed.
   decreases, and a new job would add two references), the directory-based selection, the
   SHA-pinned junit upload, and the newly wired `context_docs` gate.
 - **`docs/STATUS.md`** re-measured: unit **9,645 passed / 31 skipped at 92.77%** branch
-  coverage, e2e **89 passed / 10 skipped**, both 2026-09-04. The full-suite row is marked
+  coverage, e2e **90 passed / 10 skipped**, both 2026-09-04. The full-suite row is marked
   **not re-measured** rather than silently carried forward. A standing note records that the
   GPU path is unverified, because a skip that is not reported as a skip is how a coverage
   claim becomes false.
@@ -118,6 +118,12 @@ capability. Compared against `main` rather than assumed.
   and a `# device-literal: <reason>` written exception. Registered in
   `.claude/settings.json` and covered by 31 tests that assert both what it catches and what
   it must stay quiet about, including that the tree is currently literal-free.
+- **`python -m src.benchmark --dry-run` is now covered end-to-end.** `CLAUDE.md` gives
+  operators seven `python -m src.benchmark ...` invocations, which resolve through
+  `src/benchmark/__main__.py` — a different path from the console scripts, and the only
+  entry-point surface with no test. The documented command could have been dead while the
+  `[project.scripts]` sweep stayed green. `--dry-run` exercises argument parsing, the
+  factory, the task registry and adapter selection, then stops before any LLM call.
 - **`tests/unit/tooling/test_claude_workspace_registry.py`** — deterministic validation of
   the `.claude/` **registry**, which nothing covered. `src/tools/context_docs.py` validates
   each skill and agent *document*; this validates the set they form, catching the inverse
