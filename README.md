@@ -182,6 +182,8 @@ CI runs.
 make test-e2e                      # every device the host offers; the rest skip with a reason
 E2E_DEVICES=cpu make test-e2e      # pin the matrix
 E2E_DEVICES=cuda make test-e2e     # REQUIRE cuda — fails, never skips, if the host lacks it
+make test-ui                       # UI and User Journey E2E suites
+make test-regression               # Comprehensive regression & AQA suite (unit, integration, e2e)
 ```
 
 Tests that move a tensor are parametrized over `cpu`, `cuda` and `mps` through the `device`

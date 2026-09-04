@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import glob
 import json
 import logging
 import os
@@ -201,7 +202,19 @@ async def _cmd_replay(args: argparse.Namespace) -> int:
 
 def _cmd_validate_spec(args: argparse.Namespace) -> int:
     """Validate every given path; report all issues, exit 1 if any error."""
-    report = SpecValidator().validate_paths(args.paths)
+    expanded_paths: list[Path] = []
+    for path in args.paths:
+        path_str = str(path)
+        if any(char in path_str for char in ("*", "?")):
+            matches = [Path(m) for m in sorted(glob.glob(path_str))]
+            if matches:
+                expanded_paths.extend(matches)
+            else:
+                expanded_paths.append(path)
+        else:
+            expanded_paths.append(path)
+
+    report = SpecValidator().validate_paths(expanded_paths)
     for issue in report.issues:
         sys.stderr.write(issue.render() + "\n")
     failing = {issue.path for issue in report.errors()}
@@ -209,7 +222,7 @@ def _cmd_validate_spec(args: argparse.Namespace) -> int:
     for issue in report.issues:
         if issue.severity == "warning":
             warn_counts[issue.path] = warn_counts.get(issue.path, 0) + 1
-    for path in args.paths:
+    for path in expanded_paths:
         spec = report.specs.get(str(path))
         if str(path) in failing or spec is None:
             continue

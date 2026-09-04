@@ -66,6 +66,7 @@ docs/
 specs/
 .claude/
 .agents/
+.harness/
 planning/
 .github/
 

@@ -289,8 +289,6 @@ lift.json
 .claude/settings.local.json
 
 # Local developer scratch directories and generated artifacts
-dev/
-unit_test_results.txt
 # Root-level generated model weights (e.g. from quick training runs or meta-controller trainer).
 # NOTE: versioned weights under models/ and .claude/models/ are intentionally tracked via LFS
 # (see comments above at the *.pt section). Only root-level generated outputs are ignored here.
@@ -298,3 +296,5 @@ unit_test_results.txt
 /rnn_meta_controller.history.json
 workspace_test/
 .agents/
+.harness/
+

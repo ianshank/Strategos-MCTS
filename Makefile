@@ -32,7 +32,7 @@ TEST_ENV := WANDB_MODE=disabled \
 
 .DEFAULT_GOAL := help
 .PHONY: help install format format-check lint lint-fix lint-ratchet lint-ratchet-baseline \
-        typecheck test test-e2e test-all \
+        typecheck test test-e2e test-ui test-regression test-all \
         coverage specs docs claims claims-baseline status pins pins-baseline secrets gate clean
 
 help: ## Show this help
@@ -63,6 +63,12 @@ test: ## Unit tests with branch coverage — the gate CI enforces
 
 test-e2e: ## End-to-end suite, as the CI test job runs it (set E2E_DEVICES to pin the device matrix)
 	$(TEST_ENV) $(PYTHON) -m pytest tests/e2e -m "not ui" -ra $(PYTEST_ARGS)
+
+test-ui: ## Run UI and User Journey E2E tests
+	$(TEST_ENV) $(PYTHON) -m pytest tests/e2e/test_ui_e2e.py tests/e2e/test_user_journeys.py -v $(PYTEST_ARGS)
+
+test-regression: ## Comprehensive regression & AQA suite (unit, integration, and e2e)
+	$(TEST_ENV) $(PYTHON) -m pytest tests/unit/ tests/integration/ tests/e2e/ -m "not slow" -ra $(PYTEST_ARGS)
 
 test-all: ## Full non-slow sweep (wider than the gate; expect env-dependent failures)
 	$(TEST_ENV) $(PYTHON) -m pytest tests/ -m "not slow" $(PYTEST_ARGS)
