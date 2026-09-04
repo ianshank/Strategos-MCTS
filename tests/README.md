@@ -96,12 +96,42 @@ pytest -m component
 
 ### 5. Integration & E2E Tests
 
-End-to-end user journey tests and integration tests.
-
 ```bash
-pytest -m e2e
+make test-e2e        # what CI runs: pytest tests/e2e -m "not ui"
 pytest -m integration
 ```
+
+**What belongs in `tests/e2e/`.** A module qualifies only if it drives a *real entry
+point* — an installed console script, `python -m`, or the FastAPI app through its
+lifespan — with every component inside the process real and only the network boundary
+stubbed, through the paths the code already offers (`ALLOW_MOCK_LLM_FALLBACK`, the offline
+hub flags). Re-implementing an algorithm in the test is not an end-to-end test. The full
+contract and the reasoning behind it are in
+`docs/plans/2026-09-04-e2e-device-agnostic.md`.
+
+**The device matrix.** Anything that moves a tensor is parametrized over `cpu`, `cuda` and
+`mps` by the `device_case` / `device` fixtures in `tests/e2e/conftest.py`, which are built
+on `tests/utils/device_matrix.py`. Never write a device literal in a test; take the
+fixture. The matrix is static so that unavailable devices are reported as **skipped with a
+reason** rather than being absent — on a CPU-only runner "all green" must not read as "the
+CUDA path is tested". Non-CPU cases carry the `gpu` marker, so `-m "not gpu"` deselects
+them. Use `accelerator_case` for a test that compares an accelerator *against* CPU; it
+collects as a single reasoned skip where no accelerator exists.
+
+```bash
+make test-e2e                      # every available device; others skip with a reason
+E2E_DEVICES=cpu make test-e2e      # pin the matrix
+E2E_DEVICES=cuda make test-e2e     # REQUIRE cuda: fails, not skips, if the host lacks it
+```
+
+`E2E_DEVICES` is test-side only; nothing under `src/` reads it. It is unrelated to
+`FORCE_GPU_TESTS`, which belongs to the Docker smoke tests.
+
+**Subprocesses.** Use the `run_script` / `run_module` fixtures rather than `subprocess`
+directly. They strip every provider and tracker credential from the child's environment
+before it starts (this suite also runs in a post-merge workflow that exports real API
+keys), bound each child, kill whole process groups on timeout, and render a failure as
+argv, exit code and both captured streams.
 
 ## Test Data Builders (`builders.py`)
 
@@ -397,8 +427,13 @@ All tests must pass before merging to main.
 ## Code Coverage
 
 Current coverage targets:
-- **Minimum**: 50% (configured in `pyproject.toml`)
-- **Goal**: 80%+ for core modules
+- **Minimum**: branch coverage at or above `fail_under` in `pyproject.toml`
+  `[tool.coverage.report]` — **85%**, enforced by CI and by `make test`. Read the value
+  there rather than trusting this line; `CHARTER.md` NG-5 forbids lowering it.
+- **Scope**: the gate measures `tests/unit/` only. The e2e suite runs outside the `--cov`
+  invocation on purpose, so end-to-end tests can neither dilute nor inflate the unit
+  denominator (`docs/plans/EVIDENCE_FIRST_PROGRAM.md` R3).
+- **Measured**: see `docs/STATUS.md`, which is regenerated from a real run.
 
 View coverage report:
 ```bash

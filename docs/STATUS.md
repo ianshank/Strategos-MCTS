@@ -19,17 +19,25 @@
 
 | Metric | Value |
 |---|---|
-| Full test suite | **10,919 passed, 137 skipped, 0 failed** (2026-08-24, `.[dev,neural,api]`, all suites including E2E & UI) ✅ |
-| Unit tests (`tests/unit/`, CI gate scope) | **9,529 passed, 29 skipped, 0 failed** (2026-08-24, `.[dev,neural,api]`) ✅ |
-| **Gate-scope branch coverage** (`tests/unit/` — what CI actually enforces) | **92.78%** (2026-08-24, `.[dev,neural,api]`) ✅ |
+| Full test suite | **10,919 passed, 137 skipped, 0 failed** (2026-08-24, `.[dev,neural,api]`, all suites including E2E & UI) — **not re-measured on 2026-09-04**, so it predates the e2e suite below; re-run rather than trust it |
+| Unit tests (`tests/unit/`, CI gate scope) | **9,682 passed, 31 skipped, 0 failed** (2026-09-04, `.[dev,neural,api]`) ✅ |
+| **Gate-scope branch coverage** (`tests/unit/` — what CI actually enforces) | **92.76%** (2026-09-04, `.[dev,neural,api]`) ✅ |
+| End-to-end suite (`tests/e2e -m "not ui"`, PR-gating) | **91 passed, 10 skipped, 0 failed** (2026-09-04, CPU-only host) ✅ — the 10 skips are the `cuda`/`mps` device cases and the accelerator-vs-CPU comparison, each naming its reason |
 | `ruff check .` (repo-wide) | **clean** — 0 issues ✅ |
 | `black . --check --line-length 120` (repo-wide) | **clean** ✅ |
-| `mypy src/` (strict pins) | **clean** — no issues in 335 source files ✅ |
+| `mypy src/` (strict pins) | **clean** — no issues in 336 source files ✅ |
 | Production Readiness Score | **21/21 (100.0%)** ✅ |
 | Harness / Spec validation | **48/48 specs valid** ✅ |
 | Wall time (full suite parallel) | ~94s (1m 34s) |
 
-The gate-enforcing total is the **92.78%** "Gate-scope branch coverage" row — well above 85%.
+The gate-enforcing total is the **92.76%** "Gate-scope branch coverage" row — well above 85%.
+
+> **The GPU path is unverified.** The e2e row above was measured on a CPU-only host. The `cuda`
+> and `mps` cases are written and are selected by availability, but **have never been run**, and
+> nothing in this file should be read as evidence that they pass. `E2E_DEVICES=cuda make test-e2e`
+> on real hardware, with its junit report committed, is what would change that. Stated here
+> because a skip that is not reported as a skip is exactly how a coverage claim becomes false
+> (CHARTER.md NG-3).
 This reflects Phases 0–5 (through the M5 self-play stack), the July 2026 test hardening pass,
 the GPU training & gameplay domain extensions (Connect Four, Othello, GPU hardware utils,
 training profiles), the 2026-07-25 code-hygiene pass (huggingface_space fork removal, dead-test

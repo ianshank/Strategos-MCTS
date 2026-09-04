@@ -6,7 +6,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from src.config.settings import Settings
+from src.config.constants import CPU_DEVICE
+from src.config.settings import MCTSImplementation, Settings
+from src.utils.device import get_default_device_str
 
 
 @dataclass
@@ -41,6 +43,29 @@ class TrainerConfig:
 
     additional_config: dict[str, Any] = field(default_factory=dict)
 
+    @staticmethod
+    def resolve_device(settings: Settings) -> str:
+        """Pick the trainer's device from settings and the hardware actually present.
+
+        The baseline MCTS implementation needs no accelerator and stays on CPU. The
+        neural implementation wants one, resolved in the same order the rest of the
+        project uses (``src/training/system_config.py``): an explicit
+        ``TORCH_DEVICE_OVERRIDE`` first, then the best device this machine offers.
+
+        This previously returned the literal ``"cuda"`` for the neural implementation
+        with no availability check and no consultation of the override, so a CPU-only or
+        Apple-silicon host configured with ``MCTS_IMPL=neural`` built a trainer whose
+        device string failed at the first tensor move. On a CUDA host the resolved value
+        is unchanged, so existing configurations behave exactly as before
+        (``CHARTER.md`` NG-6: CPU-only and single-GPU paths both stay functional).
+        """
+        if settings.MCTS_IMPL.value != MCTSImplementation.NEURAL.value:
+            return CPU_DEVICE
+        override = settings.TORCH_DEVICE_OVERRIDE
+        if override:
+            return str(override)
+        return get_default_device_str()
+
     @classmethod
     def from_settings(cls, settings: Settings) -> TrainerConfig:
         """Create configuration from settings."""
@@ -48,7 +73,7 @@ class TrainerConfig:
             batch_size=settings.MCTS_MAX_PARALLEL_ROLLOUTS * 8,
             gradient_clip_norm=1.0,
             use_mixed_precision=False,
-            device="cuda" if settings.MCTS_IMPL.value == "neural" else "cpu",
+            device=cls.resolve_device(settings),
             checkpoint_dir=settings.S3_PREFIX if settings.S3_BUCKET else "checkpoints",
             mcts_iterations=settings.MCTS_ITERATIONS,
         )

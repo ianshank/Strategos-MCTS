@@ -43,14 +43,35 @@ pytest tests/unit -v --tb=short -q
 | `black . --line-length 120` | Format code |
 | `ruff check . --select I --fix` | Sort imports (ruff owns isort rules) |
 | `ruff check . --fix` | Lint with auto-fix |
+| `make lint-ratchet` | Check the ruff rule ratchet (`NPY002` counts may only shrink) |
+| `make lint-ratchet-baseline` | Re-tighten the ratchet in the same change that fixes call sites |
 | `mypy src/` | Type check (matches CI exactly) |
+| `make secrets` | Fast key grep plus the repo-wide gitleaks scan, if the binary is installed |
+
+> **NumPy lint, and why one rule is ratcheted rather than gated.** Ruff's `NPY` ruleset is
+> selected, so NumPy-specific rules are enforced — except `NPY002` (`numpy-legacy-random`),
+> which is in `ignore` and held instead to a per-area baseline in `.lint_ratchet_baseline.json`
+> by `src/tools/lint_ratchet.py`. The ruleset was never selected at all before 2026-09-04, so
+> **108** legacy global-RNG call sites went unreported; one of them is the root Dirichlet noise
+> in `src/framework/mcts/neural_mcts.py` that makes `NeuralMCTS` irreproducible under a
+> torch-only seed — the defect specified in `specs/hygiene_determinism.SPEC.md` AC-3.
+> Converting all 108 would touch `src/training/` and `src/framework/mcts/`, both claimed by open
+> approved specs (NG-4), so the counts may only shrink instead. Do not "fix" a ratchet violation
+> by raising the baseline: re-tighten only in the change that actually removes call sites.
 
 > **Type-check strictness, stated honestly.** The gate is `mypy src/` with the settings in
 > `pyproject.toml` `[tool.mypy]` — which deliberately set `disallow_untyped_defs = false` and
 > `disallow_incomplete_defs = false`. It is **not** `--strict`. This table previously documented
-> `mypy src/ --strict`; measured 2026-08-04, that command reports **545 errors in 92 files**, so it
-> was a claim no command reproduced (CHARTER.md NG-3). Raising strictness is a deliberate ratchet,
-> tracked separately — do not "fix" the 545 by adding blanket ignores.
+> `mypy src/ --strict`; that command reports **539 errors in 92 files** (re-measured 2026-09-04;
+> it was 545 on 2026-08-04, so the figure drifts and must be re-measured rather than trusted), so
+> it was a claim no command reproduced (CHARTER.md NG-3). Raising strictness is a deliberate
+> ratchet, tracked separately — do not "fix" the count by adding blanket ignores.
+>
+> The 539 break down by error code as follows, which is more actionable than the total because
+> two of the six dominate and they are separate axes:
+> `no-untyped-def` 223, `type-arg` 146, `misc` 74, `untyped-decorator` 57, `no-untyped-call` 36,
+> `attr-defined` 3. Reproduce with
+> `mypy src/ --strict 2>&1 | grep -oE '\[[a-z-]+\]$' | sort | uniq -c | sort -rn`.
 
 > **Tooling is pinned for CI/local parity.** `ruff` and `mypy` are pinned to a validated
 > minor in the `[dev]` extra (the CI lint job installs `.[dev]`). Bump them deliberately and
@@ -70,6 +91,15 @@ pytest tests/unit -v --tb=short -q
 | `pytest tests/ -m "not slow"` | Skip slow tests |
 | `pytest tests/unit -x` | Stop on first failure |
 | `pytest tests/unit/benchmark -v` | Run benchmark framework tests |
+| `make test-e2e` | End-to-end suite exactly as the CI test job runs it |
+| `E2E_DEVICES=cuda make test-e2e` | Require a device: fails (never skips) if the host lacks it |
+
+> **The E2E suite is device-parametrized.** Tests under `tests/e2e/` that move a tensor run
+> once per device (`cpu`, `cuda`, `mps`) via the `device` fixture in `tests/e2e/conftest.py`.
+> Unavailable devices are reported as **skipped with a reason**, not omitted, so a green run
+> on a CPU-only machine never reads as "the GPU path is tested". Never write a device literal
+> in a test — take the fixture. See `tests/README.md` and
+> `docs/plans/2026-09-04-e2e-device-agnostic.md`.
 
 ---
 

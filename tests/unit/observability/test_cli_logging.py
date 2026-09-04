@@ -1,0 +1,172 @@
+"""The console scripts must actually emit their logs, and not onto stdout.
+
+Two separate contracts, both previously unenforced and both previously violated.
+
+**They logged nothing.** ``get_logger`` returns a bare ``mcts.*`` logger with no handler.
+Until a caller runs ``setup_logging``/``configure_cli_logging`` the ``mcts`` logger has no
+configuration, so INFO and DEBUG records are discarded and only WARNING and above escape
+through ``logging.lastResort``, unformatted. Every ``main()`` reached its work without
+configuring anything, so an operator running ``self-play-convergence`` saw no output at
+all — not the resolved device, not the seed, not the losses, not the checkpoint paths.
+A run that fails in the field is then undiagnosable.
+
+**Where the logs go matters.** ``setup_logging`` defaults its console handler to stdout,
+which is correct for a server and wrong for these commands: ``policy-lift`` prints its
+JSON artifact to stdout, so a log record interleaved there corrupts
+``policy-lift ... | jq``. ``configure_cli_logging`` therefore writes to stderr, and the
+stream choice is asserted here rather than left to a comment.
+
+These are unit tests over the logging configuration itself. The end-to-end proof that the
+installed console scripts honour it lives in ``tests/e2e/test_operational_entry_points_e2e.py``.
+"""
+
+from __future__ import annotations
+
+import logging
+
+import pytest
+
+from src.observability.logging import (
+    CONSOLE_STREAM_STDERR,
+    CONSOLE_STREAM_STDOUT,
+    configure_cli_logging,
+    get_logger,
+    setup_logging,
+)
+
+pytestmark = [pytest.mark.unit]
+
+#: The logger hierarchy every `get_logger` call lands under.
+FRAMEWORK_LOGGER = "mcts"
+
+
+@pytest.fixture(autouse=True)
+def _restore_logging_configuration():
+    """Put the global logging config back, so configuring it here cannot leak.
+
+    ``dictConfig`` mutates process-wide state. Without this, a test that configures
+    handlers would change how every later test in the session logs — the ambient-state
+    dependency that makes suites mysteriously order-sensitive.
+    """
+    root = logging.getLogger()
+    framework = logging.getLogger(FRAMEWORK_LOGGER)
+    saved = (root.handlers[:], root.level, framework.handlers[:], framework.level, framework.propagate)
+    # Cleared on ENTRY as well as restored on exit. Restoring alone leaves handlers that an
+    # earlier suite attached in place for the duration of these tests, which made them pass
+    # under `pytest tests/unit/` and fail under the full sweep — an order-dependent test is
+    # not an invariant, and CI hid it only because the gate job runs tests/unit/ in isolation.
+    root.handlers, framework.handlers = [], []
+    try:
+        yield
+    finally:
+        root.handlers, root.level, framework.handlers, framework.level, framework.propagate = saved
+
+
+def _console_streams(logger: logging.Logger) -> list[object]:
+    return [h.stream for h in logger.handlers if isinstance(h, logging.StreamHandler)]
+
+
+def test_a_cli_logger_is_unconfigured_before_setup() -> None:
+    """The starting condition, pinned so the fix cannot be mistaken for a no-op.
+
+    If this ever fails because something configures logging at import, the guarantee the
+    other tests provide changes meaning and they should be re-read.
+    """
+    logging.getLogger(FRAMEWORK_LOGGER).handlers = []
+    assert _console_streams(logging.getLogger(FRAMEWORK_LOGGER)) == []
+
+
+def test_configure_cli_logging_writes_records_to_stderr(capsys: pytest.CaptureFixture) -> None:
+    """The console handler must land on stderr, leaving stdout as a data channel.
+
+    Asserted by *routing an actual record* rather than by comparing the handler's stream to
+    ``sys.stderr`` by identity. ``dictConfig`` resolves ``ext://sys.stderr`` to whatever
+    object is current when it runs, and pytest swaps the std streams around a test, so an
+    identity comparison is a test of capture plumbing rather than of this code — which is
+    precisely why the first version of this file passed alone and failed in the full sweep.
+    """
+    configure_cli_logging()
+    assert _console_streams(
+        logging.getLogger(FRAMEWORK_LOGGER)
+    ), "configure_cli_logging attached no console handler; the CLI would stay silent"
+
+    get_logger("training.self_play_convergence").warning("routing probe")
+    captured = capsys.readouterr()
+    assert "routing probe" in captured.err
+    assert "routing probe" not in captured.out, (
+        "a CLI log record reached stdout. policy-lift prints its JSON artifact there, so this "
+        "would corrupt `policy-lift ... | jq`."
+    )
+
+
+def test_configure_cli_logging_actually_emits_an_info_record(capsys: pytest.CaptureFixture) -> None:
+    """End of the chain: a `logger.info` from library code reaches the operator.
+
+    Asserting the handler exists is not enough — the level and the propagation settings
+    have to let an INFO record through, which is exactly what was broken.
+    """
+    configure_cli_logging(log_level="INFO")
+    get_logger("training.self_play_convergence").info("run starting")
+
+    captured = capsys.readouterr()
+    assert "run starting" in captured.err, "an INFO record from a CLI was discarded"
+    assert "run starting" not in captured.out, "the record leaked onto stdout"
+
+
+def test_setup_logging_still_defaults_to_stdout(capsys: pytest.CaptureFixture) -> None:
+    """Backwards compatibility: the stream argument must not move existing callers.
+
+    ``setup_logging`` has other consumers that expect stdout; the new parameter is opt-in.
+    """
+    setup_logging()
+    get_logger("compat.probe").warning("default stream probe")
+    captured = capsys.readouterr()
+    assert "default stream probe" in captured.out, "the default stream moved; existing callers would break"
+
+
+@pytest.mark.parametrize(
+    ("stream", "expected_channel"),
+    [(CONSOLE_STREAM_STDOUT, "out"), (CONSOLE_STREAM_STDERR, "err")],
+)
+def test_the_stream_constants_route_to_the_channel_they_name(
+    stream: str, expected_channel: str, capsys: pytest.CaptureFixture
+) -> None:
+    """The two exported constants must route where they claim to."""
+    setup_logging(stream=stream)
+    get_logger("constants.probe").warning("constant probe")
+    captured = capsys.readouterr()
+    other = "err" if expected_channel == "out" else "out"
+    assert "constant probe" in getattr(captured, expected_channel)
+    assert "constant probe" not in getattr(captured, other)
+
+
+def test_configuring_twice_does_not_stack_handlers() -> None:
+    """``main()`` may run more than once in a process (tests, embedding callers).
+
+    Duplicate handlers would print every record twice, which reads as a message-loss bug
+    from the other direction.
+    """
+    configure_cli_logging()
+    first = len(logging.getLogger(FRAMEWORK_LOGGER).handlers)
+    configure_cli_logging()
+    assert len(logging.getLogger(FRAMEWORK_LOGGER).handlers) == first
+
+
+def test_every_name_the_package_advertises_can_actually_be_imported() -> None:
+    """`__all__` is a promise; an entry with no binding is an `ImportError` waiting to happen.
+
+    `configure_cli_logging` was added to `src/observability/__init__.__all__` without being
+    imported into the module, so `from src.observability import configure_cli_logging` raised
+    even though the symbol was advertised — `__all__` is documentation to a reader and to
+    `import *`, but it binds nothing. Found by a reviewer on PR #166.
+
+    Written over the whole of `__all__` rather than for that one name, so the next export
+    added without a binding fails here instead of at a caller.
+    """
+    import src.observability as package
+
+    missing = [name for name in package.__all__ if not hasattr(package, name)]
+    assert not missing, (
+        f"src/observability/__init__.py advertises {missing} in __all__ but binds nothing for them; "
+        "`from src.observability import <name>` would raise ImportError. Add the import."
+    )

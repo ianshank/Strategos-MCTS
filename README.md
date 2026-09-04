@@ -171,6 +171,25 @@ pytest tests/integration/
 pytest tests/integration/test_deployed_models.py
 ```
 
+### End-to-end suite and the device matrix
+
+`tests/e2e/` drives the real entry points — the installed console scripts, the FastAPI app
+through its own lifespan, and a genuine two-rank `gloo` process group — rather than
+re-implementing them. It runs in the PR-gating CI job, and `make test-e2e` runs exactly what
+CI runs.
+
+```bash
+make test-e2e                      # every device the host offers; the rest skip with a reason
+E2E_DEVICES=cpu make test-e2e      # pin the matrix
+E2E_DEVICES=cuda make test-e2e     # REQUIRE cuda — fails, never skips, if the host lacks it
+```
+
+Tests that move a tensor are parametrized over `cpu`, `cuda` and `mps` through the `device`
+fixture. The matrix is deliberately static, so a device the host lacks is reported as
+**skipped with a reason** rather than being absent: on a CPU-only runner "all green" must
+never be read as "the GPU path is tested". Never write a device literal in a test — take the
+fixture. See `tests/README.md` and `docs/plans/2026-09-04-e2e-device-agnostic.md`.
+
 ### Continuous integration & quality gates
 
 To reproduce CI locally, install with the same extras CI uses and run the unit suite with
@@ -180,7 +199,13 @@ the coverage gate:
 pip install -e ".[dev,neural,api]"
 ruff check . && black . --check --line-length 120 && mypy src/
 STRICT_OPTIONAL_DEPS=1 pytest tests/unit/ --cov=src --cov-fail-under=85
+STRICT_OPTIONAL_DEPS=1 pytest tests/e2e -m "not ui"      # or: make test-e2e
 ```
+
+`make gate` runs all of the above in CI order. The e2e run sits **outside** the `--cov`
+invocation on purpose, so end-to-end tests can neither dilute nor inflate the unit
+denominator (`docs/plans/EVIDENCE_FIRST_PROGRAM.md` R3) — which also means E2E coverage is
+not measured, and this is stated rather than implied.
 
 `STRICT_OPTIONAL_DEPS=1` matches the CI test job: a missing optional dependency aborts
 collection with an actionable message rather than silently shrinking the suite (and the

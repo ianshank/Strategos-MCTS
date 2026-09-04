@@ -120,6 +120,14 @@ jobs:
           fi
           echo "OK: the claim-ledger gate rejects an unsubstantiated PROVEN grade"
 
+      - name: Validate the context documents against the tree
+        # CHARTER.md INV-10: every repository path and pinned value cited by a governed
+        # document must resolve. `make docs` has always run this locally and it is in
+        # `make gate`, but no workflow ran it — so the check that exists *because*
+        # orientation docs drift was the one check CI could not catch drifting. Two lines,
+        # no new action reference, so the pin ratchet is untouched.
+        run: python -m src.tools.context_docs
+
       - name: Check the GitHub Actions pin ratchet
         # A tag such as @v4 is a mutable pointer, so a tag-pinned third-party action is an
         # unreviewed code-execution path into CI. The tree is not fully pinned yet, so this
@@ -127,6 +135,16 @@ jobs:
         # gate that would have to start disabled: the count may only go down, and a newly
         # introduced action must be pinned to a commit SHA on first use.
         run: python -m src.tools.action_pins
+
+      - name: Check the lint ratchet
+        # ruff's NumPy ruleset was never selected, so NPY002 (numpy-legacy-random) was
+        # unenforced at 108 call sites — one of which is the root Dirichlet noise behind the
+        # known determinism defect (specs/hygiene_determinism.SPEC.md AC-3). Converting them
+        # all touches src/training/ and src/framework/mcts/, both claimed by open approved
+        # specs, so the rule is held to a shrinking baseline instead: counts may only go down,
+        # and an area absent from .lint_ratchet_baseline.json must have zero findings. Same
+        # mechanism as the pin ratchet above, deliberately. No new action reference.
+        run: python -m src.tools.lint_ratchet
 
       - name: Spec traceability (PRs only)
         # A PR touching src/** must run on a spec/<id> branch whose spec is
@@ -372,6 +390,59 @@ jobs:
           path: artifacts/status.json
           if-no-files-found: warn
           retention-days: 30
+
+      - name: Run end-to-end tests
+        # The e2e suite drives real entry points (console scripts, a two-rank gloo process
+        # group, the REST app through its lifespan) in subprocesses. It runs HERE, in the
+        # main test job, for three reasons:
+        #   1. It must gate pull requests. e2e_with_langsmith.yml is the only other place
+        #      tests/e2e runs, and every job there is gated on the LANGSMITH_API_KEY
+        #      secret being present — so on a fork, or before that secret exists, the
+        #      whole suite silently does not run and cannot block a merge.
+        #   2. A separate job would add actions/checkout + actions/setup-python, and
+        #      .github/action_pin_baseline.json caps their unpinned uses; the ratchet in
+        #      tests/unit/test_ci_workflow_invariants.py fails on the increment.
+        #   3. It reuses this job's .[dev,neural,api] install.
+        # Deliberately OUTSIDE the --cov invocation above: E2E coverage must not move the
+        # unit denominator in either direction (docs/plans/EVIDENCE_FIRST_PROGRAM.md R3).
+        # Placed after the status artifact so an e2e failure still leaves one behind.
+        # The `ui` marker is excluded: tests/e2e/test_ui_e2e.py needs a live Gradio
+        # environment and is owned by the ui-tests job. Selected by DIRECTORY, not by
+        # `-m e2e`, so a new module that forgets its marker still runs.
+        # The presence of this step is itself asserted by
+        # tests/unit/test_ci_workflow_invariants.py, so it cannot be quietly dropped.
+        run: |
+          pytest tests/e2e \
+            -m "not ui" \
+            --junitxml=e2e-junit.xml \
+            --durations=10 \
+            -ra
+        env:
+          WANDB_MODE: disabled
+          LANGCHAIN_TRACING_V2: "false"
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+          TOKENIZERS_PARALLELISM: "false"
+          # A placeholder, never sent: tests/utils/e2e_process.py strips every provider
+          # credential from each child's environment before it starts.
+          OPENAI_API_KEY: "sk-test-key-not-real"
+          STRICT_OPTIONAL_DEPS: "1"
+
+      - name: Upload end-to-end test results
+        # The junit report carries the per-device skip reasons, which is how a CPU-only
+        # runner says "the cuda cases were not verified here" instead of staying silent.
+        #
+        # SHA-pinned rather than @v4, and deliberately: .github/action_pin_baseline.json
+        # caps actions/upload-artifact at 8 unpinned uses and the ratchet in
+        # tests/unit/test_ci_workflow_invariants.py permits only decreases, so a ninth
+        # tag-pinned use would fail the build. Pinning is the direction CL-33 wants
+        # anyway; this SHA is actions/upload-artifact v4.6.2.
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-test-results
+          path: e2e-junit.xml
+          if-no-files-found: warn
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

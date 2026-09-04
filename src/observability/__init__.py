@@ -11,7 +11,7 @@ Includes:
 """
 
 from .debug import MCTSDebugger, export_tree_to_dot, visualize_mcts_tree
-from .logging import CorrelationIdFilter, get_logger, setup_logging
+from .logging import CorrelationIdFilter, configure_cli_logging, get_logger, setup_logging
 from .metrics import MetricsCollector, agent_metrics, mcts_metrics
 from .profiling import AsyncProfiler, MemoryProfiler, generate_performance_report, profile_block
 from .tracing import TracingManager, get_tracer, trace_operation
@@ -37,6 +37,7 @@ except ImportError:
 __all__ = [
     # Logging
     "setup_logging",
+    "configure_cli_logging",
     "get_logger",
     "CorrelationIdFilter",
     # Tracing

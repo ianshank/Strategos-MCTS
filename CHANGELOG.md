@@ -7,6 +7,282 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### A device-agnostic end-to-end suite that actually gates pull requests
+
+Plan: `docs/plans/2026-09-04-e2e-device-agnostic.md`. No spec: `src/**` is touched by one
+commit only, which carries a `No-Spec:` trailer per `CHARTER.md` NG-4's written-exception
+clause. No carve-out is claimed and none is consumed.
+
+The suite named `tests/e2e/` was neither end-to-end nor gating. Of its 95 tests, 27
+reimplemented UCB1 in a dictionary and imported nothing from `src/`, and 26 touched `src`
+only through the `QueryInput` validator. No PR-triggered workflow ran the directory:
+`e2e_with_langsmith.yml` was the only workflow that did, and every job in it is gated on a
+`LANGSMITH_API_KEY` secret, so on a fork the whole suite silently did not run. Separately,
+**no test in the repository was parametrized over devices**, so `CHARTER.md` INV-9's promise
+that CPU-only and single-GPU paths both keep working rested on CI happening to be CPU-only.
+
+#### Added
+
+- **A device matrix (`tests/utils/device_matrix.py`, `tests/e2e/conftest.py`).** Tests that
+  move a tensor run once per device (`cpu`, `cuda`, `mps`) through one shared fixture built
+  on `src/utils/device.py`. The matrix is **static**, so unavailable devices are reported as
+  *skipped with a reason* rather than being absent — "all green" on a CPU runner must not
+  read as "the GPU path is tested". Non-CPU cases carry a new `gpu` marker.
+  `E2E_DEVICES` pins the matrix and makes the named devices **required**: one the host lacks
+  then fails rather than skipping.
+- **Hermetic subprocess execution (`tests/utils/e2e_process.py`).** Strips every provider and
+  tracker credential before a child starts, bounds each child, kills whole process groups on
+  timeout, and renders a failure as argv, exit code and both streams.
+- **Five end-to-end modules** driving real entry points: the self-play golden path through
+  the installed `self-play-convergence` and `policy-lift` console scripts on `connect_four`
+  (including `--resume` numbering and fresh-process seeded reproducibility); Neural MCTS
+  across the device matrix plus an accelerator-versus-CPU forward-pass comparison with TF32
+  disabled; **the first two-rank `gloo` process group any test in this repository has
+  formed**, proving rank-0 I/O fencing (`ddp_orchestrator` AC-4); the REST app through its
+  own lifespan serving `/graph/structure` and `/graph/mermaid` from a real built graph; and
+  the eight declared console scripts plus the container healthcheck run as processes.
+  Measured on a CPU-only host: 88 passed, 8 skipped, 55 s.
+- **Invariants on the harness's own helpers** (`tests/unit/tooling/test_e2e_harness_helpers.py`).
+  The device matrix and the subprocess harness are the single point of silent failure for
+  the whole suite: a `device_params()` that returned nothing would collapse the matrix, and
+  the e2e tests would collect no device cases while still reporting success. 35 tests pin
+  the matrix contract, the `E2E_DEVICES` skip-versus-fail semantics, the credential
+  stripping, the timeout bound and the failure rendering; each was verified by mutation
+  rather than assumed.
+- **A CI step and the invariant that protects it.** `ci.yml`'s `test` job now runs
+  `pytest tests/e2e -m "not ui"`, selected by directory so a module that forgets its marker
+  still runs, and `tests/unit/test_ci_workflow_invariants.py` fails if the step is removed.
+  The run sits outside the `--cov` invocation so E2E coverage cannot move the unit
+  denominator (`docs/plans/EVIDENCE_FIRST_PROGRAM.md` R3). `make test-e2e` runs the same
+  thing locally.
+
+#### Fixed
+
+- **`TrainerConfig.from_settings` hard-selected `"cuda"`** from the MCTS implementation flag,
+  with no availability check and without consulting `TORCH_DEVICE_OVERRIDE` — the only device
+  knob `Settings` offers. A CPU-only or Apple-silicon host configured with `MCTS_IMPL=neural`
+  built a trainer whose device string failed at the first tensor move. Now resolved by a named
+  `TrainerConfig.resolve_device` in the same order `src/training/system_config.py` uses. A CUDA
+  host resolves to `cuda` exactly as before (`CHARTER.md` NG-6).
+- **The first SHA-pinned GitHub Action in the tree.** The new artifact upload is pinned to
+  `actions/upload-artifact` v4.6.2 rather than `@v4`: a ninth unpinned use would have failed
+  the ratchet in `.github/action_pin_baseline.json`, and pinning is the direction CL-33 wants.
+- **Two Makefile-target parsers disagreed on digits.** `make help` and the
+  documented-targets invariant both used `[a-zA-Z_-]+`, while the `.PHONY` parser splits on
+  whitespace — so any target with a digit in its name was invisible in `make help` and
+  reported undocumented however it was documented.
+- Corrected `tests/README.md`, which stated a 50% coverage minimum; `pyproject.toml` sets 85%.
+
+#### Documentation, automation and configuration brought in line
+
+Everything below reflects changes this branch actually made; nothing here claims a
+capability. Compared against `main` rather than assumed.
+
+- **`README.md`** gained the end-to-end suite and the device matrix — it previously did not
+  mention `tests/e2e/` at all — plus the `make test-e2e` line in the CI-reproduction block,
+  and an explicit note that E2E coverage is deliberately unmeasured (evidence-chain R3).
+- **`docs/C4_ARCHITECTURE.md`** CI/CD section now describes the e2e step, *why* it is a step
+  in the `test` job rather than a job of its own (the action-pin ratchet permits only
+  decreases, and a new job would add two references), the directory-based selection, the
+  SHA-pinned junit upload, and the newly wired `context_docs` gate.
+- **`docs/STATUS.md`** re-measured: unit **9,682 passed / 31 skipped at 92.76%** branch
+  coverage, e2e **91 passed / 10 skipped**, both 2026-09-04. The full-suite row is marked
+  **not re-measured** rather than silently carried forward. A standing note records that the
+  GPU path is unverified, because a skip that is not reported as a skip is how a coverage
+  claim becomes false.
+- **`docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`** states Phase 1's gate precisely:
+  G-M1's first half (a two-rank distributed E2E test green in CI) is **met**; its second half
+  (a recorded scaling measurement) is **not**, so the gate has not cleared. The test is
+  CPU-only by design and proves orchestration, not scaling, and `ddp_orchestrator` AC-3
+  (gradient averaging) remains unexercised because identical per-rank seeds make weight
+  equality vacuous.
+- **`.gitignore`** ignores `e2e-junit.xml`, the artifact the new CI step produces.
+- **`.dockerignore` deliberately unchanged.** `tests/` is copied into two images on purpose —
+  `Dockerfile.test:43` exists to run pytest and `Dockerfile.train:90` ships the suite — so
+  excluding it would break both builds. Recorded as a considered non-change.
+
+#### Added — a skill and a hook, both deterministically validated
+
+- **`.claude/skills/e2e-device-matrix/SKILL.md`** — how to run the suite and, more
+  importantly, how to read the result: a table mapping each skip shape to what may and may
+  not be claimed from it, the `E2E_DEVICES` pin-versus-require contract, the procedure that
+  converts the unverified GPU path into a committed artefact, and the rule that
+  cross-device determinism must never be asserted. Picked up by
+  `python -m src.tools.context_docs` (18 → 19 documents, every cited path resolving).
+- **`.claude/hooks/device_literal_gate.py`** — a `PreToolUse` gate for the rule
+  `tests/README.md` states and which was violated inside the very change that wrote it: a
+  hard-coded `device="cpu"` makes a test pass identically everywhere while proving nothing
+  about the accelerator path. Scoped to `tests/e2e/` only — `src/` holds ~40 legitimate
+  device literals (availability ladders, field defaults), and a gate that cries wolf is
+  ignored within a day. Warn by default like `spec_gate.py`, with `block` and bypass modes
+  and a `# device-literal: <reason>` written exception. Registered in
+  `.claude/settings.json` and covered by 31 tests that assert both what it catches and what
+  it must stay quiet about, including that the tree is currently literal-free.
+- **`python -m src.benchmark --dry-run` is now covered end-to-end.** `CLAUDE.md` gives
+  operators seven `python -m src.benchmark ...` invocations, which resolve through
+  `src/benchmark/__main__.py` — a different path from the console scripts, and the only
+  entry-point surface with no test. The documented command could have been dead while the
+  `[project.scripts]` sweep stayed green. `--dry-run` exercises argument parsing, the
+  factory, the task registry and adapter selection, then stops before any LLM call.
+- **`tests/unit/tooling/test_claude_workspace_registry.py`** — deterministic validation of
+  the `.claude/` **registry**, which nothing covered. `src/tools/context_docs.py` validates
+  each skill and agent *document*; this validates the set they form, catching the inverse
+  failure: an artefact that exists but is not wired. It asserts that every file under
+  `.claude/hooks/` is registered in `settings.json` and every registration resolves to a file
+  on disk (an unregistered hook enforces nothing while reading as a control; a dangling one
+  fails inside a deliberately non-fatal code path, so the gate simply stops firing), that
+  every hook has a `test_<name>.py` beside it, that hook commands are rooted at
+  `${CLAUDE_PROJECT_DIR}`, that `settings.json` wires no unknown event key, and that every
+  skill/agent `name` matches its own path, carries a routable description, and is unique
+  across the shared namespace. Both wiring invariants were mutation-checked: unregistering
+  `device_literal_gate.py` and renaming `spec_gate.py` in the settings each turn the suite red.
+
+#### Added — ruff's NumPy ruleset, and a ratchet for the one rule that cannot be gated yet
+
+`pyproject.toml` never selected ruff's `NPY` family, so **no NumPy-specific rule was enforced
+anywhere in this repository**. Selecting it reports exactly one rule: `NPY002`
+(`numpy-legacy-random`), at **108** call sites that use NumPy's process-global legacy RNG
+instead of an explicit `np.random.Generator`.
+
+That is not a style preference here. `src/framework/mcts/neural_mcts.py:322` is in the list —
+the root Dirichlet noise that makes `NeuralMCTS` irreproducible under a torch-only seed, the
+defect recorded in `docs/plans/EVIDENCE_FIRST_PROGRAM.md` §2.5, surfaced again by this
+branch's e2e work, and specified for repair in `specs/hygiene_determinism.SPEC.md` AC-3. The
+rule that would have caught it was available the whole time and switched off. Three more sit
+on `np.random.seed` calls in the training drivers, which is the same defect in another guise:
+seeding the legacy global RNG does not seed a `Generator` anyone later constructs.
+
+- **`NPY` is now selected**, with every rule but `NPY002` enforced immediately — the tree was
+  already clean against them, so that is real coverage at zero refactor cost.
+- **`NPY002` is ratcheted, not exempted.** `src/tools/lint_ratchet.py` holds it to
+  `.lint_ratchet_baseline.json`: per-area counts may only decrease, and an area absent from the
+  baseline must have zero findings. Grouping by area is what makes it bite — a repo-wide total
+  would let a fix in `src/training` silently pay for a regression in `src/api`. Converting all
+  108 at once would touch `src/training/` and `src/framework/mcts/`, both claimed by open
+  approved specs, so a blanket refactor here would violate NG-4. The determinism debt is now a
+  number that visibly goes down when AC-3 lands.
+- **Deliberately the same mechanism as `src/tools/action_pins.py`** — declarative registry,
+  committed baseline, counts that only shrink, a `--write-baseline` re-tightening step — rather
+  than a second ratchet system with its own conventions. The ruff runner is injected, so the
+  24 unit tests assert exact counts without depending on the host's ruff or the tree's state.
+- Wired into `make lint-ratchet`, `make gate`, the `spec-validate` CI job, the `lint-ratchet`
+  console script, and the `quality-gate` skill. Mutation-checked: adding one legacy call to an
+  existing area and to a new area each fail the ratchet.
+
+#### Fixed — the documented secret scan could not pass, and could not fail
+
+Two independent defects in the same control, both found by installing gitleaks and actually
+running the command the docs give:
+
+- **It exited 1 on 17 findings, every one a placeholder.** `make secrets` and step 8 of the
+  `quality-gate` skill both run a repo-wide working-tree scan; on a clean checkout of `main` it
+  reported 17 leaks. A gate that always fails is worse than no gate — it teaches the reader to
+  run it and ignore it while still counting as coverage on a checklist. CI never caught this
+  because `gitleaks-action` scans a push's *commit range*, so the local command and the CI job
+  were never checking the same thing. Every one of the 17 lines was opened and read, then
+  allowlisted **by literal value** — never by file path, which is the F-20 failure mode
+  `.gitleaks.toml`'s own header records. Several are inputs the redaction tests feed in so the
+  sanitiser can prove it masks them. Compiled bytecode is now excluded on a structural
+  argument (its strings are already scanned at their source). The scan now reports **no leaks**.
+- **A real leak reported as "not installed".** Both call sites used
+  `command -v gitleaks && gitleaks detect ... || echo "not installed"`. In `A && B || C`, a
+  scan that *finds something* exits 1 and takes the `||` branch — so a genuine leak printed
+  "gitleaks not installed locally" and the target exited **0**. The `quality-gate` skill warns
+  about this exact pitfall in step 7, two lines above where step 8 committed it. Both are now
+  `if`/`else`, and `tests/unit/tooling/test_gitleaks_config.py` fails if the shape returns.
+- That module also pins the config's structural invariants deterministically, without needing
+  the binary: the builtin ruleset stays extended rather than replaced, no allowlist entry is a
+  bare credential prefix (the bound is *derived* from the known prefixes, not chosen), no entry
+  contains a wildcard, path exemptions cover only generated content, and the scan stays wired
+  into both CI and the Makefile. Mutation-checked against a `^docs/` path exemption and a bare
+  `sk-` entry.
+
+#### Fixed — review findings on this branch's own code (PR #166)
+
+- **The subprocess harness could deadlock, and would have looked like a flake.** `wait_all`
+  drained children **sequentially**. `communicate()` multiplexes one child's own stdout and
+  stderr, so a single child cannot deadlock against itself — but it never touches a
+  *sibling's* pipes. Every later child therefore went unread, and one writing past a pipe
+  buffer (64 KiB on Linux) blocked in `write()`. In a distributed run the rank being drained
+  is itself waiting in a collective on the rank now blocked writing, and neither can proceed.
+  **Reproduced before fixing**: two children — the first waiting on a file the second writes
+  only after emitting 512 KiB of stderr — both exited `-SIGTERM` at the 15 s deadline with
+  empty streams and no evidence of the cause. `torch.distributed` on `gloo` is exactly this
+  shape and is easily noisier than 64 KiB, so the harness would have failed as an unexplained
+  flake in the one test the e2e suite exists to make trustworthy. Now one drain thread per
+  child; the same pair completes in **0.1 s**. The reproduction is kept as a regression test
+  driven through real subprocesses, because a mock cannot exhibit a pipe-buffer deadlock.
+  `wait_all([])` is also pinned, since a thread pool sized from an empty list would raise.
+- **`src/observability/__init__.py` advertised a symbol it did not bind.**
+  `configure_cli_logging` was added to `__all__` without being imported, so
+  `from src.observability import configure_cli_logging` raised `ImportError` while the name
+  appeared exported. `__all__` is documentation and an `import *` filter; it binds nothing.
+  Fixed, and pinned over the *whole* of `__all__` so the next export added without a binding
+  fails in the suite rather than at a caller.
+- **A test asserted a hard-coded `:` PYTHONPATH separator** while `hermetic_env` joins with
+  `os.pathsep` — the test was checking a different property than the implementation
+  guarantees. Now uses `os.pathsep`.
+- **A test imported `Failed` from the private `_pytest.outcomes`.** Not a stability contract
+  and it has moved between releases, so an unrelated pytest upgrade would break the suite.
+  Now `pytest.fail.Exception`, the public API.
+
+All four were raised by an automated reviewer, verified against the tree before being acted
+on, and mutation-checked afterwards.
+
+#### Fixed — the console scripts were silent
+
+A hygiene audit of this branch found that `setup_logging()` had **zero call sites in
+`src/`**. `get_logger` returns a bare `mcts.*` logger with no handler, so until something
+configures the hierarchy every INFO and DEBUG record is discarded and only WARNING and
+above escapes through `logging.lastResort`, unformatted. `self-play-convergence` and
+`policy-lift` both reached their work without configuring anything: an operator saw no
+resolved device, no seed, no per-iteration losses and no checkpoint paths, which makes a
+failed run undiagnosable after the fact.
+
+Fixed with a named `configure_cli_logging()` helper called from both `main()`s. It writes
+to **stderr**, and that is the load-bearing detail: `setup_logging` defaults to stdout, and
+`policy-lift` prints its JSON artifact there — logging to stdout would have corrupted
+`policy-lift ... | jq`. `setup_logging` gains an opt-in `stream` parameter whose default
+preserves the behaviour every existing caller already gets.
+
+Covered by `tests/unit/observability/test_cli_logging.py` (7 tests, including that
+configuring twice does not stack handlers) and by a process-boundary assertion in
+`tests/e2e/test_operational_entry_points_e2e.py` that the installed script emits structured
+records carrying a correlation id while leaving stdout empty. Both verified by mutation:
+pointing the helper back at stdout, or removing the call, each turns the suite red.
+
+Also from the same audit: `make gate` did not run `test-e2e` even though the Makefile
+header claims exact CI parity and the CI `test` job runs it; `python -m src.tools.context_docs`
+was in `make gate` but in **no** workflow, so the check that exists because orientation docs
+drift was the one check CI could not catch drifting; `tests/e2e/test_user_journeys.py`
+hard-coded `device="cpu"` against the rule this PR added to `tests/README.md`, and now takes
+the fixture; and `CLAUDE.md`'s `mypy --strict` figure was stale (545 → **539**, re-measured,
+now with the per-error-code breakdown so the number is actionable rather than decorative).
+
+#### Found, not fixed
+
+Recorded in the plan's §4 rather than silently worked around:
+
+- **A failed process-group init degrades silently.** `init_distributed` catches the failure
+  and returns `False`; `src/training/self_play_convergence.py` ignores the return value.
+  Verified: two ranks launched with the default `nccl` backend on a CPU-only host become two
+  independent single-process runs that **both** write a checkpoint and both exit 0, so an
+  operator who mis-set the backend gets half the data and no error. This reads as an NG-2
+  ("no silent fallback") violation in the distributed path. Not fixed here: `src/training/`
+  is claimed by open approved specs and the fix is a failure-policy decision. The new test
+  pins the correct behaviour by setting `TRAINING_BACKEND=gloo` explicitly.
+- **`NeuralMCTS` is irreproducible under a torch-only seed** (root Dirichlet noise draws from
+  the process-global NumPy RNG). Already known — `EVIDENCE_FIRST_PROGRAM.md` §2.5, with the
+  fix specified in the approved `specs/hygiene_determinism.SPEC.md` AC-3. The new test seeds
+  both RNGs, as the self-play driver does, and documents the coupling at the seam.
+
+#### Not verified
+
+The `cuda` and `mps` cases were written but **not run**: this work was developed and measured
+on a CPU-only host. Per `CHARTER.md` NG-3 that is stated rather than implied — no document
+may claim the GPU path is tested until an artefact from `E2E_DEVICES=cuda make test-e2e` on
+real hardware exists.
+
 ### Evidence-First Program: roadmap re-gated behind a claim ledger
 
 Spec: `specs/evidence_claim_ledger.SPEC.md` (schema v2, approved).

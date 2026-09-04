@@ -40,10 +40,60 @@ regexes = [
   '''sk-ant-valid_key_12345678901234567890''',
   # docs/SECRETS_MANAGEMENT.md — a fill-in-the-blank example, not a value that was ever real.
   '''sk-ant-new-key-here''',
+
+  # ---------------------------------------------------------------------------------------
+  # Added 2026-09-04. The documented local command — `make secrets`, step 8 of the
+  # quality-gate skill — exited 1 on 17 findings, every one a placeholder. A gate that always
+  # fails is not a gate: it trains the reader to run it and ignore it, which is worse than not
+  # having it. (CI stayed green because gitleaks-action scans only a push's commit range, so
+  # the local working-tree scan and the CI job were never checking the same thing.)
+  #
+  # Every line below was opened and read before being listed, and each value is allowlisted by
+  # its literal text rather than by file path — the F-20 lesson recorded above. Verification:
+  #   gitleaks detect --config .gitleaks.toml --source . --no-git
+  # must report 0 leaks on a clean checkout.
+
+  # docs/E2E_USER_JOURNEYS.md, docs/archive/**: `curl -H "X-API-Key: ..."` examples. The
+  # values say what they are; none was ever issued.
+  '''your-api-key''',
+  '''demo-api-key-replace-in-production''',
+  '''invalid-key''',
+
+  # tests/unit/test_api_auth.py, tests/unit/test_component_factory.py,
+  # tests/integration/test_api_framework_integration.py — labelled test doubles for the API-key
+  # auth path. `valid_api_key_123` is "valid" only to the test's own fake verifier.
+  '''test_api_key_12345''',
+  '''test-api-key-12345''',
+  '''valid_api_key_123''',
+  '''invalid-api-key-12345''',
+
+  # tests/unit/observability/test_logging.py, tests/unit/test_api_exceptions.py — these are
+  # inputs the redaction tests feed in *so the sanitiser can prove it masks them*. Removing
+  # them would delete the evidence that secret-scrubbing works. The `eyJ...` value is the
+  # base64 of `{"alg":"HS256","typ":"JWT"}`, the public header every JWT begins with, and
+  # carries no payload or signature.
+  '''sk-1234567890abcdef''',
+  '''sk_live_12345678''',
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9''',
+
+  # tests/unit/test_validation_config.py — fixture values for Settings validation, each
+  # carrying its provider's prefix so the validator's prefix check is exercised.
+  '''sk-test123456789012345678901234567890''',
+  '''sk-test_api_key_1234567890123456789012345678901234567890''',
+  '''br-secret123456789012345678''',
+  '''pc-secret1234567890123456789''',
 ]
 
 paths = [
   # detect-secrets' own baseline stores SHA1 fingerprints of prior findings, not the secret values
   # themselves — structurally not exploitable regardless of content, unlike a doc or test file.
   '''^\.secrets\.baseline$''',
+
+  # Compiled Python bytecode. `--no-git` walks the working tree, so a local run picked up
+  # `__pycache__/*.pyc` and re-reported the string constants of the source file beside it —
+  # the same finding twice, one of them in a file that is gitignored and never committed.
+  # This is a structural argument like `.secrets.baseline` above, not an eyeball check:
+  # bytecode is generated output, so anything in it is already being scanned at its source.
+  '''(^|/)__pycache__/''',
+  '''\.py[co]$''',
 ]

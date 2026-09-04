@@ -41,7 +41,7 @@ from src.benchmark.policy_lift import build_network
 from src.config.constants import M5_DEFAULT_MLP_HIDDEN_DIMS, M5_DEFAULT_SELF_PLAY_SIMULATIONS
 from src.config.settings import get_settings
 from src.framework.domain_registry import DomainRegistry, DomainSpec
-from src.observability.logging import get_logger
+from src.observability.logging import configure_cli_logging, get_logger
 from src.training.self_play_trainer import SelfPlayConfig, SelfPlayTrainer
 from src.training.system_config import MCTSConfig, get_default_device_str
 from src.utils.gpu_utils import set_cuda_memory_fraction
@@ -395,6 +395,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    # Without this the driver is silent: get_logger returns an unconfigured `mcts.*`
+    # logger, so the resolved device, the seed, the per-iteration losses and the
+    # checkpoint paths are all discarded, and a failed run cannot be diagnosed
+    # afterwards. Writes to stderr so stdout stays free for the command's own output.
+    configure_cli_logging()
     args = build_parser().parse_args()
     sys.exit(asyncio.run(run(args)))
 

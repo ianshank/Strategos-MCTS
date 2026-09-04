@@ -90,10 +90,35 @@ graph TD
 
 | Phase | Focus | Est. | Gate to next |
 |---|---|---|---|
-| 1 | Multi-node scaling & low-latency inference | 2wk | Distributed E2E test green |
+| 1 | Multi-node scaling & low-latency inference | 2wk | Distributed E2E test green — **half met**, see below |
 | 2 | Advanced Neural Architectures | 3wk | Transformer parity tests pass |
 | 3 | Chess & Automated ELO | 2wk | UCI adapter plays valid match |
 | 4 | Enterprise Observability | 1wk | MLflow dashboard functional |
+
+> **Phase 1's gate, stated precisely (2026-09-04).** `CHARTER.md` §5 Gate G-M1 has two halves:
+> "a distributed end-to-end test green in CI on at least two ranks, **and** a scaling measurement
+> recorded in `docs/STATUS.md` together with the command that reproduces it."
+>
+> The **first half is now met**. `tests/e2e/test_ddp_two_rank_cpu_e2e.py` forms a real two-rank
+> `gloo` process group — the first process group any test in this repository has formed; every
+> prior distributed test patched `init_process_group` — and proves rank-0 I/O fencing
+> (`ddp_orchestrator` AC-4) by asserting rank 1's checkpoint directory stays empty. It runs in the
+> PR-gating CI job.
+>
+> The **second half is not met, and the gate therefore has not cleared.** No scaling measurement
+> exists. The test is CPU-only by design (NCCL needs two GPUs, which no runner here has), so it
+> demonstrates *orchestration*, not *scaling*, and it says nothing about the plan's own ">80%
+> linear scaling up to 4 GPUs" success metric. Nor does it prove gradient averaging: with identical
+> per-rank seeds both ranks compute identical gradients, so weight equality after a step would be
+> vacuous — `ddp_orchestrator` AC-3 remains unexercised.
+>
+> Two defects the test surfaced, recorded in `docs/plans/2026-09-04-e2e-device-agnostic.md` §4 and
+> unfixed: `init_distributed` swallows a failed process-group init and the driver ignores its
+> return value, so two ranks launched with the default `nccl` backend on a CPU host silently
+> become two independent single-process runs that **both** write a checkpoint and both exit 0
+> (an apparent NG-2 "no silent fallback" violation); and DDP broadcasts buffers on every forward,
+> so a BatchNorm-carrying network with per-rank trajectories of differing length can deadlock
+> mid-search — a real hazard for this phase at scale.
 
 ---
 

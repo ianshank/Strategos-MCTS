@@ -1158,8 +1158,13 @@ class TestHRMTRMSynergyJourney:
         scenario_type="tactical",
         tags=["user_journey", "hrm", "trm", "synergy", "decomposition"],
     )
-    def test_hrm_trm_synergy(self):
-        """Test HRM decomposition followed by TRM refinement."""
+    def test_hrm_trm_synergy(self, device):
+        """Test HRM decomposition followed by TRM refinement.
+
+        Takes the ``device`` fixture rather than hard-coding ``"cpu"``: these agents accept a
+        device and ``CHARTER.md`` INV-9 promises the single-GPU path keeps working, so the
+        journey runs on every device the host offers and reports the others as reasoned skips.
+        """
         from src.agents.hrm_agent import create_hrm_agent
         from src.agents.trm_agent import create_trm_agent
         from src.training.system_config import HRMConfig, TRMConfig
@@ -1188,13 +1193,13 @@ class TestHRMTRMSynergyJourney:
             dropout=0.1,
         )
 
-        hrm_agent = create_hrm_agent(hrm_config, device="cpu")
-        trm_agent = create_trm_agent(trm_config, output_dim=64, device="cpu")
+        hrm_agent = create_hrm_agent(hrm_config, device=device)
+        trm_agent = create_trm_agent(trm_config, output_dim=64, device=device)
 
-        # Step 2: Create test input
+        # Step 2: Create test input, on the same device as the agents.
         batch_size = 2
         seq_len = 10
-        test_input = torch.randn(batch_size, seq_len, hrm_config.h_dim)
+        test_input = torch.randn(batch_size, seq_len, hrm_config.h_dim, device=device)
 
         # Step 3: HRM hierarchical processing
         hrm_output = hrm_agent(
