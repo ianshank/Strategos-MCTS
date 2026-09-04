@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Knowledge Graph Integration & E2E Stabilization
+- **Added**: A Neo4j/NetworkX hybrid Knowledge Graph (`src/training/knowledge_graph.py`) for explicit concept tracking, entity extraction, and property graph-guided QA.
+- **Added**: `.claude/skills/aqa-regression`, `.claude/agents/godfile-decomposer`, and `.claude/skills/gpu-device-auditor` for rigorous quality assurance, autonomous decomposition of God-files, and rigorous hardware introspection.
+- **Added**: `networkx`, `neo4j`, and `arxiv` to `pyproject.toml` dependencies.
+- **Fixed**: Package version conflict between `gradio` and `huggingface_hub`.
+- **Fixed**: `ImportError` in `src/api/inference_server.py`.
+- **Changed**: Updated architecture documentation (`docs/C4_ARCHITECTURE.md`, `CHARTER.md`, `AGENTS.md`) to reflect the new Knowledge Graph capabilities.
+
 ### A device-agnostic end-to-end suite that actually gates pull requests
 
 Plan: `docs/plans/2026-09-04-e2e-device-agnostic.md`. No spec: `src/**` is touched by one

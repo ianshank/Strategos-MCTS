@@ -462,7 +462,7 @@ class TestTrainingFailureHandling:
 
         from src.training import unified_orchestrator as uo
 
-        with patch.object(uo, "_strict_training_errors", return_value=False):
+        with patch("src.training.orchestrator_components.utils._strict_training_errors", return_value=False):
             with caplog.at_level(logging.WARNING):
                 result = uo._handle_training_failure("hrm_train_epoch", "boom", dict(self._ZEROS))
 
@@ -475,7 +475,7 @@ class TestTrainingFailureHandling:
         from src.api.exceptions import TrainingError
         from src.training import unified_orchestrator as uo
 
-        with patch.object(uo, "_strict_training_errors", return_value=True):
+        with patch("src.training.orchestrator_components.utils._strict_training_errors", return_value=True):
             with pytest.raises(TrainingError) as exc_info:
                 uo._handle_training_failure("hrm_train_epoch", "boom", dict(self._ZEROS))
 

@@ -95,5 +95,11 @@ paths = [
   # This is a structural argument like `.secrets.baseline` above, not an eyeball check:
   # bytecode is generated output, so anything in it is already being scanned at its source.
   '''(^|/)__pycache__/''',
-  '''\.py[co]$''',
 ]
+
+[[rules]]
+description = "Context7 API Key"
+id = "context7-api-key"
+regex = '''ctx7sk-[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}'''
+secretGroup = 1
+tags = ["key", "Context7"]

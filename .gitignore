@@ -251,7 +251,16 @@ reports/
 # ... but the documentation trees are tracked content, not artifacts:
 !docs/reports/
 !docs/archive/reports/
+# Training artifacts and caches
+cache/
+checkpoints/
+reports/
+# ... but the documentation trees are tracked content, not artifacts:
+!docs/reports/
+!docs/archive/reports/
 training/models/
+knowledge_graph.json
+data/kg/
 
 # Temporary files
 nul

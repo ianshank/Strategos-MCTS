@@ -45,6 +45,7 @@ graph TB
     System -->|Performance Metrics<br/>Telemetry| Monitor
     System -->|Index & Retrieve<br/>Knowledge| Pinecone
     System -->|Fetch Papers<br/>Research Corpus| ArXiv
+    System -->|Knowledge Graph<br/>Concepts| Neo4j
     System -->|Trained Models<br/>Predictions| Client
 
     style System fill:#4A90E2,stroke:#2E5C8A,stroke-width:3px,color:#fff
@@ -55,6 +56,7 @@ graph TB
     style Monitor fill:#F7DC6F,stroke:#D4AC0D,stroke-width:2px
     style Pinecone fill:#F7DC6F,stroke:#D4AC0D,stroke-width:2px
     style ArXiv fill:#F7DC6F,stroke:#D4AC0D,stroke-width:2px
+    style Neo4j fill:#F7DC6F,stroke:#D4AC0D,stroke-width:2px
 ```
 
 ### Key Relationships
@@ -68,6 +70,7 @@ graph TB
 | **System** | Monitoring | Sends telemetry, performance metrics, alerts |
 | **System** | Pinecone | Stores/Retrieves vector embeddings for RAG |
 | **System** | ArXiv API | Fetches research papers for knowledge corpus |
+| **System** | Neo4j | Persists Concepts and Relationships in Knowledge Graph |
 
 ---
 
@@ -109,6 +112,7 @@ graph TB
             ReplayBuffer[Replay Buffer<br/>Python/NumPy<br/><br/>Experience storage]
             Cache[Evaluation Cache<br/>Python Dict<br/><br/>MCTS caching]
             VectorStore[Vector Store<br/>Pinecone<br/><br/>RAG Knowledge Base]
+            KnowledgeGraph[Knowledge Graph<br/>Neo4j/NetworkX<br/><br/>Concept relationships]
         end
     end
 
@@ -117,6 +121,7 @@ graph TB
         S3[(Cloud Storage<br/>S3/MinIO)]
         Prometheus[(Monitoring<br/>Prometheus/Grafana)]
         LLMProvider[LLM Provider<br/>OpenAI/Anthropic]
+        Neo4jDB[(Graph Database<br/>Neo4j)]
     end
 
     User -->|Configure| Orchestrator
@@ -139,6 +144,7 @@ graph TB
     MCTS -->|Guided by| HRM
     MCTS -->|Refines with| TRM
     MCTS -->|Retrieves from| VectorStore
+    MCTS -->|Queries| KnowledgeGraph
 
     MetaController -->|Routes to| HRM
     MetaController -->|Routes to| TRM
@@ -149,11 +155,13 @@ graph TB
     InferenceEngine -->|Uses| HRM
     InferenceEngine -->|Uses| TRM
     InferenceEngine -->|Uses| MCTS
+    InferenceEngine -->|Uses| KnowledgeGraph
 
     Orchestrator -->|Logs to| WandB
     Monitor -->|Exports to| Prometheus
     Orchestrator -->|Saves checkpoints| S3
     ReplayBuffer -->|Persists to| S3
+    KnowledgeGraph -->|Persists to| Neo4jDB
 
     style Orchestrator fill:#E74C3C,stroke:#922B21,stroke-width:2px,color:#fff
     style DataGen fill:#E74C3C,stroke:#922B21,stroke-width:2px,color:#fff
@@ -163,6 +171,7 @@ graph TB
     style MetaController fill:#3498DB,stroke:#1F618D,stroke-width:2px,color:#fff
     style API fill:#2ECC71,stroke:#1E8449,stroke-width:2px,color:#fff
     style VectorStore fill:#F39C12,stroke:#B9770E,stroke-width:2px
+    style KnowledgeGraph fill:#F39C12,stroke:#B9770E,stroke-width:2px
 ```
 
 ### Container Descriptions
@@ -186,6 +195,7 @@ graph TB
 | **Inference Engine** | PyTorch | Model inference and prediction |
 | **Replay Buffer** | Python, NumPy | Stores and samples experiences (torch-safe checkpoints) |
 | **Vector Store** | Pinecone | RAG knowledge base for retrieval |
+| **Knowledge Graph** | Neo4j, NetworkX | Semantic relationship and property tracking via `GraphQA` |
 | **Prometheus Metrics** | prometheus-client | Counters/histograms for agents, MCTS, LLM calls; `/metrics` endpoint |
 
 

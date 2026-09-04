@@ -8,6 +8,7 @@ Demonstrates the actual trained neural meta-controllers:
 
 This is a production demonstration using real trained models.
 """
+from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass

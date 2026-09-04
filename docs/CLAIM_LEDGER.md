@@ -14,7 +14,7 @@
 ## Grades
 
 | Grade | Meaning | Requirement enforced by the validator |
-|---|---|---|
+| --- | --- | --- |
 | `PROVEN` | A named command reproduces the claim from this tree, and an evidence artefact exists. | `Verify` non-empty **and** `Evidence` resolves on disk. |
 | `PARTIAL` | Some component of the claim is demonstrated; the whole is not. | `Verify` non-empty; `Notes` must state what is missing. |
 | `UNPROVEN` | Code exists; no command demonstrates the claimed outcome. | `Verify` may be `-`; `Notes` must state the missing link. |
@@ -34,7 +34,7 @@ prose makes the claim. `Verify` is a single shell command runnable from the repo
 ## Charter §2 mission bullets
 
 | Id | Claim | Source | Grade | Verify | Evidence | Notes |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | CL-1 | Neural MCTS search with correct game-theoretic semantics, with negamax sign handling and PUCT selection that agree across the core, parallel, and progressive-widening engines. | CHARTER.md | FALSE | `pytest tests/unit/framework/mcts/test_value_semantics_regression.py -q` | - | Contradicted by the tree. `src/framework/mcts/core.py:377-393` never negates on backup and has no `two_player` knob; `src/framework/mcts/parallel_mcts.py:535-539` and `src/framework/mcts/progressive_widening.py:470-471` negate unconditionally while their selection honours `two_player` (`parallel_mcts.py:492`, `progressive_widening.py:350`). Only `NeuralMCTS` is self-consistent. The existing regression test passes because both engines are only exercised in their default two-player configuration. Cleared by milestone E2. |
 | CL-2 | LangGraph orchestration with introspection: a typed, checkpointed agent graph whose structure is inspectable at runtime. | CHARTER.md | PARTIAL | `pytest tests/unit/api -q -k graph` | - | The endpoints exist and are on by default in `src/api/rest_server.py`; the demo clause in the charter is a manual `GET`, not a command with an exit code. Missing link: no artefact records a served graph structure for a known commit. |
 | CL-3 | Multi-domain play through a domain registry: Connect Four, Othello, and Chess register against one adapter contract. | CHARTER.md | PARTIAL | `pytest tests/unit/framework/mcts/test_domain_adapters.py -q` | - | Registration and the adapter contract are tested. Missing link: the registry test itself needs the `neural` extra, and `src/games/connect_four/state.py:5-13` imports NumPy and Torch unconditionally, so no domain is exercisable on the default install. |
@@ -45,11 +45,12 @@ prose makes the claim. `Verify` is a single shell command runnable from the repo
 | CL-8 | Deterministic documentation validation: documentation claims are checked against the tree, not trusted. | CHARTER.md | PROVEN | `python -m src.tools.context_docs` | src/tools/context_docs.py | Exit 0 means every cited path and pinned value still holds; wrapped by `tests/unit/tools/test_context_docs.py`. |
 | CL-9 | Fail-loud operational posture: with the mock-LLM fallback unset, the service errors rather than silently serving mock output. | CHARTER.md | PARTIAL | `pytest tests/unit/config/test_fail_loud_posture.py tests/unit/test_framework_service.py -q` | tests/unit/config/test_fail_loud_posture.py | The default is correct (`src/config/settings.py` defaults `ALLOW_MOCK_LLM_FALLBACK` to false; `src/api/framework_service.py:301-327` raises when unset), and E1 added `Settings.validate_fail_loud_posture`, which now *refuses* the flag outright when `DEPLOYMENT_ENV` is `staging` or `production`. Remaining gap: no deployment manifest declares `DEPLOYMENT_ENV`, so an operator who leaves it unset still gets the permissive posture. Cleared when the production manifests set it. |
 | CL-10 | Operational observability: liveness, readiness, and Prometheus metrics endpoints. | CHARTER.md | PARTIAL | `pytest tests/unit/api -q -k health` | - | Endpoints are implemented in `src/api/rest_server.py` and unit-tested. Missing link: no artefact from a running container. |
+| CL-37 | Knowledge Graph for explicit concept tracking: a neo4j/networkx hybrid graph for storing relationships, concept extraction, and graph-guided QA. | CHARTER.md | PARTIAL | `pytest tests/integration/test_knowledge_graph.py -q` | - | Integration tests exist. Missing link: no end-to-end extraction from live play. |
 
 ## README capability bullets
 
 | Id | Claim | Source | Grade | Verify | Evidence | Notes |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | CL-11 | HRM (Hierarchical Reasoning Module): DeBERTa-based agent for complex problem decomposition. | README.md | UNPROVEN | - | - | The module exists under `src/agents/`. Missing link: no benchmark shows decomposition quality, and the published ARC-Prize ablations make the architectural premise contestable. Scheduled as an E4 ablation arm with refinement steps swept and architecture held fixed. |
 | CL-12 | TRM (Task Refinement Module): iterative agent for refining and optimizing solutions. | README.md | UNPROVEN | - | - | As CL-11. The external analysis of the reference TRM checkpoint attributes most measured gain to test-time augmentation and voting rather than recursion, so the refinement-step sweep is the falsifying experiment. |
 | CL-13 | Neural MCTS: AlphaZero-style tree search guided by policy/value networks. | README.md | PARTIAL | `pytest tests/unit/test_neural_mcts_signs.py -q` | - | Sign semantics and PUCT are tested for `NeuralMCTS` specifically. Missing link: no run shows search improving on the raw network policy. Cleared by E2 (invariant) and E4 (measurement). |
@@ -67,11 +68,12 @@ prose makes the claim. `Verify` is a single shell command runnable from the repo
 | CL-25 | GPU hardware introspection: pre-flight memory validation, memory tracking, and CUDA allocation-fraction enforcement. | README.md | PARTIAL | `pytest tests/unit/utils -q -k gpu` | - | `src/utils/gpu_utils.py` is tested with mocked CUDA. Missing link: no artefact from real GPU hardware. |
 | CL-26 | Operational training profiles: `--profile {smoke,dev,full}` presets. | README.md | PROVEN | `self-play-convergence --help` | src/training/training_config.py | The console script is declared in `pyproject.toml` and the three profiles are defined in the cited module; both are checked by the context-doc validator. |
 | CL-27 | Policy-comparison benchmark with a domain-type-aware decision-quality lift metric and a meta-controller learning loop. | README.md | PARTIAL | `pytest tests/unit/benchmark -q -k policy_comparison` | - | The lift metric is implemented with a confidence-interval lower bound as the gate (`src/benchmark/policy_comparison.py:78-91`). Missing link: the existing unit test asserts result structure only and explicitly not improvement; no adversarial-domain result is committed. |
+| CL-38 | Knowledge Graph: Neo4j/NetworkX hybrid for explicit concept tracking, entity extraction, and property graph QA. | README.md | PARTIAL | `pytest tests/integration/test_knowledge_graph.py -q` | - | Integration tests exist. Missing link: no end-to-end extraction from live play. |
 
 ## Process claims
 
 | Id | Claim | Source | Grade | Verify | Evidence | Notes |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | CL-28 | The coverage gate is enforced at 85% branch coverage and is currently exceeded. | docs/STATUS.md | PROVEN | `python -m pytest tests/unit --cov=src --cov-fail-under=85` | pyproject.toml | The threshold literal lives in `pyproject.toml` and is pinned by the context-doc validator, so the documented number cannot drift from the enforced one. |
 | CL-29 | Unit coverage percentage is evidence that the framework works end to end. | - | FALSE | - | - | Recorded deliberately as a claim the project must never make. Component coverage says nothing about self-play convergence, policy-target construction, perspective sign correctness, or whether search improves on the network — which is precisely how CL-1's defect survived at 89.65%. See `docs/plans/EVIDENCE_FIRST_PROGRAM.md` §4 R3. |
 | CL-30 | No workflow exposes privileged context to untrusted pull requests via `pull_request_target`. | .github/workflows/ci.yml | PROVEN | `pytest tests/unit/test_ci_workflow_invariants.py -q -k pull_request_target` | tests/unit/test_ci_workflow_invariants.py | Gated since E1 by a per-workflow invariant test, so the property is enforced rather than observed. Recorded because an external review asserted the opposite; the ledger exists to settle such disputes mechanically. |

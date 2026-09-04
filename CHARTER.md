@@ -94,7 +94,9 @@ anyone can falsify the bullet without reading code.
   bought. *(Demo: the `policy-lift` console script → `src/benchmark/policy_lift.py`; the acceptance
   contract lives in `specs/m5_policy_lift.SPEC.md`.)*
 - **System-versus-system benchmarking**: a harness that scores different agent systems on a shared
-  task set. *(Demo: `python -m src.benchmark --dry-run` → `src/benchmark/cli.py`.)*
+  task set. *(Demo: `python -m src.benchmark --dry-run` -> `src/benchmark/cli.py`.)*
+- **Knowledge Graph for explicit concept tracking**: a neo4j/networkx hybrid graph for storing
+  relationships, concept extraction, and graph-guided QA. *(Demo: integration tests in `tests/integration/test_knowledge_graph.py`.)*
 - **Spec-driven development toolchain**: every change under `src/` is traceable to a written
   contract, mechanically. *(Demo: `harness validate-spec specs/charter_alignment.SPEC.md` →
   `src/framework/harness/cli.py`.)*

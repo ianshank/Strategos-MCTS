@@ -70,6 +70,7 @@ python -m src.benchmark --systems langgraph_mcts --tasks A1
 | Existing agents | `src/agents/`, `src/framework/agents/base.py` |
 | LangGraph orchestration | `src/framework/graph/builder.py` |
 | MCTS engine | `src/framework/mcts/core.py` (baseline), `src/framework/mcts/neural_mcts.py` (AlphaZero-style; `single_agent` flag) |
+| Knowledge Graph | `src/training/knowledge_graph.py` (Concepts, Relationships, GraphQA, Retrieval) |
 | Gameplay domains | `src/games/chess/` (chess), `src/games/connect_four/` (connect_four), `src/games/othello/` (othello) (adversarial), `src/framework/mcts/single_agent_domains.py` (reasoning, planning) |
 | Neural self-play (M5) | `src/training/self_play_trainer.py` |
 | Training profiles | `src/training/training_config.py` (`smoke`/`dev`/`full` profiles) |

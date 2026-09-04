@@ -136,3 +136,7 @@ scripts/verification/
 *.crt
 credentials.json
 secrets.json
+
+# Knowledge Graph data
+knowledge_graph.json
+data/kg/

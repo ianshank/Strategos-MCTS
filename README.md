@@ -74,6 +74,7 @@ graph TB
 - **Neural MCTS**: AlphaZero-style tree search guided by policy/value networks.
 - **Meta-Controller**: Neural router (GRU/BERT) that dynamically assigns tasks to the best agent.
 - **Deep Research Agent Swarm (`/deep-research`)**: Multi-agent literature discovery and architectural feasibility pipeline (Planner -> Fetcher -> Critic -> Synthesizer).
+- **Knowledge Graph**: Neo4j/NetworkX hybrid for explicit concept tracking, entity extraction, and property graph QA.
 
 ### 🛠️ Training Pipeline & Scaling
 - **Multi-GPU Distributed Training**: PyTorch DistributedDataParallel (`src/utils/distributed.py`) via `torchrun` with Rank-0 I/O fencing.

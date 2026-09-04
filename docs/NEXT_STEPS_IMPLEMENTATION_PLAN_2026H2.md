@@ -20,9 +20,11 @@
 > least one live rejection. At that point distributed self-play has a referee, inference
 > optimisation has a denominator, and architecture changes have an acceptance test.
 >
-> **Implementation Progress (Updated 2026-07-23):**
+> **Implementation Progress (Updated 2026-09-04):**
 > Phases 0–5 from the early H2 roadmap (tech debt cleanup, coverage baselining, Gradio UI, single-node GPU training, and ADK integration) have been **successfully implemented and merged**. For current test/coverage figures see `docs/STATUS.md` (the source of truth; re-measured 2026-07-25 after the code-hygiene pass). The `SelfPlayTrainer` and `UnifiedTrainingOrchestrator` are stable on single-GPU (AMP, `torch.compile`). 
-> 
+>
+> **Knowledge Graph Integration** has been successfully added to track concepts explicitly with a Neo4j/NetworkX hybrid, enabling property graph QA and entity extraction.
+>
 > **The roadmap below defines the new frontier for the remainder of H2 2026: Scaling, Advanced Architectures, and Enterprise Developer Experience.**
 
 ---
