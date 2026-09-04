@@ -31,11 +31,11 @@ TEST_ENV := WANDB_MODE=disabled \
             STRICT_OPTIONAL_DEPS=1
 
 .DEFAULT_GOAL := help
-.PHONY: help install format format-check lint lint-fix typecheck test test-all \
+.PHONY: help install format format-check lint lint-fix typecheck test test-e2e test-all \
         coverage specs docs claims claims-baseline status pins pins-baseline secrets gate clean
 
 help: ## Show this help
-	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
+	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
 install: ## Install the project with the CI extras
@@ -59,6 +59,9 @@ typecheck: ## Type check. NOT --strict; see CLAUDE.md for why (CI step)
 test: ## Unit tests with branch coverage — the gate CI enforces
 	$(TEST_ENV) $(PYTHON) -m pytest tests/unit/ \
 		--cov=src --cov-report=term-missing --cov-fail-under=$(COV_MIN) $(PYTEST_ARGS)
+
+test-e2e: ## End-to-end suite, as the CI test job runs it (set E2E_DEVICES to pin the device matrix)
+	$(TEST_ENV) $(PYTHON) -m pytest tests/e2e -m "not ui" -ra $(PYTEST_ARGS)
 
 test-all: ## Full non-slow sweep (wider than the gate; expect env-dependent failures)
 	$(TEST_ENV) $(PYTHON) -m pytest tests/ -m "not slow" $(PYTEST_ARGS)

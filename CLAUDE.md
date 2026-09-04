@@ -70,6 +70,15 @@ pytest tests/unit -v --tb=short -q
 | `pytest tests/ -m "not slow"` | Skip slow tests |
 | `pytest tests/unit -x` | Stop on first failure |
 | `pytest tests/unit/benchmark -v` | Run benchmark framework tests |
+| `make test-e2e` | End-to-end suite exactly as the CI test job runs it |
+| `E2E_DEVICES=cuda make test-e2e` | Require a device: fails (never skips) if the host lacks it |
+
+> **The E2E suite is device-parametrized.** Tests under `tests/e2e/` that move a tensor run
+> once per device (`cpu`, `cuda`, `mps`) via the `device` fixture in `tests/e2e/conftest.py`.
+> Unavailable devices are reported as **skipped with a reason**, not omitted, so a green run
+> on a CPU-only machine never reads as "the GPU path is tested". Never write a device literal
+> in a test — take the fixture. See `tests/README.md` and
+> `docs/plans/2026-09-04-e2e-device-agnostic.md`.
 
 ---
 

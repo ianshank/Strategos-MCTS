@@ -130,7 +130,23 @@ _require_or_ignore("uvicorn", "api", ["unit/test_inference_server.py"])
 # test_inference_server.py imports src/api/inference_server.py, which imports torch at
 # module scope. Previously unguarded, so a `.[dev,api]`-without-neural environment hit
 # a hard collection error rather than a skip.
-_require_or_ignore("torch", "neural", ["unit/test_inference_server.py"])
+#
+# The three e2e modules below drive the neural entry points (the self-play driver, the
+# policy-lift gate, NeuralMCTS, and a two-rank process group), so they import torch at
+# module scope too. Routed through this helper rather than a module-level
+# `pytest.importorskip` on purpose: under STRICT_OPTIONAL_DEPS (which the CI test job
+# sets) a missing `neural` extra must abort collection with an actionable message, not
+# silently shrink the e2e suite to the modules that happen not to need torch.
+_require_or_ignore(
+    "torch",
+    "neural",
+    [
+        "unit/test_inference_server.py",
+        "e2e/test_self_play_golden_path_e2e.py",
+        "e2e/test_neural_mcts_device_e2e.py",
+        "e2e/test_ddp_two_rank_cpu_e2e.py",
+    ],
+)
 
 try:
     import chess  # noqa: F401

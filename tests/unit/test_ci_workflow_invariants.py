@@ -697,6 +697,39 @@ def test_test_job_installs_the_extras_its_suites_require() -> None:
 
 
 @pytest.mark.unit
+def test_the_end_to_end_suite_runs_on_pull_requests() -> None:
+    """The e2e suite must be gated by a PR-triggered job, not only by the post-merge one.
+
+    ``e2e_with_langsmith.yml`` runs ``tests/e2e`` too, but every job in it is gated on
+    ``needs.check-secrets.outputs.has_langsmith == 'true'``. On a fork, or in any clone
+    where that secret is absent, the entire suite silently does not run — so before this
+    step existed, 95 end-to-end tests could not block a merge no matter how they finished.
+
+    Asserted structurally rather than by step name so a rename does not silently drop the
+    coverage, and paired with the marker check because ``-m "e2e"`` would deselect a new
+    module whose author forgot ``pytestmark``.
+    """
+    test_job = _load(WORKFLOW_DIR / CI_WORKFLOW)["jobs"]["test"]
+    e2e_steps = [
+        step
+        for step in _steps(test_job)
+        if "pytest" in str(step.get("run", "")) and "tests/e2e" in str(step.get("run", ""))
+    ]
+    assert e2e_steps, (
+        "the ci.yml `test` job no longer runs `pytest tests/e2e`. The only other workflow "
+        "that runs the e2e suite is gated on a repository secret, so removing this step "
+        "leaves the suite unable to block a pull request."
+    )
+
+    run = str(e2e_steps[0]["run"])
+    # Selected by directory. `-m "e2e and ..."` would silently skip a module that forgets
+    # its marker, which is the failure mode this test exists to prevent.
+    assert re.search(
+        r"pytest\s+tests/e2e\b", run
+    ), f"the e2e step must select the directory so an unmarked module still runs; got: {run!r}"
+
+
+@pytest.mark.unit
 def test_suppressed_api_suites_are_no_longer_ignored() -> None:
     """AC-5: the three suppression layers must not reappear.
 
@@ -777,7 +810,11 @@ def test_makefile_exists_and_documents_its_targets() -> None:
     text = _makefile_text()
     declared = set(re.findall(r"^\.PHONY:\s*(.*(?:\\\n.*)*)", text, re.M))
     phony = {t for block in declared for t in block.replace("\\", " ").split()}
-    documented = set(re.findall(r"^([a-zA-Z_-]+):.*?## ", text, re.M))
+    # Digits are part of a target name: the .PHONY parser above splits on whitespace and
+    # accepts them, so a character class without 0-9 here made the two halves disagree and
+    # reported any digit-bearing target (e.g. `test-e2e`) as undocumented no matter what
+    # help text it carried.
+    documented = set(re.findall(r"^([a-zA-Z0-9_-]+):.*?## ", text, re.M))
     undocumented = phony - documented - {"help"}
     assert not undocumented, f"Makefile targets without `## ` help text: {sorted(undocumented)}"
 

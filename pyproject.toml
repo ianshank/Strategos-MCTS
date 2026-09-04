@@ -390,6 +390,12 @@ markers = [
     "ma_due_diligence: M&A due diligence workflow tests",
     "selenium: Selenium browser automation tests",
     "harness: Agent harness framework tests",
+    # Attached automatically to the non-CPU cells of the device matrix in
+    # tests/utils/device_matrix.py, so `-m "not gpu"` deselects every accelerator case.
+    # Registered here only: this list is evaluated at configuration time, which is before
+    # a conftest applies the mark, and the split registry documented above is a debt to
+    # shrink rather than widen.
+    "gpu: Requires a non-CPU torch device (cuda/mps); skipped with a reason otherwise",
     # Supplied by the pytest-timeout plugin. Declared here so --strict-markers also
     # holds in environments that install the project without the [dev] extra; pytest
     # tolerates the plugin re-registering it.

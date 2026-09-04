@@ -7,6 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### A device-agnostic end-to-end suite that actually gates pull requests
+
+Plan: `docs/plans/2026-09-04-e2e-device-agnostic.md`. No spec: `src/**` is touched by one
+commit only, which carries a `No-Spec:` trailer per `CHARTER.md` NG-4's written-exception
+clause. No carve-out is claimed and none is consumed.
+
+The suite named `tests/e2e/` was neither end-to-end nor gating. Of its 95 tests, 27
+reimplemented UCB1 in a dictionary and imported nothing from `src/`, and 26 touched `src`
+only through the `QueryInput` validator. No PR-triggered workflow ran the directory:
+`e2e_with_langsmith.yml` was the only workflow that did, and every job in it is gated on a
+`LANGSMITH_API_KEY` secret, so on a fork the whole suite silently did not run. Separately,
+**no test in the repository was parametrized over devices**, so `CHARTER.md` INV-9's promise
+that CPU-only and single-GPU paths both keep working rested on CI happening to be CPU-only.
+
+#### Added
+
+- **A device matrix (`tests/utils/device_matrix.py`, `tests/e2e/conftest.py`).** Tests that
+  move a tensor run once per device (`cpu`, `cuda`, `mps`) through one shared fixture built
+  on `src/utils/device.py`. The matrix is **static**, so unavailable devices are reported as
+  *skipped with a reason* rather than being absent — "all green" on a CPU runner must not
+  read as "the GPU path is tested". Non-CPU cases carry a new `gpu` marker.
+  `E2E_DEVICES` pins the matrix and makes the named devices **required**: one the host lacks
+  then fails rather than skipping.
+- **Hermetic subprocess execution (`tests/utils/e2e_process.py`).** Strips every provider and
+  tracker credential before a child starts, bounds each child, kills whole process groups on
+  timeout, and renders a failure as argv, exit code and both streams.
+- **Five end-to-end modules** driving real entry points: the self-play golden path through
+  the installed `self-play-convergence` and `policy-lift` console scripts on `connect_four`
+  (including `--resume` numbering and fresh-process seeded reproducibility); Neural MCTS
+  across the device matrix plus an accelerator-versus-CPU forward-pass comparison with TF32
+  disabled; **the first two-rank `gloo` process group any test in this repository has
+  formed**, proving rank-0 I/O fencing (`ddp_orchestrator` AC-4); the REST app through its
+  own lifespan serving `/graph/structure` and `/graph/mermaid` from a real built graph; and
+  the eight declared console scripts plus the container healthcheck run as processes.
+  Measured on a CPU-only host: 88 passed, 8 skipped, 55 s.
+- **A CI step and the invariant that protects it.** `ci.yml`'s `test` job now runs
+  `pytest tests/e2e -m "not ui"`, selected by directory so a module that forgets its marker
+  still runs, and `tests/unit/test_ci_workflow_invariants.py` fails if the step is removed.
+  The run sits outside the `--cov` invocation so E2E coverage cannot move the unit
+  denominator (`docs/plans/EVIDENCE_FIRST_PROGRAM.md` R3). `make test-e2e` runs the same
+  thing locally.
+
+#### Fixed
+
+- **`TrainerConfig.from_settings` hard-selected `"cuda"`** from the MCTS implementation flag,
+  with no availability check and without consulting `TORCH_DEVICE_OVERRIDE` — the only device
+  knob `Settings` offers. A CPU-only or Apple-silicon host configured with `MCTS_IMPL=neural`
+  built a trainer whose device string failed at the first tensor move. Now resolved by a named
+  `TrainerConfig.resolve_device` in the same order `src/training/system_config.py` uses. A CUDA
+  host resolves to `cuda` exactly as before (`CHARTER.md` NG-6).
+- **The first SHA-pinned GitHub Action in the tree.** The new artifact upload is pinned to
+  `actions/upload-artifact` v4.6.2 rather than `@v4`: a ninth unpinned use would have failed
+  the ratchet in `.github/action_pin_baseline.json`, and pinning is the direction CL-33 wants.
+- **Two Makefile-target parsers disagreed on digits.** `make help` and the
+  documented-targets invariant both used `[a-zA-Z_-]+`, while the `.PHONY` parser splits on
+  whitespace — so any target with a digit in its name was invisible in `make help` and
+  reported undocumented however it was documented.
+- Corrected `tests/README.md`, which stated a 50% coverage minimum; `pyproject.toml` sets 85%.
+
+#### Found, not fixed
+
+Recorded in the plan's §4 rather than silently worked around:
+
+- **A failed process-group init degrades silently.** `init_distributed` catches the failure
+  and returns `False`; `src/training/self_play_convergence.py` ignores the return value.
+  Verified: two ranks launched with the default `nccl` backend on a CPU-only host become two
+  independent single-process runs that **both** write a checkpoint and both exit 0, so an
+  operator who mis-set the backend gets half the data and no error. This reads as an NG-2
+  ("no silent fallback") violation in the distributed path. Not fixed here: `src/training/`
+  is claimed by open approved specs and the fix is a failure-policy decision. The new test
+  pins the correct behaviour by setting `TRAINING_BACKEND=gloo` explicitly.
+- **`NeuralMCTS` is irreproducible under a torch-only seed** (root Dirichlet noise draws from
+  the process-global NumPy RNG). Already known — `EVIDENCE_FIRST_PROGRAM.md` §2.5, with the
+  fix specified in the approved `specs/hygiene_determinism.SPEC.md` AC-3. The new test seeds
+  both RNGs, as the self-play driver does, and documents the coupling at the seam.
+
+#### Not verified
+
+The `cuda` and `mps` cases were written but **not run**: this work was developed and measured
+on a CPU-only host. Per `CHARTER.md` NG-3 that is stated rather than implied — no document
+may claim the GPU path is tested until an artefact from `E2E_DEVICES=cuda make test-e2e` on
+real hardware exists.
+
 ### Evidence-First Program: roadmap re-gated behind a claim ledger
 
 Spec: `specs/evidence_claim_ledger.SPEC.md` (schema v2, approved).
