@@ -31,7 +31,6 @@ import re
 import sys
 from typing import Any
 
-import numpy as np
 import torch
 from torch import nn
 
@@ -50,6 +49,7 @@ from src.framework.domain_registry import DomainRegistry, DomainSpec
 from src.models.policy_value_net import MLPPolicyValueNetwork, create_policy_value_network
 from src.observability.logging import configure_cli_logging, get_logger
 from src.training.system_config import MCTSConfig, NeuralNetworkConfig
+from src.utils.seeding import set_all_seeds
 
 logger = get_logger(__name__)
 
@@ -333,8 +333,7 @@ async def run(args: argparse.Namespace) -> int:
             "device": args.device,
         },
     )
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
+    set_all_seeds(args.seed)
 
     try:
         trained_state = _load_state_dict(args.checkpoint, args.device)

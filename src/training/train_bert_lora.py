@@ -64,6 +64,7 @@ except ImportError:
 
 from src.agents.meta_controller.bert_controller import BERTMetaController  # noqa: E402
 from src.training.data_generator import MetaControllerDataGenerator  # noqa: E402
+from src.utils.seeding import set_all_seeds  # noqa: E402
 
 
 def setup_logging(log_level: int = logging.INFO) -> logging.Logger:
@@ -159,7 +160,7 @@ class BERTLoRATrainer:
 
         # Setup logging
         self.logger = setup_logging()
-        self.logger.info("Initializing BERTLoRATrainer")
+        self.logger.info("Initializing BERTLoRATrainer with seed=%s", seed)
 
         # Store training parameters
         # Resolution order: explicit arg > BERT_MODEL_NAME env var > prajjwal1/bert-mini default.
@@ -174,9 +175,7 @@ class BERTLoRATrainer:
         self.seed = seed
 
         # Set random seeds for reproducibility
-        torch.manual_seed(seed)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed_all(seed)
+        set_all_seeds(seed)
 
         # Initialize BERTMetaController with LoRA enabled
         self.logger.info(f"Loading model: {model_name}")

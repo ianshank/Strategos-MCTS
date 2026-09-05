@@ -431,6 +431,62 @@ def mock_llm_client_error() -> AsyncMock:
 
 
 # =============================================================================
+# Seeding Fixtures (hygiene_determinism AC-5)
+# =============================================================================
+
+
+@pytest.fixture
+def global_seed():
+    """Opt-in process-wide seed for tests that need a reproducible global RNG.
+
+    **Not autouse.** Request explicitly in new tests::
+
+        def test_foo(global_seed):
+            ...
+
+    Resolves the seed via ``resolve_seed()`` (Settings.SEED / DEFAULT_SEED) and
+    seeds process-global RNGs through ``set_all_seeds``. Snapshots and restores
+    python ``random``, NumPy legacy, and torch RNG state after the test so
+    seeding does not leak across the suite. Prefer injecting an
+    ``np.random.Generator`` via ``new_rng(seed)`` for new production code.
+    """
+    import random as py_random
+
+    import numpy as np
+
+    from src.utils.seeding import resolve_seed, set_all_seeds
+
+    seed = resolve_seed()
+
+    py_state = py_random.getstate()
+    # Legacy RandomState snapshot/restore is required to undo set_all_seeds; Generator
+    # has no process-global equivalent (hygiene_determinism AC-5 isolation).
+    np_state = np.random.get_state()  # noqa: NPY002
+    torch_state = None
+    cuda_states = None
+    try:
+        import torch
+
+        torch_state = torch.random.get_rng_state()
+        if torch.cuda.is_available():
+            cuda_states = torch.cuda.get_rng_state_all()
+    except ImportError:
+        pass
+
+    set_all_seeds(seed)
+    yield seed
+
+    py_random.setstate(py_state)
+    np.random.set_state(np_state)  # noqa: NPY002
+    if torch_state is not None:
+        import torch
+
+        torch.random.set_rng_state(torch_state)
+        if cuda_states is not None:
+            torch.cuda.set_rng_state_all(cuda_states)
+
+
+# =============================================================================
 # MCTS Fixtures
 # =============================================================================
 

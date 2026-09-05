@@ -702,7 +702,7 @@ def _checkpoint_status_banner() -> str:
     return checkpoint_status_banner(reports)
 
 
-def _build_demo() -> "gr.Blocks":
+def _build_demo() -> gr.Blocks:
     """Construct the Gradio UI. Requires the ``[ui]`` extra (gradio).
 
     Factored into a function so importing this module never touches gradio; the
@@ -719,8 +719,7 @@ def _build_demo() -> "gr.Blocks":
         theme=theme_soft,
         css=css_content,
     ) as demo:
-        gr.Markdown(
-            f"""
+        gr.Markdown(f"""
             # 🎯 LangGraph Multi-Agent MCTS Framework
             ## Demo with Neural Meta-Controllers
 
@@ -735,8 +734,7 @@ def _build_demo() -> "gr.Blocks":
             - **MCTS**: Strategic exploration for optimization problems
 
             ---
-            """
-        )
+            """)
 
         with gr.Row():
             with gr.Column(scale=2):
@@ -761,13 +759,11 @@ def _build_demo() -> "gr.Blocks":
                     info="Choose which trained controller to use",
                 )
 
-                gr.Markdown(
-                    """
+                gr.Markdown("""
                 **Controller Comparison:**
                 - **RNN**: Fast, captures sequential patterns
                 - **BERT**: More context-aware, text understanding
-                """
-                )
+                """)
 
         process_btn = gr.Button("🚀 Process Query", variant="primary", size="lg")
 
@@ -872,8 +868,7 @@ def _build_demo() -> "gr.Blocks":
                     api_name="stream",
                 )
 
-        gr.Markdown(
-            """
+        gr.Markdown("""
             ---
 
             ### 📚 About This Demo
@@ -891,8 +886,7 @@ def _build_demo() -> "gr.Blocks":
 
             ---
             *Built with PyTorch, Transformers, PEFT, and Gradio*
-            """
-        )
+            """)
 
     return demo
 
@@ -901,10 +895,10 @@ def _build_demo() -> "gr.Blocks":
 # get_settings() (via _build_demo), so `import app` raised ValidationError without
 # a provider key — which is what turned tests/ui into a collection error and made
 # every test in tests/e2e/test_ui_e2e.py ERROR instead of run.
-_demo_cache: "gr.Blocks | None" = None
+_demo_cache: gr.Blocks | None = None
 
 
-def get_demo() -> "gr.Blocks | None":
+def get_demo() -> gr.Blocks | None:
     """
     Build (once) and return the Gradio UI, or None when gradio is absent.
 

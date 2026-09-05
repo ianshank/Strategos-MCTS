@@ -37,6 +37,7 @@ from src.observability.logging import get_logger
 # NeuralMCTS uses the neural-specific MCTSConfig (num_simulations / c_puct / temperature_*),
 # which is distinct from the baseline src.framework.mcts.config.MCTSConfig.
 from src.training.system_config import MCTSConfig, get_default_device_str
+from src.utils.seeding import set_all_seeds
 
 logger = get_logger(__name__)
 
@@ -96,8 +97,7 @@ class SelfPlayTrainer:
         self.initial_state_fn = initial_state_fn
 
         if seed is not None:
-            torch.manual_seed(seed)
-            np.random.seed(seed)
+            set_all_seeds(seed)
 
         self.raw_network = network.to(self.device)
         self.network = self.raw_network
@@ -117,7 +117,7 @@ class SelfPlayTrainer:
         self.use_amp = self.config.use_amp and self.device.startswith("cuda")
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.use_amp) if self.use_amp else None
 
-        self.mcts = NeuralMCTS(self.network, self.mcts_config, device=device, single_agent=single_agent)
+        self.mcts = NeuralMCTS(self.network, self.mcts_config, device=device, single_agent=single_agent, seed=seed)
         self.collector = SelfPlayCollector(self.mcts, self.mcts_config, action_space_size=action_space_size)
         self.loss_fn = AlphaZeroLoss(value_loss_weight=self.config.value_loss_weight)
         self.optimizer = optimizer or torch.optim.Adam(self.network.parameters(), lr=self.config.learning_rate)
@@ -129,6 +129,7 @@ class SelfPlayTrainer:
                 "single_agent": single_agent,
                 "action_space_size": action_space_size,
                 "device": device,
+                "seed": seed,
                 "buffer_capacity": self.config.buffer_capacity,
                 "use_amp": self.use_amp,
                 "compile_model": self.config.compile_model,

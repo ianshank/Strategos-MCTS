@@ -2,18 +2,13 @@
 
 **Why this exists.** ``ruff``'s NumPy ruleset (``NPY``) was never selected in
 ``pyproject.toml``, so none of it was enforced. Turning it on reports **NPY002**
-(``numpy-legacy-random``) at 108 call sites — every ``np.random.seed``, ``np.random.choice``,
+(``numpy-legacy-random``) at many call sites — every ``np.random.seed``, ``np.random.choice``,
 ``np.random.dirichlet`` that uses NumPy's process-global legacy RNG instead of an explicit
 ``np.random.Generator``.
 
-That is not a style preference here. One of those 108 is
-``src/framework/mcts/neural_mcts.py:322``, the root Dirichlet noise that makes ``NeuralMCTS``
-irreproducible under a torch-only seed — the defect recorded in
-``docs/plans/EVIDENCE_FIRST_PROGRAM.md`` §2.5 and specified for repair in
-``specs/hygiene_determinism.SPEC.md`` AC-3. The rule that would have caught it was available
-the whole time and switched off. Three more sit on ``np.random.seed`` calls in the training
-drivers, which is the same defect wearing a different hat: seeding the legacy global RNG does
-not seed a ``Generator`` anyone later constructs.
+That is not a style preference here. The NeuralMCTS root-Dirichlet defect
+(``specs/hygiene_determinism.SPEC.md`` AC-3) was one of those call sites; it now uses an
+injected ``Generator``. Remaining NPY002 hits are tracked here so the count can only shrink.
 
 **Why a ratchet rather than a gate.** Converting 108 call sites touches ``src/training/`` and
 ``src/framework/mcts/``, both claimed by open approved specs, so a blanket refactor here would
@@ -21,8 +16,7 @@ violate CHARTER.md NG-4. And a gate that must be introduced switched off is deco
 ``NPY`` is selected in ``pyproject.toml`` with ``NPY002`` ignored — every *other* NumPy rule is
 enforced from now on at zero refactor cost — and this module holds ``NPY002`` to a committed
 baseline that may only shrink. That converts an all-or-nothing cleanup into a property that
-holds continuously, and it makes the determinism debt a number that visibly goes down when
-``hygiene_determinism`` AC-3 lands.
+holds continuously, and it makes the remaining legacy-RNG debt a number that visibly goes down.
 
 This is deliberately the *same* mechanism as ``src/tools/action_pins.py`` — a declarative
 registry, a committed baseline grouped by area, counts that may only decrease, and a
@@ -102,10 +96,9 @@ RATCHETED_RULES: tuple[RatchetedRule, ...] = (
         code="NPY002",
         paths=(".",),
         rationale=(
-            "Legacy global-RNG calls. One of them (src/framework/mcts/neural_mcts.py, root "
-            "Dirichlet noise) is the known determinism defect specified in "
-            "specs/hygiene_determinism.SPEC.md AC-3. src/training/ and src/framework/mcts/ are "
-            "claimed by open approved specs, so a blanket conversion here would violate NG-4."
+            "Legacy global-RNG calls (NPY002). NeuralMCTS Dirichlet noise was migrated to an "
+            "injected Generator by hygiene_determinism AC-3; remaining sites (replay buffers, "
+            "demos, legacy training/) shrink via this ratchet — counts may only decrease."
         ),
     ),
 )

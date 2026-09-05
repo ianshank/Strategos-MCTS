@@ -25,6 +25,7 @@ import torch
 import torch.nn as nn
 
 from src.observability.logging import get_logger
+from src.utils.seeding import new_rng, resolve_seed
 
 from ...training.system_config import MCTSConfig
 
@@ -275,6 +276,8 @@ class NeuralMCTS:
         config: MCTSConfig,
         device: str = "cpu",
         single_agent: bool = False,
+        rng: np.random.Generator | None = None,
+        seed: int | None = None,
     ):
         """
         Initialize neural MCTS.
@@ -286,16 +289,41 @@ class NeuralMCTS:
             single_agent: When True, treat the search as a single-agent (non-adversarial)
                 problem — values are NOT negated between plies during backpropagation.
                 Defaults to False, preserving two-player zero-sum (negamax) behavior.
+            rng: Optional injected numpy Generator for Dirichlet noise / action sampling.
+                When omitted, one is created via ``new_rng(seed)``.
+            seed: Optional seed for the *owned* Generator (ignored when ``rng`` is
+                injected). Falls back to ``config.seed`` (when present), then
+                ``Settings.SEED`` / ``DEFAULT_SEED``.
         """
         self.network = policy_value_network
         self.config = config
         self.device = device
         self.single_agent = single_agent
 
+        # When an RNG is injected we do not own its seed — avoid resolving/storing
+        # a misleading Settings-derived self.seed that was never applied.
+        if rng is not None:
+            self.rng = rng
+            self.seed: int | None = None
+        else:
+            config_seed = getattr(config, "seed", None)
+            self.seed = resolve_seed(seed if seed is not None else config_seed)
+            self.rng = new_rng(self.seed)
+
         # Caching for network evaluations
         self.cache: dict[str, tuple[np.ndarray, float]] = {}
         self.cache_hits = 0
         self.cache_misses = 0
+
+        logger.info(
+            "NeuralMCTS initialized",
+            extra={
+                "seed": self.seed,
+                "rng_injected": rng is not None,
+                "device": device,
+                "single_agent": single_agent,
+            },
+        )
 
     def add_dirichlet_noise(
         self,
@@ -319,7 +347,7 @@ class NeuralMCTS:
         epsilon = epsilon or self.config.dirichlet_epsilon
         alpha = alpha or self.config.dirichlet_alpha
 
-        noise = np.random.dirichlet([alpha] * len(policy_probs))
+        noise = self.rng.dirichlet([alpha] * len(policy_probs))
         return (1 - epsilon) * policy_probs + epsilon * noise
 
     @torch.no_grad()
@@ -529,7 +557,7 @@ class NeuralMCTS:
             return actions[np.argmax(probs)]
 
         # Sample from distribution
-        idx = np.random.choice(len(actions), p=probs)
+        idx = int(self.rng.choice(len(actions), p=probs))
         return actions[idx]
 
     def clear_cache(self):

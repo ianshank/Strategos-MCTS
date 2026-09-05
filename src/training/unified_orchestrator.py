@@ -21,6 +21,8 @@ import torch
 from torch.amp import GradScaler
 import torch.nn as nn
 
+from src.utils.seeding import set_all_seeds
+
 from ..agents.hrm_agent import HRMLoss, create_hrm_agent
 from ..agents.trm_agent import TRMLoss, create_trm_agent
 from ..framework.mcts.neural_mcts import GameState, NeuralMCTS, SelfPlayCollector
@@ -70,7 +72,7 @@ class UnifiedTrainingOrchestrator(MetricsMixin, CheckpointMixin, SelfPlayMixin, 
         self.initial_state_fn = initial_state_fn
         self.board_size = board_size
         self.device = config.device
-        torch.manual_seed(config.seed)
+        set_all_seeds(config.seed, rank=getattr(config, "rank", 0))
         self.monitor = PerformanceMonitor(window_size=100, enable_gpu_monitoring=self.device != "cpu")
         self._initialize_components()
         self.current_iteration = 0
@@ -135,7 +137,12 @@ class UnifiedTrainingOrchestrator(MetricsMixin, CheckpointMixin, SelfPlayMixin, 
             init_time_ms=round((time.perf_counter() - trm_start) * 1000, 2),
         )
         mcts_start = time.perf_counter()
-        self.mcts = NeuralMCTS(policy_value_network=self.policy_value_net, config=self.config.mcts, device=self.device)
+        self.mcts = NeuralMCTS(
+            policy_value_network=self.policy_value_net,
+            config=self.config.mcts,
+            device=self.device,
+            seed=self.config.seed,
+        )
         logger.info(
             "Neural MCTS initialized",
             component="neural_mcts",

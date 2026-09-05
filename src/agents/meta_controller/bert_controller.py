@@ -19,6 +19,7 @@ from src.agents.meta_controller.base import (
 )
 from src.agents.meta_controller.utils import features_to_text
 from src.observability.logging import get_logger
+from src.utils.seeding import set_all_seeds
 
 logger = get_logger(__name__)
 
@@ -144,7 +145,8 @@ class BERTMetaController(AbstractMetaController):
             raise ImportError("peft library is required for LoRA support. Install it with: pip install peft")
 
         # Set random seed for reproducibility
-        torch.manual_seed(seed)
+        set_all_seeds(seed)
+        logger.info("BERTMetaController initialized", extra={"seed": seed, "name": name})
 
         # Auto-detect device if not specified
         if device is None:

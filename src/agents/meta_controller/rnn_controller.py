@@ -17,6 +17,7 @@ from src.agents.meta_controller.base import (
 )
 from src.agents.meta_controller.utils import features_to_tensor
 from src.observability.logging import get_logger
+from src.utils.seeding import set_all_seeds
 
 logger = get_logger(__name__)
 
@@ -183,7 +184,8 @@ class RNNMetaController(AbstractMetaController):
         super().__init__(name=name, seed=seed)
 
         # Set random seed for reproducibility
-        torch.manual_seed(seed)
+        set_all_seeds(seed)
+        logger.info("RNNMetaController initialized", extra={"seed": seed, "name": name})
 
         # Auto-detect device if not specified
         if device is None:

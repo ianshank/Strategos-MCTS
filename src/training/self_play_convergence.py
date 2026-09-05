@@ -34,7 +34,6 @@ import re
 import sys
 from typing import Any
 
-import numpy as np
 import torch
 
 from src.benchmark.policy_lift import build_network
@@ -45,6 +44,7 @@ from src.observability.logging import configure_cli_logging, get_logger
 from src.training.self_play_trainer import SelfPlayConfig, SelfPlayTrainer
 from src.training.system_config import MCTSConfig, get_default_device_str
 from src.utils.gpu_utils import set_cuda_memory_fraction
+from src.utils.seeding import set_all_seeds
 
 logger = get_logger(__name__)
 
@@ -58,8 +58,8 @@ _CHECKPOINT_TEMPLATE = "ckpt_iter_{n}.pt"
 _CHECKPOINT_RE = re.compile(r"^ckpt_iter_(\d+)\.pt$")
 SIDECAR_SUFFIX = ".meta.json"
 
-# numpy's np.random.seed accepts a seed in [0, 2**32 - 1]; torch is more lenient but we
-# validate against the stricter bound so both seeders succeed.
+# set_all_seeds seeds NumPy's legacy RNG (bound [0, 2**32 - 1]) and torch; validate
+# against the stricter NumPy bound so both seeders succeed.
 _MAX_SEED = 2**32 - 1
 
 __all__ = [
@@ -212,8 +212,7 @@ async def run(args: argparse.Namespace) -> int:
     if args.device.startswith("cuda"):
         set_cuda_memory_fraction(settings.TRAINING_CUDA_MEMORY_FRACTION)
 
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
+    set_all_seeds(args.seed)
 
     # Build the network + trainer and (optionally) load a resume checkpoint.
     try:
