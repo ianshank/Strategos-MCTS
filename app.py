@@ -702,7 +702,7 @@ def _checkpoint_status_banner() -> str:
     return checkpoint_status_banner(reports)
 
 
-def _build_demo() -> "gr.Blocks":
+def _build_demo() -> gr.Blocks:
     """Construct the Gradio UI. Requires the ``[ui]`` extra (gradio).
 
     Factored into a function so importing this module never touches gradio; the
@@ -895,10 +895,10 @@ def _build_demo() -> "gr.Blocks":
 # get_settings() (via _build_demo), so `import app` raised ValidationError without
 # a provider key — which is what turned tests/ui into a collection error and made
 # every test in tests/e2e/test_ui_e2e.py ERROR instead of run.
-_demo_cache: "gr.Blocks | None" = None
+_demo_cache: gr.Blocks | None = None
 
 
-def get_demo() -> "gr.Blocks | None":
+def get_demo() -> gr.Blocks | None:
     """
     Build (once) and return the Gradio UI, or None when gradio is absent.
 

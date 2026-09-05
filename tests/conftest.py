@@ -459,7 +459,9 @@ def global_seed():
     seed = resolve_seed()
 
     py_state = py_random.getstate()
-    np_state = np.random.get_state()
+    # Legacy RandomState snapshot/restore is required to undo set_all_seeds; Generator
+    # has no process-global equivalent (hygiene_determinism AC-5 isolation).
+    np_state = np.random.get_state()  # noqa: NPY002
     torch_state = None
     cuda_states = None
     try:
@@ -475,7 +477,7 @@ def global_seed():
     yield seed
 
     py_random.setstate(py_state)
-    np.random.set_state(np_state)
+    np.random.set_state(np_state)  # noqa: NPY002
     if torch_state is not None:
         import torch
 
