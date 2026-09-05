@@ -43,6 +43,14 @@ except ImportError:
     EvalPrediction = None
 
 try:
+    import torchvision.io
+
+    if not hasattr(torchvision.io, "VideoReader"):
+        torchvision.io.VideoReader = object
+except (ImportError, AttributeError, Exception):
+    pass
+
+try:
     from datasets import Dataset
 
     _DATASETS_AVAILABLE = True

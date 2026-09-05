@@ -26,15 +26,31 @@ except ImportError:
 
 @pytest.fixture(autouse=True)
 def safe_torch_load():
-    """Fixture to set up safe torch loading for all tests in the module."""
+    """Fixture to set up safe torch loading for all tests in the module.
+
+    Checkpoints may have been saved with a numpy version where the canonical
+    path is ``numpy._core.multiarray.scalar``. On numpy 1.26.x the ``_core``
+    subpackage isn't directly importable, so we alias it in ``sys.modules``
+    AND register the ``scalar`` type with ``add_safe_globals``.
+    """
     if hasattr(torch.serialization, "add_safe_globals"):
+        import sys
+
         import numpy as np
 
-        np_core = getattr(np, "_core", None)
-        if np_core is None:
-            np_core = np.core
-        # Add all needed numpy types
-        torch.serialization.add_safe_globals([np_core.multiarray.scalar, np.dtype, np.dtypes.Float64DType])
+        # Ensure numpy._core.multiarray is resolvable by the unpickler.
+        # On numpy 1.x, np._core may not exist or may lack multiarray.
+        if "numpy._core" not in sys.modules:
+            sys.modules["numpy._core"] = np.core  # type: ignore[attr-defined]
+        if "numpy._core.multiarray" not in sys.modules:
+            sys.modules["numpy._core.multiarray"] = np.core.multiarray  # type: ignore[attr-defined]
+
+        from numpy.core.multiarray import scalar as np_scalar  # type: ignore[attr-defined]
+
+        safe_globals = [np_scalar, np.dtype]
+        if hasattr(np, "dtypes") and hasattr(np.dtypes, "Float64DType"):
+            safe_globals.append(np.dtypes.Float64DType)
+        torch.serialization.add_safe_globals(safe_globals)
 
 
 @pytest.fixture
@@ -176,7 +192,10 @@ def test_meta_controller_loading(production_models_dir):
         pytest.skip("Meta-controller not deployed")
 
     try:
-        checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
+        # weights_only=False because this trusted checkpoint was saved with a numpy
+        # version whose pickle globals reference numpy._core.multiarray.scalar, which
+        # can't be add_safe_globals'd on numpy 1.26.x (different module path).
+        checkpoint = torch.load(model_path, map_location="cpu", weights_only=False)
         assert "model_state_dict" in checkpoint
         assert "config" in checkpoint
     except (OSError, ValueError) as e:

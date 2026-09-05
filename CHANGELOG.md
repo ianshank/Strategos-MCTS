@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Knowledge Graph Integration & E2E Stabilization
+- **Added**: A Neo4j/NetworkX hybrid Knowledge Graph (`src/training/knowledge_graph.py`) for explicit concept tracking, entity extraction, and property graph-guided QA.
+- **Added**: `.claude/skills/aqa-regression`, `.claude/agents/godfile-decomposer`, and `.claude/skills/gpu-device-auditor` for rigorous quality assurance, autonomous decomposition of God-files, and rigorous hardware introspection.
+- **Added**: `networkx`, `neo4j`, and `arxiv` to `pyproject.toml` dependencies.
+- **Fixed**: Package version conflict between `gradio` and `huggingface_hub`.
+- **Fixed**: `ImportError` in `src/api/inference_server.py`.
+- **Changed**: Updated architecture documentation (`docs/C4_ARCHITECTURE.md`, `CHARTER.md`, `AGENTS.md`) to reflect the new Knowledge Graph capabilities.
+
 ### A device-agnostic end-to-end suite that actually gates pull requests
 
 Plan: `docs/plans/2026-09-04-e2e-device-agnostic.md`. No spec: `src/**` is touched by one
@@ -72,6 +80,26 @@ that CPU-only and single-GPU paths both keep working rested on CI happening to b
   whitespace — so any target with a digit in its name was invisible in `make help` and
   reported undocumented however it was documented.
 - Corrected `tests/README.md`, which stated a 50% coverage minimum; `pyproject.toml` sets 85%.
+- **Cross-platform Harness CLI wildcard expansion (`src/framework/harness/cli.py`, `spec_validator.py`).**
+  On Windows shells (PowerShell and cmd.exe), wildcard arguments like `specs/*.SPEC.md` are passed as literal
+  unexpanded strings. `SpecValidator.validate_paths` and `_cmd_validate_spec` now expand wildcard patterns using
+  `glob.glob`, ensuring `harness validate-spec specs/*.SPEC.md` works seamlessly on all operating systems while
+  preserving fail-loud reporting for non-existent paths.
+- **Windows DDP Gloo socket and CUDA device override (`src/training/self_play_convergence.py`, `tests/e2e/test_ddp_two_rank_cpu_e2e.py`).**
+  Conditioned `GLOO_SOCKET_IFNAME="lo"` on non-Windows platforms, set `CUDA_VISIBLE_DEVICES="-1"` for reliable
+  CUDA hiding on Windows, and fixed line 204 in `self_play_convergence.py` so explicit `--device cpu` is not
+  overridden by local CUDA discovery.
+- **Global logger propagation leak isolation (`tests/conftest.py`).**
+  Added autouse fixture `ensure_mcts_logging_propagation` that guarantees `logging.getLogger("mcts").propagate = True`
+  before and after each test, preventing process-wide `dictConfig` calls from breaking pytest's `caplog` assertions.
+- **NumPy 2.x safe globals in PyTorch `WeightsUnpickler` (`tests/integration/test_deployed_models.py`).**
+  Registered `numpy._core.multiarray.scalar` safe globals and module aliasing to support model weights created
+  under NumPy >= 2.0 on NumPy 1.26 environments.
+- **Mypy 1.15 strictness typing across 336 source files.**
+  Resolved type-narrowing and protocol issues across `factories.py`, `llm_mcts.py`, `reasoning.py`, `tracing.py`,
+  and `meta_controller_trainer.py`.
+- **cuDNN non-deterministic reduction calibrated tolerance (`tests/e2e/test_neural_mcts_device_e2e.py`).**
+  Calibrated fp32 forward-pass tolerance for high-magnitude raw logits under CUDA non-deterministic convolution reductions.
 
 #### Documentation, automation and configuration brought in line
 

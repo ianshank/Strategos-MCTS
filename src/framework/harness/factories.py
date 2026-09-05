@@ -23,6 +23,7 @@ from src.framework.harness.loop.runner import HarnessRunner
 from src.framework.harness.memory.markdown import MarkdownMemoryStore
 from src.framework.harness.memory.tools import register_memory_tools
 from src.framework.harness.planner import HeuristicPlanner, LLMPlanner
+from src.framework.harness.protocols import Planner
 from src.framework.harness.ralph import RalphLoop
 from src.framework.harness.replay import (
     SystemClock,
@@ -127,16 +128,16 @@ class HarnessFactory:
         registry = self.create_tool_registry(memory_store=memory_store, shell_allowlist=shell_allowlist)
         executor = AsyncToolExecutor(registry, hs, logger=log.getChild("tools"))
         intent = DefaultIntentNormalizer(logger=log.getChild("intent"))
-        planner = (
-            LLMPlanner(
+        planner: Planner
+        if hs.PLANNER_ENABLED:
+            planner = LLMPlanner(
                 llm,
                 max_tokens=hs.PLANNER_MAX_TOKENS,
                 temperature=hs.PLANNER_TEMPERATURE,
                 logger=log.getChild("planner"),
             )
-            if hs.PLANNER_ENABLED
-            else HeuristicPlanner(logger=log.getChild("planner"))
-        )
+        else:
+            planner = HeuristicPlanner(logger=log.getChild("planner"))
         injector = DefaultContextInjector(
             memory=memory_store,
             compressor=EpisodicCompressor.from_settings(hs),

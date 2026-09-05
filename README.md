@@ -74,6 +74,7 @@ graph TB
 - **Neural MCTS**: AlphaZero-style tree search guided by policy/value networks.
 - **Meta-Controller**: Neural router (GRU/BERT) that dynamically assigns tasks to the best agent.
 - **Deep Research Agent Swarm (`/deep-research`)**: Multi-agent literature discovery and architectural feasibility pipeline (Planner -> Fetcher -> Critic -> Synthesizer).
+- **Knowledge Graph**: Neo4j/NetworkX hybrid for explicit concept tracking, entity extraction, and property graph QA.
 
 ### 🛠️ Training Pipeline & Scaling
 - **Multi-GPU Distributed Training**: PyTorch DistributedDataParallel (`src/utils/distributed.py`) via `torchrun` with Rank-0 I/O fencing.
@@ -182,6 +183,8 @@ CI runs.
 make test-e2e                      # every device the host offers; the rest skip with a reason
 E2E_DEVICES=cpu make test-e2e      # pin the matrix
 E2E_DEVICES=cuda make test-e2e     # REQUIRE cuda — fails, never skips, if the host lacks it
+make test-ui                       # UI and User Journey E2E suites
+make test-regression               # Comprehensive regression & AQA suite (unit, integration, e2e)
 ```
 
 Tests that move a tensor are parametrized over `cpu`, `cuda` and `mps` through the `device`

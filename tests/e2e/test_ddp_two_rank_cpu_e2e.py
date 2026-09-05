@@ -59,27 +59,30 @@ _PORT_IN_USE_MARKERS = ("Address already in use", "EADDRINUSE")
 
 def _rank_env(rank: int, port: int, e2e_env) -> dict[str, str]:
     """The environment ``torchrun`` would hand a rank, plus the CPU-only pins."""
-    return e2e_env(
-        {
-            "RANK": str(rank),
-            "LOCAL_RANK": str(rank),
-            "WORLD_SIZE": str(WORLD_SIZE),
-            "MASTER_ADDR": "127.0.0.1",
-            "MASTER_PORT": str(port),
-            # Without this the settings default (nccl) is used, init fails on a CPU host,
-            # the failure is swallowed, and the test would pass against two independent
-            # single-process runs. See the module docstring.
-            "TRAINING_BACKEND": "gloo",
-            # Hide any GPU so the driver does not override --device with cuda:{local_rank}.
-            "CUDA_VISIBLE_DEVICES": "",
-            # torchrun sets this for nproc_per_node > 1; two default-threaded torch
-            # processes oversubscribe a 2-vCPU runner badly.
-            "OMP_NUM_THREADS": "1",
-            # gloo otherwise resolves the hostname to choose an interface, which fails in
-            # some containers.
-            "GLOO_SOCKET_IFNAME": "lo",
-        }
-    )
+    import sys
+
+    env = {
+        "RANK": str(rank),
+        "LOCAL_RANK": str(rank),
+        "WORLD_SIZE": str(WORLD_SIZE),
+        "MASTER_ADDR": "127.0.0.1",
+        "MASTER_PORT": str(port),
+        # Without this the settings default (nccl) is used, init fails on a CPU host,
+        # the failure is swallowed, and the test would pass against two independent
+        # single-process runs. See the module docstring.
+        "TRAINING_BACKEND": "gloo",
+        # Hide any GPU so the driver does not override --device with cuda:{local_rank}.
+        "CUDA_VISIBLE_DEVICES": "-1",
+        # torchrun sets this for nproc_per_node > 1; two default-threaded torch
+        # processes oversubscribe a 2-vCPU runner badly.
+        "OMP_NUM_THREADS": "1",
+    }
+    # gloo otherwise resolves the hostname to choose an interface, which fails in
+    # some Linux containers. On Windows, 'lo' interface does not exist.
+    if sys.platform != "win32":
+        env["GLOO_SOCKET_IFNAME"] = "lo"
+
+    return e2e_env(env)
 
 
 def _driver_argv(checkpoint_dir: Path, seed: int) -> list[str]:

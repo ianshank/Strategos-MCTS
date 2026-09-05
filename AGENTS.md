@@ -28,7 +28,7 @@ python scripts/validate_context_docs.py  # deterministic check: .claude skills/a
 parity — bump deliberately and re-validate. Coverage gate: 85% (`--cov-fail-under=85`).
 Achieved: **89.65%** gate-scope (`tests/unit/`, 2026-08-04, `[dev,neural,api]` env — see
 `docs/STATUS.md`). The full-suite 90.15% figure predates the 2026-08-04 denominator widening.
-`mypy src/` must remain clean (335 files).
+`mypy src/` must remain clean (336 files).
 Async tests must use `@pytest.mark.asyncio` + `await` — never `asyncio.get_event_loop()`.
 
 ## Harness CLI
@@ -70,6 +70,7 @@ python -m src.benchmark --systems langgraph_mcts --tasks A1
 | Existing agents | `src/agents/`, `src/framework/agents/base.py` |
 | LangGraph orchestration | `src/framework/graph/builder.py` |
 | MCTS engine | `src/framework/mcts/core.py` (baseline), `src/framework/mcts/neural_mcts.py` (AlphaZero-style; `single_agent` flag) |
+| Knowledge Graph | `src/training/knowledge_graph.py` (Concepts, Relationships, GraphQA, Retrieval) |
 | Gameplay domains | `src/games/chess/` (chess), `src/games/connect_four/` (connect_four), `src/games/othello/` (othello) (adversarial), `src/framework/mcts/single_agent_domains.py` (reasoning, planning) |
 | Neural self-play (M5) | `src/training/self_play_trainer.py` |
 | Training profiles | `src/training/training_config.py` (`smoke`/`dev`/`full` profiles) |
@@ -84,14 +85,13 @@ python -m src.benchmark --systems langgraph_mcts --tasks A1
 | Observability | `src/observability/{logging,metrics,tracing}.py` |
 | Benchmark harness | `src/benchmark/` (+ `policy_comparison.py` for trained-vs-baseline lift) |
 | Agent harness framework | `src/framework/harness/` |
-|  · runner | `src/framework/harness/loop/runner.py` |
-|  · facade (`AsyncAgentBase` adapter) | `src/framework/harness/loop/facade.py` |
-|  · memory (event log + compactor) | `src/framework/harness/memory/` |
-|  · tools (registry + builtins) | `src/framework/harness/tools/` |
-|  · topologies | `src/framework/harness/topology/` |
-|  · ralph loop | `src/framework/harness/ralph/` |
-|  · replay (cassettes + clock) | `src/framework/harness/replay/` |
-
+| · runner | `src/framework/harness/loop/runner.py` |
+| · facade (`AsyncAgentBase` adapter) | `src/framework/harness/loop/facade.py` |
+| · memory (event log + compactor) | `src/framework/harness/memory/` |
+| · tools (registry + builtins) | `src/framework/harness/tools/` |
+| · topologies | `src/framework/harness/topology/` |
+| · ralph loop | `src/framework/harness/ralph/` |
+| · replay (cassettes + clock) | `src/framework/harness/replay/` |
 
 ## Test layout
 
@@ -132,8 +132,8 @@ Fixtures: `tests/fixtures/harness_fixtures.py` (helpers), `tests/integration/har
 - SDD enforcement: `/spec-new` + `/spec-implement` (`.claude/commands/`), `spec-review` subagent
   (`.claude/agents/`), PreToolUse gate `.claude/hooks/spec_gate.py` (warn mode; `SPEC_GATE_BYPASS=1`
   for hotfixes; src/** PRs need a `spec/<id>` branch with an approved spec or a `No-Spec: <reason>` trailer)
-- Deep Research: `/deep-research` command (`.claude/commands/`), orchestrated by `research-planner`, 
-  `research-fetcher`, `research-critic`, and `research-synthesizer` agents (`.claude/agents/`) with 
+- Deep Research: `/deep-research` command (`.claude/commands/`), orchestrated by `research-planner`,
+  `research-fetcher`, `research-critic`, and `research-synthesizer` agents (`.claude/agents/`) with
   reports output to `docs/reports/` using the `deep-research` skill (`.claude/skills/`).
 - Implementation template: `docs/templates/MULTI_AGENT_MCTS_TEMPLATE.md`
 - Architecture: `docs/C4_ARCHITECTURE.md`

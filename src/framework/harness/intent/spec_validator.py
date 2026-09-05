@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+import glob
 import logging
 from pathlib import Path
 import re
@@ -84,10 +85,22 @@ class SpecValidator:
 
     def validate_paths(self, paths: Sequence[Path]) -> ValidationReport:
         """Validate every path, then cross-file rules over the whole set."""
+        expanded_paths: list[Path] = []
+        for path in paths:
+            path_str = str(path)
+            if any(char in path_str for char in ("*", "?")):
+                matches = [Path(m) for m in sorted(glob.glob(path_str))]
+                if matches:
+                    expanded_paths.extend(matches)
+                else:
+                    expanded_paths.append(path)
+            else:
+                expanded_paths.append(path)
+
         issues: list[ValidationIssue] = []
         specs: dict[str, Spec] = {}
         ids_seen: dict[str, Path] = {}
-        for path in paths:
+        for path in expanded_paths:
             spec = self._load(path, issues)
             if spec is None:
                 continue
@@ -117,7 +130,7 @@ class SpecValidator:
                     )
         errors = sum(1 for issue in issues if issue.severity == "error")
         self._logger.debug(
-            "spec validation complete paths=%d errors=%d warnings=%d", len(paths), errors, len(issues) - errors
+            "spec validation complete paths=%d errors=%d warnings=%d", len(expanded_paths), errors, len(issues) - errors
         )
         return ValidationReport(issues=issues, specs=specs)
 

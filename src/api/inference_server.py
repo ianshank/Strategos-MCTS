@@ -7,8 +7,13 @@ Provides REST API for:
 - Health checks and monitoring
 """
 
+from pathlib import Path
+import sys
 import time
 from typing import Any
+
+# Ensure project root is in path when run directly
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,13 +21,12 @@ from pydantic import BaseModel, Field
 import torch
 import uvicorn
 
+from src.config.constants import DEFAULT_SERVER_HOST
+from src.config.settings import get_settings
+from src.framework.mcts.neural_mcts import NeuralMCTS
 from src.observability.logging import get_logger
-
-from ..config.constants import DEFAULT_SERVER_HOST
-from ..config.settings import get_settings
-from ..framework.mcts.neural_mcts import NeuralMCTS
-from ..training.performance_monitor import PerformanceMonitor
-from ..training.system_config import SystemConfig
+from src.training.performance_monitor import PerformanceMonitor
+from src.training.system_config import SystemConfig
 
 # Configure module logger
 logger = get_logger(__name__)
@@ -32,7 +36,7 @@ logger = get_logger(__name__)
 class InferenceRequest(BaseModel):
     """Request for problem inference."""
 
-    state: list[list[float]]  # State representation
+    state: list[Any]  # State representation, can be 2D or 3D
     query: str | None = "Solve this problem"
     max_thinking_time: float = Field(default=10.0, ge=0.1, le=60.0)
     use_mcts: bool = True
@@ -45,7 +49,7 @@ class InferenceRequest(BaseModel):
 class PolicyValueRequest(BaseModel):
     """Request for policy-value evaluation."""
 
-    state: list[list[float]]  # State representation
+    state: list[Any]  # State representation, can be 2D or 3D
 
 
 class InferenceResponse(BaseModel):
@@ -177,23 +181,68 @@ class InferenceServer:
         # Policy-Value Network
         from ..models.policy_value_net import create_policy_value_network
 
-        models["policy_value_net"] = create_policy_value_network(config.neural_net, board_size=19, device=device)
-        models["policy_value_net"].load_state_dict(checkpoint["policy_value_net"])
+        # Dynamic board size handling based on action_size if not explicitly in config
+        # Infer board dimensions from action size to avoid shape mismatches
+        board_size: int | None = None
+        board_rows: int | None = None
+        board_cols: int | None = None
+
+        if board_size is None and board_rows is None:
+            # Infer from action_size:
+            # Othello: 8x8 + 1 = 65 -> board_size=8
+            # Connect Four: 7 columns -> board_rows=6, board_cols=7
+            # Go: 19x19 + 1 = 362 -> board_size=19
+            action_size = getattr(config.neural_net, "action_size", 362)
+            if action_size == 65:
+                board_size = 8
+            elif action_size == 7:
+                board_rows = 6
+                board_cols = 7
+            else:
+                board_size = 19
+
+        logger.info(
+            "Building network with board_size=%s, action_size=%s, input_channels=%s",
+            board_size,
+            getattr(config.neural_net, "action_size", -1),
+            getattr(config.neural_net, "input_channels", -1),
+        )
+
+        models["policy_value_net"] = create_policy_value_network(
+            config.neural_net,
+            board_size=board_size if board_size is not None else 0,
+            board_rows=board_rows,
+            board_cols=board_cols,
+            device=device,
+        )
+
+        # Support both isolated and unified orchestrator checkpoint formats
+        pv_state_dict = checkpoint.get("policy_value_net", checkpoint.get("pv_model"))
+        if pv_state_dict is None:
+            raise RuntimeError("Checkpoint missing policy_value_net state dictionary.")
+
+        models["policy_value_net"].load_state_dict(pv_state_dict)
         models["policy_value_net"].eval()
 
         # HRM Agent
         from ..agents.hrm_agent import create_hrm_agent
 
         models["hrm_agent"] = create_hrm_agent(config.hrm, device)
-        models["hrm_agent"].load_state_dict(checkpoint["hrm_agent"])
-        models["hrm_agent"].eval()
+
+        hrm_state_dict = checkpoint.get("hrm_agent", checkpoint.get("hrm_model"))
+        if hrm_state_dict:
+            models["hrm_agent"].load_state_dict(hrm_state_dict)
+            models["hrm_agent"].eval()
 
         # TRM Agent
         from ..agents.trm_agent import create_trm_agent
 
         models["trm_agent"] = create_trm_agent(config.trm, output_dim=config.neural_net.action_size, device=device)
-        models["trm_agent"].load_state_dict(checkpoint["trm_agent"])
-        models["trm_agent"].eval()
+
+        trm_state_dict = checkpoint.get("trm_agent", checkpoint.get("trm_model"))
+        if trm_state_dict:
+            models["trm_agent"].load_state_dict(trm_state_dict)
+            models["trm_agent"].eval()
 
         # MCTS
         models["mcts"] = NeuralMCTS(
@@ -261,10 +310,23 @@ class InferenceServer:
 
                 results: dict[str, Any] = {}
 
+                def _shape_for_agent(tensor: torch.Tensor, target_dim: int) -> torch.Tensor:
+                    t = tensor
+                    if t.dim() == 4:
+                        t = t.flatten(start_dim=1).unsqueeze(1).repeat(1, 16, 1)
+                    elif t.dim() == 2:
+                        t = t.unsqueeze(1).repeat(1, 16, 1)
+                    if t.shape[-1] > target_dim:
+                        t = t[:, :, :target_dim]
+                    elif t.shape[-1] < target_dim:
+                        t = torch.nn.functional.pad(t, (0, target_dim - t.shape[-1]))
+                    return t
+
                 # HRM Decomposition (if requested)
                 if request.use_hrm_decomposition:
                     with torch.no_grad():
-                        hrm_output = self.models["hrm_agent"](state_tensor)
+                        hrm_state = _shape_for_agent(state_tensor, self.config.hrm.h_dim)
+                        hrm_output = self.models["hrm_agent"](hrm_state)
                         results["subproblems"] = [
                             {
                                 "level": sp.level,
@@ -285,8 +347,8 @@ class InferenceServer:
                 # TRM Refinement (if requested)
                 if request.use_trm_refinement and results.get("best_action"):
                     with torch.no_grad():
-                        # Simplified: just run TRM on the state
-                        trm_output = self.models["trm_agent"](state_tensor)
+                        trm_state = _shape_for_agent(state_tensor, self.config.trm.latent_dim)
+                        trm_output = self.models["trm_agent"](trm_state)
                         results["refinement_info"] = {
                             "converged": trm_output.converged,
                             "convergence_step": trm_output.convergence_step,
@@ -419,17 +481,20 @@ def main():
     args = parser.parse_args()
 
     # Load config and override device if specified
-    config = None
-    if args.device:
-        config = SystemConfig()
-        config.device = args.device
-
     server = InferenceServer(
         checkpoint_path=args.checkpoint,
-        config=config,
+        config=None,  # Always load from checkpoint
         host=args.host,
         port=args.port,
     )
+
+    if args.device:
+        server.device = args.device
+        server.config.device = args.device
+        # Move models to the correct device
+        for model in server.models.values():
+            if hasattr(model, "to"):
+                model.to(args.device)
 
     server.run()
 

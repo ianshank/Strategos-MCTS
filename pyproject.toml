@@ -32,6 +32,10 @@ dependencies = [
     "openai>=1.0.0,<3.0.0",
     "httpx>=0.25.0,<1.0.0",
     "pydantic>=2.0.0,<3.0.0",
+    # Knowledge Graph System requirements
+    "networkx>=3.0",
+    "neo4j>=5.0.0",
+    "arxiv>=2.0.0",
     # Core: src/config/settings.py imports pydantic_settings unconditionally, so it is a
     # runtime dependency (was previously only satisfied transitively / via the benchmark extra).
     "pydantic-settings>=2.0.0,<3.0.0",

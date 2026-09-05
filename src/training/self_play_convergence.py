@@ -201,7 +201,7 @@ async def run(args: argparse.Namespace) -> int:
 
     if is_distributed_run:
         distributed.init_distributed(backend=settings.TRAINING_BACKEND)
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and args.device != "cpu":
             args.device = f"cuda:{distributed.get_local_rank()}"
 
     if args.device is None:

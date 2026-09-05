@@ -139,6 +139,14 @@ def train_and_validate(
     if x_train.shape[0] == 0:  # tiny datasets: fall back to training on all rows
         x_train, y_train = x, y
 
+    # Move tensors to the model's device
+    try:
+        device = next(model.parameters()).device
+        x_train, y_train = x_train.to(device), y_train.to(device)
+        x_val, y_val = x_val.to(device), y_val.to(device)
+    except (StopIteration, AttributeError):
+        pass
+
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_fn = nn.CrossEntropyLoss()
 

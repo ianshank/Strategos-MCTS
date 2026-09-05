@@ -5,15 +5,15 @@
     {
       "path": "CHARTER.md",
       "section": "2. Mission",
-      "claim_bullets": 10,
-      "ledger_rows": 10,
+      "claim_bullets": 11,
+      "ledger_rows": 11,
       "ungraded_surplus": 0
     },
     {
       "path": "README.md",
       "section": "Key Features",
-      "claim_bullets": 22,
-      "ledger_rows": 17,
+      "claim_bullets": 23,
+      "ledger_rows": 18,
       "ungraded_surplus": 5
     }
   ]

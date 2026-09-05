@@ -338,7 +338,8 @@ class StdlibLLMClient:
             "max_tokens": max_tokens,
             "temperature": min(temperature, 1.0),
         }
-        headers = {
+        assert self.api_key is not None, "api_key validated in __init__"
+        headers: dict[str, str] = {
             "x-api-key": self.api_key,
             "anthropic-version": config["api_version"],
             "Content-Type": "application/json",

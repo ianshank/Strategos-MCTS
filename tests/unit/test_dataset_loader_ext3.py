@@ -304,11 +304,15 @@ class TestPRIMUSLoaderLoad:
                 "This is a gated dataset and requires authentication"
             )
             with caplog.at_level("ERROR"):
+                caplog.clear()  # discard any records from prior tests
                 with pytest.raises(RuntimeError, match="gated dataset"):
                     loader.load()
 
-        assert "hf auth login" in caplog.text
-        assert "huggingface-cli login" not in caplog.text
+        # Use records (cleared above) not caplog.text (stream may retain stale data).
+        error_messages = [r.getMessage() for r in caplog.records if r.levelname == "ERROR"]
+        combined = " ".join(error_messages)
+        assert "hf auth login" in combined, f"Expected 'hf auth login' in error messages, got: {error_messages}"
+        assert "huggingface-cli login" not in combined
 
     def test_load_generic_exception(self):
         """Lines 325-327: generic exception re-raised."""

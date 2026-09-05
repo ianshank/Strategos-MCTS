@@ -707,12 +707,13 @@ def create_data_loader_from_buffer(
 
     # Create a generator that samples from replay buffer
     class BufferDataLoader:
-        def __init__(self, buffer, batch_size, input_dim, output_dim, num_batches=10):
+        def __init__(self, buffer, batch_size, input_dim, output_dim, num_batches=10, device="cpu"):
             self.buffer = buffer
             self.batch_size = batch_size
             self.input_dim = input_dim
             self.output_dim = output_dim
             self.num_batches = num_batches
+            self.device = device
             self._current = 0
 
         def __iter__(self):
@@ -728,10 +729,33 @@ def create_data_loader_from_buffer(
             # Sample from buffer
             experiences, _, _ = self.buffer.sample(self.batch_size)
 
-            # Convert to tensors
-            states = torch.stack([e.state for e in experiences])
-            # Use policy as target (simplified)
-            targets = torch.stack([e.policy for e in experiences])
+            # Convert states to tensors [batch, seq, input_dim]
+            state_list = [
+                e.state.float() if isinstance(e.state, torch.Tensor) else torch.tensor(e.state, dtype=torch.float32)
+                for e in experiences
+            ]
+            states = torch.stack(state_list).to(self.device)
+            if states.dim() == 4:
+                states = states.flatten(start_dim=1).unsqueeze(1).repeat(1, 16, 1)
+            elif states.dim() == 2:
+                states = states.unsqueeze(1).repeat(1, 16, 1)
+            if states.shape[-1] > self.input_dim:
+                states = states[:, :, : self.input_dim]
+            elif states.shape[-1] < self.input_dim:
+                states = torch.nn.functional.pad(states, (0, self.input_dim - states.shape[-1]))
+
+            # Convert targets to tensors [batch, seq, output_dim]
+            target_list = [
+                e.policy.float() if isinstance(e.policy, torch.Tensor) else torch.tensor(e.policy, dtype=torch.float32)
+                for e in experiences
+            ]
+            targets = torch.stack(target_list).to(self.device)
+            if targets.dim() == 2:
+                targets = targets.unsqueeze(1).repeat(1, states.shape[1], 1)
+            if targets.shape[-1] > self.output_dim:
+                targets = targets[:, :, : self.output_dim]
+            elif targets.shape[-1] < self.output_dim:
+                targets = torch.nn.functional.pad(targets, (0, self.output_dim - targets.shape[-1]))
 
             return states, targets
 
@@ -740,4 +764,5 @@ def create_data_loader_from_buffer(
         batch_size,
         input_dim,
         output_dim,
+        device=device,
     )

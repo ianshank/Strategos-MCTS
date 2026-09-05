@@ -280,3 +280,13 @@ def test_repo_specs_all_validate_clean() -> None:
     assert paths, "expected specs/*.SPEC.md to exist"
     issues = _paths_issues(paths)
     assert _errors(issues) == set(), [i.render() for i in issues]
+
+
+def test_validate_paths_wildcard_expansion(tmp_path: Path) -> None:
+    """Wildcard globs in paths (common on Windows) are expanded properly."""
+    _write(tmp_path, spec_id="spec_one")
+    _write(tmp_path, spec_id="spec_two")
+    wildcard_path = tmp_path / "*.SPEC.md"
+    report = SpecValidator().validate_paths([wildcard_path])
+    assert report.errors() == []
+    assert len(report.specs) == 2
