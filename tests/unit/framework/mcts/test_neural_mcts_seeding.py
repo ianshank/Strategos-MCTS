@@ -89,14 +89,37 @@ def test_dirichlet_noise_diverges_with_different_seeds() -> None:
 @pytest.mark.neural
 def test_injected_rng_is_used_for_noise_and_choice() -> None:
     rng = new_rng(77)
+    # seed kwarg must be ignored when rng is injected — self.seed stays None
     mcts = NeuralMCTS(_UniformNet(), _config(), rng=rng, seed=77)
     assert mcts.rng is rng
+    assert mcts.seed is None
     policy = np.ones(3) / 3.0
     noised = mcts.add_dirichlet_noise(policy)
     assert noised.shape == (3,)
     assert abs(noised.sum() - 1.0) < 1e-6
     action = mcts.select_action({0: 0.1, 1: 0.2, 2: 0.7}, temperature=1.0)
     assert action in (0, 1, 2)
+
+
+@pytest.mark.neural
+def test_owned_rng_stores_resolved_seed() -> None:
+    mcts = NeuralMCTS(_UniformNet(), _config(), seed=123)
+    assert mcts.seed == 123
+    assert mcts.rng is not None
+
+
+@pytest.mark.neural
+def test_injected_rng_does_not_resolve_settings_seed() -> None:
+    """Injected rng must not pull a misleading seed from Settings."""
+    from unittest.mock import MagicMock, patch
+
+    mock_settings = MagicMock()
+    mock_settings.SEED = 999
+    rng = new_rng(1)
+    with patch("src.config.settings.get_settings", return_value=mock_settings):
+        mcts = NeuralMCTS(_UniformNet(), _config(), rng=rng)
+    assert mcts.seed is None
+    assert mcts.rng is rng
 
 
 @pytest.mark.neural

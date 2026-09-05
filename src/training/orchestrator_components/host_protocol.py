@@ -18,6 +18,7 @@ class OrchestratorHost(Protocol):
     policy_value_net: Any
     pv_optimizer: Any
     pv_loss_fn: Any
+    pv_scheduler: Any
     scaler: Any
     hrm_agent: Any
     hrm_optimizer: Any
@@ -26,3 +27,9 @@ class OrchestratorHost(Protocol):
     trm_optimizer: Any
     trm_loss_fn: Any
     best_model_path: Any
+    best_win_rate: float
+    checkpoint_dir: Any
+    current_iteration: int
+    mcts: Any
+
+    def _compute_gradient_norm(self, model: Any) -> float: ...

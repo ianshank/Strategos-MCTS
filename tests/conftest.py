@@ -436,7 +436,7 @@ def mock_llm_client_error() -> AsyncMock:
 
 
 @pytest.fixture
-def global_seed() -> int:
+def global_seed():
     """Opt-in process-wide seed for tests that need a reproducible global RNG.
 
     **Not autouse.** Request explicitly in new tests::
@@ -444,21 +444,44 @@ def global_seed() -> int:
         def test_foo(global_seed):
             ...
 
-    Uses ``Settings.SEED`` when set, otherwise ``DEFAULT_SEED``. Prefer injecting
-    an ``np.random.Generator`` via ``new_rng(seed)`` for new production code; this
-    fixture is the documented convention when a test must seed the process-global
-    RNGs (python ``random``, NumPy legacy, torch).
+    Resolves the seed via ``resolve_seed()`` (Settings.SEED / DEFAULT_SEED) and
+    seeds process-global RNGs through ``set_all_seeds``. Snapshots and restores
+    python ``random``, NumPy legacy, and torch RNG state after the test so
+    seeding does not leak across the suite. Prefer injecting an
+    ``np.random.Generator`` via ``new_rng(seed)`` for new production code.
     """
-    from src.config.constants import DEFAULT_SEED
-    from src.utils.seeding import set_all_seeds
+    import random as py_random
 
-    seed = DEFAULT_SEED
-    if SETTINGS_AVAILABLE:
-        configured = get_settings().SEED
-        if configured is not None:
-            seed = int(configured)
+    import numpy as np
+
+    from src.utils.seeding import resolve_seed, set_all_seeds
+
+    seed = resolve_seed()
+
+    py_state = py_random.getstate()
+    np_state = np.random.get_state()
+    torch_state = None
+    cuda_states = None
+    try:
+        import torch
+
+        torch_state = torch.random.get_rng_state()
+        if torch.cuda.is_available():
+            cuda_states = torch.cuda.get_rng_state_all()
+    except ImportError:
+        pass
+
     set_all_seeds(seed)
-    return seed
+    yield seed
+
+    py_random.setstate(py_state)
+    np.random.set_state(np_state)
+    if torch_state is not None:
+        import torch
+
+        torch.random.set_rng_state(torch_state)
+        if cuda_states is not None:
+            torch.cuda.set_rng_state_all(cuda_states)
 
 
 # =============================================================================

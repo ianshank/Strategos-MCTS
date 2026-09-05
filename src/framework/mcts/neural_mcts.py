@@ -291,17 +291,24 @@ class NeuralMCTS:
                 Defaults to False, preserving two-player zero-sum (negamax) behavior.
             rng: Optional injected numpy Generator for Dirichlet noise / action sampling.
                 When omitted, one is created via ``new_rng(seed)``.
-            seed: Optional seed for the owned Generator. Falls back to ``config.seed``
-                (when present), then ``Settings.SEED`` / ``DEFAULT_SEED``.
+            seed: Optional seed for the *owned* Generator (ignored when ``rng`` is
+                injected). Falls back to ``config.seed`` (when present), then
+                ``Settings.SEED`` / ``DEFAULT_SEED``.
         """
         self.network = policy_value_network
         self.config = config
         self.device = device
         self.single_agent = single_agent
 
-        config_seed = getattr(config, "seed", None)
-        self.seed = resolve_seed(seed if seed is not None else config_seed)
-        self.rng = rng if rng is not None else new_rng(self.seed)
+        # When an RNG is injected we do not own its seed — avoid resolving/storing
+        # a misleading Settings-derived self.seed that was never applied.
+        if rng is not None:
+            self.rng = rng
+            self.seed: int | None = None
+        else:
+            config_seed = getattr(config, "seed", None)
+            self.seed = resolve_seed(seed if seed is not None else config_seed)
+            self.rng = new_rng(self.seed)
 
         # Caching for network evaluations
         self.cache: dict[str, tuple[np.ndarray, float]] = {}
@@ -310,7 +317,12 @@ class NeuralMCTS:
 
         logger.info(
             "NeuralMCTS initialized",
-            extra={"seed": self.seed, "device": device, "single_agent": single_agent},
+            extra={
+                "seed": self.seed,
+                "rng_injected": rng is not None,
+                "device": device,
+                "single_agent": single_agent,
+            },
         )
 
     def add_dirichlet_noise(

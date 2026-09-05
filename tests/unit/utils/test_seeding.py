@@ -12,7 +12,14 @@ import numpy as np
 import pytest
 
 from src.config.constants import DEFAULT_SEED
-from src.utils.seeding import new_rng, resolve_seed, set_all_seeds
+from src.utils.seeding import (
+    NUMPY_LEGACY_SEED_MAX,
+    NUMPY_LEGACY_SEED_MIN,
+    new_rng,
+    resolve_seed,
+    set_all_seeds,
+    validate_numpy_seed,
+)
 
 
 class TestResolveSeed:
@@ -149,3 +156,47 @@ class TestSetAllSeeds:
             effective = set_all_seeds(2, deterministic_torch=True)
         assert effective == 2
         assert "deterministic_torch=True" in mock_logger.info.call_args[0][0]
+
+
+class TestValidateNumpySeed:
+    """NumPy legacy-safe seed bounds (0 .. 2**32 - 1)."""
+
+    def test_accepts_bounds(self) -> None:
+        assert validate_numpy_seed(NUMPY_LEGACY_SEED_MIN) == NUMPY_LEGACY_SEED_MIN
+        assert validate_numpy_seed(NUMPY_LEGACY_SEED_MAX) == NUMPY_LEGACY_SEED_MAX
+
+    def test_rejects_below_min(self) -> None:
+        with pytest.raises(ValueError, match="must be in"):
+            validate_numpy_seed(NUMPY_LEGACY_SEED_MIN - 1)
+
+    def test_rejects_above_max(self) -> None:
+        with pytest.raises(ValueError, match="must be in"):
+            validate_numpy_seed(NUMPY_LEGACY_SEED_MAX + 1)
+
+    def test_label_appears_in_message(self) -> None:
+        with pytest.raises(ValueError, match="effective seed"):
+            validate_numpy_seed(-1, label="effective seed")
+
+
+class TestResolveSeedValidation:
+    def test_explicit_out_of_range_raises(self) -> None:
+        with pytest.raises(ValueError, match="seed must be in"):
+            resolve_seed(NUMPY_LEGACY_SEED_MAX + 1)
+
+    def test_settings_out_of_range_raises(self) -> None:
+        mock_settings = MagicMock()
+        mock_settings.SEED = -5
+        with patch("src.config.settings.get_settings", return_value=mock_settings):
+            with pytest.raises(ValueError, match="Settings.SEED"):
+                resolve_seed(None)
+
+
+class TestSetAllSeedsValidation:
+    def test_effective_seed_out_of_range_raises(self) -> None:
+        # base at max + rank 1 overflows the legacy range
+        with pytest.raises(ValueError, match="effective seed"):
+            set_all_seeds(NUMPY_LEGACY_SEED_MAX, rank=1)
+
+    def test_negative_base_raises(self) -> None:
+        with pytest.raises(ValueError, match="effective seed"):
+            set_all_seeds(-1, rank=0)
