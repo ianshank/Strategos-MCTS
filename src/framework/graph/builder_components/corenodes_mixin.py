@@ -1,4 +1,10 @@
-# mypy: disable-error-code="attr-defined,misc,assignment"
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .host_protocol import GraphBuilderHost
+else:
+    GraphBuilderHost = object  # type: ignore[misc,assignment]
+
 from collections.abc import Callable
 from typing import Any
 
@@ -60,7 +66,7 @@ logger = get_structured_logger(__name__)
 
 class CoreNodesMixin:
 
-    def _wrap_node(self, handler: Any, name: str) -> Any:
+    def _wrap_node(self: "GraphBuilderHost", handler: Any, name: str) -> Any:
         """Return the registered form of a node ``handler``.
 
         Single wrapping seam applied to every node at registration time: when a trace
@@ -87,7 +93,7 @@ class CoreNodesMixin:
             return fn
         return with_node_retry(policy, node_name, fn, on_retry=on_retry)
 
-    def _entry_node(self, state: AgentState) -> dict:
+    def _entry_node(self: "GraphBuilderHost", state: AgentState) -> dict:
         """Initialize state and parse query with validation."""
         query = state.get("query", "")
         if not query or not isinstance(query, str):
@@ -98,7 +104,7 @@ class CoreNodesMixin:
         self.logger.info(f"Entry node: {query[:100]}{('...' if len(query) > 100 else '')}")
         return {"iteration": 0, "agent_outputs": [], "mcts_config": self.mcts_config.to_dict()}
 
-    def _retrieve_context_node(self, state: AgentState) -> dict:
+    def _retrieve_context_node(self: "GraphBuilderHost", state: AgentState) -> dict:
         """Retrieve context from vector store using RAG with error handling."""
         if not state.get("use_rag", True) or not self.vector_store:
             return {"rag_context": "", "retrieved_docs": []}
@@ -122,7 +128,7 @@ class CoreNodesMixin:
             self.logger.exception("RAG retrieval failed")
             return {"rag_context": "", "retrieved_docs": []}
 
-    def _create_adk_node_handler(self, name: str, agent: Any):
+    def _create_adk_node_handler(self: "GraphBuilderHost", name: str, agent: Any):
         """Create a handler function for an ADK agent node."""
 
         async def handler(state: AgentState) -> dict:

@@ -1,4 +1,10 @@
-# mypy: disable-error-code="attr-defined,misc,assignment"
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .host_protocol import GraphBuilderHost
+else:
+    GraphBuilderHost = object  # type: ignore[misc,assignment]
+
 from src.framework.graph.state import AgentState
 from src.observability.logging import get_structured_logger
 
@@ -55,14 +61,14 @@ logger = get_structured_logger(__name__)
 
 class ConsensusNodesMixin:
 
-    def _aggregate_results_node(self, state: AgentState) -> dict:
+    def _aggregate_results_node(self: "GraphBuilderHost", state: AgentState) -> dict:
         """Aggregate results from all agents."""
         self.logger.info("Aggregating agent results")
         agent_outputs = state.get("agent_outputs", [])
         confidence_scores = {output["agent"]: output["confidence"] for output in agent_outputs}
         return {"confidence_scores": confidence_scores}
 
-    def _evaluate_consensus_node(self, state: AgentState) -> dict:
+    def _evaluate_consensus_node(self: "GraphBuilderHost", state: AgentState) -> dict:
         """Evaluate consensus among agents and increment iteration counter.
 
         The iteration counter is incremented here to ensure proper loop termination
@@ -81,7 +87,7 @@ class ConsensusNodesMixin:
         )
         return {"consensus_reached": consensus_reached, "consensus_score": avg_confidence, "iteration": next_iteration}
 
-    def _check_consensus(self, state: AgentState) -> str:
+    def _check_consensus(self: "GraphBuilderHost", state: AgentState) -> str:
         """Check if consensus reached or need more iterations.
 
         Returns:

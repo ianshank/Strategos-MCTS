@@ -1,4 +1,10 @@
-# mypy: disable-error-code="attr-defined,misc,assignment"
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .host_protocol import OrchestratorHost
+else:
+    OrchestratorHost = object  # type: ignore[misc,assignment]
+
 import time
 from typing import Any
 
@@ -16,7 +22,7 @@ logger = get_structured_logger(__name__)
 
 class TrainingMixin:
 
-    async def _train_policy_value_network(self) -> dict[str, float]:
+    async def _train_policy_value_network(self: "OrchestratorHost") -> dict[str, float]:
         """Train policy-value network on replay buffer data."""
         if not self.replay_buffer.is_ready(self.config.training.batch_size):
             logger.warning(
@@ -123,7 +129,7 @@ class TrainingMixin:
         )
         return {"policy_loss": avg_policy_loss, "value_loss": avg_value_loss}
 
-    def _compute_gradient_norm(self, model: nn.Module) -> float:
+    def _compute_gradient_norm(self: "OrchestratorHost", model: nn.Module) -> float:
         """Compute the total gradient norm for a model."""
         total_norm = 0.0
         for p in model.parameters():
@@ -132,7 +138,7 @@ class TrainingMixin:
                 total_norm += param_norm.item() ** 2
         return float(total_norm**0.5)
 
-    async def _train_hrm_agent(self) -> dict[str, Any]:
+    async def _train_hrm_agent(self: "OrchestratorHost") -> dict[str, Any]:
         """
         Train HRM agent with proper loss computation.
 
@@ -216,7 +222,7 @@ class TrainingMixin:
         )
         return result
 
-    async def _train_trm_agent(self) -> dict[str, Any]:
+    async def _train_trm_agent(self: "OrchestratorHost") -> dict[str, Any]:
         """
         Train TRM agent with deep supervision.
 
@@ -310,7 +316,7 @@ class TrainingMixin:
         )
         return result
 
-    async def _evaluate(self) -> dict[str, float]:
+    async def _evaluate(self: "OrchestratorHost") -> dict[str, float]:
         """
         Evaluate current model against previous best through self-play.
 

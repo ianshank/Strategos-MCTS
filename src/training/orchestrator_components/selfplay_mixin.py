@@ -1,4 +1,10 @@
-# mypy: disable-error-code="attr-defined,misc,assignment"
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .host_protocol import OrchestratorHost
+else:
+    OrchestratorHost = object  # type: ignore[misc,assignment]
+
 import time
 
 from src.observability.logging import get_structured_logger
@@ -9,7 +15,7 @@ logger = get_structured_logger(__name__)
 
 class SelfPlayMixin:
 
-    async def _generate_self_play_data(self) -> list[Experience]:
+    async def _generate_self_play_data(self: "OrchestratorHost") -> list[Experience]:
         """Generate training data from self-play games."""
         num_games = self.config.training.games_per_iteration
         logger.debug(

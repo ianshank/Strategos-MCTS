@@ -1,4 +1,10 @@
-# mypy: disable-error-code="attr-defined,misc,assignment"
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .host_protocol import GraphBuilderHost
+else:
+    GraphBuilderHost = object  # type: ignore[misc,assignment]
+
 from src.framework.graph.state import AgentState
 from src.observability.logging import get_structured_logger
 
@@ -55,11 +61,11 @@ logger = get_structured_logger(__name__)
 
 class RoutingNodesMixin:
 
-    def _route_decision_node(self, _state: AgentState) -> dict:
+    def _route_decision_node(self: "GraphBuilderHost", _state: AgentState) -> dict:
         """Prepare routing decision."""
         return {}
 
-    def _neural_route_decision(self, state: AgentState) -> str:
+    def _neural_route_decision(self: "GraphBuilderHost", state: AgentState) -> str:
         """
         Make routing decision using neural meta-controller.
 
@@ -92,7 +98,7 @@ class RoutingNodesMixin:
             self.logger.error(f"Neural routing failed: {e}")
             return self._rule_based_route_decision(state)
 
-    def _rule_based_route_decision(self, state: AgentState) -> str:
+    def _rule_based_route_decision(self: "GraphBuilderHost", state: AgentState) -> str:
         """
         Make routing decision using rule-based logic.
 
@@ -132,7 +138,7 @@ class RoutingNodesMixin:
             return "mcts"
         return "aggregate"
 
-    def _route_to_agents(self, state: AgentState) -> str:
+    def _route_to_agents(self: "GraphBuilderHost", state: AgentState) -> str:
         """Route to appropriate agent based on state."""
         if self.use_neural_routing and self.meta_controller is not None:
             return self._neural_route_decision(state)

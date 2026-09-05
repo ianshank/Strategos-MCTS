@@ -1,4 +1,10 @@
-# mypy: disable-error-code="attr-defined,misc,assignment"
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .host_protocol import OrchestratorHost
+else:
+    OrchestratorHost = object  # type: ignore[misc,assignment]
+
 from typing import Any
 
 import psutil
@@ -11,7 +17,7 @@ logger = get_structured_logger(__name__)
 
 class MetricsMixin:
 
-    def _get_memory_utilization(self) -> dict[str, Any]:
+    def _get_memory_utilization(self: "OrchestratorHost") -> dict[str, Any]:
         """Get current memory and GPU utilization metrics."""
         memory_info = {}
         process = psutil.Process()
@@ -30,7 +36,7 @@ class MetricsMixin:
                 logger.debug("Failed to get GPU memory info", error=str(e))
         return memory_info
 
-    def _log_metrics(self, iteration: int, metrics: dict):
+    def _log_metrics(self: "OrchestratorHost", iteration: int, metrics: dict):
         """Log metrics to console and tracking systems."""
         logger.info(
             "Iteration metrics summary",

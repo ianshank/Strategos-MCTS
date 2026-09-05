@@ -1,4 +1,10 @@
-# mypy: disable-error-code="attr-defined,misc,assignment"
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .host_protocol import GraphBuilderHost
+else:
+    GraphBuilderHost = object  # type: ignore[misc,assignment]
+
 from typing import Any
 
 from src.framework.graph.state import AgentState
@@ -57,7 +63,7 @@ logger = get_structured_logger(__name__)
 
 class MetaControllerNodesMixin:
 
-    def _init_meta_controller(self, config: Any) -> None:
+    def _init_meta_controller(self: "GraphBuilderHost", config: Any) -> None:
         """
         Initialize the neural meta-controller based on configuration.
 
@@ -109,7 +115,7 @@ class MetaControllerNodesMixin:
             else:
                 raise
 
-    def _init_neuro_symbolic(self, config: Any) -> None:
+    def _init_neuro_symbolic(self: "GraphBuilderHost", config: Any) -> None:
         """
         Initialize neuro-symbolic reasoning components.
 
@@ -143,7 +149,7 @@ class MetaControllerNodesMixin:
             self.logger.error(f"Failed to initialize neuro-symbolic components: {e}")
             self.use_symbolic_reasoning = False
 
-    def _extract_meta_controller_features(self, state: AgentState) -> Any:
+    def _extract_meta_controller_features(self: "GraphBuilderHost", state: AgentState) -> Any:
         """
         Extract features from AgentState for meta-controller prediction.
 

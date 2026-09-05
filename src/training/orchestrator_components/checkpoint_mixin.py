@@ -1,4 +1,10 @@
-# mypy: disable-error-code="attr-defined,misc,assignment"
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .host_protocol import OrchestratorHost
+else:
+    OrchestratorHost = object  # type: ignore[misc,assignment]
+
 from pathlib import Path
 import time
 
@@ -11,7 +17,7 @@ logger = get_structured_logger(__name__)
 
 class CheckpointMixin:
 
-    def _save_checkpoint(self, iteration: int, metrics: dict, is_best: bool = False):
+    def _save_checkpoint(self: "OrchestratorHost", iteration: int, metrics: dict, is_best: bool = False):
         """Save model checkpoint."""
         from src.utils import distributed
 
@@ -60,7 +66,7 @@ class CheckpointMixin:
             except Exception as e:
                 logger.error("Failed to save best model checkpoint", error=str(e), best_model_path=str(best_path))
 
-    def load_checkpoint(self, path: str):
+    def load_checkpoint(self: "OrchestratorHost", path: str):
         """Load checkpoint from file."""
         logger.info("Loading checkpoint", checkpoint_path=path, device=self.device)
         load_start = time.perf_counter()

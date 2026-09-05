@@ -1,4 +1,10 @@
-# mypy: disable-error-code="attr-defined,misc,assignment"
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .host_protocol import OrchestratorHost
+else:
+    OrchestratorHost = object  # type: ignore[misc,assignment]
+
 from typing import Any
 
 from src.api.exceptions import TrainingError

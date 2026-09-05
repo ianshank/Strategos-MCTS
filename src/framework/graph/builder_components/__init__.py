@@ -2,12 +2,14 @@
 
 from .consensusnodes_mixin import ConsensusNodesMixin
 from .corenodes_mixin import CoreNodesMixin
+from .host_protocol import GraphBuilderHost
 from .metacontrollernodes_mixin import MetaControllerNodesMixin
 from .routingnodes_mixin import RoutingNodesMixin
 
 __all__ = [
     "ConsensusNodesMixin",
     "CoreNodesMixin",
+    "GraphBuilderHost",
     "MetaControllerNodesMixin",
     "RoutingNodesMixin",
 ]

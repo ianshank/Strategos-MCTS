@@ -41,3 +41,14 @@ Do **not** jump to MuZero / distributed self-play. After #167 merges:
 1. `fix(ci): green PR #167 — black, mypy mixins, context-docs, W293`
 2. `refactor(graph): Protocol stubs for GraphBuilder mixins`
 3. `test(graph): streaming + checkpoint resume smokes`
+
+
+## Sequential queue (2026-09-05)
+
+1. **Land CI unblock** — apply `pr167-ci-fix.patch` on `qa/full-suite-regression-2026-09-04` and wait for green CI / merge readiness.
+2. **Phase B patch** — `pr167-phase-b-protocols.patch` (this follow-up): replace mixin `# mypy: disable-error-code` pragmas with `GraphBuilderHost` / `OrchestratorHost` Protocols and typed `self` parameters.
+3. **Evidence-First next (not more LangGraph features first)**
+   - **E1b** — execute approved `specs/hygiene_determinism.SPEC.md` (`src/utils/seeding.py`, NeuralMCTS injected RNG). Branch should be `spec/hygiene_determinism`.
+   - **E2** — execute approved `specs/hygiene_mcts_value_semantics.SPEC.md` (then `hygiene_mcts_engines`). Requires human `No-Spec` exception for module overlap with `strategos_risk_averse_subgoal_scorer`, or land after that conflict is cleared.
+
+Do not start MuZero / distributed self-play until E5 has a live promotion rejection (`docs/plans/EVIDENCE_FIRST_PROGRAM.md`).
