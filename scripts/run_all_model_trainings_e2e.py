@@ -345,7 +345,9 @@ async def run_agent_trainer(device: str = "cuda") -> dict[str, Any]:
     with open(agent_metrics_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
-    logger.info(f"Agent training complete. HRM loss: {results['hrm']['loss']:.4f}, TRM loss: {results['trm']['loss']:.4f}")
+    logger.info(
+        f"Agent training complete. HRM loss: {results['hrm']['loss']:.4f}, TRM loss: {results['trm']['loss']:.4f}"
+    )
     return results
 
 
@@ -404,12 +406,15 @@ async def run_unified_orchestrator(device: str = "cuda") -> dict[str, Any]:
 
     # Copy orchestrator checkpoint
     import shutil
+
     saved_ckpt = Path(system_cfg.checkpoint_dir) / "checkpoint_iter_1.pt"
     ckpt_path = OUTPUT_DIR / "unified_orchestrator_checkpoint.pt"
     if saved_ckpt.exists():
         shutil.copy(saved_ckpt, ckpt_path)
 
-    metrics_clean = {k: float(v) if isinstance(v, (int, float, np.floating, np.integer)) else v for k, v in metrics.items()}
+    metrics_clean = {
+        k: float(v) if isinstance(v, (int, float, np.floating, np.integer)) else v for k, v in metrics.items()
+    }
     metrics_clean["checkpoint_path"] = str(ckpt_path)
     metrics_clean["device"] = device
 

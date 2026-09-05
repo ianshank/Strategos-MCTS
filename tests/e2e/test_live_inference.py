@@ -34,7 +34,7 @@ def live_server():
         "--port",
         str(TEST_PORT),
         "--device",
-        "cpu"  # Force CPU for test stability across environments
+        "cpu",  # Force CPU for test stability across environments
     ]
 
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -90,17 +90,12 @@ def test_inference_endpoint(live_server):
     # If the unified checkpoint was Connect Four, state is [17, 6, 7] flattened = 714
     # Wait, the request parses state as a list of floats.
     # Let's send a minimal valid state shape.
-    state = [[[0.0]*7 for _ in range(6)] for _ in range(17)]
+    state = [[[0.0] * 7 for _ in range(6)] for _ in range(17)]
 
-    payload = {
-        "state": state,
-        "use_hrm_decomposition": True,
-        "use_mcts": True,
-        "use_trm_refinement": True
-    }
+    payload = {"state": state, "use_hrm_decomposition": True, "use_mcts": True, "use_trm_refinement": True}
 
-    data = json.dumps(payload).encode('utf-8')
-    req = urllib.request.Request(f"{live_server}/inference", data=data, headers={'Content-Type': 'application/json'})
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(f"{live_server}/inference", data=data, headers={"Content-Type": "application/json"})
 
     try:
         with urllib.request.urlopen(req) as response:

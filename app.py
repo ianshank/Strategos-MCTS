@@ -8,6 +8,7 @@ Demonstrates the actual trained neural meta-controllers:
 
 This is a production demonstration using real trained models.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -718,7 +719,8 @@ def _build_demo() -> "gr.Blocks":
         theme=theme_soft,
         css=css_content,
     ) as demo:
-        gr.Markdown(f"""
+        gr.Markdown(
+            f"""
             # 🎯 LangGraph Multi-Agent MCTS Framework
             ## Demo with Neural Meta-Controllers
 
@@ -733,7 +735,8 @@ def _build_demo() -> "gr.Blocks":
             - **MCTS**: Strategic exploration for optimization problems
 
             ---
-            """)
+            """
+        )
 
         with gr.Row():
             with gr.Column(scale=2):
@@ -758,11 +761,13 @@ def _build_demo() -> "gr.Blocks":
                     info="Choose which trained controller to use",
                 )
 
-                gr.Markdown("""
+                gr.Markdown(
+                    """
                 **Controller Comparison:**
                 - **RNN**: Fast, captures sequential patterns
                 - **BERT**: More context-aware, text understanding
-                """)
+                """
+                )
 
         process_btn = gr.Button("🚀 Process Query", variant="primary", size="lg")
 
@@ -867,7 +872,8 @@ def _build_demo() -> "gr.Blocks":
                     api_name="stream",
                 )
 
-        gr.Markdown("""
+        gr.Markdown(
+            """
             ---
 
             ### 📚 About This Demo
@@ -885,7 +891,8 @@ def _build_demo() -> "gr.Blocks":
 
             ---
             *Built with PyTorch, Transformers, PEFT, and Gradio*
-            """)
+            """
+        )
 
     return demo
 

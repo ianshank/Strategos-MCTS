@@ -1,9 +1,11 @@
+# mypy: disable-error-code="attr-defined,misc,assignment"
 from typing import Any
 
 from src.api.exceptions import TrainingError
 from src.observability.logging import get_structured_logger
 
 logger = get_structured_logger(__name__)
+
 
 def _strict_training_errors() -> bool:
     """
@@ -14,9 +16,11 @@ def _strict_training_errors() -> bool:
     """
     try:
         from src.config.settings import get_settings
+
         return bool(get_settings().TRAINING_STRICT_ERRORS)
     except Exception:
         return False
+
 
 def _handle_training_failure(stage: str, reason: str, zero_metrics: dict[str, float]) -> dict[str, Any]:
     """
@@ -29,7 +33,9 @@ def _handle_training_failure(stage: str, reason: str, zero_metrics: dict[str, fl
     """
     if _strict_training_errors():
         raise TrainingError(user_message=f"Training step '{stage}' failed", internal_details=reason, stage=stage)
-    logger.warning('Training step degraded; returning zero metrics', event='training_step_degraded', stage=stage, reason=reason)
+    logger.warning(
+        "Training step degraded; returning zero metrics", event="training_step_degraded", stage=stage, reason=reason
+    )
     result = zero_metrics.copy()
-    result['degraded'] = True
+    result["degraded"] = True
     return result

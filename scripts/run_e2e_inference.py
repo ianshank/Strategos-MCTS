@@ -16,6 +16,7 @@ HOST = f"http://127.0.0.1:{TEST_PORT}"
 CHECKPOINT_PATH = "artifacts/trainings/unified_orchestrator_checkpoint.pt"
 REPORT_PATH = "artifacts/trainings/INFERENCE_RUN_REPORT.md"
 
+
 def main():
     print(f"Starting E2E Inference Validation at {datetime.now().isoformat()}")
 
@@ -32,12 +33,11 @@ def main():
         "--port",
         str(TEST_PORT),
         "--device",
-        "cpu"
+        "cpu",
     ]
 
     print(f"Launching inference server: {' '.join(cmd)}")
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
 
     ready = False
     for i in range(90):
@@ -67,17 +67,12 @@ def main():
         return 1
 
     # Run journey tests
-    state = [[[0.0]*7 for _ in range(6)] for _ in range(17)]
-    payload = {
-        "state": state,
-        "use_hrm_decomposition": True,
-        "use_mcts": True,
-        "use_trm_refinement": True
-    }
+    state = [[[0.0] * 7 for _ in range(6)] for _ in range(17)]
+    payload = {"state": state, "use_hrm_decomposition": True, "use_mcts": True, "use_trm_refinement": True}
 
     print("Sending inference journey payload...")
-    data = json.dumps(payload).encode('utf-8')
-    req = urllib.request.Request(f"{HOST}/inference", data=data, headers={'Content-Type': 'application/json'})
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(f"{HOST}/inference", data=data, headers={"Content-Type": "application/json"})
 
     start_time = time.time()
     try:
@@ -105,7 +100,7 @@ def main():
 
     # Write report
     report = f"""# E2E Inference Run Report
-    
+
 **Generated**: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 **Checkpoint**: `{CHECKPOINT_PATH}`
 **Status**: {"✅ PASSED" if success else "❌ FAILED"}
@@ -127,6 +122,8 @@ def main():
     print(f"Report written to {REPORT_PATH}")
     return 0 if success else 1
 
+
 if __name__ == "__main__":
     import sys
+
     sys.exit(main())

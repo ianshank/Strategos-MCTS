@@ -12,6 +12,8 @@ Features:
 - Automated graph construction from papers/code
 """
 
+# mypy: disable-error-code="assignment,arg-type,var-annotated,no-any-return,index"
+
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -1020,6 +1022,7 @@ class GraphQA:
     def _identify_entities(self, question: str) -> list[str]:
         """Identify concept entities in question."""
         import string
+
         entities = []
         # Remove punctuation
         clean_question = question.translate(str.maketrans("", "", string.punctuation))

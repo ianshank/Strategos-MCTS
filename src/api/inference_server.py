@@ -201,15 +201,19 @@ class InferenceServer:
             else:
                 board_size = 19
 
-        logger.info("Building network with board_size=%s, action_size=%s, input_channels=%s",
-                    board_size, getattr(config.neural_net, "action_size", -1), getattr(config.neural_net, "input_channels", -1))
+        logger.info(
+            "Building network with board_size=%s, action_size=%s, input_channels=%s",
+            board_size,
+            getattr(config.neural_net, "action_size", -1),
+            getattr(config.neural_net, "input_channels", -1),
+        )
 
         models["policy_value_net"] = create_policy_value_network(
             config.neural_net,
-            board_size=board_size,
+            board_size=board_size if board_size is not None else 0,
             board_rows=board_rows,
             board_cols=board_cols,
-            device=device
+            device=device,
         )
 
         # Support both isolated and unified orchestrator checkpoint formats
