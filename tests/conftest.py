@@ -431,6 +431,37 @@ def mock_llm_client_error() -> AsyncMock:
 
 
 # =============================================================================
+# Seeding Fixtures (hygiene_determinism AC-5)
+# =============================================================================
+
+
+@pytest.fixture
+def global_seed() -> int:
+    """Opt-in process-wide seed for tests that need a reproducible global RNG.
+
+    **Not autouse.** Request explicitly in new tests::
+
+        def test_foo(global_seed):
+            ...
+
+    Uses ``Settings.SEED`` when set, otherwise ``DEFAULT_SEED``. Prefer injecting
+    an ``np.random.Generator`` via ``new_rng(seed)`` for new production code; this
+    fixture is the documented convention when a test must seed the process-global
+    RNGs (python ``random``, NumPy legacy, torch).
+    """
+    from src.config.constants import DEFAULT_SEED
+    from src.utils.seeding import set_all_seeds
+
+    seed = DEFAULT_SEED
+    if SETTINGS_AVAILABLE:
+        configured = get_settings().SEED
+        if configured is not None:
+            seed = int(configured)
+    set_all_seeds(seed)
+    return seed
+
+
+# =============================================================================
 # MCTS Fixtures
 # =============================================================================
 

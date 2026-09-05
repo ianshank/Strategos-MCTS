@@ -21,6 +21,7 @@ from src.agents.meta_controller.rnn_controller import (
     RNNMetaControllerModel,
 )
 from src.training.data_generator import MetaControllerDataGenerator
+from src.utils.seeding import set_all_seeds
 
 # Braintrust integration (optional)
 try:
@@ -111,9 +112,7 @@ class RNNTrainer:
         self.seed = seed
 
         # Set random seeds for reproducibility
-        torch.manual_seed(seed)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed_all(seed)
+        set_all_seeds(seed)
 
         # Auto-detect device if not specified
         from src.utils.device import resolve_device
@@ -122,7 +121,7 @@ class RNNTrainer:
 
         # Setup logging
         self._setup_logging()
-        self.logger.info(f"Initializing RNNTrainer with device: {self.device}")
+        self.logger.info(f"Initializing RNNTrainer with device: {self.device}, seed: {self.seed}")
 
         # Initialize model
         self.model = RNNMetaControllerModel(

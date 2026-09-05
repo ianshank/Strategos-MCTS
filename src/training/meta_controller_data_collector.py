@@ -20,6 +20,7 @@ from torch import nn
 
 from src.agents.meta_controller.base import MetaControllerFeatures
 from src.observability.logging import get_logger
+from src.utils.seeding import set_all_seeds
 
 logger = get_logger(__name__)
 
@@ -122,8 +123,7 @@ def train_and_validate(
     ``model`` must map ``(batch, FEATURE_DIM) -> (batch, len(AGENT_LABELS))`` logits.
     Reproducible under ``seed``. Reports validation accuracy vs a majority-class baseline.
     """
-    torch.manual_seed(seed)
-    np.random.seed(seed)
+    set_all_seeds(seed)
 
     x, y = collector.to_dataset()
     n = x.shape[0]

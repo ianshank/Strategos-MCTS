@@ -5,6 +5,21 @@ Newest first.
 
 ---
 
+## 2026-09-04 — Central seeding utility (`hygiene_determinism`)
+
+`src/utils/seeding.py` is now the single entry point for process-wide seeding.
+
+### Behavior changes
+
+- **NeuralMCTS Dirichlet / action sampling** no longer draws from NumPy's process-global legacy RNG. Noise comes from an engine-owned `numpy.random.Generator` created via `new_rng(seed)` (or an injected `rng=`). Same seed → same noise on the same machine; callers that previously relied on ambient `np.random.seed` alone to control NeuralMCTS noise must pass `seed=` / `rng=` (or rely on `config.seed` / `Settings.SEED` / `DEFAULT_SEED`).
+- **Migrated trainers/CLIs** (`self_play_convergence`, `self_play_trainer`, `policy_lift`, `train_rnn`, `train_bert_lora`, `unified_orchestrator`, meta-controller data collector / RNN & BERT controllers) call `set_all_seeds`, which also seeds Python's `random` module. Sites that previously only set torch (or only torch+numpy) now seed all three when torch is installed.
+
+### Not a breaking API change
+
+Constructor and CLI `seed=` kwargs are preserved. `set_all_seeds` returns the effective rank-aware seed (`seed + rank`). No new seed environment variable was added — continue to use `Settings.SEED` / `DEFAULT_SEED`.
+
+---
+
 ## 2026-08-22 — `DEPLOYMENT_ENV` and the fail-loud posture refusal (`evidence_claim_ledger`)
 
 `Settings` gains a `DEPLOYMENT_ENV` field (one of `development`, `test`, `staging`, `production`;

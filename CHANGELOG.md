@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Hygiene — rank-aware seeding & reproducible NeuralMCTS noise (`hygiene_determinism`)
+
+- **Added**: `src/utils/seeding.py` with `set_all_seeds(seed, *, rank=0, deterministic_torch=False)`, `new_rng(seed)`, and `resolve_seed(seed)` (reuses `Settings.SEED` / `DEFAULT_SEED`; no new seed env var).
+- **Changed**: `NeuralMCTS` owns an injected `numpy.random.Generator` for Dirichlet root noise and stochastic action selection; constructor accepts optional `rng` / `seed`.
+- **Changed**: Training/benchmark/meta-controller call sites that hand-rolled `torch.manual_seed` + `np.random.seed` now call `set_all_seeds(...)` (legacy `seed=` kwargs preserved).
+- **Added**: Opt-in (non-autouse) `global_seed` fixture in `tests/conftest.py` as the convention for new tests that need a process-global seed.
+- **Tests**: `tests/unit/utils/test_seeding.py` (AC-1/AC-2) and `tests/unit/framework/mcts/test_neural_mcts_seeding.py` (AC-3).
+- **Changed**: NPY002 lint ratchet baseline tightened 108 → 102 after migrating NeuralMCTS and training seed call sites.
+
 ### Knowledge Graph Integration & E2E Stabilization
 - **Added**: A Neo4j/NetworkX hybrid Knowledge Graph (`src/training/knowledge_graph.py`) for explicit concept tracking, entity extraction, and property graph-guided QA.
 - **Added**: `.claude/skills/aqa-regression`, `.claude/agents/godfile-decomposer`, and `.claude/skills/gpu-device-auditor` for rigorous quality assurance, autonomous decomposition of God-files, and rigorous hardware introspection.
