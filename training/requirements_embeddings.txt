@@ -20,7 +20,7 @@ voyageai>=0.2.0
 cohere>=4.0.0
 
 # OpenAI embeddings
-openai>=1.0.0
+openai>=2.53.0
 
 # Vector database (required for RAG)
 pinecone>=7.0.0  # renamed distribution (old pinecone-client collides); floor matches pyproject [vectordb]
