@@ -3,13 +3,12 @@
   "schema_version": 1,
   "rules": {
     "NPY002": {
-      "total": 102,
+      "total": 101,
       "by_group": {
         "examples/advanced_mcts_demo.py": 1,
         "scripts/generate_meta_controller_training_data.py": 5,
         "src/games": 2,
         "src/training": 2,
-        "tests/e2e": 1,
         "tests/games": 4,
         "tests/test_deepmind_framework.py": 4,
         "tests/unit": 19,
