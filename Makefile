@@ -32,7 +32,7 @@ TEST_ENV := WANDB_MODE=disabled \
 
 .DEFAULT_GOAL := help
 .PHONY: help install format format-check lint lint-fix lint-ratchet lint-ratchet-baseline \
-        typecheck test test-e2e test-ui test-regression test-all \
+        typecheck test test-local-distillation test-e2e test-ui test-regression test-all \
         coverage specs docs claims claims-baseline status pins pins-baseline secrets gate clean
 
 help: ## Show this help
@@ -56,10 +56,14 @@ lint-fix: ## Lint with autofix
 
 typecheck: ## Type check. NOT --strict; see CLAUDE.md for why (CI step)
 	mypy src/
+	mypy -p scripts.local_distillation
 
 test: ## Unit tests with branch coverage — the gate CI enforces
 	$(TEST_ENV) $(PYTHON) -m pytest tests/unit/ \
 		--cov=src --cov-report=term-missing --cov-fail-under=$(COV_MIN) $(PYTEST_ARGS)
+
+test-local-distillation: ## Unit tests for scripts/local_distillation (also covered by `make test`)
+	$(TEST_ENV) $(PYTHON) -m pytest tests/unit/scripts/local_distillation/ $(PYTEST_ARGS)
 
 test-e2e: ## End-to-end suite, as the CI test job runs it (set E2E_DEVICES to pin the device matrix)
 	$(TEST_ENV) $(PYTHON) -m pytest tests/e2e -m "not ui" -ra $(PYTEST_ARGS)

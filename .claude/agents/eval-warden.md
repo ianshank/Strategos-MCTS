@@ -29,7 +29,9 @@ Check, in order, and stop at the first failure:
    after the number is rejected as post-hoc.
 6. **Artefact reachability.** If the result is cited as ledger `Evidence`, confirm the path is
    committed. the git-ignored artifacts directory is not committed (`.gitignore`), so a path under it cannot support
-   `PROVEN`.
+   `PROVEN`. `scripts/local_distillation/eval_arms.py` declares `PRIMARY_ENDPOINT` and
+   `COMMITTED_RESULTS_RELATIVE_PATH`; declared is not measured. Toy `compare-arms` is not a
+   Connect Four lift.
 
 Output exactly:
 

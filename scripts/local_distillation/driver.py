@@ -18,9 +18,9 @@ from scripts.local_distillation.settings import DistillationSettings
 from scripts.local_distillation.sidecar import c4_network_architecture
 from src.framework.mcts.neural_mcts import GameState
 from src.models.policy_value_net import AlphaZeroLoss
-from src.observability.logging import get_logger
+from src.observability.logging import get_structured_logger
 
-logger = get_logger(__name__)
+logger = get_structured_logger(__name__)
 
 
 class HygienicTrainer:
@@ -33,22 +33,24 @@ class HygienicTrainer:
         settings: DistillationSettings,
         rng: np.random.Generator,
         *,
-        device: str = "cpu",
-        buffer_capacity: int = 10_000,
+        device: str | None = None,
+        buffer_capacity: int | None = None,
     ) -> None:
         assert_neural_mcts_teacher(collector.mcts)
         self.network = network
         self.collector = collector
         self.settings = settings
         self.rng = rng
-        self.device = device
-        self.buffer: deque[TrajectoryRow] = deque(maxlen=buffer_capacity)
+        self.device = settings.device if device is None else device
+        capacity = settings.buffer_capacity if buffer_capacity is None else buffer_capacity
+        self.buffer: deque[TrajectoryRow] = deque(maxlen=capacity)
         self.loss_fn = AlphaZeroLoss(value_loss_weight=settings.value_loss_weight)
         self.optimizer = torch.optim.Adam(network.parameters(), lr=settings.learning_rate)
 
     async def generate(self, num_games: int, initial_state_fn: Callable[[], GameState]) -> int:
         rows = await self.collector.generate_batch(num_games, initial_state_fn, self.rng)
         self.buffer.extend(rows)
+        logger.info("distillation games generated", games_requested=num_games, rows_added=len(rows))
         return len(rows)
 
     def train_step(self) -> dict[str, float] | None:
@@ -73,7 +75,9 @@ class HygienicTrainer:
         self.optimizer.step()
         self.network.eval()
         self.collector.mcts.clear_cache()
-        return {key: float(val) for key, val in loss_dict.items()}
+        metrics = {key: float(val) for key, val in loss_dict.items()}
+        logger.info("distillation train step", **{f"metric_{key}": value for key, value in metrics.items()})
+        return metrics
 
     def save_checkpoint(self, path: Path, *, extra: dict[str, Any] | None = None) -> None:
         path = Path(path)
@@ -86,4 +90,4 @@ class HygienicTrainer:
         }
         sidecar = path.with_name(path.name + ".meta.json")
         sidecar.write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n")
-        logger.info("distillation checkpoint saved", extra={"path": str(path)})
+        logger.info("distillation checkpoint saved", checkpoint_path=str(path))

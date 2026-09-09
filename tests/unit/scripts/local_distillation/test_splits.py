@@ -69,6 +69,21 @@ def test_grouped_split_keeps_games_together() -> None:
             assert n_in_split == n_total
 
 
+def test_grouped_split_empty_val_without_leakage() -> None:
+    """Default fractions with n<10 games: int(n * val_frac)==0, val is empty, no hash leak."""
+    rows = [_row(f"g{i}", token=float(i)) for i in range(9)]
+    settings = DistillationSettings(train_frac=0.8, val_frac=0.1)
+    train, val, test = grouped_split(rows, settings, new_rng(0))
+    assert val == []
+    assert train
+    train_ids = {row.game_id for row in train}
+    test_ids = {row.game_id for row in test}
+    assert train_ids.isdisjoint(test_ids)
+    train_h = {row.state_hash() for row in train}
+    test_h = {row.state_hash() for row in test}
+    assert not (train_h & test_h)
+
+
 def test_overlapping_state_hashes_across_splits_fail() -> None:
     rows = [
         _row("game-a", token=0.0),

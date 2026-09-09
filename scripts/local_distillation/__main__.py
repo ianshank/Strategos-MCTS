@@ -21,7 +21,10 @@ from scripts.local_distillation.eval_arms import (
 from scripts.local_distillation.settings import DistillationSettings, get_distillation_settings
 from scripts.local_distillation.sidecar import c4_network_architecture, validate_c4_sidecar
 from scripts.local_distillation.toy_domain import ACTION_SPACE, CountingNet, TwoPlyState
-from src.utils.seeding import new_rng
+from src.observability.logging import get_structured_logger
+from src.utils.seeding import new_rng, resolve_seed
+
+logger = get_structured_logger(__name__)
 
 
 def _sidecar_payload(settings: DistillationSettings) -> dict[str, Any]:
@@ -52,10 +55,12 @@ def main(argv: list[str] | None = None) -> int:
 
     settings = get_distillation_settings()
     if args.cmd in (None, "sidecar"):
+        logger.info("local distillation command", command="sidecar")
         json.dump(_sidecar_payload(settings), sys.stdout, indent=2)
         sys.stdout.write("\n")
         return 0
     if args.cmd == "promote":
+        logger.info("local distillation command", command="promote")
         min_delta = settings.promotion_min_delta if args.min_delta is None else args.min_delta
         decision = decide_promotion(args.candidate, args.incumbent, min_delta=min_delta)
         json.dump(
@@ -80,17 +85,27 @@ def main(argv: list[str] | None = None) -> int:
 async def _compare_arms(settings: DistillationSettings, *, simulations: int | None) -> int:
     """Toy domain only — provenance random-weights, not a C4 golden-path result."""
     sims = simulations if simulations is not None else settings.default_simulations
+    logger.info("local distillation command", command="compare-arms", domain="toy_two_ply")
     network = CountingNet()
     toy_settings = DistillationSettings(
         default_simulations=sims,
         temperature_threshold=settings.temperature_threshold,
         temperature_init=settings.temperature_init,
         temperature_final=settings.temperature_final,
+        device=settings.device,
+        wall_clock_repeat_cap=settings.wall_clock_repeat_cap,
     )
-    rng = new_rng()
-    mcts = build_mcts(network, toy_settings, device="cpu", seed=None, rng=rng, single_agent=False)
+    rng = new_rng(resolve_seed(None))
+    mcts = build_mcts(network, toy_settings, device=settings.device, seed=None, rng=rng, single_agent=False)
     HygienicCollector(mcts, toy_settings, action_space_size=ACTION_SPACE)
-    comparison = await compare_search_vs_no_search(mcts, TwoPlyState(), num_simulations=sims, device="cpu", rng=rng)
+    comparison = await compare_search_vs_no_search(
+        mcts,
+        TwoPlyState(),
+        num_simulations=sims,
+        device=settings.device,
+        rng=rng,
+        repeat_cap=settings.wall_clock_repeat_cap,
+    )
     json.dump(
         {
             "primary_endpoint": comparison.primary_endpoint,
@@ -102,6 +117,7 @@ async def _compare_arms(settings: DistillationSettings, *, simulations: int | No
             "no_search_provenance": comparison.no_search.provenance,
             "search_provenance": comparison.search.provenance,
             "domain": "toy_two_ply",
+            "note": "not a Connect Four lift",
         },
         sys.stdout,
         indent=2,

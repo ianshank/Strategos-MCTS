@@ -108,6 +108,9 @@ checkpoints/
 benchmark_output/
 benchmarks/
 
+# Generated artifacts (gitignored in the repo; do not ship in the image)
+artifacts/
+
 # Test output artifacts
 unit_test_results.txt
 test_results.txt

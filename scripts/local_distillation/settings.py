@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from scripts.local_distillation.schema import SCHEMA_VERSION
 from src.games.connect_four.config import ConnectFourConfig
 
 _C4 = ConnectFourConfig()
@@ -19,7 +20,7 @@ class DistillationSettings(BaseSettings):
         extra="ignore",
     )
 
-    schema_version: int = Field(default=1, ge=1)
+    schema_version: int = Field(default=SCHEMA_VERSION, ge=1)
     min_simulations: int = Field(default=1, ge=1)
     default_simulations: int = Field(default=8, ge=1)
     temperature_init: float = Field(default=1.0, gt=0.0)
@@ -37,10 +38,12 @@ class DistillationSettings(BaseSettings):
     num_channels: int = Field(default=32, ge=1)
     recurrent_enabled: bool = Field(default=False)
     recurrences: int = Field(default=4, ge=1)
-    recurrent_hidden: int = Field(default=32, ge=1)
     promotion_min_delta: float = Field(default=0.0)
     train_frac: float = Field(default=0.8, gt=0.0, lt=1.0)
     val_frac: float = Field(default=0.1, gt=0.0, lt=1.0)
+    buffer_capacity: int = Field(default=10_000, ge=1)
+    wall_clock_repeat_cap: int = Field(default=1_000_000, ge=1)
+    device: str = Field(default="cpu", min_length=1)
 
     @model_validator(mode="after")
     def _fractions_fit(self) -> DistillationSettings:

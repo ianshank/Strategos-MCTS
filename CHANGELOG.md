@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — local distillation hygiene / docs / typecheck
+
+- Distillation knobs: `buffer_capacity`, `wall_clock_repeat_cap`, `device`; `schema_version` defaults to `SCHEMA_VERSION`; unused `recurrent_hidden` removed.
+- `mypy -p scripts.local_distillation` runs next to `mypy src/` in Makefile `typecheck` and CI. Routing pointers in AGENTS/CLAUDE/README/C4; e2e same-device search reseeds `NeuralMCTS.rng`.
+- Tests: CLI/settings coverage, STM `validate_row` after assign, AC-1 collector no skip.
+
 ### Fixed — inherited pytest / Docker red after #168
 
 - BERT/RNN meta-controllers no longer pass the reserved LogRecord key `name` in `logger.info(..., extra=...)`.

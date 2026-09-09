@@ -44,6 +44,7 @@ never present an extension point or unfinished path as finished.
 | Benchmark | `src/benchmark/` (`cli.py`, `factory.py`, `policy_lift.py`, `tasks/`, `evaluation/`, `reporting/`) |
 | Agent harness | `src/framework/harness/` (`cli.py`, `loop/`, `tools/`, `hooks/`, `topology/`, `ralph/`, `replay/`, `intent/`) |
 | Spec-driven dev | `src/framework/harness/intent/{spec_loader,spec_validator,spec_trace}.py`; `specs/` |
+| Local distillation | `scripts/local_distillation/`; draft spec `specs/local_distillation_contract.SPEC.md` |
 
 Console scripts: see `strategos-primer`'s "Workflows & commands" for the full, current list — kept
 in one place rather than duplicated here, since the duplicate copy is exactly how this list went

@@ -58,7 +58,7 @@ async def test_collector_stores_visit_sum_after_temperature_threshold() -> None:
     network = BiasedNet()
     mcts = NeuralMCTS(
         network,
-        MCTSConfig(num_simulations=16, virtual_loss=0.0, dirichlet_epsilon=0.0),
+        MCTSConfig(num_simulations=16, virtual_loss=0.0),
         device="cpu",
         seed=0,
     )
@@ -69,5 +69,4 @@ async def test_collector_stores_visit_sum_after_temperature_threshold() -> None:
     train = visits_to_policy(row.visit_counts, temperature=1.0)
     np.testing.assert_allclose(row.policy_target, train)
     play = visits_to_policy(row.visit_counts, temperature=settings.temperature_final)
-    if float(row.visit_counts.min()) > 0:
-        assert not np.allclose(row.policy_target, play)
+    assert not np.allclose(row.policy_target, play)

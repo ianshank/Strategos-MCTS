@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from scripts.local_distillation.collector import HygienicCollector, _assign_stm_values
-from scripts.local_distillation.schema import TrajectoryRow
+from scripts.local_distillation.schema import TrajectoryRow, validate_row
 from scripts.local_distillation.settings import DistillationSettings
 from src.framework.mcts.neural_mcts import NeuralMCTS
 from src.training.system_config import MCTSConfig
@@ -38,6 +38,7 @@ def test_assign_stm_values_uses_row_player_not_p1_counter() -> None:
     _assign_stm_values([row], terminal=terminal, single_agent=False)
     # P1 always wins the toy; STM at the stored ply is P2, so z = -1.
     assert row.value_target == pytest.approx(-1.0)
+    validate_row(row, action_size=ACTION_SPACE)
     # Independent player=1 counter would have assigned +1.
     assert terminal.get_reward(player=1) == pytest.approx(1.0)
 
@@ -61,3 +62,4 @@ async def test_play_game_from_midgame_p2_root() -> None:
     assert len(rows) == 1
     assert rows[0].current_player == -1
     assert rows[0].value_target == pytest.approx(-1.0)
+    validate_row(rows[0], action_size=ACTION_SPACE)

@@ -200,7 +200,9 @@ jobs:
           pip list 2>&1 | head -100
 
       - name: Run mypy
-        run: mypy src/ --no-error-summary
+        run: |
+          mypy src/ --no-error-summary
+          mypy -p scripts.local_distillation --no-error-summary
 
   security-scan:
     name: Security Scan with Bandit

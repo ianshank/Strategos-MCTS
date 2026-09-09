@@ -12,8 +12,11 @@ from scripts.local_distillation.policy_targets import play_temperature, visits_t
 from scripts.local_distillation.schema import TrajectoryRow, validate_row
 from scripts.local_distillation.settings import DistillationSettings
 from src.framework.mcts.neural_mcts import GameState, NeuralMCTS
+from src.observability.logging import get_structured_logger
 from src.training.system_config import MCTSConfig
 from src.utils.seeding import new_rng
+
+logger = get_structured_logger(__name__)
 
 
 class HygienicCollector:
@@ -95,6 +98,13 @@ class HygienicCollector:
                 state = state.apply_action(action)
                 move_count += 1
             _assign_stm_values(rows, terminal=state, single_agent=self.mcts.single_agent)
+            for row in rows:
+                validate_row(row, action_size=self.action_space_size)
+            logger.info(
+                "distillation game collected",
+                lineage_id=game_id,
+                ply_count=len(rows),
+            )
         finally:
             network.train(was_training)
         return rows

@@ -5,11 +5,13 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 import hashlib
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
 
-from scripts.local_distillation.settings import DistillationSettings
+if TYPE_CHECKING:
+    from scripts.local_distillation.settings import DistillationSettings
 
 SCHEMA_VERSION = 1
 

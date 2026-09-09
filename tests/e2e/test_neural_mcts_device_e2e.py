@@ -24,7 +24,6 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-import numpy as np
 import pytest
 import torch
 
@@ -33,6 +32,7 @@ from src.framework.domain_registry import DomainRegistry
 from src.framework.mcts.neural_mcts import NeuralMCTS
 from src.training.self_play_convergence import resolve_architecture
 from src.training.system_config import MCTSConfig
+from src.utils.seeding import new_rng
 from tests.utils.device_matrix import CPU_DEVICE, DeviceCase
 
 pytestmark = [pytest.mark.e2e, pytest.mark.mcts, pytest.mark.neural]
@@ -54,42 +54,39 @@ CROSS_DEVICE_ATOL = 50.0
 CROSS_DEVICE_RTOL = 0.05
 
 
-def _build_search(device: str) -> tuple[NeuralMCTS, Any]:
-    """A real network and search for ``DOMAIN``, both placed on ``device``."""
+def _build_search(device: str, *, seed: int) -> tuple[NeuralMCTS, Any]:
+    """A real network and search for ``DOMAIN``, both placed on ``device``.
+
+    ``seed`` is passed into ``NeuralMCTS`` explicitly. ``MCTSConfig.seed`` defaults to 42,
+    which is not the advertised test seed.
+    """
     spec = DomainRegistry.get(DOMAIN)
+    _seed_everything(seed)
     network = build_network(resolve_architecture(spec), spec, device)
     network.eval()
     config = MCTSConfig()
     config.num_simulations = SIMULATIONS
-    search = NeuralMCTS(network, config, device=device, single_agent=spec.single_agent)
+    search = NeuralMCTS(network, config, device=device, single_agent=spec.single_agent, seed=seed)
     return search, spec
 
 
 def _seed_everything(seed: int) -> None:
-    """Seed both RNGs the search actually consumes.
+    """Seed torch for weight initialization only.
 
-    Torch alone is not enough, and that is a property of the code under test rather than
-    of this test: ``NeuralMCTS`` draws its root Dirichlet noise and its stochastic action
-    samples from the **process-global NumPy RNG**, so a torch-only seed leaves the search
-    irreproducible. ``src/training/self_play_convergence.py`` seeds both for exactly this
-    reason, so seeding both here reproduces the driver's real configuration.
-
-    ``specs/hygiene_determinism.SPEC.md`` AC-3 (approved, unimplemented) replaces that
-    global draw with an injected generator. When it lands this helper should shrink to
-    passing a seeded generator into the engine, and the coupling to global state that
-    makes the line below necessary disappears.
+    Search Dirichlet and action noise come from the engine-owned ``NeuralMCTS.rng``
+    (``new_rng(seed)``). Reseeding ``np.random.seed`` does not rewind that Generator;
+    callers that need a second search on the same instance must assign
+    ``search.rng = new_rng(search.seed)``. See ``docs/MIGRATION_NOTES.md``.
     """
     torch.manual_seed(seed)
-    np.random.seed(seed)
 
 
 def test_search_produces_a_usable_policy_on_every_device(device_case: DeviceCase) -> None:
     """A real search on ``device`` returns a normalized policy over the legal actions."""
-    search, spec = _build_search(device_case.name)
+    search, spec = _build_search(device_case.name, seed=0)
     state = spec.initial_state_fn()
 
-    _seed_everything(0)
-    action_probs, root = asyncio.run(search.search(state))
+    action_probs, root = asyncio.run(search.search(state, add_root_noise=True))
 
     legal = set(state.get_legal_actions())
     assert legal, "the domain's initial state reports no legal actions"
@@ -111,21 +108,21 @@ def test_search_produces_a_usable_policy_on_every_device(device_case: DeviceCase
 def test_same_device_same_seed_search_is_reproducible(device_case: DeviceCase) -> None:
     """Repeating a seeded search on one device reproduces the policy exactly.
 
-    Seeded through :func:`_seed_everything`, which is what the self-play driver does. A
-    torch-only seed fails this assertion today — see that helper for why, and for the
-    approved spec that removes the dependency.
+    Dirichlet stays on (``add_root_noise=True``). The first ``search()`` advances
+    ``NeuralMCTS.rng``; the second run reseeds that Generator (and clears the eval
+    cache) rather than calling ``np.random.seed``.
     """
-    search, spec = _build_search(device_case.name)
+    search, spec = _build_search(device_case.name, seed=0)
     state = spec.initial_state_fn()
 
-    _seed_everything(0)
-    first, _ = asyncio.run(search.search(state))
+    first, _ = asyncio.run(search.search(state, add_root_noise=True))
 
     # A warm evaluation cache would make the second run trivially equal, so it is cleared:
     # the assertion must cover the network path, not the dictionary in front of it.
     search.clear_cache()
-    _seed_everything(0)
-    second, _ = asyncio.run(search.search(state))
+    assert search.seed is not None
+    search.rng = new_rng(search.seed)
+    second, _ = asyncio.run(search.search(state, add_root_noise=True))
 
     assert first == second, f"a seeded search on {device_case.name!r} was not reproducible across runs in one process"
 

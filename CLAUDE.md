@@ -45,7 +45,8 @@ pytest tests/unit -v --tb=short -q
 | `ruff check . --fix` | Lint with auto-fix |
 | `make lint-ratchet` | Check the ruff rule ratchet (`NPY002` counts may only shrink) |
 | `make lint-ratchet-baseline` | Re-tighten the ratchet in the same change that fixes call sites |
-| `mypy src/` | Type check (matches CI exactly) |
+| `mypy src/` | Type check `src/` (matches CI; not `--strict`) |
+| `mypy -p scripts.local_distillation` | Type check the distillation package (never `mypy scripts/local_distillation`) |
 | `make secrets` | Fast key grep plus the repo-wide gitleaks scan, if the binary is installed |
 
 > **NumPy lint, and why one rule is ratcheted rather than gated.** Ruff's `NPY` ruleset is
@@ -157,6 +158,9 @@ BENCHMARK FRAMEWORK
 ├── src/benchmark/adapters/      # System adapters (LangGraph, ADK) + factory
 ├── src/benchmark/evaluation/    # Harness, scorer, cost calculator, models
 └── src/benchmark/reporting/     # Metrics aggregator, report generator
+
+SCRIPTS
+└── scripts/local_distillation/  # NeuralMCTS teacher labels (draft spec; not src/)
 
 TESTS
 ├── tests/unit/                  # Unit tests
@@ -312,6 +316,7 @@ ruff check .
 
 # 3. Types
 mypy src/
+mypy -p scripts.local_distillation
 
 # 4. Tests (the gate CI enforces; `make test` wraps this, including STRICT_OPTIONAL_DEPS)
 STRICT_OPTIONAL_DEPS=1 pytest tests/unit/ --cov=src --cov-fail-under=85

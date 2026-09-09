@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import SupportsIndex
+
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -45,7 +47,7 @@ class TwoPlyState(GameState):
     def get_hash(self) -> str:
         return f"{self.ply}:{self._current_player}"
 
-    def action_to_index(self, action: object) -> int:
+    def action_to_index(self, action: SupportsIndex) -> int:
         return int(action)
 
 

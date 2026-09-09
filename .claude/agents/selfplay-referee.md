@@ -1,6 +1,6 @@
 ---
 name: selfplay-referee
-description: Reviews two-player search and self-play code in Strategos-MCTS for value-sign, seeding, and engine-agreement defects. Use PROACTIVELY when touching src/framework/mcts/**, src/training/self_play*, or any code that backs up a value through a game tree or compares two engines.
+description: Reviews two-player search and self-play code in Strategos-MCTS for value-sign, seeding, and engine-agreement defects. Use PROACTIVELY when touching src/framework/mcts/**, src/training/self_play*, scripts/local_distillation/**, or any code that backs up a value through a game tree or compares two engines.
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -24,6 +24,8 @@ engine or code path as guilty until you have read the lines.
 3. **Global RNG use.** `np.random.*` and bare `random.*` in a search or self-play path make runs
    irreproducible and silently couple parallel workers. Require an injected `Generator` or seed.
    `Grep` for `np.random\.` under `src/framework/` and `src/training/`.
+   Distillation labels in `scripts/local_distillation/` must keep visit/sum π separate from play
+   τ, bind STM z via `get_reward(player=row.current_player)`, and inject a Generator (`new_rng`).
 4. **Unreachable evaluation.** An evaluator that is implemented but never called from a training
    path proves nothing. Confirm each evaluator has a live caller; report the absence explicitly
    rather than assuming a wiring you have not read.

@@ -83,7 +83,12 @@ CPU and accelerator kernels reduce in different orders. Assert instead:
 
 - same device, same seed → identical results (bitwise on CPU only; the drivers set neither
   `cudnn.deterministic` nor `CUBLAS_WORKSPACE_CONFIG`, so bitwise CUDA equality is not a
-  property the code claims);
+  property the code claims). After `hygiene_determinism`, that same-device check reseeds
+  `NeuralMCTS.rng` / passes `seed=` (`tests/e2e/test_neural_mcts_device_e2e.py`,
+  `src/utils/seeding.py`); `np.random.seed` does not rewind engine noise. Keep
+  `add_root_noise=True`. Leftover global-seed folklore in
+  `tests/unit/test_neural_mcts_ext.py` and `tests/unit/training/test_self_play_trainer.py`
+  is not this contract;
 - valid output on every device;
 - accelerator vs CPU agreement within a **stated tolerance**, with TF32 disabled — otherwise
   the comparison silently becomes 10-bit against 24-bit and the tolerance describes the GPU

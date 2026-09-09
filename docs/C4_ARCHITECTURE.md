@@ -465,6 +465,10 @@ graph LR
   states are made hashable by `single_agent_domains.StringActionGameState`.
   `save_checkpoint(..., metadata=...)` optionally writes a `<checkpoint>.meta.json` architecture
   sidecar so tools can rebuild the network without guessing.
+- `scripts/local_distillation/` is a scripts-only driver that writes NeuralMCTS teacher labels
+  (visit/sum π plus STM z) under a draft spec (`specs/local_distillation_contract.SPEC.md`). It is
+  not `self-play-convergence`, not inside the training/serving container, and not a measured
+  endpoint.
 - The built-in **reasoning/planning domains are synthetic smoke tests** (gameable rewards — they
   validate plumbing, not decision quality). **Chess is the adversarial M5 domain**, registered lazily
   on first `DomainRegistry.get("chess")` via `src/games/chess/registration.py` behind the optional
