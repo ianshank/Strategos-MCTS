@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — local distillation contract (`scripts/local_distillation/`)
+
+- Hygienic NeuralMCTS collector that stores visit/sum π separately from play temperature, binds value targets to `current_player`, runs search under `eval()`, and clears the eval cache after each train step.
+- Versioned trajectory schema with `game_id` grouped splits, Connect Four sidecar validation (3×6×7; no chess architecture fallback), a default-off recurrent policy/value student, and a promotion helper that can reject a degraded checkpoint.
+- Draft spec: `specs/local_distillation_contract.SPEC.md`. Tests under `tests/unit/scripts/local_distillation/`.
+- Language/Unsloth/Qwen3 remain out of scope (CHARTER §7). `self-play-convergence` labels are unchanged.
+
 ### Hygiene — rank-aware seeding & reproducible NeuralMCTS noise (`hygiene_determinism`)
 
 - **Added**: `src/utils/seeding.py` with `set_all_seeds(seed, *, rank=0, deterministic_torch=False)`, `new_rng(seed)`, and `resolve_seed(seed)` (reuses `Settings.SEED` / `DEFAULT_SEED`; no new seed env var).
