@@ -522,10 +522,9 @@ class TestInferenceServerMain:
         )
         mock_server_instance.run.assert_called_once()
 
-    @patch("src.api.inference_server.SystemConfig")
     @patch("src.api.inference_server.InferenceServer")
     @patch("argparse.ArgumentParser")
-    def test_main_with_device_override(self, mock_parser_cls, mock_server_cls, mock_sys_config):
+    def test_main_with_device_override(self, mock_parser_cls, mock_server_cls):
         mock_parser = MagicMock()
         mock_parser_cls.return_value = mock_parser
         mock_args = MagicMock()
@@ -535,15 +534,22 @@ class TestInferenceServerMain:
         mock_args.device = "cuda"
         mock_parser.parse_args.return_value = mock_args
 
-        mock_config = MagicMock()
-        mock_sys_config.return_value = mock_config
-        mock_server_cls.return_value = MagicMock()
+        mock_model = MagicMock()
+        mock_server = MagicMock()
+        mock_server.models = {"pv": mock_model}
+        mock_server_cls.return_value = mock_server
 
         from src.api.inference_server import main
 
         main()
 
-        mock_sys_config.assert_called_once()
-        assert mock_config.device == "cuda"
-        call_kwargs = mock_server_cls.call_args.kwargs
-        assert call_kwargs["config"] is mock_config
+        mock_server_cls.assert_called_once_with(
+            checkpoint_path="/ckpt.pt",
+            config=None,
+            host="localhost",
+            port=9090,
+        )
+        assert mock_server.device == "cuda"
+        assert mock_server.config.device == "cuda"
+        mock_model.to.assert_called_once_with("cuda")
+        mock_server.run.assert_called_once()

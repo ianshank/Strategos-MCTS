@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — inherited pytest / Docker red after #168
+
+- BERT/RNN meta-controllers no longer pass the reserved LogRecord key `name` in `logger.info(..., extra=...)`.
+- Unit tests retarget GraphBuilder mixin and TrainingMixin patch sites; `src.utils.__all__` includes the seeding helpers; inference `main()` device override matches the current constructor (`config=None`).
+- Docker "Run basic API tests" waits for container health instead of a fixed 10s sleep (FastAPI lifespan race).
+
 ### Added — local distillation contract (`scripts/local_distillation/`)
 
 - Hygienic NeuralMCTS collector that stores visit/sum π separately from play temperature, binds value targets to `current_player`, runs search under `eval()`, and clears the eval cache after each train step.

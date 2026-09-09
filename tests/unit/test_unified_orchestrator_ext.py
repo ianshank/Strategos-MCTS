@@ -21,6 +21,7 @@ import torch
 from src.training.system_config import SystemConfig
 
 _MODULE = "src.training.unified_orchestrator"
+_TRAINING_MIXIN = "src.training.orchestrator_components.training_mixin"
 
 
 def _make_config(tmp_path=None):
@@ -167,7 +168,7 @@ class TestTrainPolicyValueNetworkReady:
             weights,
         )
 
-        with patch(f"{_MODULE}.collate_experiences", return_value=(states, policies, values)):
+        with patch(f"{_TRAINING_MIXIN}.collate_experiences", return_value=(states, policies, values)):
             policy_logits = torch.randn(batch_size, 81)
             value_pred = torch.randn(batch_size, 1)
             orch.policy_value_net.return_value = (policy_logits, value_pred)
@@ -218,7 +219,7 @@ class TestTrainPolicyValueNetworkReady:
             weights,
         )
 
-        with patch(f"{_MODULE}.collate_experiences", return_value=(states, policies, values)):
+        with patch(f"{_TRAINING_MIXIN}.collate_experiences", return_value=(states, policies, values)):
             policy_logits = torch.randn(batch_size, 81)
             value_pred = torch.randn(batch_size, 1)
             orch.policy_value_net.return_value = (policy_logits, value_pred)
@@ -247,7 +248,7 @@ class TestTrainPolicyValueNetworkReady:
 
             orch._compute_gradient_norm = MagicMock(return_value=0.5)
 
-            with patch(f"{_MODULE}.autocast"):
+            with patch(f"{_TRAINING_MIXIN}.autocast"):
                 result = await orch._train_policy_value_network()
 
         assert result["policy_loss"] == pytest.approx(0.3, rel=0.01)
@@ -274,7 +275,7 @@ class TestTrainPolicyValueNetworkReady:
             weights,
         )
 
-        with patch(f"{_MODULE}.collate_experiences", return_value=(states, policies, values)):
+        with patch(f"{_TRAINING_MIXIN}.collate_experiences", return_value=(states, policies, values)):
             policy_logits = torch.randn(batch_size, 81)
             value_pred = torch.randn(batch_size, 1)
             orch.policy_value_net.return_value = (policy_logits, value_pred)

@@ -185,7 +185,7 @@ class RNNMetaController(AbstractMetaController):
 
         # Set random seed for reproducibility
         set_all_seeds(seed)
-        logger.info("RNNMetaController initialized", extra={"seed": seed, "name": name})
+        logger.info("RNNMetaController initialized", extra={"seed": seed, "controller_name": name})
 
         # Auto-detect device if not specified
         if device is None:
