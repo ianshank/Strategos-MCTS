@@ -103,6 +103,7 @@ graph TB
 - **GPU Hardware Introspection** (`docs/GPU_TRAINING_GUIDE.md`): `src/utils/gpu_utils.py` for pre-flight memory validation, `GPUMemoryTracker`, and CUDA allocation fraction enforcement.
 - **Operational Training Profiles**: `--profile {smoke,dev,full}` presets for instant plumbing validation, dev testing, and full self-play training.
 - **Policy-comparison benchmark** (`src/benchmark/policy_comparison.py`) with a domain-type-aware decision-quality lift metric and a **meta-controller learning loop** (`docs/META_CONTROLLER_TRAINING.md`).
+- Local NeuralMCTS teacher-label distillation lives in `scripts/local_distillation/` (draft contract: `specs/local_distillation_contract.SPEC.md`); it is not a measured Connect Four endpoint.
 
 
 ## Installation

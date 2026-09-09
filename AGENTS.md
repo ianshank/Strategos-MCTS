@@ -17,6 +17,7 @@ cp .env.example .env  # then add OPENAI_API_KEY or ANTHROPIC_API_KEY
 black . --check --line-length 120
 ruff check .
 mypy src/
+mypy -p scripts.local_distillation
 pytest tests/unit -v
 pytest tests/integration -v
 pytest tests/ -m harness
@@ -52,6 +53,7 @@ All knobs come from `HARNESS_*` env vars; never hardcode in call sites.
 ```bash
 python -m src.benchmark --dry-run
 python -m src.benchmark --systems langgraph_mcts --tasks A1
+python -m scripts.local_distillation  # sidecar / promote / toy compare-arms (not a C4 lift)
 ```
 
 ## Code style
@@ -73,6 +75,7 @@ python -m src.benchmark --systems langgraph_mcts --tasks A1
 | Knowledge Graph | `src/training/knowledge_graph.py` (Concepts, Relationships, GraphQA, Retrieval) |
 | Gameplay domains | `src/games/chess/` (chess), `src/games/connect_four/` (connect_four), `src/games/othello/` (othello) (adversarial), `src/framework/mcts/single_agent_domains.py` (reasoning, planning) |
 | Neural self-play (M5) | `src/training/self_play_trainer.py` |
+| Local distillation | `scripts/local_distillation/` (draft spec; teacher labels, not `self-play-convergence`) |
 | Training profiles | `src/training/training_config.py` (`smoke`/`dev`/`full` profiles) |
 | Self-play convergence driver | `src/training/self_play_convergence.py` (CLI entry, `--profile`/`--mixed-precision`/`--compile`) |
 | System/device config | `src/training/system_config.py` (device resolution, AMP, compile, CUDA memory fraction) |

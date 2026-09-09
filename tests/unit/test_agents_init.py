@@ -98,6 +98,10 @@ class TestUtilsInit:
             "get_project_plan",
             "MCTSDebugger",
             "create_debugger",
+            "set_all_seeds",
+            "new_rng",
+            "resolve_seed",
+            "validate_numpy_seed",
         }
         assert set(utils_mod.__all__) == expected
 

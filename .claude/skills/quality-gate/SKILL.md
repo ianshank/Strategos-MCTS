@@ -24,6 +24,7 @@ ruff check .
 
 # 3. Types (pinned mypy; see [dev] extra)
 mypy src/
+mypy -p scripts.local_distillation
 
 # 4. Specs and context docs — deterministic, no network
 harness validate-spec specs/*.SPEC.md

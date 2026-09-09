@@ -47,5 +47,9 @@ maturity ladder in `docs/capability_maturity.json` and why `CAPABILITY_MATURITY_
 | "converges" | a lift metric was computed, not merely a loss curve logged |
 | "agrees with" | two *independent* engines were compared |
 
+`python -m scripts.local_distillation compare-arms` on toy TwoPly is **not** a Connect Four lift.
+`decide_promotion` in `scripts/local_distillation/eval_arms.py` is a helper that can reject; it is
+not Evidence-First E5. `PRIMARY_ENDPOINT` declared in that package is not a measured result.
+
 When in doubt, report the weaker claim. Under-claiming costs a sentence; over-claiming costs the
 credibility of every other number in the document.

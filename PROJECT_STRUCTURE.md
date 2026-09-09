@@ -67,6 +67,7 @@ langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 │   └── neural_meta_controller_demo.py  # Neural controller demo
 │
 ├── scripts/                     # Automation and utility scripts
+│   ├── local_distillation/             # NeuralMCTS teacher labels (draft spec; not src/)
 │   ├── smoke_test.sh                   # Docker deployment smoke tests
 │   ├── verify_external_services.py     # Service connectivity (test-imported)
 │   ├── export_architecture_diagrams.py # Export Mermaid diagrams
@@ -135,7 +136,7 @@ langgraph-multi-agent-mcts/          # repo/product brand: Strategos-MCTS
 | `config/` | **Runtime** config data for deployment (YAML/JSON: alerting rules, assembly config, MCP config) |
 | `docs/` | All documentation and guides |
 | `examples/` | Working library-usage examples |
-| `scripts/` | Automation, verification, and utility scripts |
+| `scripts/` | Automation, verification, utility scripts, and `scripts/local_distillation/` |
 | `tests/` | Comprehensive test suite |
 | `tools/` | Development and debugging tools |
 | `kubernetes/` | Container orchestration manifests |

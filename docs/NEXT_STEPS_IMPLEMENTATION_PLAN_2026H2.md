@@ -25,6 +25,11 @@
 >
 > **Knowledge Graph Integration** has been successfully added to track concepts explicitly with a Neo4j/NetworkX hybrid, enabling property graph QA and entity extraction.
 >
+> **Local distillation (on the tree, not a phase gate).** `scripts/local_distillation/` and
+> `specs/local_distillation_contract.SPEC.md` (`status: draft`) are present. Next step is human
+> `spec-review` → `approved`. A later experiment PR may commit
+> `benchmarks/results/local_distillation_c4.json`; this does not mark Phase 3 complete.
+>
 > **The roadmap below defines the new frontier for the remainder of H2 2026: Scaling, Advanced Architectures, and Enterprise Developer Experience.**
 
 ---

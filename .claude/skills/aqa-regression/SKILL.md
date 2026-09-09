@@ -16,8 +16,13 @@ Use this skill to execute the full test suite and verify no regressions exist.
 1. **Run Unit Tests & Mypy**:
    ```bash
    mypy src/
+   mypy -p scripts.local_distillation
    pytest tests/unit -v
+   pytest tests/unit/scripts/local_distillation -v
    ```
+   Distillation coverage is the unit folder above, not an e2e device-matrix case. Same-device
+   NeuralMCTS reproducibility is `tests/e2e/test_neural_mcts_device_e2e.py` (owned `rng` reseed;
+   see the `e2e-device-matrix` skill).
 2. **Run Integration Tests**:
    ```bash
    pytest tests/integration -v

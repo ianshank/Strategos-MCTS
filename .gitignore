@@ -283,6 +283,8 @@ data/training_with_assembly*.json
 # Benchmark output artifacts
 benchmark_output/
 benchmarks/
+# AC-11 JSON lives at benchmarks/results/local_distillation_c4.json when an experiment PR
+# writes it. Do not `git add -f` that path on the local_distillation_contract spec.
 benchmark_results/
 benchmark_report.md
 benchmark_results.json

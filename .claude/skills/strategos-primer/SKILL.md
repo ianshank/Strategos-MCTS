@@ -75,6 +75,7 @@ on an aggregation node (`src/framework/graph/builder.py`).
 | **Benchmark** | System-vs-system evaluation harness + policy-lift measurement. | `src/benchmark/cli.py`, `factory.py`, `policy_lift.py`, `tasks/`, `evaluation/`, `reporting/` |
 | **Agent harness** | Deterministic autonomous agent loop, tools, hooks, topologies, Ralph outer loop, record/replay. | `src/framework/harness/` (`cli.py`, `loop/`, `tools/`, `hooks/`, `topology/`, `ralph/`, `replay/`, `intent/`) |
 | **Spec-driven dev** | Spec schema, validator, tracer, scaffolder driving the SDD workflow. | `src/framework/harness/intent/spec_loader.py`, `spec_validator.py`, `spec_trace.py`; specs in `specs/` |
+| **Local distillation** | Scripts-only NeuralMCTS teacher labels (draft spec; not `self-play-convergence`). | `scripts/local_distillation/`; `specs/local_distillation_contract.SPEC.md` |
 
 Peripheral areas you'll meet less often: `src/training/` (ML pipeline), `src/games/chess/`,
 `src/api/` (REST + inference servers), `src/enterprise/`, `src/integrations/`. `src/neuro_symbolic/`

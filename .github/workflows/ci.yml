@@ -200,7 +200,9 @@ jobs:
           pip list 2>&1 | head -100
 
       - name: Run mypy
-        run: mypy src/ --no-error-summary
+        run: |
+          mypy src/ --no-error-summary
+          mypy -p scripts.local_distillation --no-error-summary
 
   security-scan:
     name: Security Scan with Bandit
@@ -753,8 +755,10 @@ jobs:
             -e LOG_LEVEL=INFO \
             langgraph-mcts:test
 
-          # Wait for service to be ready
-          sleep 10
+          # Wait for the new container to be healthy. A fixed sleep races FastAPI
+          # lifespan (the prior health-check step already stopped its container).
+          timeout 60s bash -c 'until docker inspect --format="{{.State.Health.Status}}" mcts-api-test | grep -q "healthy"; do sleep 2; done' || \
+          (echo "Container failed to become healthy" && docker logs mcts-api-test && exit 1)
 
           # Test health endpoint
           curl -f http://localhost:8000/health || (echo "Health check failed" && docker logs mcts-api-test && exit 1)
