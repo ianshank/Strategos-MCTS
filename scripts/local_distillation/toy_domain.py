@@ -74,13 +74,19 @@ class CountingNet(nn.Module):
 class BiasedNet(nn.Module):
     """Strongly prefers action 0 so visit counts are skewed (π_train vs π_play)."""
 
-    def __init__(self, n_actions: int = ACTION_SPACE, in_dim: int = 2) -> None:
+    def __init__(
+        self,
+        n_actions: int = ACTION_SPACE,
+        in_dim: int = 2,
+        *,
+        bias: tuple[float, float] = (8.0, -8.0),
+    ) -> None:
         super().__init__()
         self.fc = nn.Linear(in_dim, n_actions)
         self.val = nn.Linear(in_dim, 1)
         with torch.no_grad():
             self.fc.weight.zero_()
-            self.fc.bias.copy_(torch.tensor([8.0, -8.0]))
+            self.fc.bias.copy_(torch.tensor(list(bias)))
             self.val.weight.zero_()
             self.val.bias.zero_()
 

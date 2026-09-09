@@ -55,7 +55,7 @@ async def test_collector_stores_visit_sum_after_temperature_threshold() -> None:
         temperature_final=0.1,
         temperature_init=1.0,
     )
-    network = BiasedNet()
+    network = BiasedNet(bias=(0.5, 0.0))
     mcts = NeuralMCTS(
         network,
         MCTSConfig(num_simulations=16, virtual_loss=0.0),
