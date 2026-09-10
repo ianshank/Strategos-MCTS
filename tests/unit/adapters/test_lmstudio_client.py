@@ -830,6 +830,20 @@ class TestLMStudioGenerateStream:
         chunks = [chunk async for chunk in result]
         assert chunks == ["shown"]
 
+    @pytest.mark.asyncio
+    async def test_stream_prefers_visible_text_when_delta_contains_content_and_reasoning(self, client):
+        _build_stream_mocks(
+            client,
+            [
+                'data: {"choices":[{"delta":{"content":"shown","reasoning_content":"hidden"}}]}',
+                "data: [DONE]",
+            ],
+        )
+
+        result = await client.generate(prompt="test", stream=True)
+        chunks = [chunk async for chunk in result]
+        assert chunks == ["shown"]
+
 
 @pytest.mark.unit
 class TestLMStudioGenerateExtraKwargs:

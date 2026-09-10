@@ -360,14 +360,13 @@ class LMStudioClient(BaseLLMClient):
                                 data = json.loads(data_str)
                                 delta = data["choices"][0].get("delta", {})
                                 content = message_content_to_text(delta.get("content"))
+                                reasoning_content = message_content_to_text(delta.get("reasoning_content"))
+                                if reasoning_content and not saw_visible_content:
+                                    buffered_reasoning_chunks.append(reasoning_content)
                                 if content:
                                     saw_visible_content = True
                                     buffered_reasoning_chunks.clear()
                                     yield content
-                                    continue
-                                reasoning_content = message_content_to_text(delta.get("reasoning_content"))
-                                if reasoning_content and not saw_visible_content:
-                                    buffered_reasoning_chunks.append(reasoning_content)
                             except (json.JSONDecodeError, KeyError):
                                 continue
 
