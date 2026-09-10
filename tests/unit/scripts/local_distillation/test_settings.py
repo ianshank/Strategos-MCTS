@@ -20,6 +20,17 @@ def test_fractions_must_leave_a_test_remainder() -> None:
         DistillationSettings(train_frac=0.9, val_frac=0.2)
 
 
+def test_promotion_min_delta_rejects_negative() -> None:
+    with pytest.raises(ValidationError):
+        DistillationSettings(promotion_min_delta=-0.1)
+
+
+def test_device_env_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LOCAL_DISTILLATION_DEVICE", "cuda")
+    settings = DistillationSettings()
+    assert settings.device == "cuda"
+
+
 def test_buffer_capacity_and_schema_version_match_schema_constant() -> None:
     settings = DistillationSettings()
     assert settings.schema_version == SCHEMA_VERSION

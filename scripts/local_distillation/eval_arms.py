@@ -6,14 +6,12 @@ from dataclasses import dataclass
 import time
 from typing import Any
 
-import numpy as np
 import torch
 from torch import nn
 
 from scripts.local_distillation.settings import DistillationSettings
 from src.config.constants import EVIDENCE_PROVENANCE_RANDOM_WEIGHTS, EVIDENCE_PROVENANCES
 from src.framework.mcts.neural_mcts import GameState, NeuralMCTS
-from src.utils.seeding import new_rng
 
 # Declared before any holdout run. A later experiment PR may write this path; this
 # package does not treat artifacts/ or self-play-convergence plumbing as evidence.
@@ -58,9 +56,13 @@ def greedy_network_action(network: nn.Module, state: GameState, *, device: str) 
     legal = state.get_legal_actions()
     if not legal:
         raise ValueError("no legal actions")
+    was_training = bool(network.training)
     network.eval()
-    with torch.no_grad():
-        log_probs, _value = network(state.to_tensor().unsqueeze(0).to(device))
+    try:
+        with torch.no_grad():
+            log_probs, _value = network(state.to_tensor().unsqueeze(0).to(device))
+    finally:
+        network.train(was_training)
     probs = torch.exp(log_probs.squeeze(0)).detach().cpu().numpy()
     best = None
     best_p = -1.0
@@ -114,11 +116,9 @@ async def compare_search_vs_no_search(
     *,
     num_simulations: int,
     device: str,
-    rng: np.random.Generator | None = None,
     repeat_cap: int | None = None,
 ) -> SearchNoSearchComparison:
     """Equal-expansion arms. Wall-clock is recorded; no-search is repeated to match search time."""
-    owned_rng = rng if rng is not None else new_rng()
     cap = DistillationSettings().wall_clock_repeat_cap if repeat_cap is None else repeat_cap
     search = await run_search_arm(mcts, state, num_simulations=num_simulations)
     no_search = run_no_search_arm(mcts.network, state, device=device)
@@ -127,7 +127,6 @@ async def compare_search_vs_no_search(
         state,
         device=device,
         budget_s=search.wall_clock_s,
-        rng=owned_rng,
         repeat_cap=cap,
     )
     if no_search.provenance not in EVIDENCE_PROVENANCES or search.provenance not in EVIDENCE_PROVENANCES:
@@ -145,7 +144,6 @@ def repeat_no_search_until(
     *,
     device: str,
     budget_s: float,
-    rng: np.random.Generator,
     repeat_cap: int,
 ) -> int:
     """Equal wall-clock helper: greedy rollouts until ``budget_s`` elapses. Returns count."""
@@ -153,8 +151,6 @@ def repeat_no_search_until(
         raise ValueError("budget_s must be >= 0")
     if repeat_cap < 1:
         raise ValueError("repeat_cap must be >= 1")
-    if not isinstance(rng, np.random.Generator):
-        raise TypeError("rng must be a numpy Generator")
     deadline = time.perf_counter() + budget_s
     n = 0
     while time.perf_counter() < deadline:

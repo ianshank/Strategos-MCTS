@@ -410,6 +410,8 @@ markers = [
     # a conftest applies the mark, and the split registry documented above is a debt to
     # shrink rather than widen.
     "gpu: Requires a non-CPU torch device (cuda/mps); skipped with a reason otherwise",
+    "live: Hits a live local LLM (LM Studio); skipped unless REQUIRE_LMSTUDIO=1",
+    "enable_socket: Allow real sockets when pytest-socket is installed",
     # Supplied by the pytest-timeout plugin. Declared here so --strict-markers also
     # holds in environments that install the project without the [dev] extra; pytest
     # tolerates the plugin re-registering it.

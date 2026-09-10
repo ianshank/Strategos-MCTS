@@ -16,7 +16,7 @@ class DistillationSettings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="LOCAL_DISTILLATION_",
-        case_sensitive=True,
+        case_sensitive=False,
         extra="ignore",
     )
 
@@ -38,7 +38,7 @@ class DistillationSettings(BaseSettings):
     num_channels: int = Field(default=32, ge=1)
     recurrent_enabled: bool = Field(default=False)
     recurrences: int = Field(default=4, ge=1)
-    promotion_min_delta: float = Field(default=0.0)
+    promotion_min_delta: float = Field(default=0.0, ge=0.0)
     train_frac: float = Field(default=0.8, gt=0.0, lt=1.0)
     val_frac: float = Field(default=0.1, gt=0.0, lt=1.0)
     buffer_capacity: int = Field(default=10_000, ge=1)

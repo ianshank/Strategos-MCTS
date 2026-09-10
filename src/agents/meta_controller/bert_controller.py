@@ -17,7 +17,7 @@ from src.agents.meta_controller.base import (
     MetaControllerFeatures,
     MetaControllerPrediction,
 )
-from src.agents.meta_controller.utils import features_to_text
+from src.agents.meta_controller.utils import controller_initialized_extra, features_to_text
 from src.observability.logging import get_logger
 from src.utils.seeding import set_all_seeds
 
@@ -146,7 +146,7 @@ class BERTMetaController(AbstractMetaController):
 
         # Set random seed for reproducibility
         set_all_seeds(seed)
-        logger.info("BERTMetaController initialized", extra={"seed": seed, "controller_name": name})
+        logger.info("BERTMetaController initialized", extra=controller_initialized_extra(seed=seed, name=name))
 
         # Auto-detect device if not specified
         if device is None:

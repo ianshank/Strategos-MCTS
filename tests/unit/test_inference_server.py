@@ -553,3 +553,59 @@ class TestInferenceServerMain:
         assert mock_server.config.device == "cuda"
         mock_model.to.assert_called_once_with("cuda")
         mock_server.run.assert_called_once()
+
+    @patch("src.api.inference_server.InferenceServer")
+    @patch("argparse.ArgumentParser")
+    def test_main_device_override_sets_neural_mcts_device(self, mock_parser_cls, mock_server_cls):
+        mock_parser = MagicMock()
+        mock_parser_cls.return_value = mock_parser
+        mock_args = MagicMock()
+        mock_args.checkpoint = "/ckpt.pt"
+        mock_args.host = "localhost"
+        mock_args.port = 9090
+        mock_args.device = "cuda"
+        mock_parser.parse_args.return_value = mock_args
+
+        class _SearchWithoutTo:
+            def __init__(self) -> None:
+                self.device = "cpu"
+                self.network = MagicMock()
+
+        search = _SearchWithoutTo()
+        mock_server = MagicMock()
+        mock_server.models = {"mcts": search}
+        mock_server_cls.return_value = mock_server
+
+        from src.api.inference_server import main
+
+        main()
+
+        assert search.device == "cuda"
+        search.network.to.assert_called_once_with("cuda")
+        mock_server.run.assert_called_once()
+
+
+@pytest.mark.unit
+class TestPlaceInferenceModel:
+    """Direct coverage of ``_place_inference_model`` (NeuralMCTS is not nn.Module)."""
+
+    def test_calls_to_when_present(self):
+        from src.api.inference_server import _place_inference_model
+
+        occupant = MagicMock()
+        occupant.network = occupant
+        _place_inference_model(occupant, "cuda")
+        occupant.to.assert_called_once_with("cuda")
+
+    def test_moves_nested_network_when_occupant_has_no_to(self):
+        from src.api.inference_server import _place_inference_model
+
+        class _Search:
+            def __init__(self) -> None:
+                self.device = "cpu"
+                self.network = MagicMock()
+
+        search = _Search()
+        _place_inference_model(search, "cuda")
+        assert search.device == "cuda"
+        search.network.to.assert_called_once_with("cuda")

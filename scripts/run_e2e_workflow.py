@@ -20,6 +20,7 @@ from src.adapters.llm.anthropic_client import AnthropicClient
 from src.adapters.llm.base import BaseLLMClient
 from src.adapters.llm.lmstudio_client import LMStudioClient
 from src.adapters.llm.openai_client import OpenAIClient
+from src.config.constants import DEFAULT_LMSTUDIO_URL
 from src.framework.graph import GraphBuilder
 
 # Import Demo Agents (Simulated behavior for E2E test)
@@ -65,7 +66,7 @@ def get_real_llm_client() -> BaseLLMClient:
         # Default to LM Studio if no keys, assuming local setup
         logger.info("No API keys found. Defaulting to LM Studio (Local)")
         # Ensure LM Studio URL is reachable or set env var if needed
-        return LMStudioClient(base_url="http://localhost:1234/v1")
+        return LMStudioClient(base_url=DEFAULT_LMSTUDIO_URL)
 
 
 class LangGraphAgentAdapter:

@@ -136,6 +136,14 @@ class TestSettingsValidators:
             ):
                 Settings()
 
+    def test_lmstudio_url_without_v1_is_normalized(self):
+        settings = self._make_settings(LMSTUDIO_BASE_URL="http://127.0.0.1:1234")
+        assert settings.LMSTUDIO_BASE_URL == "http://127.0.0.1:1234/v1"
+
+    def test_lmstudio_localhost_is_rewritten_to_ipv4(self):
+        settings = self._make_settings(LMSTUDIO_BASE_URL="http://localhost:1234/v1")
+        assert settings.LMSTUDIO_BASE_URL == "http://127.0.0.1:1234/v1"
+
     def test_s3_bucket_too_short(self):
         from src.config.settings import Settings
 

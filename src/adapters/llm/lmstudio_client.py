@@ -15,6 +15,7 @@ from src.config.constants import (
     DEFAULT_LMSTUDIO_MODEL,
     DEFAULT_LMSTUDIO_TIMEOUT,
     DEFAULT_LMSTUDIO_URL,
+    normalize_lmstudio_base_url,
 )
 from src.observability.logging import get_logger
 
@@ -29,6 +30,33 @@ from .exceptions import (
 )
 
 logger = get_logger(__name__)
+
+
+def message_content_to_text(content: object) -> str:
+    """Flatten OpenAI-compat ``message.content`` (string, list, or null)."""
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                text = item.get("text")
+                if text:
+                    parts.append(str(text))
+        return "".join(parts)
+    return str(content)
+
+
+def assistant_message_text(message: dict) -> str:
+    """Visible assistant text, including omni ``reasoning_content`` fallback."""
+    text = message_content_to_text(message.get("content"))
+    if text:
+        return text
+    return message_content_to_text(message.get("reasoning_content"))
 
 
 class LMStudioClient(BaseLLMClient):
@@ -63,7 +91,7 @@ class LMStudioClient(BaseLLMClient):
         Args:
             api_key: Not required for local server (ignored)
             model: Model identifier (often ignored by LM Studio, uses loaded model)
-            base_url: Local server URL (default: http://localhost:1234/v1)
+            base_url: Local server URL (default: http://127.0.0.1:1234/v1)
             timeout: Request timeout in seconds (default longer for local models)
             max_retries: Max retry attempts (fewer for local)
             rate_limit_per_minute: Rate limit for requests per minute (None to disable)
@@ -72,6 +100,7 @@ class LMStudioClient(BaseLLMClient):
 
         # Allow overriding via environment variable
         base_url = base_url or os.environ.get("LMSTUDIO_BASE_URL", self.DEFAULT_BASE_URL)
+        base_url = normalize_lmstudio_base_url(base_url)
 
         super().__init__(
             api_key=api_key or "not-required",  # Placeholder
@@ -254,7 +283,7 @@ class LMStudioClient(BaseLLMClient):
                     finish_reason = choice.get("finish_reason", "stop")
 
                     llm_response = LLMResponse(
-                        text=message.get("content", ""),
+                        text=assistant_message_text(message),
                         usage=usage,
                         model=data.get("model", self.model),
                         raw_response=data,
@@ -328,7 +357,7 @@ class LMStudioClient(BaseLLMClient):
                             try:
                                 data = json.loads(data_str)
                                 delta = data["choices"][0].get("delta", {})
-                                content = delta.get("content", "")
+                                content = message_content_to_text(delta.get("content"))
                                 if content:
                                     yield content
                             except (json.JSONDecodeError, KeyError):

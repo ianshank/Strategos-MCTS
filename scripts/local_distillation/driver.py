@@ -13,6 +13,7 @@ import torch
 from torch import nn
 
 from scripts.local_distillation.collector import HygienicCollector, assert_neural_mcts_teacher
+from scripts.local_distillation.device import place_network
 from scripts.local_distillation.schema import TrajectoryRow
 from scripts.local_distillation.settings import DistillationSettings
 from scripts.local_distillation.sidecar import c4_network_architecture
@@ -37,15 +38,15 @@ class HygienicTrainer:
         buffer_capacity: int | None = None,
     ) -> None:
         assert_neural_mcts_teacher(collector.mcts)
-        self.network = network
+        self.device = settings.device if device is None else device
         self.collector = collector
+        self.network = place_network(network, self.device, mcts=collector.mcts)
         self.settings = settings
         self.rng = rng
-        self.device = settings.device if device is None else device
         capacity = settings.buffer_capacity if buffer_capacity is None else buffer_capacity
         self.buffer: deque[TrajectoryRow] = deque(maxlen=capacity)
         self.loss_fn = AlphaZeroLoss(value_loss_weight=settings.value_loss_weight)
-        self.optimizer = torch.optim.Adam(network.parameters(), lr=settings.learning_rate)
+        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=settings.learning_rate)
 
     async def generate(self, num_games: int, initial_state_fn: Callable[[], GameState]) -> int:
         rows = await self.collector.generate_batch(num_games, initial_state_fn, self.rng)

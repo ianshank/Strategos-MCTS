@@ -320,6 +320,11 @@ def test_the_offline_posture_is_pinned() -> None:
         assert env[name] == value
 
 
+def test_hermetic_env_does_not_leak_parent_llm_provider() -> None:
+    env = hermetic_env(repo_root=REPO_ROOT, base={"LLM_PROVIDER": "lmstudio"})
+    assert env["LLM_PROVIDER"] == "openai"
+
+
 def test_overrides_are_applied_last_and_none_deletes() -> None:
     env = hermetic_env(
         repo_root=REPO_ROOT,
@@ -344,6 +349,28 @@ def test_repo_root_is_prepended_to_pythonpath() -> None:
     # would assert a different property than the one the implementation guarantees.
     assert inherited["PYTHONPATH"].split(os.pathsep)[0] == str(REPO_ROOT)
     assert "/existing" in inherited["PYTHONPATH"]
+
+
+def test_hermetic_env_puts_console_script_dirs_on_path() -> None:
+    """Installed entry points must resolve even when Scripts/ is not on the parent PATH."""
+    import sysconfig
+
+    from tests.utils.e2e_process import console_script_dirs
+
+    env = hermetic_env(repo_root=REPO_ROOT, base={"PATH": "/usr/bin"})
+    parts = env["PATH"].split(os.pathsep)
+    scripts = sysconfig.get_path("scripts")
+    assert scripts in parts
+    assert parts.index(scripts) < parts.index("/usr/bin")
+    assert console_script_dirs()
+
+
+def test_resolve_console_script_finds_installed_entry_point() -> None:
+    from tests.utils.e2e_process import resolve_console_script
+
+    path = resolve_console_script("action-pins")
+    assert os.path.isfile(path)
+    assert "action-pins" in os.path.basename(path).lower()
 
 
 # ---------------------------------------------------------------- the child timeout

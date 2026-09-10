@@ -38,6 +38,7 @@ from tests.utils.e2e_process import (
     DUMMY_PROVIDER_ENV,
     ProcessResult,
     hermetic_env,
+    resolve_console_script,
     run_command,
     run_python_module,
 )
@@ -152,7 +153,9 @@ def run_script(repo_root: Path, e2e_env: Callable[..., dict[str, str]]) -> Calla
         **env_kwargs: Any,
     ) -> ProcessResult:
         env = e2e_env(env_overrides, **env_kwargs)
-        result = run_command(list(argv), env=env, cwd=repo_root, timeout=timeout)
+        argv_list = list(argv)
+        argv_list[0] = resolve_console_script(str(argv_list[0]))
+        result = run_command(argv_list, env=env, cwd=repo_root, timeout=timeout)
         logger.debug("run_script(%s) -> exit %s", argv[0], result.returncode)
         return result
 

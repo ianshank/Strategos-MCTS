@@ -54,6 +54,9 @@ def _mock_settings():
     s.HYBRID_VALUE_CONFIDENCE_THRESHOLD = 0.6
     s.HYBRID_NEURAL_COST_PER_CALL = 0.0001
     s.HYBRID_LLM_COST_PER_1K_TOKENS = 0.03
+    s.LMSTUDIO_MODEL = None
+    s.LMSTUDIO_TIMEOUT = 300.0
+    s.LMSTUDIO_BASE_URL = "http://127.0.0.1:1234/v1"
     return s
 
 
@@ -84,6 +87,12 @@ class TestLLMClientFactory:
         factory = LLMClientFactory(settings=_mock_settings())
         assert factory._get_default_model("lmstudio") == DEFAULT_LMSTUDIO_MODEL
 
+    def test_get_default_model_lmstudio_uses_settings_when_set(self):
+        settings = _mock_settings()
+        settings.LMSTUDIO_MODEL = "nvidia/nemotron-3-nano-omni"
+        factory = LLMClientFactory(settings=settings)
+        assert factory._get_default_model("lmstudio") == "nvidia/nemotron-3-nano-omni"
+
     def test_get_default_model_unknown(self):
         factory = LLMClientFactory(settings=_mock_settings())
         assert factory._get_default_model("unknown") == DEFAULT_OPENAI_MODEL
@@ -104,6 +113,32 @@ class TestLLMClientFactory:
         call_kwargs = mock_create_client.call_args
         assert call_kwargs.kwargs["provider"] == "openai"
         assert call_kwargs.kwargs["model"] == "gpt-4"
+
+    @patch("src.adapters.llm.create_client")
+    def test_create_lmstudio_uses_settings_model_and_timeout(self, mock_create_client):
+        mock_create_client.return_value = MagicMock()
+        settings = _mock_settings()
+        settings.LLM_PROVIDER = "lmstudio"
+        settings.LMSTUDIO_MODEL = "nvidia/nemotron-3-nano-omni"
+        settings.LMSTUDIO_TIMEOUT = 300.0
+        settings.HTTP_TIMEOUT_SECONDS = 30.0
+        factory = LLMClientFactory(settings=settings)
+        factory.create()
+        kwargs = mock_create_client.call_args.kwargs
+        assert kwargs["model"] == "nvidia/nemotron-3-nano-omni"
+        assert kwargs["timeout"] == 300.0
+
+    @patch("src.adapters.llm.create_client")
+    def test_create_from_settings_passes_lmstudio_base_url(self, mock_create_client):
+        mock_create_client.return_value = MagicMock()
+        settings = _mock_settings()
+        settings.LLM_PROVIDER = "lmstudio"
+        settings.LMSTUDIO_MODEL = "nvidia/nemotron-3-nano-omni"
+        factory = LLMClientFactory(settings=settings)
+        factory.create_from_settings()
+        kwargs = mock_create_client.call_args.kwargs
+        assert kwargs["base_url"] == "http://127.0.0.1:1234/v1"
+        assert kwargs["model"] == "nvidia/nemotron-3-nano-omni"
 
 
 @pytest.mark.unit

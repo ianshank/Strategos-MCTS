@@ -87,9 +87,12 @@ class LLMClientFactory:
         """
         from src.adapters.llm import create_client
 
-        provider = provider or self.settings.LLM_PROVIDER
+        if provider is None:
+            provider = self._provider_name()
+        elif hasattr(provider, "value"):
+            provider = str(provider.value)
         model = model or self._get_default_model(provider)
-        timeout = timeout if timeout is not None else self.settings.HTTP_TIMEOUT_SECONDS
+        timeout = timeout if timeout is not None else self._default_timeout(provider)
         max_retries = max_retries if max_retries is not None else self.settings.HTTP_MAX_RETRIES
 
         self.logger.info(f"Creating LLM client: provider={provider}, model={model}")
@@ -109,10 +112,31 @@ class LLMClientFactory:
         Returns:
             Configured LLM client based on environment settings
         """
-        return self.create()
+        extra: dict[str, Any] = {}
+        if self._provider_name() == "lmstudio":
+            base_url = getattr(self.settings, "LMSTUDIO_BASE_URL", None)
+            if base_url:
+                extra["base_url"] = base_url
+        return self.create(**extra)
+
+    def _provider_name(self) -> str:
+        provider = self.settings.LLM_PROVIDER
+        return str(provider.value if hasattr(provider, "value") else provider)
+
+    def _default_timeout(self, provider: str) -> float:
+        if provider == "lmstudio":
+            configured = getattr(self.settings, "LMSTUDIO_TIMEOUT", None)
+            if configured is not None:
+                return float(configured)
+        return float(self.settings.HTTP_TIMEOUT_SECONDS)
 
     def _get_default_model(self, provider: str) -> str:
         """Get default model for a provider."""
+        settings = getattr(self, "settings", None)
+        if provider == "lmstudio" and settings is not None:
+            configured = getattr(settings, "LMSTUDIO_MODEL", None)
+            if configured:
+                return str(configured)
         defaults = {
             "openai": DEFAULT_OPENAI_MODEL,
             "anthropic": DEFAULT_ANTHROPIC_MODEL,

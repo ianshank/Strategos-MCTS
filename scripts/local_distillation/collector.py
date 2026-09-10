@@ -8,6 +8,7 @@ from uuid import uuid4
 import numpy as np
 from torch import nn
 
+from scripts.local_distillation.device import place_network
 from scripts.local_distillation.policy_targets import play_temperature, visits_to_policy
 from scripts.local_distillation.schema import TrajectoryRow, validate_row
 from scripts.local_distillation.settings import DistillationSettings
@@ -157,8 +158,9 @@ def build_mcts(
         temperature_threshold=settings.temperature_threshold,
     )
     owned_rng = rng if rng is not None else new_rng(seed)
+    placed = place_network(network, device)
     return NeuralMCTS(
-        network,
+        placed,
         config,
         device=device,
         single_agent=single_agent,

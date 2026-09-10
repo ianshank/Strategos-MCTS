@@ -32,6 +32,22 @@ def test_c4_architecture_pins_shape_and_blocks() -> None:
     validate_c4_sidecar({"network": arch}, settings)
 
 
+def test_sidecar_num_res_blocks_must_match_settings() -> None:
+    settings = DistillationSettings()
+    network = c4_network_architecture(settings)
+    network["num_res_blocks"] = int(settings.num_res_blocks) + 1
+    with pytest.raises(SidecarError, match="num_res_blocks"):
+        validate_c4_sidecar({"network": network}, settings)
+
+
+def test_sidecar_num_channels_must_match_settings() -> None:
+    settings = DistillationSettings()
+    network = c4_network_architecture(settings)
+    network["num_channels"] = int(settings.num_channels) + 1
+    with pytest.raises(SidecarError, match="num_channels"):
+        validate_c4_sidecar({"network": network}, settings)
+
+
 def test_missing_board_rows_is_error() -> None:
     settings = DistillationSettings()
     network = c4_network_architecture(settings)

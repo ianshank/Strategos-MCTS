@@ -10,6 +10,11 @@ import torch
 from src.agents.meta_controller.base import MetaControllerFeatures
 
 
+def controller_initialized_extra(*, seed: int, name: str) -> dict[str, object]:
+    """Logger extra for controller init. Never use LogRecord-reserved key ``name``."""
+    return {"seed": seed, "controller_name": name}
+
+
 def normalize_features(features: MetaControllerFeatures) -> list[float]:
     """
     Normalize meta-controller features to a 10-dimensional vector in range [0, 1].

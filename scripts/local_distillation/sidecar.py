@@ -51,4 +51,8 @@ def validate_c4_sidecar(meta: dict[str, Any], settings: DistillationSettings) ->
         raise SidecarError("sidecar board_rows/board_cols must be Connect Four 6×7")
     if int(network["action_size"]) != settings.action_size:
         raise SidecarError("sidecar action_size does not match Connect Four")
+    if int(network["num_res_blocks"]) != settings.num_res_blocks:
+        raise SidecarError("sidecar num_res_blocks does not match settings")
+    if int(network["num_channels"]) != settings.num_channels:
+        raise SidecarError("sidecar num_channels does not match settings")
     return network

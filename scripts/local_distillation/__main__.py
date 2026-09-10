@@ -12,6 +12,7 @@ import sys
 from typing import Any
 
 from scripts.local_distillation.collector import HygienicCollector, build_mcts
+from scripts.local_distillation.device import place_network
 from scripts.local_distillation.eval_arms import (
     COMMITTED_RESULTS_RELATIVE_PATH,
     PRIMARY_ENDPOINT,
@@ -86,7 +87,7 @@ async def _compare_arms(settings: DistillationSettings, *, simulations: int | No
     """Toy domain only — provenance random-weights, not a C4 golden-path result."""
     sims = simulations if simulations is not None else settings.default_simulations
     logger.info("local distillation command", command="compare-arms", domain="toy_two_ply")
-    network = CountingNet()
+    network = place_network(CountingNet(), settings.device)
     toy_settings = DistillationSettings(
         default_simulations=sims,
         temperature_threshold=settings.temperature_threshold,
@@ -103,7 +104,6 @@ async def _compare_arms(settings: DistillationSettings, *, simulations: int | No
         TwoPlyState(),
         num_simulations=sims,
         device=settings.device,
-        rng=rng,
         repeat_cap=settings.wall_clock_repeat_cap,
     )
     json.dump(

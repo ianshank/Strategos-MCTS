@@ -458,6 +458,25 @@ class InferenceServer:
         uvicorn.run(self.app, host=self.host, port=self.port)
 
 
+def _place_inference_model(model: object, device: str) -> None:
+    """Move a loaded occupant onto ``device``.
+
+    No-Spec: NeuralMCTS exposes ``device`` and ``network`` but is not an
+    ``nn.Module``, so ``hasattr(model, "to")`` misses the search tree.
+    """
+    mover = getattr(model, "to", None)
+    if callable(mover):
+        mover(device)
+    if hasattr(model, "device"):
+        model.device = device
+    wrapped = getattr(model, "network", None)
+    if wrapped is not None and wrapped is not model:
+        wrapped_to = getattr(wrapped, "to", None)
+        if callable(wrapped_to):
+            wrapped_to(device)
+    logger.debug("Placed inference occupant on device %s", device)
+
+
 def main():
     """Main entry point for inference server."""
     import argparse
@@ -493,8 +512,7 @@ def main():
         server.config.device = args.device
         # Move models to the correct device
         for model in server.models.values():
-            if hasattr(model, "to"):
-                model.to(args.device)
+            _place_inference_model(model, args.device)
 
     server.run()
 

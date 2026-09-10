@@ -19,7 +19,8 @@ from src.adapters.llm.exceptions import (
     LLMStreamError,
     LLMTimeoutError,
 )
-from src.adapters.llm.lmstudio_client import LMStudioClient
+from src.adapters.llm.lmstudio_client import LMStudioClient, assistant_message_text, message_content_to_text
+from src.config.constants import normalize_lmstudio_base_url
 
 
 @pytest.fixture
@@ -97,6 +98,24 @@ class TestLMStudioClientInit:
         """Test custom API key is stored when provided."""
         client = LMStudioClient(api_key="custom-local-key")
         assert client.api_key == "custom-local-key"
+
+    def test_base_url_without_v1_is_normalized(self):
+        client = LMStudioClient(base_url="http://127.0.0.1:1234")
+        assert client.base_url == "http://127.0.0.1:1234/v1"
+
+    def test_normalize_lmstudio_base_url_is_idempotent(self):
+        assert normalize_lmstudio_base_url("http://127.0.0.1:1234/v1/") == "http://127.0.0.1:1234/v1"
+
+    def test_normalize_rewrites_localhost_to_ipv4_loopback(self):
+        assert normalize_lmstudio_base_url("http://localhost:1234") == "http://127.0.0.1:1234/v1"
+        assert normalize_lmstudio_base_url("http://LOCALHOST:1234/v1/") == "http://127.0.0.1:1234/v1"
+
+    def test_normalize_leaves_non_loopback_hosts(self):
+        assert normalize_lmstudio_base_url("http://myhost:5000") == "http://myhost:5000/v1"
+
+    def test_client_rewrites_localhost_base_url(self):
+        client = LMStudioClient(base_url="http://localhost:1234/v1")
+        assert client.base_url == "http://127.0.0.1:1234/v1"
 
 
 @pytest.mark.unit
@@ -292,6 +311,72 @@ class TestLMStudioGenerate:
         assert result.text == "Hello from local model"
         assert result.total_tokens == 15
         assert result.finish_reason == "stop"
+
+    def test_message_content_to_text_handles_omni_list_and_null(self):
+        assert message_content_to_text(None) == ""
+        assert message_content_to_text("plain") == "plain"
+        assert (
+            message_content_to_text([{"type": "text", "text": "hello"}, {"type": "text", "text": " world"}])
+            == "hello world"
+        )
+        assert assistant_message_text({"content": "", "reasoning_content": "hidden then ping"}) == "hidden then ping"
+
+    @pytest.mark.asyncio
+    async def test_generate_flattens_omni_content_list(self, client):
+        payload = {
+            "id": "chatcmpl-omni",
+            "object": "chat.completion",
+            "model": "test-local-model",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": "omni-ok"}],
+                    },
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = payload
+        mock_http = AsyncMock()
+        mock_http.post = AsyncMock(return_value=mock_response)
+        mock_http.is_closed = False
+        client._client = mock_http
+        result = await client.generate(prompt="Hello")
+        assert result.text == "omni-ok"
+
+    @pytest.mark.asyncio
+    async def test_generate_falls_back_to_reasoning_content(self, client):
+        payload = {
+            "id": "chatcmpl-reason",
+            "object": "chat.completion",
+            "model": "test-local-model",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "",
+                        "reasoning_content": "the answer is ping",
+                    },
+                    "finish_reason": "length",
+                }
+            ],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 8, "total_tokens": 9},
+        }
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = payload
+        mock_http = AsyncMock()
+        mock_http.post = AsyncMock(return_value=mock_response)
+        mock_http.is_closed = False
+        client._client = mock_http
+        result = await client.generate(prompt="Hello")
+        assert result.text == "the answer is ping"
 
     @pytest.mark.asyncio
     async def test_generate_with_messages(self, client, mock_success_response):
