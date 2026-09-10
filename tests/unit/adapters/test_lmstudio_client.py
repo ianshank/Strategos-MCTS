@@ -800,6 +800,36 @@ class TestLMStudioGenerateStream:
         chunks = [chunk async for chunk in result]
         assert "".join(chunks) == "ABC"
 
+    @pytest.mark.asyncio
+    async def test_stream_falls_back_to_reasoning_content_when_no_visible_text_arrives(self, client):
+        _build_stream_mocks(
+            client,
+            [
+                'data: {"choices":[{"delta":{"reasoning_content":"think"}}]}',
+                'data: {"choices":[{"delta":{"reasoning_content":" step"}}]}',
+                "data: [DONE]",
+            ],
+        )
+
+        result = await client.generate(prompt="test", stream=True)
+        chunks = [chunk async for chunk in result]
+        assert chunks == ["think", " step"]
+
+    @pytest.mark.asyncio
+    async def test_stream_discards_buffered_reasoning_once_visible_text_arrives(self, client):
+        _build_stream_mocks(
+            client,
+            [
+                'data: {"choices":[{"delta":{"reasoning_content":"hidden"}}]}',
+                'data: {"choices":[{"delta":{"content":"shown"}}]}',
+                "data: [DONE]",
+            ],
+        )
+
+        result = await client.generate(prompt="test", stream=True)
+        chunks = [chunk async for chunk in result]
+        assert chunks == ["shown"]
+
 
 @pytest.mark.unit
 class TestLMStudioGenerateExtraKwargs:

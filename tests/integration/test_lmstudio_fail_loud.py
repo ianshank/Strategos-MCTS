@@ -11,10 +11,10 @@ pytestmark = [pytest.mark.integration, pytest.mark.enable_socket]
 
 
 @pytest.mark.asyncio
-async def test_closed_port_raises_connection_error_without_mock() -> None:
+async def test_closed_port_raises_connection_error_without_mock(unused_tcp_port: int) -> None:
     client = LMStudioClient(
         model="unused-model",
-        base_url="http://127.0.0.1:9/v1",
+        base_url=f"http://127.0.0.1:{unused_tcp_port}/v1",
         timeout=1.0,
         max_retries=1,
     )

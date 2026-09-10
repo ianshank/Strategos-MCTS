@@ -31,6 +31,12 @@ def test_device_env_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.device == "cuda"
 
 
+def test_lowercase_device_env_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("local_distillation_device", "cuda")
+    settings = DistillationSettings()
+    assert settings.device == "cpu"
+
+
 def test_buffer_capacity_and_schema_version_match_schema_constant() -> None:
     settings = DistillationSettings()
     assert settings.schema_version == SCHEMA_VERSION

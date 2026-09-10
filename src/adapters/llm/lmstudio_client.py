@@ -348,6 +348,8 @@ class LMStudioClient(BaseLLMClient):
                         await response.aread()
                         self._handle_error_response(response)
 
+                    saw_visible_content = False
+                    buffered_reasoning_chunks: list[str] = []
                     async for line in response.aiter_lines():
                         if line.startswith("data: "):
                             data_str = line[6:]
@@ -359,9 +361,19 @@ class LMStudioClient(BaseLLMClient):
                                 delta = data["choices"][0].get("delta", {})
                                 content = message_content_to_text(delta.get("content"))
                                 if content:
+                                    saw_visible_content = True
+                                    buffered_reasoning_chunks.clear()
                                     yield content
+                                    continue
+                                reasoning_content = message_content_to_text(delta.get("reasoning_content"))
+                                if reasoning_content and not saw_visible_content:
+                                    buffered_reasoning_chunks.append(reasoning_content)
                             except (json.JSONDecodeError, KeyError):
                                 continue
+
+                    if not saw_visible_content:
+                        for reasoning_chunk in buffered_reasoning_chunks:
+                            yield reasoning_chunk
 
             except httpx.TimeoutException as e:
                 raise LLMTimeoutError(self.PROVIDER_NAME, self.timeout) from e

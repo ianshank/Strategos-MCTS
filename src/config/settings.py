@@ -10,6 +10,8 @@ Provides:
 """
 
 from enum import Enum
+from ipaddress import ip_address
+from urllib.parse import urlsplit
 
 from pydantic import (
     Field,
@@ -722,9 +724,14 @@ class Settings(BaseSettings):
             if not v.startswith(("http://", "https://")):
                 raise ValueError("LM Studio base URL must start with http:// or https://")
             normalized = normalize_lmstudio_base_url(v)
-            # Warn if not loopback (potential security concern). Check the
-            # rewritten URL so ``localhost`` → ``127.0.0.1`` still counts.
-            if not any(host in normalized.lower() for host in ("localhost", "127.0.0.1", "::1")):
+            hostname = urlsplit(normalized).hostname
+            is_loopback = False
+            if hostname is not None:
+                try:
+                    is_loopback = ip_address(hostname).is_loopback
+                except ValueError:
+                    is_loopback = hostname.lower() == "localhost"
+            if not is_loopback:
                 import warnings
 
                 warnings.warn(
