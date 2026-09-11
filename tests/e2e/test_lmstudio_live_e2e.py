@@ -11,7 +11,7 @@ import pytest
 
 from src.adapters.llm.lmstudio_client import LMStudioClient
 
-pytestmark = [pytest.mark.e2e, pytest.mark.live]
+pytestmark = [pytest.mark.e2e, pytest.mark.live, pytest.mark.enable_socket]
 
 
 def _live_client() -> LMStudioClient:
