@@ -143,7 +143,7 @@ openai~=1.0.0  # OpenAI API for knowledge extraction
 langchain~=0.0.300  # LangGraph integration
 
 # Graph Databases (Optional)
-neo4j~=5.0.0  # Neo4j graph database driver
+neo4j>=5.0,<6.4  # Neo4j graph database driver
 
 
 # =============================================================================
