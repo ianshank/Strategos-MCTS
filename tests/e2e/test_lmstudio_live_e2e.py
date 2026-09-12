@@ -10,6 +10,7 @@ import os
 import pytest
 
 from src.adapters.llm.lmstudio_client import LMStudioClient
+from src.config.constants import DEFAULT_LMSTUDIO_TIMEOUT, DEFAULT_LMSTUDIO_URL
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live, pytest.mark.enable_socket]
 
@@ -17,8 +18,8 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live, pytest.mark.enable_socket]
 def _live_client() -> LMStudioClient:
     return LMStudioClient(
         model=os.environ.get("LMSTUDIO_MODEL", "nvidia/nemotron-3-nano-omni"),
-        base_url=os.environ.get("LMSTUDIO_BASE_URL", "http://127.0.0.1:1234/v1"),
-        timeout=float(os.environ.get("LMSTUDIO_TIMEOUT", "300")),
+        base_url=os.environ.get("LMSTUDIO_BASE_URL", DEFAULT_LMSTUDIO_URL),
+        timeout=float(os.environ.get("LMSTUDIO_TIMEOUT", str(DEFAULT_LMSTUDIO_TIMEOUT))),
         max_retries=2,
     )
 

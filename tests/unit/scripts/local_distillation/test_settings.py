@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -31,8 +32,15 @@ def test_device_env_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.device == "cuda"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="os.environ is case-insensitive on Windows")
 def test_lowercase_device_env_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("local_distillation_device", "cuda")
+    settings = DistillationSettings()
+    assert settings.device == "cpu"
+
+
+def test_misspelled_device_env_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LOCAL_DISTILLATION_DEVIC", "cuda")
     settings = DistillationSettings()
     assert settings.device == "cpu"
 

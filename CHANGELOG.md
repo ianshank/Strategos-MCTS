@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Windows hermetic e2e resolves console scripts to an absolute path and pins `LLM_PROVIDER=openai` so a live LM Studio shell cannot leak into healthcheck children.
 - Closed-port LM Studio generate fails loud (`LLMConnectionError` or `LLMTimeoutError`); no mock fallback.
-- Meta-controller init logs no longer pass the reserved LogRecord key `name`.
+- Meta-controller init logs go through `controller_initialized_extra` so they cannot pass the reserved LogRecord key `name`.
 
 ### Changed — local distillation hygiene / docs / typecheck
 

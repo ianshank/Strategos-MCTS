@@ -25,9 +25,7 @@ class DistillationSettings(BaseSettings):
         populate_by_name=True,
     )
 
-    schema_version: int = Field(
-        default=SCHEMA_VERSION, ge=1, validation_alias=_distillation_env("SCHEMA_VERSION")
-    )
+    schema_version: int = Field(default=SCHEMA_VERSION, ge=1, validation_alias=_distillation_env("SCHEMA_VERSION"))
     min_simulations: int = Field(default=1, ge=1, validation_alias=_distillation_env("MIN_SIMULATIONS"))
     default_simulations: int = Field(default=8, ge=1, validation_alias=_distillation_env("DEFAULT_SIMULATIONS"))
     temperature_init: float = Field(default=1.0, gt=0.0, validation_alias=_distillation_env("TEMPERATURE_INIT"))

@@ -63,4 +63,4 @@ Classify every failure before patching. Env-identical-to-`origin/main` is not a 
    python -m src.tools.status_artifact --strict
    ```
 5. **Parse Results**:
-   Classify into the RCA ids above (plus typing / serialization / logger leaks when they appear) and write `docs/reviews/` plus `NOTES.md`.
+   Classify into the RCA ids above (plus typing / serialization / logger leaks when they appear) and write under `docs/reviews/`.
