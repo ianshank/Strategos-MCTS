@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -18,6 +19,30 @@ pytestmark = [pytest.mark.unit]
 def test_fractions_must_leave_a_test_remainder() -> None:
     with pytest.raises(ValidationError, match="remainder"):
         DistillationSettings(train_frac=0.9, val_frac=0.2)
+
+
+def test_promotion_min_delta_rejects_negative() -> None:
+    with pytest.raises(ValidationError):
+        DistillationSettings(promotion_min_delta=-0.1)
+
+
+def test_device_env_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LOCAL_DISTILLATION_DEVICE", "cuda")
+    settings = DistillationSettings()
+    assert settings.device == "cuda"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="os.environ is case-insensitive on Windows")
+def test_lowercase_device_env_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("local_distillation_device", "cuda")
+    settings = DistillationSettings()
+    assert settings.device == "cpu"
+
+
+def test_misspelled_device_env_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LOCAL_DISTILLATION_DEVIC", "cuda")
+    settings = DistillationSettings()
+    assert settings.device == "cpu"
 
 
 def test_buffer_capacity_and_schema_version_match_schema_constant() -> None:

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — post-#169 hygiene close-out
+
+- LM Studio `normalize_lmstudio_base_url` rewrites `localhost` → `127.0.0.1` and appends `/v1` (Windows IPv6 `::1` miss). Default and `.env.example` use `http://127.0.0.1:1234/v1`.
+- Distillation student/teacher tensors share `place_network`; inference `--device` is applied as `device_override` before `_load_models` so CUDA checkpoints construct on the requested device (NeuralMCTS is not `nn.Module`).
+- Live LM Studio is opt-in (`REQUIRE_LMSTUDIO=1` / `@pytest.mark.live`); there is no `LMSTUDIO_SKIP`. Factory honors `LMSTUDIO_MODEL` / `LMSTUDIO_TIMEOUT` / `base_url`. Omni `content` list/null plus `reasoning_content` are flattened.
+
+### Fixed — post-#169 adapter and hermetic harness
+
+- Windows hermetic e2e resolves console scripts via `sysconfig` (venv + user scheme, not a Windows-only path) and pins `LLM_PROVIDER=openai` so a live LM Studio shell cannot leak into healthcheck children.
+- Closed-port LM Studio generate fails loud (`LLMConnectionError` or `LLMTimeoutError`); no mock fallback.
+- Meta-controller init logs go through `controller_initialized_extra` so they cannot pass the reserved LogRecord key `name`.
+
 ### Changed — local distillation hygiene / docs / typecheck
 
 - Distillation knobs: `buffer_capacity`, `wall_clock_repeat_cap`, `device`; `schema_version` defaults to `SCHEMA_VERSION`; unused `recurrent_hidden` removed.

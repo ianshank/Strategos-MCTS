@@ -309,3 +309,9 @@ workspace_test/
 .agents/
 .harness/
 
+# Agent / research scratch at repo root (durable RCA lives under docs/reviews/)
+/PLAN.md
+/NOTES.md
+/_tmp_*/
+/_tmp_*.py
+

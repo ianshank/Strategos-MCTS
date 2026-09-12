@@ -147,7 +147,7 @@ def create_client(
         client = create_client("anthropic", model="sonnet")
 
         # Local LM Studio
-        client = create_client("lmstudio", base_url="http://localhost:1234/v1")
+        client = create_client("lmstudio", base_url="http://127.0.0.1:1234/v1")
 
         # With custom settings (use environment variables for keys)
         client = create_client(

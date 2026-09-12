@@ -273,7 +273,7 @@ self._logger.info(
 
 | Issue | Workaround |
 |-------|------------|
-| LMStudio tests fail without local server | Set `LMSTUDIO_SKIP=1` to skip |
+| LMStudio live tests need a local server | Skip unless `REQUIRE_LMSTUDIO=1` (there is no `LMSTUDIO_SKIP`) |
 | `pytest` errors on an unknown marker | `--strict-markers` is on — register it under `[tool.pytest.ini_options] markers` in `pyproject.toml` |
 | `RuntimeError: 'fastapi' is required to collect ...` | `STRICT_OPTIONAL_DEPS` is set — install `.[dev,neural,api]`, or unset the var to skip those modules |
 | Pinecone tests require valid API key | Use mocks in CI, real key locally |
@@ -291,6 +291,8 @@ self._logger.info(
 @pytest.mark.slow          # Tests >10 seconds
 @pytest.mark.benchmark     # Performance tests
 @pytest.mark.property      # Property-based tests
+@pytest.mark.live          # Live local LLM (LM Studio); skip unless REQUIRE_LMSTUDIO=1
+@pytest.mark.enable_socket # Opt-in network for the live/fail-loud lanes
 ```
 
 > **`--strict-markers` is enabled** (`pyproject.toml` `addopts`). An unregistered

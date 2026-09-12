@@ -15,7 +15,7 @@ from src.agents.meta_controller.base import (
     MetaControllerFeatures,
     MetaControllerPrediction,
 )
-from src.agents.meta_controller.utils import features_to_tensor
+from src.agents.meta_controller.utils import controller_initialized_extra, features_to_tensor
 from src.observability.logging import get_logger
 from src.utils.seeding import set_all_seeds
 
@@ -185,7 +185,7 @@ class RNNMetaController(AbstractMetaController):
 
         # Set random seed for reproducibility
         set_all_seeds(seed)
-        logger.info("RNNMetaController initialized", extra={"seed": seed, "controller_name": name})
+        logger.info("RNNMetaController initialized", extra=controller_initialized_extra(seed=seed, name=name))
 
         # Auto-detect device if not specified
         if device is None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 
 import pytest
@@ -11,11 +12,12 @@ from scripts.local_distillation.eval_arms import (
     PRIMARY_ENDPOINT,
     compare_search_vs_no_search,
     decide_promotion,
+    greedy_network_action,
+    repeat_no_search_until,
 )
 from src.config.constants import EVIDENCE_PROVENANCES
 from src.framework.mcts.neural_mcts import NeuralMCTS
 from src.training.system_config import MCTSConfig
-from src.utils.seeding import new_rng
 from tests.unit.scripts.local_distillation.toys import CountingNet, TwoPlyState
 
 pytestmark = [pytest.mark.unit]
@@ -35,7 +37,6 @@ async def test_compare_search_vs_no_search_records_expansions_and_wall_clock() -
         TwoPlyState(),
         num_simulations=4,
         device="cpu",
-        rng=new_rng(0),
     )
     assert comparison.no_search.expansions == 0
     assert comparison.search.expansions == 4
@@ -45,6 +46,20 @@ async def test_compare_search_vs_no_search_records_expansions_and_wall_clock() -
     assert comparison.search.provenance in EVIDENCE_PROVENANCES
     assert comparison.no_search_repeats_in_search_budget >= 0
     assert comparison.primary_endpoint == PRIMARY_ENDPOINT
+
+
+def test_greedy_network_action_restores_training_mode() -> None:
+    """Callers mid-training must not be left in eval() after a no-search arm."""
+    network = CountingNet()
+    network.train()
+    greedy_network_action(network, TwoPlyState(), device="cpu")
+    assert network.training is True
+
+
+def test_repeat_no_search_until_does_not_take_unused_rng() -> None:
+    """Wall-clock repeats are greedy; an unused rng parameter is a fake seam."""
+    assert "rng" not in inspect.signature(repeat_no_search_until).parameters
+    assert "rng" not in inspect.signature(compare_search_vs_no_search).parameters
 
 
 def test_decide_promotion_rejects_degraded_checkpoint() -> None:

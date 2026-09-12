@@ -27,10 +27,12 @@ from dataclasses import dataclass
 import logging
 import os
 from pathlib import Path
+import shutil
 import signal
 import socket
 import subprocess
 import sys
+import sysconfig
 import time
 from typing import Final
 
@@ -58,6 +60,8 @@ HERMETIC_ENV_DEFAULTS: Final[Mapping[str, str]] = {
     "TRANSFORMERS_OFFLINE": "1",
     "TOKENIZERS_PARALLELISM": "false",
     "PYTHONHASHSEED": "0",
+    # Parent shells that just ran the live LM Studio lane must not leak into children.
+    "LLM_PROVIDER": "openai",
 }
 
 #: Secrets a child must never inherit, whatever the parent shell holds.
@@ -93,6 +97,34 @@ STRIPPED_ENV_VARS: Final[tuple[str, ...]] = tuple(
 _KILL_GRACE_SECONDS: Final[float] = 5.0
 
 
+def console_script_dirs() -> tuple[str, ...]:
+    """Directories that hold ``pip install -e .`` console scripts on this interpreter."""
+    dirs: list[str] = []
+    configured = sysconfig.get_path("scripts")
+    if configured:
+        dirs.append(configured)
+    user_scheme = sysconfig.get_preferred_scheme("user")
+    user_scripts = sysconfig.get_path("scripts", scheme=user_scheme)
+    if user_scripts and user_scripts not in dirs:
+        dirs.append(user_scripts)
+    return tuple(dirs)
+
+
+def resolve_console_script(name: str) -> str:
+    """Absolute path to an installed console script.
+
+    Windows ``subprocess`` with a custom ``env`` does not search that env's PATH
+    for the executable, so callers must pass an absolute path.
+    """
+    if os.path.dirname(name):
+        return name
+    search = os.pathsep.join((*console_script_dirs(), os.environ.get("PATH", "")))
+    located = shutil.which(name, path=search)
+    if located:
+        return located
+    raise FileNotFoundError(f"console script {name!r} is not installed (search={search!r})")
+
+
 def subprocess_timeout_seconds() -> float:
     """The per-child timeout, honouring ``E2E_SUBPROCESS_TIMEOUT_SECONDS`` when it parses."""
     raw = os.environ.get(SUBPROCESS_TIMEOUT_ENV, "").strip()
@@ -126,6 +158,9 @@ def hermetic_env(
     env.update(HERMETIC_ENV_DEFAULTS)
     existing_path = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = str(repo_root) if not existing_path else os.pathsep.join([str(repo_root), existing_path])
+    path_prefix = os.pathsep.join(console_script_dirs())
+    inherited_path = env.get("PATH", "")
+    env["PATH"] = path_prefix if not inherited_path else os.pathsep.join([path_prefix, inherited_path])
     for name, value in (overrides or {}).items():
         if value is None:
             env.pop(name, None)

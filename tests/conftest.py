@@ -206,6 +206,8 @@ def pytest_configure(config):
         "mcts: MCTS-related tests",
         "neural: Neural network tests (requires PyTorch)",
         "llm: LLM integration tests",
+        "live: Hits a live local LLM (LM Studio); skip unless REQUIRE_LMSTUDIO=1",
+        "enable_socket: Allow real sockets (pytest-socket); registered for --strict-markers",
         "enterprise: Enterprise use case tests",
         "training: Training pipeline tests",
         "dataset: Dataset integration tests",
@@ -228,6 +230,7 @@ def pytest_collection_modifyitems(config, items):
     skip_slow = pytest.mark.skip(reason="Skipping slow tests (use --runslow to include)")
     skip_neural = pytest.mark.skip(reason="Skipping neural tests (PyTorch not available or SKIP_NEURAL=1)")
     skip_llm = pytest.mark.skip(reason="Skipping LLM tests (no API key or SKIP_LLM=1)")
+    skip_live = pytest.mark.skip(reason="REQUIRE_LMSTUDIO!=1; live LM Studio lane is opt-in")
 
     for item in items:
         # Skip slow tests unless explicitly requested
@@ -249,6 +252,9 @@ def pytest_collection_modifyitems(config, items):
         no_api_keys = not os.environ.get("OPENAI_API_KEY") and not os.environ.get("ANTHROPIC_API_KEY")
         if "llm" in item.keywords and (skip_llm_flag or no_api_keys):
             item.add_marker(skip_llm)
+
+        if "live" in item.keywords and os.environ.get("REQUIRE_LMSTUDIO") != "1":
+            item.add_marker(skip_live)
 
 
 def pytest_addoption(parser):

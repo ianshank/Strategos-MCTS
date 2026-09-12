@@ -10,6 +10,8 @@ Provides:
 """
 
 from enum import Enum
+from ipaddress import ip_address
+from urllib.parse import urlsplit
 
 from pydantic import (
     Field,
@@ -23,11 +25,13 @@ from src.config.constants import (
     DEFAULT_APP_VERSION,
     DEFAULT_CUDA_MEMORY_FRACTION,
     DEFAULT_DEPLOYMENT_ENV,
+    DEFAULT_LMSTUDIO_URL,
     DEPLOYMENT_ENVS,
     FAIL_LOUD_ENFORCED_ENVS,
     MAX_CUDA_MEMORY_FRACTION,
     MIN_CUDA_MEMORY_FRACTION,
     SUPPORTED_CUDA_BACKENDS,
+    normalize_lmstudio_base_url,
 )
 
 
@@ -104,10 +108,12 @@ class Settings(BaseSettings):
 
     # Local LLM Configuration
     LMSTUDIO_BASE_URL: str | None = Field(
-        default="http://localhost:1234/v1", description="LM Studio API base URL for local inference"
+        default=DEFAULT_LMSTUDIO_URL, description="LM Studio API base URL for local inference"
     )
 
-    LMSTUDIO_MODEL: str | None = Field(default=None, description="LM Studio model identifier (e.g., liquid/lfm2-1.2b)")
+    LMSTUDIO_MODEL: str | None = Field(
+        default=None, description="LM Studio model identifier as loaded in the server (optional)"
+    )
 
     # MCTS Configuration with bounds validation
     MCTS_ENABLED: bool = Field(default=True, description="Enable MCTS for agent decision-making")
@@ -717,8 +723,15 @@ class Settings(BaseSettings):
         if v is not None:
             if not v.startswith(("http://", "https://")):
                 raise ValueError("LM Studio base URL must start with http:// or https://")
-            # Warn if not localhost (potential security concern)
-            if not any(host in v for host in ("localhost", "127.0.0.1", "::1")):
+            normalized = normalize_lmstudio_base_url(v)
+            hostname = urlsplit(normalized).hostname
+            is_loopback = False
+            if hostname is not None:
+                try:
+                    is_loopback = ip_address(hostname).is_loopback
+                except ValueError:
+                    is_loopback = hostname.lower() == "localhost"
+            if not is_loopback:
                 import warnings
 
                 warnings.warn(
@@ -726,6 +739,7 @@ class Settings(BaseSettings):
                     UserWarning,
                     stacklevel=2,
                 )
+            return normalized
         return v
 
     @field_validator("OTEL_EXPORTER_OTLP_ENDPOINT")

@@ -11,6 +11,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from scripts.local_distillation.device import place_network
 from scripts.local_distillation.settings import DistillationSettings
 from src.models.policy_value_net import PolicyHead, PolicyValueNetwork, ResidualBlock, ValueHead
 from src.training.system_config import NeuralNetworkConfig
@@ -88,5 +89,7 @@ class RecurrentPolicyValue(nn.Module):
 def build_student(settings: DistillationSettings) -> nn.Module:
     """FF ``PolicyValueNetwork`` unless ``recurrent_enabled`` is set (default off)."""
     if settings.recurrent_enabled:
-        return RecurrentPolicyValue(settings)
-    return build_policy_value_network(settings)
+        student: nn.Module = RecurrentPolicyValue(settings)
+    else:
+        student = build_policy_value_network(settings)
+    return place_network(student, settings.device)

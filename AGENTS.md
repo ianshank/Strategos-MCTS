@@ -122,6 +122,7 @@ Fixtures: `tests/fixtures/harness_fixtures.py` (helpers), `tests/integration/har
 - `MEMORY.md` is a derived view. Never write it directly; append events via `MarkdownMemoryStore.append_event` and let the compactor materialise.
 - Hook ordering follows `cost_class` (cheap → expensive). Stable insertion order tie-breaks.
 - `case_sensitive=True` on settings — env vars must match field names exactly.
+- Live LM Studio is opt-in (`REQUIRE_LMSTUDIO=1`); never in `tests/unit/`. There is no `LMSTUDIO_SKIP`.
 
 ## Pointers to deeper docs
 

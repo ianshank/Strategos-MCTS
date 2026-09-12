@@ -519,6 +519,7 @@ class TestInferenceServerMain:
             config=None,
             host="0.0.0.0",
             port=8000,
+            device_override=None,
         )
         mock_server_instance.run.assert_called_once()
 
@@ -534,9 +535,7 @@ class TestInferenceServerMain:
         mock_args.device = "cuda"
         mock_parser.parse_args.return_value = mock_args
 
-        mock_model = MagicMock()
         mock_server = MagicMock()
-        mock_server.models = {"pv": mock_model}
         mock_server_cls.return_value = mock_server
 
         from src.api.inference_server import main
@@ -548,8 +547,48 @@ class TestInferenceServerMain:
             config=None,
             host="localhost",
             port=9090,
+            device_override="cuda",
         )
-        assert mock_server.device == "cuda"
-        assert mock_server.config.device == "cuda"
-        mock_model.to.assert_called_once_with("cuda")
         mock_server.run.assert_called_once()
+
+
+@pytest.mark.unit
+class TestInferenceServerDeviceOverride:
+    """``--device`` must win before factories construct occupants (NeuralMCTS is not nn.Module)."""
+
+    def test_init_forwards_override_into_load_models(self):
+        mock_config = MagicMock()
+        mock_config.device = "cpu"
+        with patch.object(InferenceServer, "_load_models", return_value=(mock_config, {})) as load:
+            with patch("src.api.inference_server.get_settings"):
+                with patch("src.api.inference_server.PerformanceMonitor"):
+                    InferenceServer(checkpoint_path="/fake.pt", device_override="cpu")
+        load.assert_called_once_with("/fake.pt", None, "cpu")
+
+    def test_load_models_constructs_occupants_on_override_device(self):
+        mock_config = MagicMock()
+        mock_config.device = "cuda"
+        mock_config.neural_net.action_size = 7
+        mock_config.neural_net.input_channels = 3
+        mock_pv = MagicMock()
+        mock_hrm = MagicMock()
+        mock_trm = MagicMock()
+        checkpoint = {"policy_value_net": {"layer": "weights"}}
+
+        with patch("src.api.inference_server.torch.load", return_value=checkpoint):
+            with patch("src.models.policy_value_net.create_policy_value_network", return_value=mock_pv) as pv_factory:
+                with patch("src.agents.hrm_agent.create_hrm_agent", return_value=mock_hrm) as hrm_factory:
+                    with patch("src.agents.trm_agent.create_trm_agent", return_value=mock_trm) as trm_factory:
+                        with patch("src.api.inference_server.NeuralMCTS") as mcts_cls:
+                            config, models = InferenceServer._load_models(None, "/ckpt.pt", mock_config, "cpu")
+
+        assert config.device == "cpu"
+        assert pv_factory.call_args.kwargs["device"] == "cpu"
+        assert hrm_factory.call_args.args[1] == "cpu"
+        assert trm_factory.call_args.kwargs["device"] == "cpu"
+        assert mcts_cls.call_args.kwargs["device"] == "cpu"
+        mock_pv.load_state_dict.assert_called_once_with(checkpoint["policy_value_net"])
+        mock_pv.eval.assert_called_once()
+        assert models["policy_value_net"] is mock_pv
+        assert models["hrm_agent"] is mock_hrm
+        assert models["trm_agent"] is mock_trm

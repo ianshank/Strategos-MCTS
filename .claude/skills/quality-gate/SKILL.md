@@ -69,6 +69,10 @@ Notes:
   silent no-op. Register new markers in `pyproject.toml [tool.pytest.ini_options] markers`.
 - All tunables must come from `src/config/settings.py` / `src/config/constants.py` — never hardcode.
 - Unit tests must not make real network/API calls; mock all I/O.
+- Live LM Studio is **not** part of `make gate`. Opt in with `REQUIRE_LMSTUDIO=1` against
+  `tests/e2e/test_lmstudio_live_e2e.py` (see `aqa-regression`). There is no `LMSTUDIO_SKIP`.
+- On Windows, `make` may be absent from PATH (use Git Bash). Invoke pytest as
+  `python -m pytest ... -p no:randomly` so user-site pytest-randomly cannot crash collection.
 - The step-7 and step-8 secret scans are complementary, not redundant: step 7 is instant and
   dependency-free but scoped to `src/`/`kubernetes/` and `sk-`-shaped keys only; step 8 is
   repo-wide and pattern-agnostic (see `docs/reviews/2026-07-31-charter-alignment-audit.md` F-17 for

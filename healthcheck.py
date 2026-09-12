@@ -392,6 +392,7 @@ class HealthChecker:
             try:
                 from src.adapters.llm import create_client
                 from src.adapters.llm.exceptions import LLMClientError
+                from src.config.constants import DEFAULT_LMSTUDIO_URL, normalize_lmstudio_base_url
             except ImportError:
                 return CheckResult(
                     name=f"llm_{provider}",
@@ -426,7 +427,6 @@ class HealthChecker:
                         metadata={"provider": provider, "configured": False},
                     )
             elif provider == "lmstudio":
-                base_url = os.environ.get("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
                 # LMStudio is optional and doesn't require API key
                 pass
 
@@ -466,7 +466,8 @@ class HealthChecker:
                     # Full test would require server to be running
                     import httpx
 
-                    base_url = os.environ.get("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
+                    raw_base_url = os.environ.get("LMSTUDIO_BASE_URL", DEFAULT_LMSTUDIO_URL)
+                    base_url = normalize_lmstudio_base_url(raw_base_url)
                     async with httpx.AsyncClient(timeout=self.timeout) as http_client:
                         response = await http_client.get(f"{base_url}/models")
                         duration_ms = (time.time() - start) * 1000

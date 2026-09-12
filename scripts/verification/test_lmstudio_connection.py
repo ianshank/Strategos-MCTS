@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Test script for LM Studio connection with liquid/lfm2-1.2b model.
+Test script for LM Studio connection with a locally served OpenAI-compat model.
 
 Verifies:
-1. Connection to LM Studio endpoint
+1. Connection to LM Studio ``/v1`` endpoint
 2. Model availability
-3. Basic inference capability
+3. Basic inference (twice at temperature=0)
+MCP/MCTS sections are advisory and do not fail the adapter lane.
 """
 
 import asyncio
@@ -31,9 +32,9 @@ async def test_connection():
         print(f"   Provider: {settings.LLM_PROVIDER}")
         print(f"   Base URL: {settings.LMSTUDIO_BASE_URL}")
         print(f"   Model: {settings.LMSTUDIO_MODEL}")
-        print("   ✓ Configuration loaded successfully")
+        print("   [ok] Configuration loaded successfully")
     except Exception as e:
-        print(f"   ✗ Configuration error: {e}")
+        print(f"   [FAIL] Configuration error: {e}")
         return False
 
     # Test HTTP connection
@@ -46,7 +47,7 @@ async def test_connection():
             response = await client.get(f"{settings.LMSTUDIO_BASE_URL}/models")
             if response.status_code == 200:
                 models_data = response.json()
-                print("   ✓ Connected to LM Studio")
+                print("   [ok] Connected to LM Studio")
                 print("   Available models:")
                 if "data" in models_data:
                     for model in models_data["data"]:
@@ -54,14 +55,14 @@ async def test_connection():
                 else:
                     print(f"      {models_data}")
             else:
-                print(f"   ✗ HTTP {response.status_code}: {response.text}")
+                print(f"   [FAIL] HTTP {response.status_code}: {response.text}")
                 return False
     except httpx.ConnectError as e:
-        print(f"   ✗ Connection failed: {e}")
+        print(f"   [FAIL] Connection failed: {e}")
         print(f"   Make sure LM Studio is running at {settings.LMSTUDIO_BASE_URL}")
         return False
     except Exception as e:
-        print(f"   ✗ Error: {e}")
+        print(f"   [FAIL] Error: {e}")
         return False
 
     # Test LLM client creation
@@ -72,40 +73,48 @@ async def test_connection():
         client = create_client(
             provider="lmstudio",
             base_url=settings.LMSTUDIO_BASE_URL,
-            model=settings.LMSTUDIO_MODEL or "liquid/lfm2-1.2b",
-            timeout=120.0,
+            model=settings.LMSTUDIO_MODEL or "local-model",
+            timeout=settings.LMSTUDIO_TIMEOUT,
             max_retries=3,
         )
-        print("   ✓ LLM client created")
+        print("   [ok] LLM client created")
         print(f"   Model: {client.model}")
     except Exception as e:
-        print(f"   ✗ Client creation error: {e}")
+        print(f"   [FAIL] Client creation error: {e}")
         return False
 
     # Test basic inference
-    print("\n4. Testing inference...")
+    print("\n4. Testing inference (temperature=0, twice)...")
     try:
-        response = await client.generate(
-            prompt="Hello, please respond with a brief greeting.",
-            temperature=0.7,
-            max_tokens=50,
+        first = await client.generate(
+            prompt="Reply with the single word ping.",
+            temperature=0.0,
+            max_tokens=128,
         )
-        print("   ✓ Inference successful")
-        print(f"   Model: {response.model}")
-        print(f"   Response: {response.text[:200]}...")
-        print(f"   Usage: {response.usage}")
+        second = await client.generate(
+            prompt="Reply with the single word ping.",
+            temperature=0.0,
+            max_tokens=128,
+        )
+        if not first.text.strip() or not second.text.strip():
+            print("   [FAIL] Empty generate() text")
+            return False
+        print("   [ok] Inference successful (2 calls)")
+        print(f"   Model: {first.model}")
+        print(f"   Response 1: {first.text[:200]}")
+        print(f"   Response 2: {second.text[:200]}")
     except Exception as e:
-        print(f"   ✗ Inference error: {e}")
+        print(f"   [FAIL] Inference error: {e}")
         return False
 
-    # Test MCP server initialization
-    print("\n5. Testing MCP server...")
+    # Test MCP server initialization (advisory; not adapter QA)
+    print("\n5. Testing MCP server (advisory)...")
     try:
         from tools.mcp.server import MCPServer
 
         mcp_server = MCPServer()
         init_result = await mcp_server.initialize()
-        print("   ✓ MCP server initialized")
+        print("   [ok] MCP server initialized")
         print(f"   Status: {init_result}")
 
         # List available tools
@@ -114,11 +123,10 @@ async def test_connection():
         for tool in tools:
             print(f"      - {tool['name']}: {tool['description'][:50]}...")
     except Exception as e:
-        print(f"   ✗ MCP server error: {e}")
-        return False
+        print(f"   ! MCP server skipped: {e}")
 
     # Test MCTS with LM Studio
-    print("\n6. Testing MCTS engine...")
+    print("\n6. Testing MCTS engine (advisory)...")
     try:
         from src.framework.mcts.config import FAST_CONFIG
         from src.framework.mcts.core import MCTSEngine, MCTSNode, MCTSState
@@ -156,19 +164,15 @@ async def test_connection():
             rollout_policy=rollout_policy,
         )
 
-        print("   ✓ MCTS engine working")
+        print("   [ok] MCTS engine working")
         print(f"   Best action: {best_action}")
         print(f"   Iterations: {stats.get('total_iterations', 0)}")
         print(f"   Seed: {stats.get('seed', 'N/A')}")
     except Exception as e:
-        print(f"   ✗ MCTS engine error: {e}")
-        import traceback
-
-        traceback.print_exc()
-        return False
+        print(f"   ! MCTS engine skipped: {e}")
 
     print("\n" + "=" * 60)
-    print("✓ All tests passed! LM Studio integration is working.")
+    print("[ok] Adapter checks passed. LM Studio integration is working.")
     print("=" * 60)
 
     print("\nQuick Start:")
@@ -180,7 +184,7 @@ async def test_connection():
     print("     client = create_client('lmstudio')")
     print("     response = await client.generate(prompt='Your query')")
     print("")
-    print(f"  3. Model: {settings.LMSTUDIO_MODEL or 'liquid/lfm2-1.2b'}")
+    print(f"  3. Model: {settings.LMSTUDIO_MODEL or 'local-model'}")
     print(f"  4. Endpoint: {settings.LMSTUDIO_BASE_URL}")
 
     return True

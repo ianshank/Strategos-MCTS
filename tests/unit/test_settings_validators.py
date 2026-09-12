@@ -2,6 +2,7 @@
 
 import os
 from unittest.mock import patch
+import warnings
 
 import pytest
 
@@ -135,6 +136,21 @@ class TestSettingsValidators:
                 },
             ):
                 Settings()
+
+    def test_lmstudio_url_without_v1_is_normalized(self):
+        settings = self._make_settings(LMSTUDIO_BASE_URL="http://127.0.0.1:1234")
+        assert settings.LMSTUDIO_BASE_URL == "http://127.0.0.1:1234/v1"
+
+    def test_lmstudio_localhost_is_rewritten_to_ipv4(self):
+        settings = self._make_settings(LMSTUDIO_BASE_URL="http://localhost:1234/v1")
+        assert settings.LMSTUDIO_BASE_URL == "http://127.0.0.1:1234/v1"
+
+    def test_lmstudio_warning_checks_hostname_not_url_substrings(self):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            self._make_settings(LMSTUDIO_BASE_URL="http://127.0.0.1.example.com:1234/v1?via=127.0.0.1")
+        assert len(caught) == 1
+        assert "non-localhost" in str(caught[0].message)
 
     def test_s3_bucket_too_short(self):
         from src.config.settings import Settings

@@ -99,4 +99,6 @@ CPU and accelerator kernels reduce in different orders. Assert instead:
 - `tests/README.md` — the e2e contract and the fixtures.
 - `docs/plans/2026-09-04-e2e-device-agnostic.md` — why the matrix is static, what two
   adversarial reviews changed, and the defects the suite surfaced.
+- Distillation tensors on the fixture device: `tests/e2e/test_local_distillation_device_e2e.py`
+  (CLI: `tests/e2e/test_local_distillation_cli_e2e.py`).
 - `quality-gate` skill — the full local gate, which includes `make test-e2e`.

@@ -10,6 +10,7 @@ configuration-related code throughout the project.
 from __future__ import annotations
 
 from typing import Final
+from urllib.parse import urlsplit, urlunsplit
 
 # ============================================================================
 # MCTS Configuration
@@ -222,12 +223,36 @@ DEFAULT_WANDB_MODE: Final[str] = "online"
 # ============================================================================
 
 DEFAULT_LANGCHAIN_ENDPOINT: Final[str] = "https://api.smith.langchain.com"
-DEFAULT_LMSTUDIO_URL: Final[str] = "http://localhost:1234/v1"
+DEFAULT_LMSTUDIO_URL: Final[str] = "http://127.0.0.1:1234/v1"
 DEFAULT_SERVER_HOST: Final[str] = "0.0.0.0"
 DEFAULT_OPENAI_BASE_URL: Final[str] = "https://api.openai.com/v1"
 DEFAULT_ANTHROPIC_BASE_URL: Final[str] = "https://api.anthropic.com"
 DEFAULT_OTLP_ENDPOINT: Final[str] = "localhost:4317"
 DEFAULT_OTLP_HTTP_ENDPOINT: Final[str] = "http://localhost:4317"
+
+
+def normalize_lmstudio_base_url(url: str) -> str:
+    """Rewrite loopback ``localhost`` to IPv4 and ensure the OpenAI-compat ``/v1``.
+
+    LM Studio serves ``/v1/models`` and ``/v1/chat/completions``. A host-only
+    URL hits ``/models`` and 404s. On Windows, ``localhost`` often resolves to
+    ``::1`` while the server binds ``127.0.0.1``; other hostnames stay as given.
+    """
+    stripped = url.strip().rstrip("/")
+    parts = urlsplit(stripped)
+    netloc = parts.netloc
+    if parts.hostname == "localhost":
+        auth = ""
+        if parts.username is not None:
+            password = "" if parts.password is None else f":{parts.password}"
+            auth = f"{parts.username}{password}@"
+        port = f":{parts.port}" if parts.port is not None else ""
+        netloc = f"{auth}127.0.0.1{port}"
+    path = parts.path.rstrip("/")
+    if not path.endswith("/v1"):
+        path = f"{path}/v1" if path else "/v1"
+    return urlunsplit((parts.scheme, netloc, path, parts.query, parts.fragment))
+
 
 # ============================================================================
 # LLM Provider Defaults

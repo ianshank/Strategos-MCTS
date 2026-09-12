@@ -191,7 +191,8 @@ Full detail: `CLAUDE.md` → "Spec-Driven Development", and `docs/plans/SDD_PLUG
 - **Two similarly-named factory homes.** `src/framework/factories.py` holds the core factories;
   `src/framework/component_factory/` is a *separate* training-factory package, not a replacement.
   Orchestration lives in the `src/framework/graph/` package.
-- **Local test skips.** LMStudio tests need a local server (`LMSTUDIO_SKIP=1` to skip); Pinecone tests
+- **Local test skips.** Live LM Studio tests are opt-in (`REQUIRE_LMSTUDIO=1` in
+  `tests/e2e/test_lmstudio_live_e2e.py`); there is no `LMSTUDIO_SKIP`. Pinecone tests
   need a key or mocks; neural MCTS is slow on CPU (use CUDA or fewer iterations).
 - **Persisted-artifact formats changed.** Substructure library is JSON; the experience buffer is
   written with `torch.save` and restored with `torch.load(..., weights_only=True)` (no pickle). Legacy
