@@ -44,7 +44,7 @@ python-chess>=1.10.0
 
 # Selenium testing (optional - for UI tests)
 selenium>=4.46.0
-webdriver-manager>=4.0.0
+webdriver-manager>=4.1.2
 
 # Note: This demo now uses REAL trained models:
 # - RNN Meta-Controller (models/rnn_meta_controller.pt)
