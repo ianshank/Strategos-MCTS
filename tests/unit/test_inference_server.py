@@ -519,6 +519,7 @@ class TestInferenceServerMain:
             config=None,
             host="0.0.0.0",
             port=8000,
+            device_override=None,
         )
         mock_server_instance.run.assert_called_once()
 
@@ -534,9 +535,7 @@ class TestInferenceServerMain:
         mock_args.device = "cuda"
         mock_parser.parse_args.return_value = mock_args
 
-        mock_model = MagicMock()
         mock_server = MagicMock()
-        mock_server.models = {"pv": mock_model}
         mock_server_cls.return_value = mock_server
 
         from src.api.inference_server import main
@@ -548,15 +547,13 @@ class TestInferenceServerMain:
             config=None,
             host="localhost",
             port=9090,
+            device_override="cuda",
         )
-        assert mock_server.device == "cuda"
-        assert mock_server.config.device == "cuda"
-        mock_model.to.assert_called_once_with("cuda")
         mock_server.run.assert_called_once()
 
     @patch("src.api.inference_server.InferenceServer")
     @patch("argparse.ArgumentParser")
-    def test_main_device_override_sets_neural_mcts_device(self, mock_parser_cls, mock_server_cls):
+    def test_main_passes_device_override_to_server(self, mock_parser_cls, mock_server_cls):
         mock_parser = MagicMock()
         mock_parser_cls.return_value = mock_parser
         mock_args = MagicMock()
@@ -566,22 +563,20 @@ class TestInferenceServerMain:
         mock_args.device = "cuda"
         mock_parser.parse_args.return_value = mock_args
 
-        class _SearchWithoutTo:
-            def __init__(self) -> None:
-                self.device = "cpu"
-                self.network = MagicMock()
-
-        search = _SearchWithoutTo()
         mock_server = MagicMock()
-        mock_server.models = {"mcts": search}
         mock_server_cls.return_value = mock_server
 
         from src.api.inference_server import main
 
         main()
 
-        assert search.device == "cuda"
-        search.network.to.assert_called_once_with("cuda")
+        mock_server_cls.assert_called_once_with(
+            checkpoint_path="/ckpt.pt",
+            config=None,
+            host="localhost",
+            port=9090,
+            device_override="cuda",
+        )
         mock_server.run.assert_called_once()
 
 

@@ -104,6 +104,7 @@ class InferenceServer:
         config: SystemConfig | None = None,
         host: str = DEFAULT_SERVER_HOST,
         port: int = 8000,
+        device_override: str | None = None,
     ):
         """
         Initialize inference server.
@@ -113,6 +114,7 @@ class InferenceServer:
             config: System configuration (loaded from checkpoint if None)
             host: Server host
             port: Server port
+            device_override: Optional device override applied before model loading
         """
         self.checkpoint_path = checkpoint_path
         self.host = host
@@ -120,7 +122,7 @@ class InferenceServer:
         self.start_time = time.time()
 
         # Load models
-        self.config, self.models = self._load_models(checkpoint_path, config)
+        self.config, self.models = self._load_models(checkpoint_path, config, device_override)
         self.device = self.config.device
 
         # Performance monitoring
@@ -155,7 +157,9 @@ class InferenceServer:
         # Setup routes
         self._setup_routes()
 
-    def _load_models(self, checkpoint_path: str, config: SystemConfig | None) -> tuple[SystemConfig, dict[str, Any]]:
+    def _load_models(
+        self, checkpoint_path: str, config: SystemConfig | None, device_override: str | None = None
+    ) -> tuple[SystemConfig, dict[str, Any]]:
         """Load models from checkpoint with error handling."""
         logger.info("Loading models from %s...", checkpoint_path)
 
@@ -172,6 +176,8 @@ class InferenceServer:
         if config is None:
             config_dict = checkpoint.get("config", {})
             config = SystemConfig.from_dict(config_dict)
+        if device_override:
+            config.device = device_override
 
         device = config.device
 
@@ -499,20 +505,13 @@ def main():
 
     args = parser.parse_args()
 
-    # Load config and override device if specified
     server = InferenceServer(
         checkpoint_path=args.checkpoint,
         config=None,  # Always load from checkpoint
         host=args.host,
         port=args.port,
+        device_override=args.device,
     )
-
-    if args.device:
-        server.device = args.device
-        server.config.device = args.device
-        # Move models to the correct device
-        for model in server.models.values():
-            _place_inference_model(model, args.device)
 
     server.run()
 

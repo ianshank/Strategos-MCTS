@@ -29,7 +29,6 @@ import os
 from pathlib import Path
 import shutil
 import signal
-import site
 import socket
 import subprocess
 import sys
@@ -104,10 +103,10 @@ def console_script_dirs() -> tuple[str, ...]:
     configured = sysconfig.get_path("scripts")
     if configured:
         dirs.append(configured)
-    user_base = site.getuserbase()
-    versioned = Path(user_base) / f"Python{sys.version_info.major}{sys.version_info.minor}" / "Scripts"
-    if str(versioned) not in dirs:
-        dirs.append(str(versioned))
+    user_scheme = sysconfig.get_preferred_scheme("user")
+    user_scripts = sysconfig.get_path("scripts", scheme=user_scheme)
+    if user_scripts and user_scripts not in dirs:
+        dirs.append(user_scripts)
     return tuple(dirs)
 
 
