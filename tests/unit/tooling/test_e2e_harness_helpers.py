@@ -365,6 +365,27 @@ def test_hermetic_env_puts_console_script_dirs_on_path() -> None:
     assert console_script_dirs()
 
 
+def test_console_script_dirs_uses_sysconfig_user_scheme(monkeypatch: pytest.MonkeyPatch) -> None:
+    """User-level console scripts must resolve on Linux/macOS, not only Windows PythonXY/Scripts."""
+    import sysconfig
+
+    from tests.utils.e2e_process import console_script_dirs
+
+    def fake_get_path(name: str, scheme: str | None = None, **_kwargs: object) -> str:
+        if name == "scripts" and scheme == "user_test_scheme":
+            return "/tmp/user-scheme-scripts"
+        if name == "scripts" and scheme is None:
+            return "/tmp/venv-scripts"
+        return "/unused"
+
+    monkeypatch.setattr(sysconfig, "get_preferred_scheme", lambda key: "user_test_scheme" if key == "user" else "venv")
+    monkeypatch.setattr(sysconfig, "get_path", fake_get_path)
+
+    dirs = console_script_dirs()
+    assert dirs[0] == "/tmp/venv-scripts"
+    assert "/tmp/user-scheme-scripts" in dirs
+
+
 def test_resolve_console_script_finds_installed_entry_point() -> None:
     from tests.utils.e2e_process import resolve_console_script
 

@@ -176,7 +176,10 @@ class InferenceServer:
         if config is None:
             config_dict = checkpoint.get("config", {})
             config = SystemConfig.from_dict(config_dict)
-        if device_override:
+        if device_override is not None:
+            # Apply before any factory call so CUDA checkpoints can construct on CPU.
+            # Do not re-run validate(): that remaps cuda→cpu when CUDA is absent and
+            # would discard an explicit --device cuda.
             config.device = device_override
 
         device = config.device
@@ -462,25 +465,6 @@ class InferenceServer:
         logger.info("=" * 80)
 
         uvicorn.run(self.app, host=self.host, port=self.port)
-
-
-def _place_inference_model(model: object, device: str) -> None:
-    """Move a loaded occupant onto ``device``.
-
-    No-Spec: NeuralMCTS exposes ``device`` and ``network`` but is not an
-    ``nn.Module``, so ``hasattr(model, "to")`` misses the search tree.
-    """
-    mover = getattr(model, "to", None)
-    if callable(mover):
-        mover(device)
-    if hasattr(model, "device"):
-        model.device = device
-    wrapped = getattr(model, "network", None)
-    if wrapped is not None and wrapped is not model:
-        wrapped_to = getattr(wrapped, "to", None)
-        if callable(wrapped_to):
-            wrapped_to(device)
-    logger.debug("Placed inference occupant on device %s", device)
 
 
 def main():

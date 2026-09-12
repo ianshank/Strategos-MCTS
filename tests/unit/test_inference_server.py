@@ -551,56 +551,44 @@ class TestInferenceServerMain:
         )
         mock_server.run.assert_called_once()
 
-    @patch("src.api.inference_server.InferenceServer")
-    @patch("argparse.ArgumentParser")
-    def test_main_passes_device_override_to_server(self, mock_parser_cls, mock_server_cls):
-        mock_parser = MagicMock()
-        mock_parser_cls.return_value = mock_parser
-        mock_args = MagicMock()
-        mock_args.checkpoint = "/ckpt.pt"
-        mock_args.host = "localhost"
-        mock_args.port = 9090
-        mock_args.device = "cuda"
-        mock_parser.parse_args.return_value = mock_args
-
-        mock_server = MagicMock()
-        mock_server_cls.return_value = mock_server
-
-        from src.api.inference_server import main
-
-        main()
-
-        mock_server_cls.assert_called_once_with(
-            checkpoint_path="/ckpt.pt",
-            config=None,
-            host="localhost",
-            port=9090,
-            device_override="cuda",
-        )
-        mock_server.run.assert_called_once()
-
 
 @pytest.mark.unit
-class TestPlaceInferenceModel:
-    """Direct coverage of ``_place_inference_model`` (NeuralMCTS is not nn.Module)."""
+class TestInferenceServerDeviceOverride:
+    """``--device`` must win before factories construct occupants (NeuralMCTS is not nn.Module)."""
 
-    def test_calls_to_when_present(self):
-        from src.api.inference_server import _place_inference_model
+    def test_init_forwards_override_into_load_models(self):
+        mock_config = MagicMock()
+        mock_config.device = "cpu"
+        with patch.object(InferenceServer, "_load_models", return_value=(mock_config, {})) as load:
+            with patch("src.api.inference_server.get_settings"):
+                with patch("src.api.inference_server.PerformanceMonitor"):
+                    InferenceServer(checkpoint_path="/fake.pt", device_override="cpu")
+        load.assert_called_once_with("/fake.pt", None, "cpu")
 
-        occupant = MagicMock()
-        occupant.network = occupant
-        _place_inference_model(occupant, "cuda")
-        occupant.to.assert_called_once_with("cuda")
+    def test_load_models_constructs_occupants_on_override_device(self):
+        mock_config = MagicMock()
+        mock_config.device = "cuda"
+        mock_config.neural_net.action_size = 7
+        mock_config.neural_net.input_channels = 3
+        mock_pv = MagicMock()
+        mock_hrm = MagicMock()
+        mock_trm = MagicMock()
+        checkpoint = {"policy_value_net": {"layer": "weights"}}
 
-    def test_moves_nested_network_when_occupant_has_no_to(self):
-        from src.api.inference_server import _place_inference_model
+        with patch("src.api.inference_server.torch.load", return_value=checkpoint):
+            with patch("src.models.policy_value_net.create_policy_value_network", return_value=mock_pv) as pv_factory:
+                with patch("src.agents.hrm_agent.create_hrm_agent", return_value=mock_hrm) as hrm_factory:
+                    with patch("src.agents.trm_agent.create_trm_agent", return_value=mock_trm) as trm_factory:
+                        with patch("src.api.inference_server.NeuralMCTS") as mcts_cls:
+                            config, models = InferenceServer._load_models(None, "/ckpt.pt", mock_config, "cpu")
 
-        class _Search:
-            def __init__(self) -> None:
-                self.device = "cpu"
-                self.network = MagicMock()
-
-        search = _Search()
-        _place_inference_model(search, "cuda")
-        assert search.device == "cuda"
-        search.network.to.assert_called_once_with("cuda")
+        assert config.device == "cpu"
+        assert pv_factory.call_args.kwargs["device"] == "cpu"
+        assert hrm_factory.call_args.args[1] == "cpu"
+        assert trm_factory.call_args.kwargs["device"] == "cpu"
+        assert mcts_cls.call_args.kwargs["device"] == "cpu"
+        mock_pv.load_state_dict.assert_called_once_with(checkpoint["policy_value_net"])
+        mock_pv.eval.assert_called_once()
+        assert models["policy_value_net"] is mock_pv
+        assert models["hrm_agent"] is mock_hrm
+        assert models["trm_agent"] is mock_trm
