@@ -517,18 +517,22 @@ class NeuralMCTS:
                 legal_actions = current.state.get_legal_actions()
                 current.expand(policy_probs, legal_actions)
 
-        # Backpropagate
+        self.backpropagate(path, value)
+        return value
+
+    def backpropagate(self, path: list[NeuralMCTSNode], value: float) -> None:
+        """Backup ``value`` along ``path`` (root-to-leaf; processed leaf-to-root).
+
+        Two-player search (``single_agent=False``) flips the sign per ply so each
+        node stores the side-to-move value. Single-agent search keeps the leaf
+        value absolute. Virtual loss is reverted here because ``_simulate`` adds
+        it on the way down.
+        """
         for node_in_path in reversed(path):
             node_in_path.update(value)
             node_in_path.revert_virtual_loss(self.config.virtual_loss)
-
-            # Flip value for opponent in two-player zero-sum games. For single-agent
-            # (non-adversarial) problems the value is shared across the path, so the
-            # negamax flip must be skipped to avoid inverting training targets.
             if not self.single_agent:
                 value = -value
-
-        return value
 
     def select_action(
         self,
