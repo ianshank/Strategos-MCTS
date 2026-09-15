@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Parent AMAF/RAVE is parent side-to-move; `select_child_rave` no longer double-negates it. Parallel virtual loss deters under `negate_child_value=True` (negate Q, then subtract VL). `MAX_VALUE` / `ROBUST_CHILD` / `action_stats["value"]` use parent-perspective Q. `NeuralMCTS()` binds `single_agent=not Settings.MCTS_TWO_PLAYER` when omitted; `RootParallelMCTSEngine` forwards `two_player`. Core `select_child` emits per-child DEBUG logs.
 
+### Changed — hygiene contract amendments (docs/specs; no `src/**`)
+
+- `hygiene_ci_mechanical` is a standing contract: named tests for AC-1..13; remaining open work is `ci.yml` `cache-to` `mode=max` → `mode=min` (AC-10). `pytest-socket` is out of that spec (`module: .github/`).
+- `hygiene_test_triage` AC-4 owns `pytest-socket` (`module: tests/`). The `[dev]` extra now declares `pytest-socket>=0.7.0,<1`; `--disable-socket` on `tests/unit/` collection is still the rest of that AC.
+- `hygiene_delete_framework_cluster` kill list no longer includes live `HarnessAgentAdapter` / `harness/topology/`.
+- `hygiene_mcts_value_semantics` Constraints require branch `spec/hygiene_mcts_value_semantics` without a `No-Spec:` trailer (implemented on that branch; do not reintroduce a trailer).
+- `.trivyignore` dropped stale `CVE-2025-23042` (comment-only expiry is not enforced). Do not ignore the perl-base CRITICAL CVEs; upgrade the package.
+
 ### Fixed — production image perl-base CRITICAL CVEs
 
 - Production `Dockerfile` installs/upgrades `perl-base` on the same `apt-get update` RUN as `curl`, so Debian 13's `5.40.1-6+deb13u1` replaces `5.40.1-6` (CVE-2026-13221, CVE-2026-42496, CVE-2026-8376). Do not ignore those CVEs. Measured red: CI Pipeline run 34705825904. `docs/C4_ARCHITECTURE.md` records that the blocking Trivy scan is cleared by that upgrade, not by `.trivyignore`.
