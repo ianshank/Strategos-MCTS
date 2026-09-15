@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — Docker Deployment sanity smoke timeout
+
+- `scripts/deployment_sanity_check.py` and the sanity job's "Run smoke tests" step no longer run `pytest tests/ -m smoke` (that collection includes `tests/deployment/test_docker_smoke.py` and its 90s health wait, and died at subprocess timeout=60 on run 34705825988). Both now invoke the operational e2e, local-distillation CLI e2e, and demo-pipeline smoke files (~16 tests). Container docker smoke stays on the Container Smoke Tests job. Sanity subprocess timeout is 180s.
+
 ### Changed — post-#169 hygiene close-out
 
 - LM Studio `normalize_lmstudio_base_url` rewrites `localhost` → `127.0.0.1` and appends `/v1` (Windows IPv6 `::1` miss). Default and `.env.example` use `http://127.0.0.1:1234/v1`.

@@ -118,7 +118,12 @@ jobs:
       - name: Run smoke tests
         run: |
           pip install pytest pytest-asyncio
-          pytest tests/ -m smoke -v --tb=short
+          # Explicit paths: do not collect tests/deployment/test_docker_smoke.py
+          # (Container Smoke Tests job). ``-m "smoke and not e2e"`` still collects it.
+          pytest tests/e2e/test_operational_entry_points_e2e.py \
+            tests/e2e/test_local_distillation_cli_e2e.py \
+            tests/integration/test_demo_pipeline.py \
+            -m smoke -q --tb=short
 
   # ===========================================================================
   # Stage 2: Build Docker Images
