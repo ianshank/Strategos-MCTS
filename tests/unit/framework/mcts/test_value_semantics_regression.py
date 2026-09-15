@@ -35,8 +35,16 @@ import pytest
 
 from src.framework.mcts.core import MCTSEngine, MCTSNode, MCTSState
 from src.framework.mcts.neural_policies import PriorsManager, puct, select_child_puct
-from src.framework.mcts.parallel_mcts import ParallelMCTSConfig, ParallelMCTSEngine, VirtualLossNode
+from src.framework.mcts.parallel_mcts import (
+    ParallelMCTSConfig,
+    ParallelMCTSEngine,
+    RootParallelMCTSEngine,
+    VirtualLossNode,
+    create_parallel_mcts,
+)
+from src.framework.mcts.policies import SelectionPolicy
 from src.framework.mcts.progressive_widening import ProgressiveWideningEngine, RAVEConfig, RAVENode
+from src.framework.mcts.scoring import ValueCandidateScorer, candidates_from_action_stats
 
 pytestmark = [pytest.mark.unit]
 
@@ -92,7 +100,7 @@ class TestParallelMCTSNegamaxSelection:
 
 
 class TestProgressiveWideningNegamaxSelection:
-    """``select_child_rave`` must negate both the UCB and RAVE/AMAF terms under negamax."""
+    """``select_child_rave`` must negate UCB Q; parent AMAF is already parent-STM."""
 
     def _tree(self) -> tuple[RAVENode, RAVENode, RAVENode]:
         root = RAVENode(state=_state("root"))
@@ -113,18 +121,26 @@ class TestProgressiveWideningNegamaxSelection:
         assert selected.action == "b"
 
     def test_rave_term_is_also_negated_when_it_dominates(self) -> None:
-        """
-        Overwhelm the mixing weight (beta -> 1) so the RAVE term alone drives the score. RAVE
-        data mirrors the direct value_sum/visits split (opponent-perspective): if only the UCB
-        term were fixed and the RAVE term were left unnegated, this dominant term would
-        silently re-introduce the exact same bug by favoring 'a' again.
-        """
-        root, a, b = self._tree()
-        rave_config = RAVEConfig(min_visits_for_rave=1, rave_constant=0.0)
-        a.rave_visits["a"], a.rave_value_sum["a"] = 100_000, 90_000.0  # rave_value(a) == 0.9
-        b.rave_visits["b"], b.rave_value_sum["b"] = 100_000, 10_000.0  # rave_value(b) == 0.1
+        """Covers hygiene_mcts_value_semantics AC-8 — parent AMAF, not stuffed child dicts.
 
-        selected = root.select_child_rave(rave_config, exploration_weight=0.1, negate_child_value=True)
+        Two-player backup writes parent RAVE as parent-STM (child Q=+0.9 → parent −0.9).
+        Selection must not negate that table again. β→1 (`rave_constant=0`, huge AMAF
+        visits vs child visits) so RAVE alone drives the pick; it must agree with UCB.
+        """
+        engine = ProgressiveWideningEngine(
+            rave_config=RAVEConfig(min_visits_for_rave=1, rave_constant=0.0),
+            two_player=True,
+        )
+        root, a, b = self._tree()
+        engine.backpropagate_with_rave(a, 0.9, ["a"])
+        engine.backpropagate_with_rave(b, 0.1, ["b"])
+        assert root.rave_value_sum["a"] / root.rave_visits["a"] == pytest.approx(-0.9)
+        assert root.rave_value_sum["b"] / root.rave_visits["b"] == pytest.approx(-0.1)
+        # Dominate β without changing the parent-STM mean.
+        root.rave_visits["a"], root.rave_value_sum["a"] = 100_000, -90_000.0
+        root.rave_visits["b"], root.rave_value_sum["b"] = 100_000, -10_000.0
+
+        selected = root.select_child_rave(engine.rave_config, exploration_weight=0.1, negate_child_value=True)
 
         assert selected.action == "b"
 
@@ -364,6 +380,25 @@ class TestSelectionDebugLogging:
         assert len(calls) == 2
         assert all("select_child_puct candidate" in call_args[0][0] for call_args in calls)
 
+    def test_core_selection_logs_one_debug_record_per_child(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Covers hygiene_mcts_value_semantics AC-4 — core ``select_child`` DEBUG."""
+        import src.framework.mcts.core as core_module
+
+        calls: list[tuple[tuple, dict]] = []
+        monkeypatch.setattr(core_module.logger, "debug", lambda *a, **kw: calls.append((a, kw)))
+
+        root = MCTSNode(state=_state("root"))
+        a = root.add_child("a", _state("a"))
+        a.visits, a.value_sum = 5, 3.0
+        b = root.add_child("b", _state("b"))
+        b.visits, b.value_sum = 5, 1.0
+        root.visits = 10
+
+        root.select_child(0.5, negate_child_value=True)
+
+        assert len(calls) == 2
+        assert all("select_child candidate" in call_args[0][0] for call_args in calls)
+
 
 # =============================================================================
 # End-to-end async integration: parallel_search and search wiring is correct
@@ -595,3 +630,186 @@ class TestBackupSignNeuralEngine:
         assert _neural_backup_chain(single_agent=True) == _SINGLE_AGENT_CHAIN
         assert _neural_backup_chain(single_agent=False) == _core_backup_chain(True)
         assert _neural_backup_chain(single_agent=True) == _core_backup_chain(False)
+
+
+# =============================================================================
+# AC-8 / AC-9 / AC-10 / AC-11 — remaining in-module sign holes
+# =============================================================================
+
+
+class TestRaveParentTableBetaZeroNegative:
+    """β=0 (no parent AMAF) must not silently depend on stuffed child RAVE dicts."""
+
+    def test_beta_zero_ignores_child_rave_tables(self) -> None:
+        """Covers hygiene_mcts_value_semantics AC-8 — negative: child tables are not the mix."""
+        root = RAVENode(state=_state("root"))
+        a = RAVENode(state=_state("a"), parent=root, action="a")
+        a.visits, a.value_sum = 50, 45.0
+        b = RAVENode(state=_state("b"), parent=root, action="b")
+        b.visits, b.value_sum = 10, 1.0
+        root.children = [a, b]
+        root.visits = 60
+        a.rave_visits["a"], a.rave_value_sum["a"] = 100_000, 90_000.0
+        b.rave_visits["b"], b.rave_value_sum["b"] = 100_000, 10_000.0
+        # Parent table empty → β=0 → pure negated UCB → 'b'
+        selected = root.select_child_rave(
+            RAVEConfig(min_visits_for_rave=1, rave_constant=0.0),
+            exploration_weight=0.5,
+            negate_child_value=True,
+        )
+        assert selected.action == "b"
+
+
+class TestVirtualLossDetersUnderNegamax:
+    """Covers hygiene_mcts_value_semantics AC-9."""
+
+    def _tree(self, q_a: float, q_b: float) -> tuple[VirtualLossNode, VirtualLossNode, VirtualLossNode]:
+        root = VirtualLossNode(state=_state("root"))
+        a = root.add_child("a", _state("a"))
+        b = root.add_child("b", _state("b"))
+        a.visits = b.visits = 10
+        a.value_sum, b.value_sum = q_a * 10.0, q_b * 10.0
+        root.visits = 20
+        return root, a, b
+
+    def test_virtual_loss_deters_when_negate_child_value_true(self) -> None:
+        root, _a, _b = self._tree(0.5, 0.5)
+        best = root.select_child_with_vl(0.0, negate_child_value=True)
+        best.add_virtual_loss(3.0)
+        selected = root.select_child_with_vl(0.0, negate_child_value=True)
+        assert selected is not best, "VL on the UCB-best child must deter, not attract, under negamax"
+
+    def test_virtual_loss_deters_when_negate_child_value_false(self) -> None:
+        root, _a, _b = self._tree(0.5, 0.5)
+        best = root.select_child_with_vl(0.0, negate_child_value=False)
+        best.add_virtual_loss(3.0)
+        selected = root.select_child_with_vl(0.0, negate_child_value=False)
+        assert selected is not best, "single-agent VL must still deter (sign pin, not 'VL does something')"
+
+    def test_zero_virtual_loss_keeps_negamax_ucb_pick(self) -> None:
+        root, _a, _b = self._tree(0.9, 0.1)
+        assert root.select_child_with_vl(0.0, negate_child_value=True).action == "b"
+
+
+class TestParentPerspectiveFinalsAndScorer:
+    """Covers hygiene_mcts_value_semantics AC-10."""
+
+    def _two_player_root(self) -> tuple[MCTSEngine, MCTSNode]:
+        engine = MCTSEngine(seed=42, two_player=True)
+        root = MCTSNode(state=_state("root"))
+        a = root.add_child("a", _state("a"))
+        b = root.add_child("b", _state("b"))
+        a.visits, a.value_sum = 10, 9.0  # child STM +0.9, opponent-good
+        b.visits, b.value_sum = 10, 1.0  # child STM +0.1
+        root.visits = 20
+        return engine, root
+
+    def test_max_value_and_robust_child_pick_parent_best(self) -> None:
+        engine, root = self._two_player_root()
+        assert engine._select_best_action(root, SelectionPolicy.MAX_VALUE) == "b"
+        assert engine._select_best_action(root, SelectionPolicy.ROBUST_CHILD) == "b"
+
+    def test_max_value_single_agent_keeps_child_argmax(self) -> None:
+        engine = MCTSEngine(seed=42, two_player=False)
+        root = MCTSNode(state=_state("root"))
+        a = root.add_child("a", _state("a"))
+        b = root.add_child("b", _state("b"))
+        a.visits, a.value_sum = 10, 9.0
+        b.visits, b.value_sum = 10, 1.0
+        assert engine._select_best_action(root, SelectionPolicy.MAX_VALUE) == "a"
+
+    def test_action_stats_and_value_scorer_agree_on_parent_q(self) -> None:
+        engine, root = self._two_player_root()
+        stats = engine._compute_statistics(root, 1)
+        assert stats["action_stats"]["b"]["value"] > stats["action_stats"]["a"]["value"]
+        candidates = candidates_from_action_stats(stats["action_stats"])
+        assert ValueCandidateScorer().select_best(candidates, engine_choice="a") == "b"
+
+    def test_parallel_and_pw_action_stats_are_parent_q(self) -> None:
+        """PW and tree-parallel publish the same parent-Q as core."""
+        _engine, core_root = self._two_player_root()
+        core_stats = _engine._compute_statistics(core_root, 1)
+
+        pw = ProgressiveWideningEngine(two_player=True)
+        pw_root = RAVENode(state=_state("root"))
+        pa = RAVENode(state=_state("a"), parent=pw_root, action="a")
+        pb = RAVENode(state=_state("b"), parent=pw_root, action="b")
+        pa.visits, pa.value_sum = 10, 9.0
+        pb.visits, pb.value_sum = 10, 1.0
+        pw_root.children = [pa, pb]
+        pw_root.visits = 20
+        pw_stats = pw._compute_statistics(pw_root, 1)
+
+        parallel = ParallelMCTSEngine(config=ParallelMCTSConfig(two_player=True))
+        vl_root = VirtualLossNode(state=_state("root"))
+        va = vl_root.add_child("a", _state("a"))
+        vb = vl_root.add_child("b", _state("b"))
+        va.visits, va.value_sum = 10, 9.0
+        vb.visits, vb.value_sum = 10, 1.0
+        par_stats = parallel._build_stats_dict(vl_root)
+
+        assert pw_stats["action_stats"]["b"]["value"] == pytest.approx(core_stats["action_stats"]["b"]["value"])
+        assert par_stats["action_stats"]["b"]["value"] == pytest.approx(core_stats["action_stats"]["b"]["value"])
+        assert pw_stats["action_stats"]["b"]["value"] > pw_stats["action_stats"]["a"]["value"]
+
+
+class TestPerspectiveFlagBinding:
+    """Covers hygiene_mcts_value_semantics AC-11."""
+
+    def test_root_parallel_forwards_two_player_false(self) -> None:
+        engine = RootParallelMCTSEngine(num_workers=2, seed=42, two_player=False)
+        assert engine.two_player is False
+        factory = create_parallel_mcts(strategy="root", num_workers=2, seed=42, two_player=False)
+        assert isinstance(factory, RootParallelMCTSEngine)
+        assert factory.two_player is False
+
+    @pytest.mark.asyncio
+    async def test_root_parallel_workers_receive_two_player(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        captured: list[object] = []
+
+        class _RecordingEngine(MCTSEngine):
+            def __init__(self, *args: object, **kwargs: object) -> None:
+                captured.append(kwargs.get("two_player"))
+                super().__init__(*args, **kwargs)  # type: ignore[misc]
+
+        monkeypatch.setattr("src.framework.mcts.core.MCTSEngine", _RecordingEngine)
+        engine = RootParallelMCTSEngine(num_workers=2, seed=7, two_player=False)
+
+        class _Policy:
+            async def evaluate(self, state: MCTSState, rng: np.random.Generator, max_depth: int = 10) -> float:
+                return 0.0
+
+        await engine.parallel_search(
+            initial_state=_state("root"),
+            num_simulations=2,
+            action_generator=lambda _s: [],
+            state_transition=lambda s, _a: s,
+            rollout_policy=_Policy(),  # type: ignore[arg-type]
+            max_rollout_depth=1,
+        )
+        assert captured, "workers must construct MCTSEngine"
+        assert all(flag is False for flag in captured)
+
+    def test_neural_omitted_single_agent_follows_settings(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        torch = pytest.importorskip("torch")
+        nn = torch.nn
+        import src.framework.mcts.neural_mcts as neural_module
+        from src.framework.mcts.neural_mcts import NeuralMCTS
+        from src.training.system_config import MCTSConfig
+
+        class _StubNet(nn.Module):
+            def __init__(self) -> None:
+                super().__init__()
+                self._p = nn.Parameter(torch.zeros(1))
+
+            def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+                return torch.zeros(1, 1), torch.zeros(1, 1)
+
+        class _Settings:
+            MCTS_TWO_PLAYER = False
+
+        monkeypatch.setattr(neural_module, "get_settings", lambda: _Settings())
+        mcts = NeuralMCTS(_StubNet(), MCTSConfig(), device="cpu")
+        assert mcts.single_agent is True
+        mcts_on = NeuralMCTS(_StubNet(), MCTSConfig(), device="cpu", single_agent=False)
+        assert mcts_on.single_agent is False
