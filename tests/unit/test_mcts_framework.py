@@ -627,8 +627,22 @@ class TestMCTSEngine:
         assert grandchild.visits == 1
         assert grandchild.value_sum == 0.6
         assert child.visits == 1
-        assert child.value_sum == 0.6
+        assert child.value_sum == -0.6
         assert root_node.visits == 1
+        assert root_node.value_sum == 0.6
+
+    def test_backpropagate_chain_single_agent_does_not_flip(self, root_node):
+        """two_player=False keeps the leaf value on every ancestor."""
+        engine = MCTSEngine(seed=42, two_player=False)
+        child_state = MCTSState(state_id="child")
+        child = root_node.add_child("a1", child_state)
+        grandchild_state = MCTSState(state_id="grandchild")
+        grandchild = child.add_child("a2", grandchild_state)
+
+        engine.backpropagate(grandchild, 0.6)
+
+        assert grandchild.value_sum == 0.6
+        assert child.value_sum == 0.6
         assert root_node.value_sum == 0.6
 
     def test_backpropagate_accumulates(self, seeded_engine, root_node):
@@ -645,7 +659,7 @@ class TestMCTSEngine:
         assert child.value == pytest.approx(0.6)
 
         assert root_node.visits == 3
-        assert root_node.value_sum == pytest.approx(1.8)
+        assert root_node.value_sum == pytest.approx(-1.8)
 
     @pytest.mark.asyncio
     async def test_simulate_returns_bounded_value(self, seeded_engine, root_node, random_rollout_policy):
@@ -1061,7 +1075,7 @@ class TestMCTSIntegration:
                     return 0.1
                 return 0.5
 
-        engine = MCTSEngine(seed=42)
+        engine = MCTSEngine(seed=42, two_player=False)
         root_state = MCTSState(state_id="root", features={"depth": 0})
         root = MCTSNode(state=root_state, rng=engine.rng)
 
