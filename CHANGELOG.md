@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — Docker Deployment sanity smoke timeout
+
+- `scripts/deployment_sanity_check.py` and the sanity job's "Run smoke tests" step no longer run `pytest tests/ -m smoke` (that collection includes `tests/deployment/test_docker_smoke.py` and its 90s health wait, and died at subprocess timeout=60 on run 34705825988). Both now invoke the operational e2e, local-distillation CLI e2e, and demo-pipeline smoke files (~16 tests). Container docker smoke stays on the Container Smoke Tests job. Sanity subprocess timeout is 180s.
+
 ### Fixed — production image perl-base CRITICAL CVEs
 
 - Production `Dockerfile` installs/upgrades `perl-base` on the same `apt-get update` RUN as `curl`, so Debian 13's `5.40.1-6+deb13u1` replaces `5.40.1-6` (CVE-2026-13221, CVE-2026-42496, CVE-2026-8376). Do not ignore those CVEs. Measured red: CI Pipeline run 34705825904. `docs/C4_ARCHITECTURE.md` records that the blocking Trivy scan is cleared by that upgrade, not by `.trivyignore`.
