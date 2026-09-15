@@ -116,10 +116,10 @@ def test_repository_ledger_grade_counts_are_total() -> None:
 def test_repository_ledger_records_engine_agreement_as_partial() -> None:
     """The charter's engine-agreement claim stays PARTIAL until E2 closes remaining holes.
 
-    Pre-AC-6 the row was FALSE (asymmetric backup). After hygiene_mcts_value_semantics
-    AC-6/AC-7, Q-backup is flag-gated but RAVE, virtual-loss, value-argmax, and
-    GraphBuilder defaults still block PROVEN. A silent promotion to PROVEN is the
-    failure mode the ledger exists to prevent.
+    Pre-AC-6 the row was FALSE (asymmetric backup).     After hygiene_mcts_value_semantics
+    AC-6–AC-11, in-module backup/RAVE/VL/finals/flags are gated but GraphBuilder
+    and factory call sites still inherit default two_player=True. A silent
+    promotion to PROVEN is the failure mode the ledger exists to prevent.
     """
     report = validate(REPO_ROOT)
     engine_rows = [row for row in report.rows if "negamax" in row.claim.lower()]

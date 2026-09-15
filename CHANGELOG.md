@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ParallelMCTSEngine` and `ProgressiveWideningEngine` gate backup negation on `two_player` (selection already did). `core.MCTSEngine` gained the same settings-backed flag (default `Settings.MCTS_TWO_PLAYER=True`) on backup and select. Default core search now negamax-flips; pass `two_player=False` for single-agent. NeuralMCTS was already consistent (`single_agent`).
 - Tests that pinned the old backup (`test_mcts_framework.py` 3-node chain all `0.6`; `test_progressive_widening.py` always-flipped root) now encode the flag. CHARTER §2 demo `test_value_semantics_regression.py` covers backup, not only stuffed-stats selection.
 
+### Fixed — MCTS remaining in-module sign holes (AC-8–AC-11, AC-4)
+
+- Parent AMAF/RAVE is parent side-to-move; `select_child_rave` no longer double-negates it. Parallel virtual loss deters under `negate_child_value=True` (negate Q, then subtract VL). `MAX_VALUE` / `ROBUST_CHILD` / `action_stats["value"]` use parent-perspective Q. `NeuralMCTS()` binds `single_agent=not Settings.MCTS_TWO_PLAYER` when omitted; `RootParallelMCTSEngine` forwards `two_player`. Core `select_child` emits per-child DEBUG logs.
+
 ### Fixed — production image perl-base CRITICAL CVEs
 
 - Production `Dockerfile` installs/upgrades `perl-base` on the same `apt-get update` RUN as `curl`, so Debian 13's `5.40.1-6+deb13u1` replaces `5.40.1-6` (CVE-2026-13221, CVE-2026-42496, CVE-2026-8376). Do not ignore those CVEs. Measured red: CI Pipeline run 34705825904. `docs/C4_ARCHITECTURE.md` records that the blocking Trivy scan is cleared by that upgrade, not by `.trivyignore`.

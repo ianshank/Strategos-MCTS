@@ -119,6 +119,17 @@ class MCTSNode:
                 parent_visits=self.visits,
                 c=exploration_weight,
             )
+            mean_value = (value_sum / child.visits) if child.visits else 0.0
+            exploration_term = score - mean_value if child.visits else score
+            logger.debug(
+                "select_child candidate: action=%s visits=%d value=%.4f exploration=%.4f " "score=%.4f negate=%s",
+                child.action,
+                child.visits,
+                mean_value,
+                exploration_term,
+                score,
+                negate_child_value,
+            )
             if score > best_score:
                 best_score = score
                 best_child = child
@@ -622,28 +633,34 @@ class MCTSEngine:
             return None
 
         if policy == SelectionPolicy.MAX_VISITS:
-            # Most robust: select action with most visits
             best_child = max(root.children, key=lambda c: c.visits)
         elif policy == SelectionPolicy.MAX_VALUE:
-            # Greedy: select action with highest average value
-            best_child = max(root.children, key=lambda c: c.value)
+            # Child Q is side-to-move at the child; two-player finals use parent Q.
+            best_child = max(root.children, key=self._parent_perspective_q)
         elif policy == SelectionPolicy.ROBUST_CHILD:
-            # Robust: require both high visits and high value
-            # Normalize both metrics and combine
-            max_visits = max(c.visits for c in root.children)
-            max_value = max(c.value for c in root.children) or 1.0
-
-            def robust_score(child):
-                visit_score = child.visits / max_visits if max_visits > 0 else 0
-                value_score = child.value / max_value if max_value > 0 else 0
-                return 0.5 * visit_score + 0.5 * value_score
-
-            best_child = max(root.children, key=robust_score)
+            best_child = max(root.children, key=self._robust_child_score(root))
         else:
-            # Default to max visits
             best_child = max(root.children, key=lambda c: c.visits)
 
         return best_child.action
+
+    def _parent_perspective_q(self, child: MCTSNode) -> float:
+        """Mean value from the parent (root-to-move) perspective."""
+        return -child.value if self.two_player else child.value
+
+    def _robust_child_score(self, root: MCTSNode) -> Callable[[MCTSNode], float]:
+        """Visit/value mix on parent-perspective Q so two-player signs stay coherent."""
+        max_visits = max(c.visits for c in root.children)
+        parent_qs = [self._parent_perspective_q(c) for c in root.children]
+        q_min = min(parent_qs)
+        q_span = max(parent_qs) - q_min
+
+        def robust_score(child: MCTSNode) -> float:
+            visit_score = child.visits / max_visits if max_visits > 0 else 0.0
+            value_score = (self._parent_perspective_q(child) - q_min) / q_span if q_span > 0 else 0.0
+            return 0.5 * visit_score + 0.5 * value_score
+
+        return robust_score
 
     def _compute_statistics(
         self,
@@ -665,12 +682,12 @@ class MCTSEngine:
         if root.children:
             best_child = max(root.children, key=lambda c: c.visits)
 
-        # Action statistics
+        # Action statistics — ``value`` is parent-perspective so scorers do not re-negate.
         action_stats = {}
         for child in root.children:
             action_stats[child.action] = {
                 "visits": child.visits,
-                "value": child.value,
+                "value": self._parent_perspective_q(child),
                 "value_sum": child.value_sum,
                 "num_children": len(child.children),
             }
@@ -682,7 +699,7 @@ class MCTSEngine:
             "num_children": len(root.children),
             "best_action": best_child.action if best_child else None,
             "best_action_visits": best_child.visits if best_child else 0,
-            "best_action_value": best_child.value if best_child else 0.0,
+            "best_action_value": self._parent_perspective_q(best_child) if best_child else 0.0,
             "action_stats": action_stats,
             "total_simulations": self.total_simulations,
             "cache_hits": self.cache_hits,

@@ -116,9 +116,9 @@ class ParallelMCTSConfig:
     """
     Treat search as two-player zero-sum (negamax): backpropagation in
     ``ParallelMCTSEngine._run_simulation`` flips the value sign per ply, and selection
-    (``VirtualLossNode.select_child_with_vl``) negates each child's effective value to read
-    it from the parent's perspective. Set False for single-agent search, where values are
-    absolute and neither phase flips the sign.
+    (``VirtualLossNode.select_child_with_vl``) negates each child's stored Q then
+    subtracts virtual loss so a busy child is less attractive. Set False for
+    single-agent search, where values are absolute and neither phase flips the sign.
     """
 
     seed: int = 42
@@ -232,12 +232,10 @@ class VirtualLossNode(MCTSNode):
 
         Args:
             exploration_weight: Exploration constant (c in UCB1)
-            negate_child_value: Negate the child's effective value for two-player (negamax)
-                search. Under the negamax backup in ``ParallelMCTSEngine._run_simulation``,
-                each node's value is stored from the perspective of the side to move AT THAT
-                NODE — i.e. the parent's opponent — so the parent must select on
-                ``-child.effective_value``. Single-agent search stores absolute values and
-                keeps the default (no negation).
+            negate_child_value: Negate the child's stored Q for two-player (negamax)
+                search. Virtual loss is applied *after* that sign so a busy child
+                is less attractive, not more. ``effective_value`` remains child-STM
+                (Q minus VL) for diagnostics; selection does not negate that composite.
 
         Returns:
             Best child node according to UCB1 with virtual loss
@@ -254,9 +252,12 @@ class VirtualLossNode(MCTSNode):
             if vl_child.effective_visits == 0:
                 return vl_child
 
-            # effective_value is stored from the child's own perspective; negate it to read
-            # from the parent's perspective under the two-player negamax convention.
-            exploitation = -vl_child.effective_value if negate_child_value else vl_child.effective_value
+            # Child Q is side-to-move at the child. Virtual loss must *deter* in
+            # parent space: negate only the Q term, then subtract VL. Negating
+            # ``effective_value`` (which already subtracted VL) would attract.
+            total_visits = vl_child.effective_visits
+            signed_sum = -vl_child.value_sum if negate_child_value else vl_child.value_sum
+            exploitation = (signed_sum - vl_child.virtual_loss) / total_visits
             exploration = exploration_weight * math.sqrt(math.log(self.effective_visits) / vl_child.effective_visits)
             score = exploitation + exploration
 
@@ -599,7 +600,7 @@ class ParallelMCTSEngine:
             vl_child = cast(VirtualLossNode, child)
             action_stats[vl_child.action] = {
                 "visits": vl_child.visits,
-                "value": vl_child.value,
+                "value": -vl_child.value if self.two_player else vl_child.value,
                 "effective_visits": vl_child.effective_visits,
             }
 
@@ -644,6 +645,8 @@ class RootParallelMCTSEngine:
         num_workers: int = 4,
         exploration_weight: float = 1.414,
         seed: int = 42,
+        *,
+        two_player: bool | None = None,
     ):
         """
         Initialize root parallel MCTS engine.
@@ -652,10 +655,13 @@ class RootParallelMCTSEngine:
             num_workers: Number of parallel workers
             exploration_weight: UCB1 exploration constant
             seed: Random seed base
+            two_player: Forwarded to each worker ``MCTSEngine``. Defaults to
+                ``Settings.MCTS_TWO_PLAYER``.
         """
         self.num_workers = num_workers
         self.exploration_weight = exploration_weight
         self.seed = seed
+        self.two_player = get_settings().MCTS_TWO_PLAYER if two_player is None else two_player
 
     async def parallel_search(
         self,
@@ -692,6 +698,7 @@ class RootParallelMCTSEngine:
             engine = MCTSEngine(
                 seed=self.seed + worker_id,
                 exploration_weight=self.exploration_weight,
+                two_player=self.two_player,
             )
             root = MCTSNode(
                 state=initial_state,
@@ -745,10 +752,11 @@ class RootParallelMCTSEngine:
                     action_stats[act]["value_sum"] += act_stats["value_sum"]
                     action_stats[act]["num_workers"] += 1
 
-        # Compute average values
+        # Compute average values (parent-perspective when two_player)
         for act in action_stats:
             visits = action_stats[act]["visits"]
-            action_stats[act]["value"] = action_stats[act]["value_sum"] / visits if visits > 0 else 0.0
+            stm_mean = action_stats[act]["value_sum"] / visits if visits > 0 else 0.0
+            action_stats[act]["value"] = -stm_mean if self.two_player else stm_mean
 
         # Select best action (most total visits)
         best_action = max(action_stats.keys(), key=lambda a: action_stats[a]["visits"]) if action_stats else None

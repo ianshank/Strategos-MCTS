@@ -441,7 +441,7 @@ class TestRootParallelMCTSEngine:
 
     def test_merge_results_aggregates(self):
         """_merge_results should aggregate across workers."""
-        engine = RootParallelMCTSEngine(num_workers=2)
+        engine = RootParallelMCTSEngine(num_workers=2, two_player=False)
 
         results = [
             (
@@ -490,7 +490,7 @@ class TestRootParallelMCTSEngine:
 
     def test_merge_results_computes_value(self):
         """Merged results should compute average value per action."""
-        engine = RootParallelMCTSEngine(num_workers=1)
+        engine = RootParallelMCTSEngine(num_workers=1, two_player=False)
 
         results = [
             (
