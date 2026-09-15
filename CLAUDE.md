@@ -402,7 +402,8 @@ Reusable project skills live in `.claude/skills/`: `quality-gate` (full local ga
 `make gate`), `validate-specs`, `coverage-baseline` (STATUS only after green main — never
 revive `planning/`), `validate-context`, `aqa-regression`, `e2e-device-matrix`,
 `gpu-device-auditor`, `validate-claims`, `promotion-gate`, `strategos-primer`,
-`deep-research`. Agents: `selfplay-referee`, `eval-warden`, `spec-review`. Editor hooks
+`deep-research`, `hierarchical-recursive-brainstorm`. Agents: `selfplay-referee`,
+`eval-warden`, `spec-review`. Editor hooks
 (`spec_gate`, `device_literal_gate`, `evidence_gate`) stay warn-mode.
 
 ---
