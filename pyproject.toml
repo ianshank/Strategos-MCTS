@@ -57,6 +57,10 @@ dev = [
     "pytest-mock>=3.11.0",
     "pytest-timeout>=2.1.0",
     "pytest-xdist>=3.3.0",
+    # INV-4 / hygiene_test_triage AC-4: unit tests fail closed on unexpected sockets.
+    # Wiring `--disable-socket` for tests/unit/ is the rest of that AC; the extra
+    # must exist first so the marker's plugin is installable.
+    "pytest-socket>=0.7.0,<1",
     "hypothesis>=6.88.0",
     # Needed by tests/unit/test_ci_workflow_invariants.py to parse the workflow files.
     # Previously only in the `neural` extra, which forced those tests to guard their
