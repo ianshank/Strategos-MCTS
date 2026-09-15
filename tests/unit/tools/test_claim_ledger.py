@@ -113,19 +113,20 @@ def test_repository_ledger_grade_counts_are_total() -> None:
 
 
 @pytest.mark.unit
-def test_repository_ledger_records_the_engine_disagreement_as_false() -> None:
-    """The charter's engine-agreement claim must stay graded FALSE until milestone E2 lands.
+def test_repository_ledger_records_engine_agreement_as_partial() -> None:
+    """The charter's engine-agreement claim stays PARTIAL until E2 closes remaining holes.
 
-    Pinned deliberately. This is the defect that motivated the whole evidence chain, and a silent
-    promotion of this row — without the value-semantics fix — is exactly the failure mode the ledger
-    exists to prevent.
+    Pre-AC-6 the row was FALSE (asymmetric backup).     After hygiene_mcts_value_semantics
+    AC-6–AC-11, in-module backup/RAVE/VL/finals/flags are gated but GraphBuilder
+    and factory call sites still inherit default two_player=True. A silent
+    promotion to PROVEN is the failure mode the ledger exists to prevent.
     """
     report = validate(REPO_ROOT)
     engine_rows = [row for row in report.rows if "negamax" in row.claim.lower()]
     assert engine_rows, "expected a ledger row covering negamax sign handling"
-    assert all(row.grade == CLAIM_GRADE_FALSE for row in engine_rows), (
-        "the negamax-agreement claim is graded above FALSE. If specs/hygiene_mcts_value_semantics "
-        "has landed, update this test in the same change; otherwise the ledger is now wrong."
+    assert all(row.grade == CLAIM_GRADE_PARTIAL for row in engine_rows), (
+        "the negamax-agreement claim is not PARTIAL. If remaining E2 defects closed, "
+        "update this test in the same change; otherwise the ledger is now wrong."
     )
 
 
