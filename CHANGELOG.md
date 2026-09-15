@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — production image perl-base CRITICAL CVEs
+
+- Production `Dockerfile` installs/upgrades `perl-base` on the same `apt-get update` RUN as `curl`, so Debian 13's `5.40.1-6+deb13u1` replaces `5.40.1-6` (CVE-2026-13221, CVE-2026-42496, CVE-2026-8376). Do not ignore those CVEs. Measured red: CI Pipeline run 34705825904.
+
 ### Changed — post-#169 hygiene close-out
 
 - LM Studio `normalize_lmstudio_base_url` rewrites `localhost` → `127.0.0.1` and appends `/v1` (Windows IPv6 `::1` miss). Default and `.env.example` use `http://127.0.0.1:1234/v1`.

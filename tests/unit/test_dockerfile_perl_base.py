@@ -1,0 +1,43 @@
+"""Production image must upgrade perl-base (CI Trivy CRITICAL gate).
+
+CI Pipeline docker-build (run 34705825904) failed on three fixable CRITICAL
+findings in ``perl-base`` 5.40.1-6 on ``python:3.11-slim`` (Debian 13). The
+fixes ship in 5.40.1-6+deb13u1. Dropping Gradio does not unred that job.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+pytestmark = [pytest.mark.unit]
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+PERL_CVES = ("CVE-2026-13221", "CVE-2026-42496", "CVE-2026-8376")
+
+
+def _production_stage(dockerfile: str) -> str:
+    marker = "as production"
+    idx = dockerfile.find(marker)
+    assert idx != -1, "Dockerfile has no production stage"
+    rest = dockerfile[idx + len(marker) :]
+    next_from = rest.find("\nFROM ")
+    return rest if next_from == -1 else rest[:next_from]
+
+
+def test_production_stage_installs_perl_base() -> None:
+    dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
+    production = _production_stage(dockerfile)
+    assert "perl-base" in production, (
+        "production RUN must install/upgrade perl-base after apt-get update "
+        "so the image is at least 5.40.1-6+deb13u1"
+    )
+    assert "apt-get update" in production
+
+
+def test_trivyignore_does_not_accept_perl_base_cves() -> None:
+    ignore = (REPO_ROOT / ".trivyignore").read_text(encoding="utf-8")
+    uncommented = [line.strip() for line in ignore.splitlines() if line.strip() and not line.lstrip().startswith("#")]
+    for cve in PERL_CVES:
+        assert not any(cve in line for line in uncommented), f"{cve} must not be ignored; upgrade perl-base instead"
