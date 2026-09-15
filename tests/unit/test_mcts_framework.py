@@ -900,21 +900,21 @@ class TestMCTSEngine:
         best = seeded_engine._select_best_action(root_node, SelectionPolicy.MAX_VISITS)
         assert best == "action_1"  # Highest visits (50)
 
-    def test_select_best_action_max_value(self, seeded_engine, root_node):
-        """Test _select_best_action with MAX_VALUE policy."""
-        # Add children with different average values
+    def test_select_best_action_max_value(self, root_node):
+        """Single-agent MAX_VALUE is child-Q argmax (two-player is parent-Q; see AC-10)."""
+        engine = MCTSEngine(seed=42, two_player=False)
         for i, (visits, value_sum) in enumerate([(10, 5.0), (10, 9.0), (10, 7.0)]):
             state = MCTSState(state_id=f"child_{i}")
             child = root_node.add_child(f"action_{i}", state)
             child.visits = visits
             child.value_sum = value_sum
 
-        best = seeded_engine._select_best_action(root_node, SelectionPolicy.MAX_VALUE)
-        assert best == "action_1"  # Highest value (0.9)
+        best = engine._select_best_action(root_node, SelectionPolicy.MAX_VALUE)
+        assert best == "action_1"  # Highest child Q (0.9)
 
-    def test_select_best_action_robust_child(self, seeded_engine, root_node):
-        """Test _select_best_action with ROBUST_CHILD policy."""
-        # Add children balancing visits and value
+    def test_select_best_action_robust_child(self, root_node):
+        """ROBUST_CHILD mixes visits with parent-perspective Q."""
+        engine = MCTSEngine(seed=42, two_player=False)
         configs = [
             (50, 25.0),  # High visits, medium value (0.5)
             (30, 24.0),  # Medium visits, high value (0.8)
@@ -926,8 +926,7 @@ class TestMCTSEngine:
             child.visits = visits
             child.value_sum = value_sum
 
-        best = seeded_engine._select_best_action(root_node, SelectionPolicy.ROBUST_CHILD)
-        # Should balance between action_0 (high visits) and action_1 (high value)
+        best = engine._select_best_action(root_node, SelectionPolicy.ROBUST_CHILD)
         assert best in ["action_0", "action_1"]
 
     def test_select_best_action_no_children(self, seeded_engine, root_node):

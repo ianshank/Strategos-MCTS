@@ -202,13 +202,11 @@ class RAVENode(MCTSNode):
         Args:
             rave_config: RAVE configuration
             exploration_weight: UCB exploration constant
-            negate_child_value: Negate the child's UCB and RAVE/AMAF values for two-player
-                (negamax) search. Under the negamax backup in
-                ``ProgressiveWideningEngine.backpropagate_with_rave``, both ``value_sum`` and
-                the RAVE/AMAF statistics are recorded from the perspective of the side to
-                move AT the node — i.e. the parent's opponent — so the parent must select on
-                the negated child value AND negated RAVE value. Single-agent search stores
-                absolute values and keeps the default (no negation).
+            negate_child_value: Negate the child's UCB Q for two-player (negamax)
+                search. Parent AMAF/RAVE is already stored as parent side-to-move
+                (backup writes it after the ply flip), so the RAVE term is **not**
+                negated again. Single-agent search stores absolute values and keeps
+                the default (no UCB negation).
 
         Returns:
             Selected child node
@@ -225,8 +223,8 @@ class RAVENode(MCTSNode):
             if rave_child.visits == 0:
                 return rave_child
 
-            # value and RAVE/AMAF stats are stored from the child's own perspective; negate
-            # both to read them from the parent's perspective under the negamax convention.
+            # UCB Q is child-STM; parent AMAF is already parent-STM after two-player
+            # backup — negating RAVE again would invert the mix relative to UCB.
             ucb_exploitation = -rave_child.value if negate_child_value else rave_child.value
             ucb_exploration = exploration_weight * math.sqrt(math.log(self.visits) / rave_child.visits)
             ucb_score = ucb_exploitation + ucb_exploration
@@ -235,7 +233,7 @@ class RAVENode(MCTSNode):
             child_action = rave_child.action or ""
             rave_visits = self.get_rave_visits(child_action)
             raw_rave_value = self.get_rave_value(child_action)
-            rave_value = -raw_rave_value if negate_child_value else raw_rave_value
+            rave_value = raw_rave_value
 
             # Compute β mixing parameter
             beta = rave_config.compute_beta(rave_child.visits, rave_visits)
@@ -292,10 +290,10 @@ class ProgressiveWideningEngine:
             seed: Random seed for deterministic behavior
             two_player: Treat search as two-player zero-sum (negamax): backpropagation in
                 ``backpropagate_with_rave`` flips the value sign per ply, and selection
-                (``select_child_rave`` via :meth:`select`) negates the child's UCB and
-                RAVE/AMAF values to read them from the parent's perspective. Set False for
-                single-agent search, where values are absolute and neither phase flips sign.
-                Defaults to ``Settings.MCTS_TWO_PLAYER``.
+                (``select_child_rave`` via :meth:`select`) negates the child's UCB Q.
+                Parent AMAF is already parent side-to-move and is not negated again.
+                Set False for single-agent search, where values are absolute and neither
+                phase flips sign. Defaults to ``Settings.MCTS_TWO_PLAYER``.
         """
         self.pw_config = pw_config or ProgressiveWideningConfig()
         self.rave_config = rave_config or RAVEConfig()
@@ -626,7 +624,7 @@ class ProgressiveWideningEngine:
 
             action_stats[child_action] = {
                 "visits": child.visits,
-                "value": child.value,
+                "value": -child.value if self.two_player else child.value,
                 "rave_visits": rave_visits,
                 "rave_value": rave_value,
                 "beta": beta,

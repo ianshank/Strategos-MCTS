@@ -114,6 +114,18 @@ wired from `engine.select`. There is no escape hatch to the broken asymmetric pa
 `two_player=False` at those call sites in a follow-up (this spec's module is
 `src/framework/mcts/`). Until then, default graph search uses negamax on those scores.
 
+In-module follow-ups on the same spec (AC-8–AC-11): parent AMAF is not
+double-negated; parallel virtual loss deters after the Q sign flip;
+`MAX_VALUE`/`ROBUST_CHILD`/`action_stats["value"]` are parent-perspective when
+`two_player=True` (single-agent finals still use child Q); omitted
+`NeuralMCTS(single_agent=)` follows `not Settings.MCTS_TWO_PLAYER`;
+`RootParallelMCTSEngine(two_player=)` is forwarded to worker engines.
+
+Consumers of `action_stats["value"]` under default two-player search now see
+parent Q (previously child STM). `ValueCandidateScorer` therefore agrees with
+`MAX_VALUE` without a second negation. Pass `two_player=False` for the old
+child-Q publication.
+
 ### Benchmarks and the M5 policy-lift gate
 
 No stored benchmark artifact currently depends on `ParallelMCTSEngine` or
