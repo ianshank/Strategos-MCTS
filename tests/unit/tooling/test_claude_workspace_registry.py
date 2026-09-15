@@ -183,3 +183,14 @@ def test_every_agent_declares_its_tool_surface() -> None:
 def test_the_registry_is_not_empty() -> None:
     """Guards the checks above against a glob that silently stops matching."""
     assert _skill_docs() and _agent_docs() and _hook_files()
+
+
+def test_primer_names_every_skill_directory() -> None:
+    """Orientation docs that omit a skill make it undiscoverable.
+
+    ``context_docs`` checks cited paths, not completeness. The primer is the
+    inventory; every ``.claude/skills/*/SKILL.md`` directory name must appear in it.
+    """
+    primer = (SKILLS_DIR / "strategos-primer" / "SKILL.md").read_text(encoding="utf-8")
+    missing = [path.parent.name for path in _skill_docs() if path.parent.name not in primer]
+    assert not missing, f"strategos-primer does not name skill(s): {missing}"

@@ -398,8 +398,13 @@ harness dry-run --spec specs/phase_1_correctness.SPEC.md  # plan only, no LLM
   mappings under `tests/`. Approved specs exist, so the `spec/<id>` branch is the default channel
   and the trailer is the written exception — see `CHARTER.md` §3 NG-4 and §7.
 
-Reusable project skills live in `.claude/skills/`: `quality-gate` (full local gate),
-`validate-specs` (validate all specs), `coverage-baseline` (refresh `docs/STATUS.md`).
+Reusable project skills live in `.claude/skills/`: `quality-gate` (full local gate; prefer
+`make gate`), `validate-specs`, `coverage-baseline` (STATUS only after green main — never
+revive `planning/`), `validate-context`, `aqa-regression`, `e2e-device-matrix`,
+`gpu-device-auditor`, `validate-claims`, `promotion-gate`, `strategos-primer`,
+`deep-research`, `hierarchical-recursive-brainstorm`. Agents: `selfplay-referee`,
+`eval-warden`, `spec-review`. Editor hooks
+(`spec_gate`, `device_literal_gate`, `evidence_gate`) stay warn-mode.
 
 ---
 

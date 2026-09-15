@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — overlay docs / AQA / skill wiring
+
+- Orientation docs (`AGENTS.md`, `CLAUDE.md`, `README.md`, `strategos-primer`) name the real skill/agent/hook set. `aqa-regression` adds CHARTER value-semantics, perl-base, and deploy-sanity pin lanes. `quality-gate` manual pytest uses `TEST_ENV`. `coverage-baseline` no longer writes `planning/milestones.yaml` or `docs/STATUS.md` on a red tree. `.claude/commands/pre-pr.md` delegates to `make gate`. Makefile aliases: `test-value-semantics`, `deploy-sanity`. `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md` points at overlay PRs #171–#174 without a second roadmap.
+
 ### Changed — post-#169 hygiene close-out
 
 - LM Studio `normalize_lmstudio_base_url` rewrites `localhost` → `127.0.0.1` and appends `/v1` (Windows IPv6 `::1` miss). Default and `.env.example` use `http://127.0.0.1:1234/v1`.

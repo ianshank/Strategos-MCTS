@@ -33,6 +33,14 @@
 > God-file splits of `src/config/settings.py`, `src/framework/factories.py`, `healthcheck.py`,
 > and `src/config/constants.py` (already >600 LOC on main) need their own spec — not this hygiene pass.
 >
+> **Overlay PRs (not a second roadmap).** Independent drafts vs `main`: #172 production
+> `perl-base` (blocking Trivy CRITICAL), #173 deploy-sanity smoke paths (180s, no docker
+> smoke), #174 `spec/hygiene_mcts_value_semantics` (in-module sign; CL-1 stays PARTIAL),
+> #171 contract amendments stacked on #174. GraphBuilder `two_player=False` is a **graph**
+> follow-up (`src/framework/graph/`). `ci.yml` `cache-to` `mode=min` remains
+> `hygiene_ci_mechanical` AC-10. Do not regenerate `docs/STATUS.md` until those land on
+> green main. Do not revive `planning/` or restate a parallel wave program.
+>
 > **The roadmap below defines the new frontier for the remainder of H2 2026: Scaling, Advanced Architectures, and Enterprise Developer Experience.**
 
 ---
