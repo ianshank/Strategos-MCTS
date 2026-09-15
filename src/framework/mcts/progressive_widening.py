@@ -469,7 +469,8 @@ class ProgressiveWideningEngine:
 
             parent = current.parent
             current = cast("RAVENode | None", parent)
-            value = -value  # Flip for opponent
+            if self.two_player:
+                value = -value
 
     async def run_iteration(
         self,

@@ -1,33 +1,31 @@
 """
-Value-semantics regression suite for MCTS selection (spec: ``hygiene_mcts_value_semantics``).
+Value-semantics regression suite for MCTS selection and backup
+(spec: ``hygiene_mcts_value_semantics``).
 
-Covers three proven, executable-proof-verified bugs fixed in this phase:
+Covers proven, executable-proof-verified bugs:
 
 1. **PUCT double-division** (``neural_policies.select_child_puct``): Q was divided by visits a
    second time even though ``MCTSNode.value`` is already the mean (``value_sum / visits``) —
    collapsing Q toward 0 as visits grew and turning PUCT into a near-pure exploration bandit.
    Fixed by delegating directly to the canonical ``puct()`` formula.
 2. **Negamax selection sign mismatch** (``ParallelMCTSEngine`` /
-   ``VirtualLossNode.select_child_with_vl``): backpropagation in
-   ``ParallelMCTSEngine._run_simulation`` flips the value sign per ply (negamax), but selection
+   ``VirtualLossNode.select_child_with_vl``): backup flipped per ply but selection
    read the child's stored value without negating it — selecting the move best for the
    OPPONENT, not the root.
 3. The identical sign mismatch in ``ProgressiveWideningEngine`` / ``RAVENode.select_child_rave``,
    which additionally propagated into the RAVE/AMAF mixing term.
+4. **Backup flag mismatch (AC-6 / AC-7):** ``parallel_mcts`` and ``progressive_widening``
+   negated on backup unconditionally (ignoring ``two_player``), while ``core.MCTSEngine``
+   never negated and had no flag. Selection and backup must share one perspective flag.
 
-The fix threads an explicit ``negate_child_value`` parameter through both selection methods
-(engine-level: ``two_player``, settings-backed via ``Settings.MCTS_TWO_PLAYER``, default
-``True``), mirroring the pattern already proven correct in
-``neural_mcts.NeuralMCTSNode.select_child`` — see ``tests/unit/test_neural_mcts_signs.py`` for
-the equivalent invariant on the neural-guided engine, which this phase's fix brings the
-classical engines into parity with.
+The fix threads ``negate_child_value`` / ``two_player`` (settings-backed via
+``Settings.MCTS_TWO_PLAYER``, default ``True``) through selection *and* backup on all
+four engines. NeuralMCTS uses the inverted name ``single_agent`` for the same pair.
 
-``core.MCTSEngine`` / ``core.MCTSNode`` are untouched by this phase (they were never buggy: no
-per-ply sign flip exists on either the backpropagation or selection side, so the two sides were
-already mutually consistent). ``TestCrossEngineSingleAgentParity`` below locks
-``negate_child_value=False`` to mean exactly "matches core's untouched, always-unflipped
-convention" — this is the parity ``strategos_risk_averse_subgoal_scorer`` (which promises a
-bit-for-bit ``core.py`` baseline) can build on.
+``TestCrossEngineSingleAgentParity`` locks ``negate_child_value=False`` to mean
+"matches core's unflipped selection convention." Backup parity is
+``TestBackupSignAndCrossEngineParity`` below — CHARTER.md §2's demo command must
+exercise backup, not only stuffed-stats selection.
 """
 
 from __future__ import annotations
@@ -35,7 +33,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from src.framework.mcts.core import MCTSNode, MCTSState
+from src.framework.mcts.core import MCTSEngine, MCTSNode, MCTSState
 from src.framework.mcts.neural_policies import PriorsManager, puct, select_child_puct
 from src.framework.mcts.parallel_mcts import ParallelMCTSConfig, ParallelMCTSEngine, VirtualLossNode
 from src.framework.mcts.progressive_widening import ProgressiveWideningEngine, RAVEConfig, RAVENode
@@ -181,9 +179,8 @@ class TestCrossEngineSingleAgentParity:
     and ``RAVENode.select_child_rave`` (no RAVE data, ``negate_child_value=False``) all reduce to
     the identical UCB1 formula and must agree on the selected child for the same seeded stats.
 
-    ``core.py`` is untouched by this phase; this test locks ``negate_child_value=False`` to mean
-    exactly "matches core's untouched convention," giving the new parameter concrete, testable
-    meaning rather than an arbitrary label.
+    ``core.py`` unflipped selection is the ``negate_child_value=False`` convention.
+    Backup sign is tested separately in ``TestBackupSignAndCrossEngineParity``.
     """
 
     _EXPLORATION_WEIGHT = 0.7
@@ -461,3 +458,140 @@ class TestTwoPlayerSetting:
         # When constructed without explicit two_player, should read from settings (default True)
         engine = ProgressiveWideningEngine()
         assert engine.two_player is True
+
+    def test_core_engine_reads_settings_when_not_explicit(self) -> None:
+        engine = MCTSEngine(seed=42)
+        assert engine.two_player is True
+
+    def test_core_engine_two_player_false_is_honoured(self) -> None:
+        engine = MCTSEngine(seed=42, two_player=False)
+        assert engine.two_player is False
+
+
+# =============================================================================
+# AC-6 / AC-7: backup honours the perspective flag; four engines agree on value_sum
+# Covers hygiene_mcts_value_semantics AC-6
+# Covers hygiene_mcts_value_semantics AC-7
+# =============================================================================
+
+_LEAF_VALUE = 0.5
+_TWO_PLAYER_CHAIN = (0.5, -0.5, 0.5)  # leaf, mid, root after one 2-ply backup
+_SINGLE_AGENT_CHAIN = (0.5, 0.5, 0.5)
+
+
+def _core_backup_chain(two_player: bool) -> tuple[float, float, float]:
+    engine = MCTSEngine(seed=42, two_player=two_player)
+    root = MCTSNode(state=_state("root"))
+    mid = root.add_child("a", _state("mid"))
+    leaf = mid.add_child("b", _state("leaf"))
+    engine.backpropagate(leaf, _LEAF_VALUE)
+    return leaf.value_sum, mid.value_sum, root.value_sum
+
+
+def _parallel_backup_chain(two_player: bool) -> tuple[float, float, float]:
+    engine = ParallelMCTSEngine(config=ParallelMCTSConfig(two_player=two_player, adaptive_virtual_loss=False))
+    root = VirtualLossNode(state=_state("root"))
+    mid = root.add_child("a", _state("mid"))
+    leaf = mid.add_child("b", _state("leaf"))
+    engine.backpropagate([root, mid, leaf], _LEAF_VALUE)
+    return leaf.value_sum, mid.value_sum, root.value_sum
+
+
+def _pw_backup_chain(two_player: bool) -> tuple[float, float, float]:
+    engine = ProgressiveWideningEngine(two_player=two_player)
+    rng = engine.rng
+    root = RAVENode(state=_state("root"), rng=rng)
+    mid = RAVENode(state=_state("mid"), parent=root, action="a", rng=rng)
+    leaf = RAVENode(state=_state("leaf"), parent=mid, action="b", rng=rng)
+    engine.backpropagate_with_rave(leaf, _LEAF_VALUE, [])
+    return leaf.value_sum, mid.value_sum, root.value_sum
+
+
+def _neural_backup_chain(single_agent: bool) -> tuple[float, float, float]:
+    torch = pytest.importorskip("torch")
+    nn = torch.nn
+    from src.framework.mcts.neural_mcts import GameState, NeuralMCTS, NeuralMCTSNode
+    from src.training.system_config import MCTSConfig
+
+    class _StubNet(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self._p = nn.Parameter(torch.zeros(1))
+
+        def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+            return torch.zeros(1, 1), torch.zeros(1, 1)
+
+    class _Named(GameState):
+        def __init__(self, name: str) -> None:
+            self._name = name
+
+        def get_legal_actions(self) -> list:
+            return []
+
+        def apply_action(self, action: object) -> GameState:
+            return self
+
+        def is_terminal(self) -> bool:
+            return False
+
+        def get_reward(self, player: int = 1) -> float:
+            return 0.0
+
+        def to_tensor(self) -> torch.Tensor:
+            return torch.zeros(1)
+
+        def get_hash(self) -> str:
+            return self._name
+
+    mcts = NeuralMCTS(_StubNet(), MCTSConfig(), device="cpu", single_agent=single_agent)
+    root = NeuralMCTSNode(state=_Named("root"))
+    mid = NeuralMCTSNode(state=_Named("mid"), parent=root, action="a")
+    leaf = NeuralMCTSNode(state=_Named("leaf"), parent=mid, action="b")
+    mcts.backpropagate([root, mid, leaf], _LEAF_VALUE)
+    return leaf.value_sum, mid.value_sum, root.value_sum
+
+
+class TestBackupSignClassicalEngines:
+    """hygiene_mcts_value_semantics AC-6 / AC-7 — core, parallel, progressive-widening."""
+
+    def test_core_select_child_negates_to_match_two_player_backup(self) -> None:
+        """Covers hygiene_mcts_value_semantics AC-6 — core select reads -child.Q."""
+        root = MCTSNode(state=_state("root"))
+        root.visits = 60
+        a = root.add_child("a", _state("a"))
+        a.visits, a.value_sum = 50, 45.0  # child STM 0.9
+        b = root.add_child("b", _state("b"))
+        b.visits, b.value_sum = 10, 1.0  # child STM 0.1
+        assert root.select_child(0.5, negate_child_value=True).action == "b"
+        assert root.select_child(0.5, negate_child_value=False).action == "a"
+
+    def test_two_player_backup_alternates_sign(self) -> None:
+        """Covers hygiene_mcts_value_semantics AC-6 — two-player backup alternates."""
+        assert _core_backup_chain(True) == _TWO_PLAYER_CHAIN
+        assert _parallel_backup_chain(True) == _TWO_PLAYER_CHAIN
+        assert _pw_backup_chain(True) == _TWO_PLAYER_CHAIN
+
+    def test_single_agent_backup_is_monotone(self) -> None:
+        """Covers hygiene_mcts_value_semantics AC-6 — single-agent backup does not flip."""
+        assert _core_backup_chain(False) == _SINGLE_AGENT_CHAIN
+        assert _parallel_backup_chain(False) == _SINGLE_AGENT_CHAIN
+        assert _pw_backup_chain(False) == _SINGLE_AGENT_CHAIN
+
+    def test_cross_engine_backup_value_sums_agree(self) -> None:
+        """Covers hygiene_mcts_value_semantics AC-7 — identical per-node value sums."""
+        for two_player in (True, False):
+            core = _core_backup_chain(two_player)
+            parallel = _parallel_backup_chain(two_player)
+            pw = _pw_backup_chain(two_player)
+            assert core == parallel == pw
+
+
+class TestBackupSignNeuralEngine:
+    """Fourth engine; skipped when the neural extra (torch) is absent."""
+
+    def test_neural_backup_matches_classical_engines(self) -> None:
+        """Covers hygiene_mcts_value_semantics AC-6 AC-7 — NeuralMCTS backup parity."""
+        assert _neural_backup_chain(single_agent=False) == _TWO_PLAYER_CHAIN
+        assert _neural_backup_chain(single_agent=True) == _SINGLE_AGENT_CHAIN
+        assert _neural_backup_chain(single_agent=False) == _core_backup_chain(True)
+        assert _neural_backup_chain(single_agent=True) == _core_backup_chain(False)

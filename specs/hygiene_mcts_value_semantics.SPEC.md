@@ -2,7 +2,7 @@
 id: hygiene_mcts_value_semantics
 goal: Fix the proven MCTS value-perspective bugs (PUCT double-division; negamax selection sign in parallel and progressive-widening engines; unconditional backup negation in those same engines and absent negation in core)
 module: src/framework/mcts/
-status: approved
+status: implemented
 ---
 
 # Goal
@@ -24,7 +24,7 @@ config field so single-agent search gets a coherent non-negating pair.
 - AC-3: select_child_puct agrees with the canonical puct() on 1,000 seeded random inputs.
 - AC-4: Fixed selection paths emit per-child DEBUG structured logs (visits, mean value, exploration term) via the project logger.
 - AC-5: Affected benchmark baselines are re-run and re-recorded (or explicitly flagged for re-validation where environment-bound); MIGRATION_NOTES documents the intentional absence of an escape hatch to the broken behavior.
-- AC-6: The two-player perspective flag is honoured on the **backup** path as well as the selection path. `parallel_mcts` (currently negating unconditionally) and `progressive_widening` (likewise) must not negate when the flag is disabled, and `core.MCTSNode.backpropagate` (currently never negating) must negate when it is enabled. A regression test asserts, for each of the four engines, that a single-agent backup accumulates a monotone value and a two-player backup alternates sign; the current tree fails this test for three of the four.
+- AC-6: The two-player perspective flag is honoured on the **backup** path as well as the selection path. `parallel_mcts` and `progressive_widening` must not negate when the flag is disabled, and `core.MCTSEngine.backpropagate` must negate when it is enabled. A regression test asserts, for each of the four engines, that a single-agent backup accumulates a monotone value and a two-player backup alternates sign.
 - AC-7: Cross-engine backup parity is asserted directly, not inferred from root-action agreement: for a seeded fixed tree and a fixed leaf value, all four engines produce identical per-node value sums in both flag settings.
 
 # Constraints

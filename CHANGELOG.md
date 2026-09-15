@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — MCTS backup sign (`hygiene_mcts_value_semantics` AC-6 / AC-7)
+
+- `ParallelMCTSEngine` and `ProgressiveWideningEngine` gate backup negation on `two_player` (selection already did). `core.MCTSEngine` gained the same settings-backed flag (default `Settings.MCTS_TWO_PLAYER=True`) on backup and select. Default core search now negamax-flips; pass `two_player=False` for single-agent. NeuralMCTS was already consistent (`single_agent`).
+- Tests that pinned the old backup (`test_mcts_framework.py` 3-node chain all `0.6`; `test_progressive_widening.py` always-flipped root) now encode the flag. CHARTER §2 demo `test_value_semantics_regression.py` covers backup, not only stuffed-stats selection.
+
 ### Changed — post-#169 hygiene close-out
 
 - LM Studio `normalize_lmstudio_base_url` rewrites `localhost` → `127.0.0.1` and appends `/v1` (Windows IPv6 `::1` miss). Default and `.env.example` use `http://127.0.0.1:1234/v1`.

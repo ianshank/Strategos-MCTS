@@ -20,6 +20,7 @@ from typing import Any
 
 import numpy as np
 
+from src.config.settings import get_settings
 from src.observability.logging import get_logger
 
 from .policies import RolloutPolicy, SelectionPolicy, ucb1
@@ -91,12 +92,15 @@ class MCTSNode:
         """Check if all available actions have been expanded."""
         return len(self.expanded_actions) >= len(self.available_actions)
 
-    def select_child(self, exploration_weight: float = 1.414) -> MCTSNode:
+    def select_child(self, exploration_weight: float = 1.414, *, negate_child_value: bool = False) -> MCTSNode:
         """
         Select best child using UCB1 policy.
 
         Args:
             exploration_weight: Exploration constant (c in UCB1)
+            negate_child_value: Negate the child's Q for two-player (negamax) search.
+                Stored ``value_sum`` is the side-to-move value at the child; the parent
+                reads ``-Q`` so selection and backup agree.
 
         Returns:
             Best child node according to UCB1
@@ -108,8 +112,9 @@ class MCTSNode:
         best_score = float("-inf")
 
         for child in self.children:
+            value_sum = -child.value_sum if negate_child_value else child.value_sum
             score = ucb1(
-                value_sum=child.value_sum,
+                value_sum=value_sum,
                 visits=child.visits,
                 parent_visits=self.visits,
                 c=exploration_weight,
@@ -176,6 +181,8 @@ class MCTSEngine:
         progressive_widening_alpha: float = 0.5,
         max_parallel_rollouts: int = 4,
         cache_size_limit: int = 10000,
+        *,
+        two_player: bool | None = None,
     ):
         """
         Initialize MCTS engine.
@@ -187,18 +194,22 @@ class MCTSEngine:
             progressive_widening_alpha: Progressive widening exponent
             max_parallel_rollouts: Maximum concurrent rollouts
             cache_size_limit: Maximum number of cached simulation results
+            two_player: Two-player zero-sum (negamax): backup flips per ply and
+                selection reads ``-child.Q``. Defaults to ``Settings.MCTS_TWO_PLAYER``.
         """
         self.seed = seed
         self.rng = np.random.default_rng(seed)
         self.exploration_weight = exploration_weight
         self.progressive_widening_k = progressive_widening_k
         self.progressive_widening_alpha = progressive_widening_alpha
+        self.two_player = get_settings().MCTS_TWO_PLAYER if two_player is None else two_player
         logger.debug(
-            "MCTSEngine initialized: seed=%d, c=%.3f, pw_k=%.2f, pw_alpha=%.2f",
+            "MCTSEngine initialized: seed=%d, c=%.3f, pw_k=%.2f, pw_alpha=%.2f, two_player=%s",
             seed,
             exploration_weight,
             progressive_widening_k,
             progressive_widening_alpha,
+            self.two_player,
         )
 
         # Parallel rollout control
@@ -259,7 +270,7 @@ class MCTSEngine:
             # Check if we should expand instead of selecting
             if self.should_expand(node):
                 break
-            node = node.select_child(self.exploration_weight)
+            node = node.select_child(self.exploration_weight, negate_child_value=self.two_player)
         return node
 
     def expand(
@@ -378,6 +389,10 @@ class MCTSEngine:
         """
         MCTS Backpropagation Phase: update ancestor statistics.
 
+        When ``two_player`` is set, the sign flips at each ply so every node
+        stores the side-to-move value. Single-agent search keeps the leaf
+        value absolute.
+
         Args:
             node: Leaf node to start backpropagation
             value: Value to propagate up the tree
@@ -391,6 +406,8 @@ class MCTSEngine:
             current.visits += 1
             current.value_sum += value
             current = current.parent
+            if self.two_player:
+                value = -value
 
     async def run_iteration(
         self,

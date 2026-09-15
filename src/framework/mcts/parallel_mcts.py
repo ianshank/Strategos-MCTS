@@ -532,11 +532,20 @@ class ParallelMCTSEngine:
         async with self._tree_lock:
             self.stats.lock_wait_time += time.perf_counter() - lock_start
 
-            for node in reversed(path):
-                node.visits += 1
-                node.value_sum += value
-                node.revert_virtual_loss(self.virtual_loss_value)
-                value = -value  # Flip for opponent perspective
+            self.backpropagate(path, value)
+
+    def backpropagate(self, path: list[VirtualLossNode], value: float) -> None:
+        """Backup ``value`` along ``path`` (root-to-leaf; processed leaf-to-root).
+
+        When ``two_player`` is set, the sign flips at each ply so every node stores
+        the side-to-move value. Single-agent search keeps the leaf value absolute.
+        """
+        for node in reversed(path):
+            node.visits += 1
+            node.value_sum += value
+            node.revert_virtual_loss(self.virtual_loss_value)
+            if self.two_player:
+                value = -value
 
     def _adapt_virtual_loss(self) -> None:
         """Adapt virtual loss value based on collision rate using config thresholds."""
