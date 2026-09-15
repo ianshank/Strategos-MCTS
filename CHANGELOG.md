@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed — Docker Deployment sanity smoke timeout
 
-- `scripts/deployment_sanity_check.py` and the sanity job's "Run smoke tests" step no longer run `pytest tests/ -m smoke` (that collection includes `tests/deployment/test_docker_smoke.py` and its 90s health wait, and died at subprocess timeout=60 on run 34705825988). Both now invoke the operational e2e, local-distillation CLI e2e, and demo-pipeline smoke files (~16 tests). Container docker smoke stays on the Container Smoke Tests job. Sanity subprocess timeout is 180s.
+- `scripts/deployment_sanity_check.py` and the sanity job's "Run smoke tests" step no longer run `pytest tests/ -m smoke` (that collection includes `tests/deployment/test_docker_smoke.py` and its 90s health wait, and died at subprocess timeout=60 on run 34705825988). Both now invoke the operational e2e, local-distillation CLI e2e, and demo-pipeline smoke files (~16 tests). Container docker smoke stays on the Container Smoke Tests job. Sanity subprocess timeout is 180s. `docs/DOCKER_DEPLOYMENT.md` splits sanity vs container smoke the same way; do not use `smoke and not e2e`.
 
 ### Changed — post-#169 hygiene close-out
 

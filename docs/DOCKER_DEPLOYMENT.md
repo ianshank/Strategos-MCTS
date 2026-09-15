@@ -89,11 +89,16 @@ docker run --gpus all \
 
 ### 4. Run Smoke Tests
 
-```bash
-# Install test dependencies
-pip install pytest docker requests
+Sanity (no Docker daemon) and container smoke are **different jobs**. Do not run
+`pytest tests/ -m smoke` under the sanity script — that also collects
+`tests/deployment/test_docker_smoke.py` (90s health wait) and is what timed out
+in CI run 34705825988.
 
-# Run smoke tests
+```bash
+# Pre-deploy sanity: explicit e2e/demo smoke paths, 180s backstop
+python scripts/deployment_sanity_check.py --verbose
+
+# Container smoke (needs a built image / Docker daemon)
 pytest tests/deployment/test_docker_smoke.py -v -m smoke
 ```
 
@@ -184,7 +189,8 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 ### Pre-Deployment Tests
 
 ```bash
-# Run sanity checks
+# Run sanity checks (config, Dockerfiles, syntax, plus the explicit smoke paths
+# in SANITY_SMOKE_ARGS — not tests/deployment/test_docker_smoke.py)
 python scripts/deployment_sanity_check.py
 
 # Expected output:
@@ -197,17 +203,16 @@ python scripts/deployment_sanity_check.py
 #   ✓ Documentation - PASS
 ```
 
+Do **not** use `-m "smoke and not e2e"` as a substitute: docker smoke is still collected.
+
 ### Post-Deployment Smoke Tests
 
 ```bash
-# Test running containers
+# Container Smoke Tests job (docker-deployment.yml); needs Docker
 pytest tests/deployment/test_docker_smoke.py -v
 
 # Test specific container
 pytest tests/deployment/test_docker_smoke.py::test_cuda_available_in_container -v
-
-# Generate coverage report
-pytest tests/deployment/ --cov=. --cov-report=html
 ```
 
 ### GPU Tests
@@ -415,9 +420,11 @@ docker run --rm \
 
 The pipeline automatically:
 
-1. **Runs sanity checks** on every push
+1. **Runs sanity checks** on every push (`scripts/deployment_sanity_check.py`: explicit
+   e2e/demo smoke paths, 180s timeout — not `pytest tests/ -m smoke`)
 2. **Builds Docker images** for demo and production
-3. **Runs smoke tests** on built images
+3. **Runs container smoke tests** (`tests/deployment/test_docker_smoke.py`) on built images
+   (the Container Smoke Tests job; not the sanity subprocess)
 4. **Scans for vulnerabilities** with Trivy — an advisory CRITICAL+HIGH scan that uploads SARIF to
    GitHub code scanning, plus a **blocking** scan that fails the build on fixable CRITICAL
    findings. Accepted exceptions live in `.trivyignore` (each needs a rationale, an expiry date and
