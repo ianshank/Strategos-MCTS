@@ -20,6 +20,7 @@ from typing import Any
 
 import numpy as np
 
+from src.config.settings import get_settings
 from src.observability.logging import get_logger
 
 from .policies import RolloutPolicy, SelectionPolicy, ucb1
@@ -91,12 +92,15 @@ class MCTSNode:
         """Check if all available actions have been expanded."""
         return len(self.expanded_actions) >= len(self.available_actions)
 
-    def select_child(self, exploration_weight: float = 1.414) -> MCTSNode:
+    def select_child(self, exploration_weight: float = 1.414, *, negate_child_value: bool = False) -> MCTSNode:
         """
         Select best child using UCB1 policy.
 
         Args:
             exploration_weight: Exploration constant (c in UCB1)
+            negate_child_value: Negate the child's Q for two-player (negamax) search.
+                Stored ``value_sum`` is the side-to-move value at the child; the parent
+                reads ``-Q`` so selection and backup agree.
 
         Returns:
             Best child node according to UCB1
@@ -108,11 +112,23 @@ class MCTSNode:
         best_score = float("-inf")
 
         for child in self.children:
+            value_sum = -child.value_sum if negate_child_value else child.value_sum
             score = ucb1(
-                value_sum=child.value_sum,
+                value_sum=value_sum,
                 visits=child.visits,
                 parent_visits=self.visits,
                 c=exploration_weight,
+            )
+            mean_value = (value_sum / child.visits) if child.visits else 0.0
+            exploration_term = score - mean_value if child.visits else score
+            logger.debug(
+                "select_child candidate: action=%s visits=%d value=%.4f exploration=%.4f " "score=%.4f negate=%s",
+                child.action,
+                child.visits,
+                mean_value,
+                exploration_term,
+                score,
+                negate_child_value,
             )
             if score > best_score:
                 best_score = score
@@ -176,6 +192,8 @@ class MCTSEngine:
         progressive_widening_alpha: float = 0.5,
         max_parallel_rollouts: int = 4,
         cache_size_limit: int = 10000,
+        *,
+        two_player: bool | None = None,
     ):
         """
         Initialize MCTS engine.
@@ -187,18 +205,22 @@ class MCTSEngine:
             progressive_widening_alpha: Progressive widening exponent
             max_parallel_rollouts: Maximum concurrent rollouts
             cache_size_limit: Maximum number of cached simulation results
+            two_player: Two-player zero-sum (negamax): backup flips per ply and
+                selection reads ``-child.Q``. Defaults to ``Settings.MCTS_TWO_PLAYER``.
         """
         self.seed = seed
         self.rng = np.random.default_rng(seed)
         self.exploration_weight = exploration_weight
         self.progressive_widening_k = progressive_widening_k
         self.progressive_widening_alpha = progressive_widening_alpha
+        self.two_player = get_settings().MCTS_TWO_PLAYER if two_player is None else two_player
         logger.debug(
-            "MCTSEngine initialized: seed=%d, c=%.3f, pw_k=%.2f, pw_alpha=%.2f",
+            "MCTSEngine initialized: seed=%d, c=%.3f, pw_k=%.2f, pw_alpha=%.2f, two_player=%s",
             seed,
             exploration_weight,
             progressive_widening_k,
             progressive_widening_alpha,
+            self.two_player,
         )
 
         # Parallel rollout control
@@ -259,7 +281,7 @@ class MCTSEngine:
             # Check if we should expand instead of selecting
             if self.should_expand(node):
                 break
-            node = node.select_child(self.exploration_weight)
+            node = node.select_child(self.exploration_weight, negate_child_value=self.two_player)
         return node
 
     def expand(
@@ -378,6 +400,10 @@ class MCTSEngine:
         """
         MCTS Backpropagation Phase: update ancestor statistics.
 
+        When ``two_player`` is set, the sign flips at each ply so every node
+        stores the side-to-move value. Single-agent search keeps the leaf
+        value absolute.
+
         Args:
             node: Leaf node to start backpropagation
             value: Value to propagate up the tree
@@ -391,6 +417,8 @@ class MCTSEngine:
             current.visits += 1
             current.value_sum += value
             current = current.parent
+            if self.two_player:
+                value = -value
 
     async def run_iteration(
         self,
@@ -605,28 +633,34 @@ class MCTSEngine:
             return None
 
         if policy == SelectionPolicy.MAX_VISITS:
-            # Most robust: select action with most visits
             best_child = max(root.children, key=lambda c: c.visits)
         elif policy == SelectionPolicy.MAX_VALUE:
-            # Greedy: select action with highest average value
-            best_child = max(root.children, key=lambda c: c.value)
+            # Child Q is side-to-move at the child; two-player finals use parent Q.
+            best_child = max(root.children, key=self._parent_perspective_q)
         elif policy == SelectionPolicy.ROBUST_CHILD:
-            # Robust: require both high visits and high value
-            # Normalize both metrics and combine
-            max_visits = max(c.visits for c in root.children)
-            max_value = max(c.value for c in root.children) or 1.0
-
-            def robust_score(child):
-                visit_score = child.visits / max_visits if max_visits > 0 else 0
-                value_score = child.value / max_value if max_value > 0 else 0
-                return 0.5 * visit_score + 0.5 * value_score
-
-            best_child = max(root.children, key=robust_score)
+            best_child = max(root.children, key=self._robust_child_score(root))
         else:
-            # Default to max visits
             best_child = max(root.children, key=lambda c: c.visits)
 
         return best_child.action
+
+    def _parent_perspective_q(self, child: MCTSNode) -> float:
+        """Mean value from the parent (root-to-move) perspective."""
+        return -child.value if self.two_player else child.value
+
+    def _robust_child_score(self, root: MCTSNode) -> Callable[[MCTSNode], float]:
+        """Visit/value mix on parent-perspective Q so two-player signs stay coherent."""
+        max_visits = max(c.visits for c in root.children)
+        parent_qs = [self._parent_perspective_q(c) for c in root.children]
+        q_min = min(parent_qs)
+        q_span = max(parent_qs) - q_min
+
+        def robust_score(child: MCTSNode) -> float:
+            visit_score = child.visits / max_visits if max_visits > 0 else 0.0
+            value_score = (self._parent_perspective_q(child) - q_min) / q_span if q_span > 0 else 0.0
+            return 0.5 * visit_score + 0.5 * value_score
+
+        return robust_score
 
     def _compute_statistics(
         self,
@@ -648,12 +682,12 @@ class MCTSEngine:
         if root.children:
             best_child = max(root.children, key=lambda c: c.visits)
 
-        # Action statistics
+        # Action statistics — ``value`` is parent-perspective so scorers do not re-negate.
         action_stats = {}
         for child in root.children:
             action_stats[child.action] = {
                 "visits": child.visits,
-                "value": child.value,
+                "value": self._parent_perspective_q(child),
                 "value_sum": child.value_sum,
                 "num_children": len(child.children),
             }
@@ -665,7 +699,7 @@ class MCTSEngine:
             "num_children": len(root.children),
             "best_action": best_child.action if best_child else None,
             "best_action_visits": best_child.visits if best_child else 0,
-            "best_action_value": best_child.value if best_child else 0.0,
+            "best_action_value": self._parent_perspective_q(best_child) if best_child else 0.0,
             "action_stats": action_stats,
             "total_simulations": self.total_simulations,
             "cache_hits": self.cache_hits,

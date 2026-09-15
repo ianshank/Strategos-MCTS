@@ -24,6 +24,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from src.config.settings import get_settings
 from src.observability.logging import get_logger
 from src.utils.seeding import new_rng, resolve_seed
 
@@ -275,7 +276,7 @@ class NeuralMCTS:
         policy_value_network: nn.Module,
         config: MCTSConfig,
         device: str = "cpu",
-        single_agent: bool = False,
+        single_agent: bool | None = None,
         rng: np.random.Generator | None = None,
         seed: int | None = None,
     ):
@@ -288,7 +289,8 @@ class NeuralMCTS:
             device: Device for neural network
             single_agent: When True, treat the search as a single-agent (non-adversarial)
                 problem — values are NOT negated between plies during backpropagation.
-                Defaults to False, preserving two-player zero-sum (negamax) behavior.
+                When omitted, binds ``not Settings.MCTS_TWO_PLAYER`` so Neural and the
+                classical engines share one perspective flag.
             rng: Optional injected numpy Generator for Dirichlet noise / action sampling.
                 When omitted, one is created via ``new_rng(seed)``.
             seed: Optional seed for the *owned* Generator (ignored when ``rng`` is
@@ -298,7 +300,10 @@ class NeuralMCTS:
         self.network = policy_value_network
         self.config = config
         self.device = device
-        self.single_agent = single_agent
+        if single_agent is None:
+            self.single_agent = not get_settings().MCTS_TWO_PLAYER
+        else:
+            self.single_agent = single_agent
 
         # When an RNG is injected we do not own its seed — avoid resolving/storing
         # a misleading Settings-derived self.seed that was never applied.
@@ -321,7 +326,7 @@ class NeuralMCTS:
                 "seed": self.seed,
                 "rng_injected": rng is not None,
                 "device": device,
-                "single_agent": single_agent,
+                "single_agent": self.single_agent,
             },
         )
 
@@ -517,18 +522,22 @@ class NeuralMCTS:
                 legal_actions = current.state.get_legal_actions()
                 current.expand(policy_probs, legal_actions)
 
-        # Backpropagate
+        self.backpropagate(path, value)
+        return value
+
+    def backpropagate(self, path: list[NeuralMCTSNode], value: float) -> None:
+        """Backup ``value`` along ``path`` (root-to-leaf; processed leaf-to-root).
+
+        Two-player search (``single_agent=False``) flips the sign per ply so each
+        node stores the side-to-move value. Single-agent search keeps the leaf
+        value absolute. Virtual loss is reverted here because ``_simulate`` adds
+        it on the way down.
+        """
         for node_in_path in reversed(path):
             node_in_path.update(value)
             node_in_path.revert_virtual_loss(self.config.virtual_loss)
-
-            # Flip value for opponent in two-player zero-sum games. For single-agent
-            # (non-adversarial) problems the value is shared across the path, so the
-            # negamax flip must be skipped to avoid inverting training targets.
             if not self.single_agent:
                 value = -value
-
-        return value
 
     def select_action(
         self,

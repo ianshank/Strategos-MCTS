@@ -41,7 +41,8 @@ class CandidateRecord:
 
     Attributes:
         candidate_id: The action identifier (as produced by the search engine).
-        value: Mean value estimate for the candidate (``child.value``).
+        value: Mean value from the parent (root-to-move) perspective as published
+            in engine ``action_stats``. Two-player engines already negate child Q.
         visits: Visit count for the candidate.
         metadata: Optional extra per-candidate data for richer scorers; empty by
             default and never required by the built-in scorers.
