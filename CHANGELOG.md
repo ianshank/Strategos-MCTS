@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — overlay docs / AQA / skill wiring
+
+- Orientation docs (`AGENTS.md`, `CLAUDE.md`, `README.md`, `strategos-primer`) name the real skill/agent/hook set. `aqa-regression` adds CHARTER value-semantics, perl-base, and deploy-sanity pin lanes. `quality-gate` manual pytest uses `TEST_ENV`. `coverage-baseline` no longer writes `planning/milestones.yaml` or `docs/STATUS.md` on a red tree. `.claude/commands/pre-pr.md` delegates to `make gate`. Makefile aliases: `test-value-semantics`, `deploy-sanity`. `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md` points at overlay PRs #171–#174 without a second roadmap.
+
 ### Fixed — production image perl-base CRITICAL CVEs
 
 - Production `Dockerfile` installs/upgrades `perl-base` on the same `apt-get update` RUN as `curl`, so Debian 13's `5.40.1-6+deb13u1` replaces `5.40.1-6` (CVE-2026-13221, CVE-2026-42496, CVE-2026-8376). Do not ignore those CVEs. Measured red: CI Pipeline run 34705825904. `docs/C4_ARCHITECTURE.md` records that the blocking Trivy scan is cleared by that upgrade, not by `.trivyignore`.

@@ -19,6 +19,12 @@ engine or code path as guilty until you have read the lines.
    Check `src/framework/mcts/core.py`, `src/framework/mcts/parallel_mcts.py`,
    `src/framework/mcts/progressive_widening.py`, and `src/framework/mcts/neural_mcts.py`. Any two engines that disagree on the sign convention cannot be compared, and
    any claim of cross-engine agreement is `FALSE` while they do.
+   After `hygiene_mcts_value_semantics` AC-6–AC-11, in-module backup, parent AMAF, virtual
+   loss, parent-perspective finals, Neural↔Settings bind, and RootParallel `two_player`
+   forward are the expected pair. **Still a miss:** `GraphBuilder` /
+   `MCTSEngineFactory` construct `MCTSEngine()` without `two_player=False` (quality
+   scores are single-agent). That is out of `module: src/framework/mcts/` — keep CL-1
+   PARTIAL; do not "fix" it in this spec.
 2. **Self-consistency posing as agreement.** An engine agreeing with itself, or two engines sharing
    the same backprop helper, is not independent agreement. Trace the actual call graph.
 3. **Global RNG use.** `np.random.*` and bare `random.*` in a search or self-play path make runs
