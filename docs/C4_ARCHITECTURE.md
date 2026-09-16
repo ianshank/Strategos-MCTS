@@ -549,7 +549,9 @@ mappings under `tests/`; the `spec-validate` job now gates the CI `summary` aggr
 Docker build with a Trivy image scan whose SARIF results upload to GitHub code scanning (the `docker-build`
 job carries `security-events: write`; that upload is advisory and non-blocking) **plus a second,
 blocking scan** that fails the job on fixable CRITICAL findings, with accepted exceptions recorded
-in `.trivyignore`. The `summary` job gates every job it reports, including `chess-tests`,
+in `.trivyignore`. The production image (`Dockerfile`) upgrades `perl-base` on the same
+`apt-get update` RUN as `curl` so the Debian 13 fix (`5.40.1-6+deb13u1`) lands in the image —
+do not ignore CVE-2026-13221, CVE-2026-42496, or CVE-2026-8376. The `summary` job gates every job it reports, including `chess-tests`,
 `integration-test`, `security-scan` and `dependency-audit`. The `spec-validate` job additionally
 carries the evidence-chain gates described below (`claim-ledger`, its falsification step, the
 `action-pins` supply-chain ratchet, `python -m src.tools.context_docs` — INV-10's

@@ -50,9 +50,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install runtime dependencies only
+# Install runtime dependencies only.
+# perl-base ships in python:3.11-slim (Debian 13/trixie). 5.40.1-6 has three fixable
+# CRITICAL CVEs (CVE-2026-13221, CVE-2026-42496, CVE-2026-8376), fixed in
+# 5.40.1-6+deb13u1. `apt-get update` then install pulls that fix. Do not ignore
+# those CVEs — the CI image scan gates CRITICAL+fixable with .trivyignore.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    perl-base \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
