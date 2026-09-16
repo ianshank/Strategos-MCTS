@@ -38,7 +38,7 @@ DOCKERFILE_INSTRUCTIONS = {
 }
 PRODUCTION_STAGE_ALIAS = re.compile(r"\bAS\s+production\b", re.IGNORECASE)
 PERL_APT_INSTALL = re.compile(
-    r"(?:^|[(&;|])\s*apt-get\b[^;&|)]*\b(?:install|upgrade)\b[^;&|)]*\bperl-base\b",
+    r"(?:^|[(&;|])\s*apt(?:-get)?\b[^;&|)]*\b(?:install|upgrade)\b[^;&|)]*\bperl-base\b",
     re.IGNORECASE,
 )
 APT_INDEX_UPDATE = re.compile(r"\bapt(?:-get)?\b[^;&|)]*\bupdate\b", re.IGNORECASE)
@@ -175,6 +175,11 @@ ARG BUILD_DATE=2026-09-16
         "RUN echo preflight",
         "RUN apt-get update && apt-get install -y --no-install-recommends \\\n    perl-base",
     ]
+
+
+
+def test_perl_base_install_detection_accepts_apt_frontend() -> None:
+    assert _installs_or_upgrades_perl_base("RUN apt update && apt install -y perl-base")
 
 
 
