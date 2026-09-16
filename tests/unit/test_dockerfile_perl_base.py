@@ -18,22 +18,48 @@ PERL_CVES = ("CVE-2026-13221", "CVE-2026-42496", "CVE-2026-8376")
 
 
 def _production_stage(dockerfile: str) -> str:
-    marker = "as production"
-    idx = dockerfile.find(marker)
-    assert idx != -1, "Dockerfile has no production stage"
-    rest = dockerfile[idx + len(marker) :]
-    next_from = rest.find("\nFROM ")
-    return rest if next_from == -1 else rest[:next_from]
+    lines = dockerfile.splitlines()
+    start = next((idx for idx, line in enumerate(lines) if line.startswith("FROM ") and " as production" in line), None)
+    assert start is not None, "Dockerfile has no production stage"
+
+    end = next((idx for idx, line in enumerate(lines[start + 1 :], start + 1) if line.startswith("FROM ")), len(lines))
+    return "\n".join(lines[start:end])
+
+
+def _run_instructions(stage: str) -> list[str]:
+    instructions: list[str] = []
+    current: list[str] = []
+
+    for line in stage.splitlines():
+        if line.startswith("RUN "):
+            if current:
+                instructions.append("\n".join(current))
+            current = [line]
+            continue
+        if current:
+            if line.startswith(("COPY ", "CMD ", "ENTRYPOINT ", "HEALTHCHECK ", "ENV ", "EXPOSE ", "USER ", "WORKDIR ")):
+                instructions.append("\n".join(current))
+                current = []
+            else:
+                current.append(line)
+
+    if current:
+        instructions.append("\n".join(current))
+
+    return instructions
 
 
 def test_production_stage_installs_perl_base() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
     production = _production_stage(dockerfile)
-    assert "perl-base" in production, (
+    run_instruction = next((run for run in _run_instructions(production) if "apt-get update" in run), None)
+
+    assert run_instruction is not None, "production stage must run apt-get update before runtime package install"
+    assert "perl-base" in run_instruction, (
         "production RUN must install/upgrade perl-base after apt-get update "
         "so the image is at least 5.40.1-6+deb13u1"
     )
-    assert "apt-get update" in production
+
 
 
 def test_trivyignore_does_not_accept_perl_base_cves() -> None:
