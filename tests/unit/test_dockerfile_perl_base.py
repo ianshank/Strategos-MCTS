@@ -41,6 +41,7 @@ PERL_APT_INSTALL = re.compile(
     r"(?:^|[(&;|])\s*apt-get\b[^;&|)]*\b(?:install|upgrade)\b[^;&|)]*\bperl-base\b",
     re.IGNORECASE,
 )
+APT_INDEX_UPDATE = re.compile(r"\bapt(?:-get)?\b[^;&|)]*\bupdate\b", re.IGNORECASE)
 DOCKERFILE_CONTINUATION = re.compile(r"\\\s*\n\s*")
 
 
@@ -92,17 +93,24 @@ def _run_instructions(stage: str) -> list[str]:
     return instructions
 
 
+def _normalize_run_instruction(run_instruction: str) -> str:
+    return " ".join(DOCKERFILE_CONTINUATION.sub("", run_instruction).split())
+
+
 def _installs_or_upgrades_perl_base(run_instruction: str) -> bool:
-    normalized = " ".join(DOCKERFILE_CONTINUATION.sub("", run_instruction).split())
-    return bool(PERL_APT_INSTALL.search(normalized))
+    return bool(PERL_APT_INSTALL.search(_normalize_run_instruction(run_instruction)))
+
+
+def _updates_apt_indexes(run_instruction: str) -> bool:
+    return bool(APT_INDEX_UPDATE.search(_normalize_run_instruction(run_instruction)))
 
 
 def test_production_stage_installs_perl_base() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
     production = _production_stage(dockerfile)
-    apt_get_runs = [run for run in _run_instructions(production) if "apt-get update" in run.lower()]
+    apt_get_runs = [run for run in _run_instructions(production) if _updates_apt_indexes(run)]
 
-    assert apt_get_runs, "production stage must run apt-get update before runtime package install"
+    assert apt_get_runs, "production stage must update package indexes before runtime package install"
     assert any(_installs_or_upgrades_perl_base(run) for run in apt_get_runs), (
         "production RUN must install/upgrade perl-base after apt-get update "
         "so the image is at least 5.40.1-6+deb13u1"
@@ -138,6 +146,11 @@ ARG BUILD_DATE=2026-09-16
         "RUN echo preflight",
         "RUN apt-get update && apt-get install -y --no-install-recommends \\\n    perl-base",
     ]
+
+
+
+def test_apt_index_update_detection_accepts_apt_frontend() -> None:
+    assert _updates_apt_indexes("RUN apt update && apt-get install -y perl-base")
 
 
 
