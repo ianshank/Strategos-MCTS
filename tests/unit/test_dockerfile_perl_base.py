@@ -41,6 +41,7 @@ PERL_APT_INSTALL = re.compile(
     r"(?:^|[(&;|])\s*apt-get\b[^;&|)]*\b(?:install|upgrade)\b[^;&|)]*\bperl-base\b",
     re.IGNORECASE,
 )
+DOCKERFILE_CONTINUATION = re.compile(r"\\\s*\n\s*")
 
 
 def _is_instruction(line: str, name: str | None = None) -> bool:
@@ -92,7 +93,7 @@ def _run_instructions(stage: str) -> list[str]:
 
 
 def _installs_or_upgrades_perl_base(run_instruction: str) -> bool:
-    normalized = " ".join(run_instruction.replace("\\", " ").split())
+    normalized = " ".join(DOCKERFILE_CONTINUATION.sub("", run_instruction).split())
     return bool(PERL_APT_INSTALL.search(normalized))
 
 
@@ -167,6 +168,19 @@ def test_perl_base_grouped_shell_command_counts_as_install() -> None:
     stage = _production_stage(
         """FROM python:3.11-slim AS production
 RUN (apt-get update && apt-get install -y perl-base)
+"""
+    )
+
+    assert any(_installs_or_upgrades_perl_base(run) for run in _run_instructions(stage))
+
+
+
+def test_perl_base_grouped_multiline_command_counts_as_install() -> None:
+    stage = _production_stage(
+        """FROM python:3.11-slim AS production
+RUN (apt-get update && \\
+    apt-get install -y perl-\\
+    base)
 """
     )
 
