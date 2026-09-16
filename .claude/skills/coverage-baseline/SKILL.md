@@ -19,8 +19,7 @@ make coverage
 ```
 
 `make coverage` runs unit tests with branch coverage and writes an HTML report under htmlcov
-(gitignored) — it does **not** edit `docs/STATUS.md`. After **green main**, a dedicated follow-up may stamp STATUS from a
-real run (`python -m src.tools.status_artifact --strict`). That is a separate change.
+(gitignored) — it does **not** edit `docs/STATUS.md`. After **green main**, refresh `docs/STATUS.md` in a dedicated follow-up using measured test output; `python -m src.tools.status_artifact --strict` only writes `artifacts/status.json`.
 
 Notes:
 - **Coverage is not evidence of capability.** Recorded as `FALSE` (`CL-29`) in

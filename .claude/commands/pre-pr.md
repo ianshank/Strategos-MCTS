@@ -17,7 +17,11 @@ Overlay pins (also in `aqa-regression`):
 
 ```bash
 pytest tests/unit/framework/mcts/test_value_semantics_regression.py -q
-pytest tests/unit/test_dockerfile_perl_base.py tests/unit/test_deploy_sanity_smoke_paths.py -q
+if [ -f tests/unit/test_dockerfile_perl_base.py ] && [ -f tests/unit/test_deploy_sanity_smoke_paths.py ]; then
+  pytest tests/unit/test_dockerfile_perl_base.py tests/unit/test_deploy_sanity_smoke_paths.py -q
+else
+  echo "Overlay lanes from #172/#173 are not present in this tree yet."
+fi
 ```
 
 Do not regenerate `docs/STATUS.md` on a red main. Do not add a `No-Spec:` trailer on `spec/<id>` branches.

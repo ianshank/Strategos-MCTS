@@ -75,10 +75,10 @@ test-ui: ## Run UI and User Journey E2E tests
 test-regression: ## Comprehensive regression & AQA suite (unit, integration, and e2e)
 	$(TEST_ENV) $(PYTHON) -m pytest tests/unit/ tests/integration/ tests/e2e/ -m "not slow" -ra $(PYTEST_ARGS)
 
-test-value-semantics: ## CHARTER §2 demo — MCTS negamax / backup / RAVE / VL / finals
+test-value-semantics: ## CHARTER §2 demo — current branch coverage (selection-focused regression)
 	$(TEST_ENV) $(PYTHON) -m pytest tests/unit/framework/mcts/test_value_semantics_regression.py $(PYTEST_ARGS)
 
-deploy-sanity: ## Pre-deploy sanity script (explicit smoke paths, not docker smoke)
+deploy-sanity: ## Pre-deploy sanity script (pytest tests/ -m smoke wrapper, 60s timeout)
 	$(PYTHON) scripts/deployment_sanity_check.py
 
 test-all: ## Full non-slow sweep (wider than the gate; expect env-dependent failures)

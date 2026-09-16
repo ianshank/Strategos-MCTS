@@ -192,5 +192,5 @@ def test_primer_names_every_skill_directory() -> None:
     inventory; every ``.claude/skills/*/SKILL.md`` directory name must appear in it.
     """
     primer = (SKILLS_DIR / "strategos-primer" / "SKILL.md").read_text(encoding="utf-8")
-    missing = [path.parent.name for path in _skill_docs() if path.parent.name not in primer]
+    missing = [path.parent.name for path in _skill_docs() if not re.search(rf"`{re.escape(path.parent.name)}`", primer)]
     assert not missing, f"strategos-primer does not name skill(s): {missing}"

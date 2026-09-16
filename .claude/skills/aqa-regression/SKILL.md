@@ -21,9 +21,9 @@ Live LM Studio is adapter QA, not a distillation teacher.
 3. **Regression / slow**: `make test-regression` then `pytest tests/ --runslow -ra`.
 4. **UI**: `make test-ui` (record env skips; Gradio/LFS/offline-hub misses matching origin/main are RCA-ENV).
 5. **Live LM Studio** (opt-in, never `tests/unit/`): `REQUIRE_LMSTUDIO=1`, `LMSTUDIO_BASE_URL=http://127.0.0.1:1234/v1`, `ALLOW_MOCK_LLM_FALLBACK=false`. Tests: `tests/e2e/test_lmstudio_live_e2e.py`. Fail-loud closed port: `tests/integration/test_lmstudio_fail_loud.py`. Health `GET /v1/models` must be 200 when required; skip unless `REQUIRE_LMSTUDIO=1`.
-6. **Value-semantics CHARTER demo**: `pytest tests/unit/framework/mcts/test_value_semantics_regression.py -q` (CHARTER.md §2). Neural arm skips without torch; CI `[dev,neural,api]` must collect it. CL-1 stays PARTIAL while GraphBuilder inherits `two_player=True`.
-7. **Dockerfile perl-base pin**: `pytest tests/unit/test_dockerfile_perl_base.py -q`. Blocking Trivy CRITICAL is `.github/workflows/ci.yml` docker-build; `.github/workflows/docker-deployment.yml` scan is advisory. Do not ignore CVE-2026-13221/42496/8376.
-8. **Deploy-sanity path pin**: `pytest tests/unit/test_deploy_sanity_smoke_paths.py -q`. Sanity is explicit e2e/demo paths + 180s, not `pytest tests/ -m smoke` and not `smoke and not e2e`. Container docker smoke stays on the Container Smoke Tests job.
+6. **Value-semantics CHARTER demo**: `pytest tests/unit/framework/mcts/test_value_semantics_regression.py -q` (CHARTER.md §2). Neural arm skips without torch; CI `[dev,neural,api]` must collect it. CL-1 is `FALSE` on this tree (`docs/CLAIM_LEDGER.md`) and only moves to PARTIAL after the #174 in-module fixes land; GraphBuilder `two_player=True` remains follow-up.
+7. **Dockerfile perl-base pin**: run the perl-base unit lane when overlay #172 is present; otherwise record it as pending overlay evidence for this tree. Blocking Trivy CRITICAL is `.github/workflows/ci.yml` docker-build; `.github/workflows/docker-deployment.yml` scan is advisory. Do not ignore CVE-2026-13221/42496/8376.
+8. **Deploy-sanity path pin**: run the deploy-sanity path unit lane when overlay #173 is present; otherwise record it as pending overlay evidence for this tree. In this tree today, `scripts/deployment_sanity_check.py` still runs `pytest tests/ -m smoke` with a 60s timeout. Container docker smoke stays on the Container Smoke Tests job.
 
 ## RCA ids
 
