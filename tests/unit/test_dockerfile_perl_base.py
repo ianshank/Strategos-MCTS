@@ -2,7 +2,7 @@
 
 CI Pipeline docker-build (run 34705825904) failed on three fixable CRITICAL
 findings in ``perl-base`` 5.40.1-6 on ``python:3.11-slim`` (Debian 13). The
-fixes ship in 5.40.1-6+deb13u1. Dropping Gradio does not unred that job.
+fixes ship in 5.40.1-6+deb13u1. Dropping Gradio does not unblock that job.
 """
 
 from __future__ import annotations
@@ -172,6 +172,11 @@ RUN (apt-get update && apt-get install -y perl-base)
     )
 
     assert any(_installs_or_upgrades_perl_base(run) for run in _run_instructions(stage))
+
+
+
+def test_split_package_name_continuation_is_preserved() -> None:
+    assert _installs_or_upgrades_perl_base("RUN apt-get update && apt-get install -y perl-\\" "\n    base")
 
 
 
