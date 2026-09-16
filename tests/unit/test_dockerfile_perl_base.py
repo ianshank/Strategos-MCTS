@@ -151,6 +151,18 @@ ARG BUILD_DATE=2026-09-16
 
 
 
+def test_perl_base_policy_matches_install_run_without_cve_strings() -> None:
+    stage = _production_stage(
+        """FROM python:3.11-slim AS production
+RUN echo preflight
+RUN apt-get update && apt-get upgrade -y perl-base curl
+"""
+    )
+
+    assert any(_installs_or_upgrades_perl_base(run) for run in _run_instructions(stage))
+
+
+
 def test_perl_base_must_be_in_production_apt_get_run() -> None:
     stage = _production_stage(
         """FROM python:3.11-slim AS builder
