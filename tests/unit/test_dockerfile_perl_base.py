@@ -16,18 +16,26 @@ pytestmark = [pytest.mark.unit]
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PERL_CVES = ("CVE-2026-13221", "CVE-2026-42496", "CVE-2026-8376")
-TOP_LEVEL_DOCKERFILE_INSTRUCTION = re.compile(r"^[A-Z][A-Z0-9_]*(?:\s|$)")
+TOP_LEVEL_DOCKERFILE_INSTRUCTION = re.compile(r"^[A-Z][A-Z0-9_]*(?:\s|$)", re.IGNORECASE)
+
+
+def _is_instruction(line: str, name: str | None = None) -> bool:
+    if not TOP_LEVEL_DOCKERFILE_INSTRUCTION.match(line):
+        return False
+    if name is None:
+        return True
+    return line.split(maxsplit=1)[0].lower() == name.lower()
 
 
 def _production_stage(dockerfile: str) -> str:
     lines = dockerfile.splitlines()
     start = next(
-        (idx for idx, line in enumerate(lines) if line.lower().startswith("from ") and " as production" in line.lower()),
+        (idx for idx, line in enumerate(lines) if _is_instruction(line, "FROM") and " as production" in line.lower()),
         None,
     )
     assert start is not None, "Dockerfile has no production stage"
 
-    end = next((idx for idx, line in enumerate(lines[start + 1 :], start + 1) if line.startswith("FROM ")), len(lines))
+    end = next((idx for idx, line in enumerate(lines[start + 1 :], start + 1) if _is_instruction(line, "FROM")), len(lines))
     return "\n".join(lines[start:end])
 
 
@@ -36,13 +44,13 @@ def _run_instructions(stage: str) -> list[str]:
     current: list[str] = []
 
     for line in stage.splitlines():
-        if line.startswith("RUN "):
+        if _is_instruction(line, "RUN"):
             if current:
                 instructions.append("\n".join(current))
             current = [line]
             continue
         if current:
-            if TOP_LEVEL_DOCKERFILE_INSTRUCTION.match(line):
+            if _is_instruction(line):
                 instructions.append("\n".join(current))
                 current = []
             else:
@@ -64,6 +72,37 @@ def test_production_stage_installs_perl_base() -> None:
         "production RUN must install/upgrade perl-base after apt-get update "
         "so the image is at least 5.40.1-6+deb13u1"
     )
+
+
+def test_dockerfile_parser_is_case_insensitive() -> None:
+    stage = _production_stage(
+        """FROM python:3.11-slim As builder
+RUN echo builder
+from python:3.11-slim aS production
+run apt-get update && apt-get install -y perl-base
+Label stage=production
+"""
+    )
+
+    assert stage.splitlines()[0] == "from python:3.11-slim aS production"
+    assert _run_instructions(stage) == ["run apt-get update && apt-get install -y perl-base"]
+
+
+
+def test_run_instruction_parser_stops_at_next_top_level_instruction() -> None:
+    instructions = _run_instructions(
+        """FROM python:3.11-slim AS production
+RUN echo preflight
+RUN apt-get update && apt-get install -y --no-install-recommends \\
+    perl-base
+ARG BUILD_DATE=2026-09-16
+"""
+    )
+
+    assert instructions == [
+        "RUN echo preflight",
+        "RUN apt-get update && apt-get install -y --no-install-recommends \\\n    perl-base",
+    ]
 
 
 
