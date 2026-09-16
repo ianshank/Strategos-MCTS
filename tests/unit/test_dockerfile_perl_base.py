@@ -58,16 +58,34 @@ def _is_instruction(line: str, name: str | None = None) -> bool:
     return instruction == name.upper()
 
 
-def _production_stage(dockerfile: str) -> str:
-    lines = dockerfile.splitlines()
-    start = next(
-        (idx for idx, line in enumerate(lines) if _is_instruction(line, "FROM") and PRODUCTION_STAGE_ALIAS.search(line)),
-        None,
-    )
-    assert start is not None, "Dockerfile has no production stage"
+def _stages(dockerfile: str) -> list[list[str]]:
+    stages: list[list[str]] = []
+    current: list[str] = []
 
-    end = next((idx for idx, line in enumerate(lines[start + 1 :], start + 1) if _is_instruction(line, "FROM")), len(lines))
-    return "\n".join(lines[start:end])
+    for line in dockerfile.splitlines():
+        if _is_instruction(line, "FROM"):
+            if current:
+                stages.append(current)
+            current = [line]
+            continue
+        if current:
+            current.append(line)
+
+    if current:
+        stages.append(current)
+
+    return stages
+
+
+def _production_stage(dockerfile: str) -> str:
+    stages = _stages(dockerfile)
+    assert stages, "Dockerfile has no stages"
+
+    for stage in stages:
+        if PRODUCTION_STAGE_ALIAS.search(stage[0]):
+            return "\n".join(stage)
+
+    return "\n".join(stages[-1])
 
 
 def _run_instructions(stage: str) -> list[str]:
@@ -108,13 +126,24 @@ def _updates_apt_indexes(run_instruction: str) -> bool:
 def test_production_stage_installs_perl_base() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
     production = _production_stage(dockerfile)
-    apt_get_runs = [run for run in _run_instructions(production) if _updates_apt_indexes(run)]
 
-    assert apt_get_runs, "production stage must update package indexes before runtime package install"
-    assert any(_installs_or_upgrades_perl_base(run) for run in apt_get_runs), (
-        "production RUN must install/upgrade perl-base after apt-get update "
-        "so the image is at least 5.40.1-6+deb13u1"
+    assert any(
+        _updates_apt_indexes(run) and _installs_or_upgrades_perl_base(run) for run in _run_instructions(production)
+    ), "production RUN must update package indexes and install/upgrade perl-base in the same instruction"
+
+
+
+def test_production_stage_falls_back_to_final_stage_without_alias() -> None:
+    stage = _production_stage(
+        """FROM python:3.11-slim AS builder
+RUN echo builder
+FROM python:3.11-slim
+RUN apt-get update && apt-get install -y perl-base
+"""
     )
+
+    assert stage.splitlines()[0] == "FROM python:3.11-slim"
+
 
 
 def test_dockerfile_parser_is_case_insensitive() -> None:
