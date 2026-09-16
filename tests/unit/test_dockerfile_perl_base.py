@@ -106,6 +106,20 @@ ARG BUILD_DATE=2026-09-16
 
 
 
+def test_perl_base_must_be_in_production_apt_get_run() -> None:
+    stage = _production_stage(
+        """FROM python:3.11-slim AS builder
+RUN apt-get update && apt-get install -y perl-base
+FROM python:3.11-slim AS production
+RUN echo preflight
+RUN apt-get update && apt-get install -y curl
+"""
+    )
+
+    assert not any("apt-get update" in run and "perl-base" in run for run in _run_instructions(stage))
+
+
+
 def test_trivyignore_does_not_accept_perl_base_cves() -> None:
     ignore = (REPO_ROOT / ".trivyignore").read_text(encoding="utf-8")
     uncommented = [line.strip() for line in ignore.splitlines() if line.strip() and not line.lstrip().startswith("#")]
