@@ -152,6 +152,17 @@ RUN apt-get update && apt-get upgrade -y perl-base curl
 
 
 
+def test_perl_base_install_only_upgrade_counts_as_valid_fix() -> None:
+    stage = _production_stage(
+        """FROM python:3.11-slim AS production
+RUN apt-get update && apt-get install --only-upgrade -y perl-base
+"""
+    )
+
+    assert any(_installs_or_upgrades_perl_base(run) for run in _run_instructions(stage))
+
+
+
 def test_perl_base_grouped_shell_command_counts_as_install() -> None:
     stage = _production_stage(
         """FROM python:3.11-slim AS production
