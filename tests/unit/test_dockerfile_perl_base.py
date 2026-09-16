@@ -16,16 +16,40 @@ pytestmark = [pytest.mark.unit]
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PERL_CVES = ("CVE-2026-13221", "CVE-2026-42496", "CVE-2026-8376")
-TOP_LEVEL_DOCKERFILE_INSTRUCTION = re.compile(r"^[A-Z][A-Z0-9_]*(?:\s|$)", re.IGNORECASE)
+DOCKERFILE_INSTRUCTIONS = {
+    "ADD",
+    "ARG",
+    "CMD",
+    "COPY",
+    "ENTRYPOINT",
+    "ENV",
+    "EXPOSE",
+    "FROM",
+    "HEALTHCHECK",
+    "LABEL",
+    "MAINTAINER",
+    "ONBUILD",
+    "RUN",
+    "SHELL",
+    "STOPSIGNAL",
+    "USER",
+    "VOLUME",
+    "WORKDIR",
+}
 PRODUCTION_STAGE_ALIAS = re.compile(r"\bAS\s+production\b", re.IGNORECASE)
 
 
 def _is_instruction(line: str, name: str | None = None) -> bool:
-    if not TOP_LEVEL_DOCKERFILE_INSTRUCTION.match(line):
+    tokens = line.lstrip().split(maxsplit=1)
+    if not tokens:
+        return False
+
+    instruction = tokens[0].upper()
+    if instruction not in DOCKERFILE_INSTRUCTIONS:
         return False
     if name is None:
         return True
-    return line.split(maxsplit=1)[0].lower() == name.lower()
+    return instruction == name.upper()
 
 
 def _production_stage(dockerfile: str) -> str:
@@ -77,10 +101,10 @@ def _installs_or_upgrades_perl_base(run_instruction: str) -> bool:
 def test_production_stage_installs_perl_base() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
     production = _production_stage(dockerfile)
-    run_instruction = next((run for run in _run_instructions(production) if "apt-get update" in run.lower()), None)
+    apt_get_runs = [run for run in _run_instructions(production) if "apt-get update" in run.lower()]
 
-    assert run_instruction is not None, "production stage must run apt-get update before runtime package install"
-    assert _installs_or_upgrades_perl_base(run_instruction), (
+    assert apt_get_runs, "production stage must run apt-get update before runtime package install"
+    assert any(_installs_or_upgrades_perl_base(run) for run in apt_get_runs), (
         "production RUN must install/upgrade perl-base after apt-get update "
         "so the image is at least 5.40.1-6+deb13u1"
     )
@@ -88,16 +112,16 @@ def test_production_stage_installs_perl_base() -> None:
 
 def test_dockerfile_parser_is_case_insensitive() -> None:
     stage = _production_stage(
-        """FROM python:3.11-slim As builder
+        """  FROM python:3.11-slim As builder
 RUN echo builder
-from python:3.11-slim   aS   production
-run apt-get update && apt-get install -y perl-base
-Label stage=production
+  from python:3.11-slim   aS   production
+  run apt-get update && apt-get install -y perl-base
+  Label stage=production
 """
     )
 
-    assert stage.splitlines()[0] == "from python:3.11-slim   aS   production"
-    assert _run_instructions(stage) == ["run apt-get update && apt-get install -y perl-base"]
+    assert stage.splitlines()[0] == "  from python:3.11-slim   aS   production"
+    assert _run_instructions(stage) == ["  run apt-get update && apt-get install -y perl-base"]
 
 
 
