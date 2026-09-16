@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+import shlex
 
 import pytest
 
@@ -90,10 +91,18 @@ def _run_instructions(stage: str) -> list[str]:
 def _installs_or_upgrades_perl_base(run_instruction: str) -> bool:
     normalized = " ".join(run_instruction.replace("\\", " ").split())
     for command in normalized.split("&&"):
-        stripped = command.strip()
-        if "apt-get" not in stripped.lower() or "perl-base" not in stripped.lower():
+        tokens = shlex.split(command.strip())
+        lower_tokens = [token.lower() for token in tokens]
+        if "apt-get" not in lower_tokens:
             continue
-        if re.search(r"\b(?:install|upgrade)\b", stripped, re.IGNORECASE):
+
+        apt_idx = lower_tokens.index("apt-get")
+        action_idx = next((idx for idx, token in enumerate(lower_tokens[apt_idx + 1 :], apt_idx + 1) if token in {"install", "upgrade"}), None)
+        if action_idx is None:
+            continue
+
+        packages = [token.lower() for token in tokens[action_idx + 1 :] if not token.startswith("-")]
+        if "perl-base" in packages:
             return True
     return False
 
@@ -156,10 +165,10 @@ RUN apt-get update && apt-get install -y curl
 
 
 
-def test_perl_base_comments_or_removals_do_not_count_as_install() -> None:
+def test_perl_base_mentions_outside_install_do_not_count() -> None:
     stage = _production_stage(
         """FROM python:3.11-slim AS production
-RUN apt-get update && echo perl-base && apt-get remove -y perl-base
+RUN apt-get update && apt-get install -y curl && echo perl-base && apt-get remove -y perl-base
 """
     )
 
