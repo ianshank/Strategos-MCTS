@@ -8,6 +8,7 @@ fixes ship in 5.40.1-6+deb13u1. Dropping Gradio does not unred that job.
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 import pytest
 
@@ -15,11 +16,15 @@ pytestmark = [pytest.mark.unit]
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PERL_CVES = ("CVE-2026-13221", "CVE-2026-42496", "CVE-2026-8376")
+TOP_LEVEL_DOCKERFILE_INSTRUCTION = re.compile(r"^[A-Z][A-Z0-9_]*(?:\s|$)")
 
 
 def _production_stage(dockerfile: str) -> str:
     lines = dockerfile.splitlines()
-    start = next((idx for idx, line in enumerate(lines) if line.startswith("FROM ") and " as production" in line), None)
+    start = next(
+        (idx for idx, line in enumerate(lines) if line.lower().startswith("from ") and " as production" in line.lower()),
+        None,
+    )
     assert start is not None, "Dockerfile has no production stage"
 
     end = next((idx for idx, line in enumerate(lines[start + 1 :], start + 1) if line.startswith("FROM ")), len(lines))
@@ -37,7 +42,7 @@ def _run_instructions(stage: str) -> list[str]:
             current = [line]
             continue
         if current:
-            if line.startswith(("COPY ", "CMD ", "ENTRYPOINT ", "HEALTHCHECK ", "ENV ", "EXPOSE ", "USER ", "WORKDIR ")):
+            if TOP_LEVEL_DOCKERFILE_INSTRUCTION.match(line):
                 instructions.append("\n".join(current))
                 current = []
             else:
