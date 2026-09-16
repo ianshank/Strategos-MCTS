@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
-import shlex
 
 import pytest
 
@@ -38,6 +37,10 @@ DOCKERFILE_INSTRUCTIONS = {
     "WORKDIR",
 }
 PRODUCTION_STAGE_ALIAS = re.compile(r"\bAS\s+production\b", re.IGNORECASE)
+PERL_APT_INSTALL = re.compile(
+    r"(?:^|[(&;|])\s*apt-get\b[^;&|)]*\b(?:install|upgrade)\b[^;&|)]*\bperl-base\b",
+    re.IGNORECASE,
+)
 
 
 def _is_instruction(line: str, name: str | None = None) -> bool:
@@ -90,21 +93,7 @@ def _run_instructions(stage: str) -> list[str]:
 
 def _installs_or_upgrades_perl_base(run_instruction: str) -> bool:
     normalized = " ".join(run_instruction.replace("\\", " ").split())
-    for command in normalized.split("&&"):
-        tokens = shlex.split(command.strip())
-        lower_tokens = [token.lower() for token in tokens]
-        if "apt-get" not in lower_tokens:
-            continue
-
-        apt_idx = lower_tokens.index("apt-get")
-        action_idx = next((idx for idx, token in enumerate(lower_tokens[apt_idx + 1 :], apt_idx + 1) if token in {"install", "upgrade"}), None)
-        if action_idx is None:
-            continue
-
-        packages = [token.lower() for token in tokens[action_idx + 1 :] if not token.startswith("-")]
-        if "perl-base" in packages:
-            return True
-    return False
+    return bool(PERL_APT_INSTALL.search(normalized))
 
 
 def test_production_stage_installs_perl_base() -> None:
@@ -156,6 +145,17 @@ def test_perl_base_policy_matches_install_run_without_cve_strings() -> None:
         """FROM python:3.11-slim AS production
 RUN echo preflight
 RUN apt-get update && apt-get upgrade -y perl-base curl
+"""
+    )
+
+    assert any(_installs_or_upgrades_perl_base(run) for run in _run_instructions(stage))
+
+
+
+def test_perl_base_grouped_shell_command_counts_as_install() -> None:
+    stage = _production_stage(
+        """FROM python:3.11-slim AS production
+RUN (apt-get update && apt-get install -y perl-base)
 """
     )
 
