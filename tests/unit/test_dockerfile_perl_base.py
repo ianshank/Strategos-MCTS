@@ -133,40 +133,34 @@ def test_production_stage_installs_perl_base() -> None:
 
 
 def test_production_stage_falls_back_to_final_stage_without_alias() -> None:
-    stage = _production_stage(
-        """FROM python:3.11-slim AS builder
+    stage = _production_stage("""FROM python:3.11-slim AS builder
 RUN echo builder
 FROM python:3.11-slim
 RUN apt-get update && apt-get install -y perl-base
-"""
-    )
+""")
 
     assert stage.splitlines()[0] == "FROM python:3.11-slim"
 
 
 def test_dockerfile_parser_is_case_insensitive() -> None:
-    stage = _production_stage(
-        """  FROM python:3.11-slim As builder
+    stage = _production_stage("""  FROM python:3.11-slim As builder
 RUN echo builder
   from python:3.11-slim   aS   production
   run apt-get update && apt-get install -y perl-base
   Label stage=production
-"""
-    )
+""")
 
     assert stage.splitlines()[0] == "  from python:3.11-slim   aS   production"
     assert _run_instructions(stage) == ["  run apt-get update && apt-get install -y perl-base"]
 
 
 def test_run_instruction_parser_stops_at_next_top_level_instruction() -> None:
-    instructions = _run_instructions(
-        """FROM python:3.11-slim AS production
+    instructions = _run_instructions("""FROM python:3.11-slim AS production
 RUN echo preflight
 RUN apt-get update && apt-get install -y --no-install-recommends \\
     perl-base
 ARG BUILD_DATE=2026-09-16
-"""
-    )
+""")
 
     assert instructions == [
         "RUN echo preflight",
@@ -183,32 +177,26 @@ def test_apt_index_update_detection_accepts_apt_frontend() -> None:
 
 
 def test_perl_base_policy_matches_install_run_without_cve_strings() -> None:
-    stage = _production_stage(
-        """FROM python:3.11-slim AS production
+    stage = _production_stage("""FROM python:3.11-slim AS production
 RUN echo preflight
 RUN apt-get update && apt-get upgrade -y perl-base curl
-"""
-    )
+""")
 
     assert any(_installs_or_upgrades_perl_base(run) for run in _run_instructions(stage))
 
 
 def test_perl_base_install_only_upgrade_counts_as_valid_fix() -> None:
-    stage = _production_stage(
-        """FROM python:3.11-slim AS production
+    stage = _production_stage("""FROM python:3.11-slim AS production
 RUN apt-get update && apt-get install --only-upgrade -y perl-base
-"""
-    )
+""")
 
     assert any(_installs_or_upgrades_perl_base(run) for run in _run_instructions(stage))
 
 
 def test_perl_base_grouped_shell_command_counts_as_install() -> None:
-    stage = _production_stage(
-        """FROM python:3.11-slim AS production
+    stage = _production_stage("""FROM python:3.11-slim AS production
 RUN (apt-get update && apt-get install -y perl-base)
-"""
-    )
+""")
 
     assert any(_installs_or_upgrades_perl_base(run) for run in _run_instructions(stage))
 
@@ -218,36 +206,30 @@ def test_split_package_name_continuation_is_preserved() -> None:
 
 
 def test_perl_base_grouped_multiline_command_counts_as_install() -> None:
-    stage = _production_stage(
-        """FROM python:3.11-slim AS production
+    stage = _production_stage("""FROM python:3.11-slim AS production
 RUN (apt-get update && \\
     apt-get install -y perl-\\
     base)
-"""
-    )
+""")
 
     assert any(_installs_or_upgrades_perl_base(run) for run in _run_instructions(stage))
 
 
 def test_perl_base_must_be_in_production_apt_get_run() -> None:
-    stage = _production_stage(
-        """FROM python:3.11-slim AS builder
+    stage = _production_stage("""FROM python:3.11-slim AS builder
 RUN apt-get update && apt-get install -y perl-base
 FROM python:3.11-slim AS production
 RUN echo preflight
 RUN apt-get update && apt-get install -y curl
-"""
-    )
+""")
 
     assert not any(_installs_or_upgrades_perl_base(run) for run in _run_instructions(stage))
 
 
 def test_perl_base_mentions_outside_install_do_not_count() -> None:
-    stage = _production_stage(
-        """FROM python:3.11-slim AS production
+    stage = _production_stage("""FROM python:3.11-slim AS production
 RUN apt-get update && apt-get install -y curl && echo perl-base && apt-get remove -y perl-base
-"""
-    )
+""")
 
     assert not any(_installs_or_upgrades_perl_base(run) for run in _run_instructions(stage))
 
