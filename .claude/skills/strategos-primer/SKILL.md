@@ -124,17 +124,26 @@ status-artifact        # write artifacts/status.json (provenance-stamped; --stri
 validate-context-docs  # deterministic doc-vs-tree validation (see /validate-context)
 ```
 
-Reusable project skills (invoke by name) cover the routine loops so you don't reconstruct them:
+Reusable project skills (invoke by name) cover the routine loops so you don't reconstruct them.
+Every directory under `.claude/skills/` is a skill; the primer must name each one (registry test):
 
-- **`/quality-gate`** — the full local CI-equivalent gate (black → ruff → mypy → specs → docs →
-  claims → pins → pytest+branch-cov → secret grep). Run before every push; green locally means green
-  in CI.
-- **`/validate-specs`** — validate `specs/*.SPEC.md` against harness spec schema v2.
-- **`/coverage-baseline`** — regenerate the evidence-backed `docs/STATUS.md` baseline.
-- **`/validate-claims`** — grade a capability claim against the tree and write the ledger row, with
-  the promotion rule applied rather than argued.
-- **`/promotion-gate`** — the checklist a result must pass before any prose calls a capability
-  proven (provenance, cost denominator, seed count, gated comparison).
+- **`quality-gate`** — the full local CI-equivalent gate. Prefer `make gate`.
+- **`validate-specs`** — validate `specs/*.SPEC.md` against harness spec schema v2.
+- **`coverage-baseline`** — local coverage report; refresh `docs/STATUS.md` only after green main.
+- **`validate-claims`** — grade a capability claim against the tree and write the ledger row.
+- **`promotion-gate`** — checklist before any prose calls a capability proven.
+- **`validate-context`** — deterministic doc-vs-tree check (`python -m src.tools.context_docs`).
+- **`strategos-primer`** — this orientation skill.
+- **`aqa-regression`** — unit / e2e matrix / regression / UI / LM Studio plus overlay pins
+  (value-semantics CHARTER demo, Dockerfile perl-base, deploy-sanity paths). Trivy blocking
+  scan is `.github/workflows/ci.yml` docker-build; `.github/workflows/docker-deployment.yml` scan is advisory.
+- **`e2e-device-matrix`** — honest GPU-skip reader for `tests/e2e/`.
+- **`gpu-device-auditor`** — accelerator / AMP / TF32 checklist.
+- **`deep-research`** — multi-agent research reports under `docs/reports/`.
+- **`hierarchical-recursive-brainstorm`** — decompose a topic before coding.
+
+Editor hooks (`.claude/settings.json`, warn-mode): `spec_gate`, `device_literal_gate`,
+`evidence_gate`. Agents: `selfplay-referee`, `eval-warden`, `spec-review`, `strategos-guide`.
 
 ## The evidence chain
 

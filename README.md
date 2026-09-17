@@ -6,7 +6,7 @@ a DeepMind-style AI system with Neural MCTS and Hierarchical Reasoning (pre-inte
 
 [![CI](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml/badge.svg)](https://github.com/ianshank/Strategos-MCTS/actions/workflows/ci.yml)
 [![Hugging Face Space](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Space-blue.svg)](https://huggingface.co/spaces/ianshank/langgraph-mcts-demo)
-[![Coverage](https://img.shields.io/badge/coverage-89.65%25-brightgreen.svg)](docs/STATUS.md)
+[![Coverage](https://img.shields.io/badge/coverage-see%20STATUS.md-informational.svg)](docs/STATUS.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](pyproject.toml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](pyproject.toml)
@@ -235,9 +235,11 @@ Secrets are never committed: Kubernetes pulls them via the External Secrets Oper
 Phase work is specified as `specs/*.SPEC.md` (Goal / Acceptance Criteria / Constraints) validated by
 the harness (`harness validate-spec specs/<file>.SPEC.md`) and a CI `spec-validate` job. Reusable
 helper skills live in `.claude/skills/` (`quality-gate`, `validate-specs`, `coverage-baseline`,
-`strategos-primer` for codebase orientation, and `validate-context`, which deterministically checks
-the `.claude/` skills/agents against the tree). The `strategos-guide` agent (`.claude/agents/`) is the
-dispatchable counterpart of the primer. See `AGENTS.md` for the agent routing ledger.
+`strategos-primer`, `validate-context`, `aqa-regression`, `e2e-device-matrix`,
+`gpu-device-auditor`, `validate-claims`, `promotion-gate`, `deep-research`,
+`hierarchical-recursive-brainstorm`). The `strategos-guide` agent
+(`.claude/agents/`) is the dispatchable counterpart of the primer; `selfplay-referee` and
+`eval-warden` review search semantics and measurement claims. See `AGENTS.md` for the agent routing ledger.
 
 ## Documentation
 

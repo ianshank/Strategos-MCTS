@@ -14,6 +14,8 @@ description: >-
 
 Run the repo's CI-equivalent gate locally, in order. Stop at the first failure and fix before
 continuing. Mirrors `.github/workflows/ci.yml` so green locally means green in CI.
+Prefer `make gate`. Trivy image scan and deploy-sanity are CI/docker jobs — not
+`make gate` steps (no docker/trivy on every laptop).
 
 ```bash
 # 1. Format (check only; run without --check to auto-fix) — repo-wide, matching CI
@@ -36,8 +38,12 @@ python -m src.tools.claim_ledger
 python -m src.tools.action_pins
 python -m src.tools.lint_ratchet
 
-# 6. Tests with branch coverage (gate = fail_under 85.0 in pyproject.toml)
-pytest tests/unit/ --cov=src --cov-report=term-missing --cov-fail-under=85
+# 6. Tests with branch coverage (gate = fail_under 85.0 in pyproject.toml).
+# Prefer `make test` / `make gate` so TEST_ENV (STRICT_OPTIONAL_DEPS=1, offline hub,
+# dummy OPENAI_API_KEY) matches CI. Manual pytest without that env is not the gate.
+STRICT_OPTIONAL_DEPS=1 WANDB_MODE=disabled LANGCHAIN_TRACING_V2=false HF_HUB_OFFLINE=1 \
+  TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false OPENAI_API_KEY=sk-test-key-not-real \
+  pytest tests/unit/ --cov=src --cov-report=term-missing --cov-fail-under=85
 
 # 6b. End-to-end suite, outside the coverage run (evidence-program R3). Read the skip
 # lines before reporting it green — see the `e2e-device-matrix` skill.
