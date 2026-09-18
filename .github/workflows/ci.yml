@@ -98,7 +98,7 @@ jobs:
         run: |
           set -euo pipefail
           scratch="$(mktemp -d)"
-          cp -r docs specs src pyproject.toml "$scratch/"
+          cp -r CHARTER.md README.md docs specs src tests benchmarks .claude .github pyproject.toml "$scratch/"
           python - "$scratch/docs/CLAIM_LEDGER.md" <<'PY'
           import sys
           path = sys.argv[1]

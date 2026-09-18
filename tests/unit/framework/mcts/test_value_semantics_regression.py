@@ -24,11 +24,14 @@ four engines. NeuralMCTS uses the inverted name ``single_agent`` for the same pa
 
 ``TestCrossEngineSingleAgentParity`` locks ``negate_child_value=False`` to mean
 "matches core's unflipped selection convention." Backup parity is
-``TestBackupSignAndCrossEngineParity`` below — CHARTER.md §2's demo command must
-exercise backup, not only stuffed-stats selection.
+``TestBackupSignClassicalEngines`` / ``TestBackupSignNeuralEngine`` below —
+CHARTER.md §2's demo command must exercise backup, not only stuffed-stats
+selection.
 """
 
 from __future__ import annotations
+
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -59,7 +62,7 @@ def _state(state_id: str) -> MCTSState:
 
 
 class TestParallelMCTSNegamaxSelection:
-    """``select_child_with_vl`` must pick the minimax-optimal child, not the opponent-best one."""
+    """Covers hygiene_mcts_value_semantics AC-1 — minimax-optimal child, not opponent-best."""
 
     def _tree(self) -> tuple[VirtualLossNode, VirtualLossNode, VirtualLossNode]:
         root = VirtualLossNode(state=_state("root"))
@@ -120,7 +123,7 @@ class TestProgressiveWideningNegamaxSelection:
 
         assert selected.action == "b"
 
-    def test_rave_term_is_also_negated_when_it_dominates(self) -> None:
+    def test_parent_amaf_is_not_double_negated_when_rave_dominates(self) -> None:
         """Covers hygiene_mcts_value_semantics AC-8 — parent AMAF, not stuffed child dicts.
 
         Two-player backup writes parent RAVE as parent-STM (child Q=+0.9 → parent −0.9).
@@ -189,14 +192,15 @@ class TestPUCTDoubleDivisionFix:
 
 
 class TestCrossEngineSingleAgentParity:
-    """
+    """Covers hygiene_mcts_value_semantics AC-2 — single-agent UCB1 agreement across engines.
+
     In single-agent mode (no sign flip), ``core.MCTSNode.select_child`` (UCB1),
     ``VirtualLossNode.select_child_with_vl`` (no active virtual loss, ``negate_child_value=False``),
     and ``RAVENode.select_child_rave`` (no RAVE data, ``negate_child_value=False``) all reduce to
     the identical UCB1 formula and must agree on the selected child for the same seeded stats.
 
     ``core.py`` unflipped selection is the ``negate_child_value=False`` convention.
-    Backup sign is tested separately in ``TestBackupSignAndCrossEngineParity``.
+    Backup sign is tested separately in ``TestBackupSignClassicalEngines``.
     """
 
     _EXPLORATION_WEIGHT = 0.7
@@ -234,6 +238,7 @@ class TestCrossEngineSingleAgentParity:
 
 class TestSelectChildPuctMatchesCanonicalFormula:
     def test_matches_puct_on_1000_seeded_random_scenarios(self) -> None:
+        """Covers hygiene_mcts_value_semantics AC-3 — 1,000 seeded PUCT vs canonical puct()."""
         rng = np.random.default_rng(20260730)
 
         for _ in range(1000):
@@ -751,6 +756,8 @@ class TestParentPerspectiveFinalsAndScorer:
         assert pw_stats["action_stats"]["b"]["value"] == pytest.approx(core_stats["action_stats"]["b"]["value"])
         assert par_stats["action_stats"]["b"]["value"] == pytest.approx(core_stats["action_stats"]["b"]["value"])
         assert pw_stats["action_stats"]["b"]["value"] > pw_stats["action_stats"]["a"]["value"]
+        # Residual (CL-1): PW still publishes child STM as best_action_value; core uses parent-Q.
+        # Do not assert equality here — a graph-module / engines follow-up owns that surface.
 
 
 class TestPerspectiveFlagBinding:
@@ -762,6 +769,13 @@ class TestPerspectiveFlagBinding:
         factory = create_parallel_mcts(strategy="root", num_workers=2, seed=42, two_player=False)
         assert isinstance(factory, RootParallelMCTSEngine)
         assert factory.two_player is False
+
+    def test_root_parallel_forwards_two_player_true(self) -> None:
+        engine = RootParallelMCTSEngine(num_workers=2, seed=42, two_player=True)
+        assert engine.two_player is True
+        factory = create_parallel_mcts(strategy="root", num_workers=2, seed=42, two_player=True)
+        assert isinstance(factory, RootParallelMCTSEngine)
+        assert factory.two_player is True
 
     @pytest.mark.asyncio
     async def test_root_parallel_workers_receive_two_player(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -813,3 +827,18 @@ class TestPerspectiveFlagBinding:
         assert mcts.single_agent is True
         mcts_on = NeuralMCTS(_StubNet(), MCTSConfig(), device="cpu", single_agent=False)
         assert mcts_on.single_agent is False
+
+        class _TwoPlayerSettings:
+            MCTS_TWO_PLAYER = True
+
+        monkeypatch.setattr(neural_module, "get_settings", lambda: _TwoPlayerSettings())
+        mcts_default_two_player = NeuralMCTS(_StubNet(), MCTSConfig(), device="cpu")
+        assert mcts_default_two_player.single_agent is False
+
+
+def test_migration_notes_document_no_escape_hatch() -> None:
+    """Covers hygiene_mcts_value_semantics AC-5 — no escape hatch to the broken pair."""
+    # tests/unit/framework/mcts/<file> → parents[4] is the repo root.
+    notes = (Path(__file__).resolve().parents[4] / "docs" / "MIGRATION_NOTES.md").read_text(encoding="utf-8")
+    assert "There is no" in notes and "escape hatch back to the old behavior" in notes
+    assert "There is no escape hatch to the broken asymmetric pair." in notes

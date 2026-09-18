@@ -11,7 +11,7 @@ select_child_puct divides an already-averaged Q by visits again (neural_policies
 parallel/progressive-widening engines flip value sign per level during backpropagation but
 select on the un-negated child value, choosing the opponent-best move. The backup side is
 symmetrically broken and was previously understated here: `parallel_mcts.py:535-539` and
-`progressive_widening.py:470-471` negate unconditionally, ignoring the very `two_player` flag their
+`progressive_widening.py:472` negate unconditionally, ignoring the very `two_player` flag their
 selection paths consult (and which `progressive_widening.py:293` documents as controlling backprop),
 while `core.py:377-393` never negates and exposes no flag at all. Adopt the proven
 negate_child_value pattern from neural_mcts.py, with the two-player perspective as an explicit

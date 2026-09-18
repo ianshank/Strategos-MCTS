@@ -194,9 +194,10 @@ believes is enforced but is not is worse than one honestly labelled.
 4. **Unit tests are hermetic.** No real network or API calls under `tests/unit/`; all external I/O is
    mocked. *Enforced by:* the CI test job's environment, which forces offline hub and tracing modes
    and injects a dummy API key (`.github/workflows/ci.yml`). **Verdict: PARTIAL** — this disables the
-   common accidental paths (HF Hub, W&B, LangChain tracing) but there is no actual socket block
-   (no `pytest-socket` or equivalent in `pyproject.toml` or `tests/conftest.py`); a test making a raw call to
-   an unrelated host would not be stopped.
+   common accidental paths (HF Hub, W&B, LangChain tracing) but there is no actual socket block yet
+   (`pytest-socket` is declared in the `[dev]` extra; `tests/conftest.py` registers `enable_socket`;
+   collection of `tests/unit/` does not pass `--disable-socket` — `hygiene_test_triage` AC-4); a test
+   making a raw call to an unrelated host would not be stopped.
 5. **Coverage is a gate, not a report.** Branch coverage must stay at or above `fail_under = 85.0`,
    declared in `pyproject.toml` and enforced in CI. *Scope, stated honestly:* the CI gate measures
    `tests/unit/` only, and the coverage configuration omits three chess modules
