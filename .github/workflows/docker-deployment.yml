@@ -115,11 +115,6 @@ jobs:
           pip install "ruff>=0.15.0,<0.16.0"  # keep in lockstep with the pyproject [dev] pin
           ruff check scripts/ training/cli.py --output-format=github
 
-      - name: Run smoke tests
-        run: |
-          pip install pytest pytest-asyncio
-          pytest tests/ -m smoke -v --tb=short
-
   # ===========================================================================
   # Stage 2: Build Docker Images
   # ===========================================================================

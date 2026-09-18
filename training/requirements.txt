@@ -128,6 +128,7 @@ tenacity~=8.2.0  # Retry logic for external services
 
 # HTTP & API
 requests~=2.31.0  # HTTP library
+httpx~=0.27.0  # Async HTTP client required by LLM adapters and healthcheck
 PyGithub~=2.1.1  # GitHub API access for code corpus builder
 
 

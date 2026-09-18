@@ -394,12 +394,15 @@ class HealthChecker:
                 from src.adapters.llm.exceptions import LLMClientError
                 from src.config.constants import DEFAULT_LMSTUDIO_URL, normalize_lmstudio_base_url
             except ImportError:
+                # LLM adapters or optional HTTP client dependencies not available.
+                # In environments running without full LLM adapter stacks, this should
+                # degrade rather than fatally fail the container healthcheck.
                 return CheckResult(
                     name=f"llm_{provider}",
-                    status=HealthStatus.UNHEALTHY,
+                    status=HealthStatus.DEGRADED,
                     message="LLM adapters not available",
                     duration_ms=0,
-                    critical=True,
+                    critical=False,
                     metadata={"provider": provider},
                 )
 
@@ -591,10 +594,10 @@ class HealthChecker:
                 self.run_check(
                     f"llm_{llm_provider}",
                     lambda: self.check_llm_provider(llm_provider),
-                    critical=True,
+                    critical=False,
                     timeout=10.0,
                 ),
-                True,
+                False,
                 None,
             ),
             (

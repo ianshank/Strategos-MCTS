@@ -36,20 +36,21 @@ import yaml
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-SMOKE_MARKER_TOKEN = "pytest.mark.smoke"
-DEFAULT_SMOKE_TEST_TIMEOUT_SECONDS = 180.0
-
-
-def _discover_smoke_test_files(tests_root: Path) -> list[Path]:
-    """Return test modules that declare the smoke marker.
-
-    Passing only these files to pytest avoids importing the entire suite before
-    ``-m smoke`` can deselect it. Full collection had consumed nearly all of the
-    former 60-second subprocess budget in CI.
-    """
-    return sorted(
-        path for path in tests_root.rglob("test_*.py") if SMOKE_MARKER_TOKEN in path.read_text(encoding="utf-8")
-    )
+# Deploy sanity must not collect ``tests/deployment/test_docker_smoke.py`` (90s health
+# wait). That file belongs to the Container Smoke Tests job. ``-m "smoke and not e2e"``
+# still collects docker smoke. Keep this list explicit. Timeout is a backstop, not a
+# performance target — CI run 34705825988 died at 60s while still collecting.
+SANITY_SMOKE_ARGS = [
+    "tests/e2e/test_operational_entry_points_e2e.py",
+    "tests/e2e/test_local_distillation_cli_e2e.py",
+    "tests/integration/test_demo_pipeline.py",
+    "-m",
+    "smoke",
+    "-q",
+    "--tb=short",
+]
+SANITY_SMOKE_TIMEOUT_SECONDS = 180
+DEFAULT_SMOKE_TEST_TIMEOUT_SECONDS = float(SANITY_SMOKE_TIMEOUT_SECONDS)
 
 
 class DeploymentSanityChecker:
@@ -186,19 +187,12 @@ class DeploymentSanityChecker:
             return False
 
     def check_test_suite(self) -> bool:
-        """Run smoke tests."""
+        """Run the deploy-sanity smoke subset (not container docker smoke)."""
         self.console.print("\n[cyan]Running smoke tests...[/cyan]")
 
-        smoke_test_files = _discover_smoke_test_files(PROJECT_ROOT / "tests")
-        if not smoke_test_files:
-            self.console.print("  [red]✗[/red] No smoke test modules found")
-            self.failures.append("No smoke test modules found")
-            return False
-
-        test_targets = [str(path.relative_to(PROJECT_ROOT)) for path in smoke_test_files]
         try:
             result = subprocess.run(
-                [sys.executable, "-m", "pytest", *test_targets, "-m", "smoke", "-v", "--tb=short"],
+                [sys.executable, "-m", "pytest", *SANITY_SMOKE_ARGS],
                 capture_output=True,
                 text=True,
                 timeout=self.smoke_test_timeout_seconds,
