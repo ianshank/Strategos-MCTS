@@ -14,7 +14,7 @@
       "name": "mcts-search-semantics",
       "stage": "tested",
       "claims": ["CL-1", "CL-11"],
-      "notes": "Ceiling is 'tested' while CL-1 is FALSE: three of four engines disagree on the value perspective. Milestone E2."
+      "notes": "Ceiling is 'tested' while CL-1 is PARTIAL: in-module Q/RAVE/VL/finals agree; GraphBuilder/factories still inherit two_player=True on quality scores; PW best_action_value is still child STM."
     },
     {
       "name": "graph-orchestration",

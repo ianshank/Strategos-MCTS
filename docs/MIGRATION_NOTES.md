@@ -80,28 +80,63 @@ value without negating it — selecting the move that is best **for the opponent
 root. This mirrors a bug already found and fixed in `neural_mcts.NeuralMCTSNode.select_child`
 (the `negate_child_value` parameter), which was never ported to these two engines.
 
-Both selection methods now accept a `negate_child_value: bool = False` parameter (RAVE also
-negates the RAVE/AMAF mixing term, which was equally unnegated). Both engines gained a
+Both selection methods now accept a `negate_child_value: bool = False` parameter.
+Parent AMAF is already parent side-to-move after two-player backup, so
+`select_child_rave` must **not** negate the RAVE mixing term a second time (AC-8).
+Both engines gained a
 `two_player: bool` field/parameter (`ParallelMCTSConfig.two_player`,
 `ProgressiveWideningEngine(..., two_player=...)`), **defaulting to `True`**, wired through to
 selection as `negate_child_value=self.two_player`. A new settings field,
 `Settings.MCTS_TWO_PLAYER` (default `True`), is the project-wide override for callers that
 construct engines without an explicit config.
 
-**Impact:** with the default (`two_player=True`), root action selection for adversarial
-two-player search changes — this is the fix. Callers that were relying on the old (broken)
-selection can set `two_player=False`, but that also disables the (now-correct) backprop-vs-
-selection consistency and should only be used for genuinely single-agent, non-adversarial
-search, matching `core.MCTSEngine`'s untouched, always-unflipped convention (see
-`tests/unit/framework/mcts/test_value_semantics_regression.py::TestCrossEngineSingleAgentParity`
-for the formal parity guarantee at `two_player=False`).
+**Impact:** with the default (`two_player=True`), root action selection *and* backup for
+adversarial two-player search change — this is the fix. `two_player=False` now produces a
+consistent single-agent search: neither selection nor backup flips. Callers that were relying
+on the old (broken) selection can set `two_player=False` only for genuinely single-agent,
+non-adversarial search.
 
-### `core.MCTSEngine` / `core.MCTSNode` are unchanged
+Default `Settings.MCTS_TWO_PLAYER` is `True`. Wiring that default into `core.MCTSEngine`
+**changes core backup and select** relative to the pre-AC-6 always-unflipped numerics.
+`strategos_risk_averse_subgoal_scorer` must treat post-AC-6 core as its bit-for-bit baseline.
 
-Neither backpropagation nor selection in `core.py` ever flipped sign, so the two were already
-mutually consistent; this phase does not touch its numerics. This preserves the bit-for-bit
-baseline the (approved, not yet implemented) `strategos_risk_averse_subgoal_scorer` spec
-depends on — this fix lands first and becomes part of that spec's baseline going forward.
+Backup parity is asserted by
+`tests/unit/framework/mcts/test_value_semantics_regression.py::TestBackupSignClassicalEngines`
+and `::TestBackupSignNeuralEngine` (CHARTER.md §2's demo command). Do not treat stuffed-stats
+selection parity as backup parity.
+
+### `core.MCTSEngine` now honours `two_player` on backup and select
+
+`MCTSEngine` takes keyword-only `two_player` (default `Settings.MCTS_TWO_PLAYER`). Backup
+negates per ply when the flag is on; `MCTSNode.select_child(..., negate_child_value=)` is
+wired from `engine.select`. There is no escape hatch to the broken asymmetric pair.
+
+`GraphBuilder` (`src/framework/graph/builder.py`) and `MCTSEngineFactory` construct
+`MCTSEngine` without `two_player=`. They now inherit `Settings.MCTS_TWO_PLAYER`
+(default True). HRM/TRM quality rollouts are single-agent scores; pass
+`two_player=False` at those call sites in a follow-up (this spec's module is
+`src/framework/mcts/`). Until then, default graph search uses negamax on those scores.
+
+In-module follow-ups on the same spec (AC-8–AC-11): parent AMAF is not
+double-negated; parallel virtual loss deters after the Q sign flip;
+`MAX_VALUE`/`ROBUST_CHILD`/`action_stats["value"]` are parent-perspective when
+`two_player=True` (single-agent finals still use child Q); omitted
+`NeuralMCTS(single_agent=)` follows `not Settings.MCTS_TWO_PLAYER`;
+`RootParallelMCTSEngine(two_player=)` is forwarded to worker engines.
+
+Consumers of `action_stats["value"]` under default two-player search now see
+parent Q (previously child STM). `ValueCandidateScorer` therefore agrees with
+`MAX_VALUE` without a second negation. Pass `two_player=False` for the old
+child-Q publication.
+
+Known residuals (CL-1 stays PARTIAL; not this overlay):
+- `ProgressiveWideningEngine._compute_statistics` still publishes child STM as
+  `best_action_value` (`progressive_widening.py`); `action_stats["value"]` is
+  parent-Q. Core publishes parent-Q on both surfaces.
+- `ParallelMCTSConfig.two_player` defaults `True` on the dataclass. Settings is
+  consulted only when `ParallelMCTSEngine(config=None)`.
+- `create_parallel_mcts(strategy="tree", two_player=...)` cannot forward the
+  flag (`ParallelMCTSEngine` takes it via config). AC-11 required `strategy="root"`.
 
 ### Benchmarks and the M5 policy-lift gate
 

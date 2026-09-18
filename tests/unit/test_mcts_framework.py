@@ -627,8 +627,22 @@ class TestMCTSEngine:
         assert grandchild.visits == 1
         assert grandchild.value_sum == 0.6
         assert child.visits == 1
-        assert child.value_sum == 0.6
+        assert child.value_sum == -0.6
         assert root_node.visits == 1
+        assert root_node.value_sum == 0.6
+
+    def test_backpropagate_chain_single_agent_does_not_flip(self, root_node):
+        """two_player=False keeps the leaf value on every ancestor."""
+        engine = MCTSEngine(seed=42, two_player=False)
+        child_state = MCTSState(state_id="child")
+        child = root_node.add_child("a1", child_state)
+        grandchild_state = MCTSState(state_id="grandchild")
+        grandchild = child.add_child("a2", grandchild_state)
+
+        engine.backpropagate(grandchild, 0.6)
+
+        assert grandchild.value_sum == 0.6
+        assert child.value_sum == 0.6
         assert root_node.value_sum == 0.6
 
     def test_backpropagate_accumulates(self, seeded_engine, root_node):
@@ -645,7 +659,7 @@ class TestMCTSEngine:
         assert child.value == pytest.approx(0.6)
 
         assert root_node.visits == 3
-        assert root_node.value_sum == pytest.approx(1.8)
+        assert root_node.value_sum == pytest.approx(-1.8)
 
     @pytest.mark.asyncio
     async def test_simulate_returns_bounded_value(self, seeded_engine, root_node, random_rollout_policy):
@@ -886,21 +900,21 @@ class TestMCTSEngine:
         best = seeded_engine._select_best_action(root_node, SelectionPolicy.MAX_VISITS)
         assert best == "action_1"  # Highest visits (50)
 
-    def test_select_best_action_max_value(self, seeded_engine, root_node):
-        """Test _select_best_action with MAX_VALUE policy."""
-        # Add children with different average values
+    def test_select_best_action_max_value(self, root_node):
+        """Single-agent MAX_VALUE is child-Q argmax (two-player is parent-Q; see AC-10)."""
+        engine = MCTSEngine(seed=42, two_player=False)
         for i, (visits, value_sum) in enumerate([(10, 5.0), (10, 9.0), (10, 7.0)]):
             state = MCTSState(state_id=f"child_{i}")
             child = root_node.add_child(f"action_{i}", state)
             child.visits = visits
             child.value_sum = value_sum
 
-        best = seeded_engine._select_best_action(root_node, SelectionPolicy.MAX_VALUE)
-        assert best == "action_1"  # Highest value (0.9)
+        best = engine._select_best_action(root_node, SelectionPolicy.MAX_VALUE)
+        assert best == "action_1"  # Highest child Q (0.9)
 
-    def test_select_best_action_robust_child(self, seeded_engine, root_node):
-        """Test _select_best_action with ROBUST_CHILD policy."""
-        # Add children balancing visits and value
+    def test_select_best_action_robust_child(self, root_node):
+        """ROBUST_CHILD mixes visits with parent-perspective Q."""
+        engine = MCTSEngine(seed=42, two_player=False)
         configs = [
             (50, 25.0),  # High visits, medium value (0.5)
             (30, 24.0),  # Medium visits, high value (0.8)
@@ -912,8 +926,7 @@ class TestMCTSEngine:
             child.visits = visits
             child.value_sum = value_sum
 
-        best = seeded_engine._select_best_action(root_node, SelectionPolicy.ROBUST_CHILD)
-        # Should balance between action_0 (high visits) and action_1 (high value)
+        best = engine._select_best_action(root_node, SelectionPolicy.ROBUST_CHILD)
         assert best in ["action_0", "action_1"]
 
     def test_select_best_action_no_children(self, seeded_engine, root_node):
@@ -1061,7 +1074,7 @@ class TestMCTSIntegration:
                     return 0.1
                 return 0.5
 
-        engine = MCTSEngine(seed=42)
+        engine = MCTSEngine(seed=42, two_player=False)
         root_state = MCTSState(state_id="root", features={"depth": 0})
         root = MCTSNode(state=root_state, rng=engine.rng)
 

@@ -494,7 +494,7 @@ This updated C4 architecture reflects the **current state** of the application, 
 3.  **RAG Integration**: Pinecone vector database for retrieval-augmented generation.
 4.  **Docker Deployment**: Containerized training and inference workflows.
 5.  **External Services**: Integration with W&B, S3, and ArXiv.
-6.  **Parallel MCTS**: Tree-parallel search engine with virtual-loss collision avoidance and adaptive scaling (`src/framework/mcts/parallel_mcts.py`).
+6.  **Parallel MCTS**: Tree-parallel search engine with virtual-loss collision avoidance and adaptive scaling (`src/framework/mcts/parallel_mcts.py`). `two_player` (default `Settings.MCTS_TWO_PLAYER=True`) gates both selection (`negate_child_value`) and backup polarity; virtual loss is subtracted after the parent-Q flip. `RootParallelMCTSEngine` forwards the flag into worker `MCTSEngine` instances. In-module engines agree on that pair; `GraphBuilder` / `MCTSEngineFactory` still omit `two_player=` (CL-1 PARTIAL).
 7.  **Assembly Router & Concept Extractor**: NLP-driven routing heuristics — `ConceptExtractor` classifies query concepts into `technical_term`, `domain_entity`, or `process_action` with a complexity score; `AssemblyRouter` maps these features to HRM/TRM/MCTS (`src/framework/assembly/`, `src/agents/meta_controller/assembly_router.py`).
 8.  **Prometheus Observability**: Full counter/histogram instrumentation for agent latency, MCTS iterations, LLM call outcomes, and active operations (`src/monitoring/prometheus_metrics.py`; `/metrics` endpoint via `rest_server.py`).
 9.  **Test hardening**: see `docs/STATUS.md` for the current measured pass counts, branch

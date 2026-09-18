@@ -36,13 +36,35 @@ import yaml
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+SMOKE_MARKER_TOKEN = "pytest.mark.smoke"
+DEFAULT_SMOKE_TEST_TIMEOUT_SECONDS = 180.0
+
+
+def _discover_smoke_test_files(tests_root: Path) -> list[Path]:
+    """Return test modules that declare the smoke marker.
+
+    Passing only these files to pytest avoids importing the entire suite before
+    ``-m smoke`` can deselect it. Full collection had consumed nearly all of the
+    former 60-second subprocess budget in CI.
+    """
+    return sorted(
+        path for path in tests_root.rglob("test_*.py") if SMOKE_MARKER_TOKEN in path.read_text(encoding="utf-8")
+    )
+
 
 class DeploymentSanityChecker:
     """Comprehensive pre-deployment sanity checker."""
 
-    def __init__(self, verbose: bool = False):
+    def __init__(
+        self,
+        verbose: bool = False,
+        smoke_test_timeout_seconds: float = DEFAULT_SMOKE_TEST_TIMEOUT_SECONDS,
+    ):
+        if smoke_test_timeout_seconds <= 0:
+            raise ValueError("smoke_test_timeout_seconds must be positive")
         self.console = Console()
         self.verbose = verbose
+        self.smoke_test_timeout_seconds = smoke_test_timeout_seconds
         self.failures: list[str] = []
         self.warnings: list[str] = []
 
@@ -167,12 +189,19 @@ class DeploymentSanityChecker:
         """Run smoke tests."""
         self.console.print("\n[cyan]Running smoke tests...[/cyan]")
 
+        smoke_test_files = _discover_smoke_test_files(PROJECT_ROOT / "tests")
+        if not smoke_test_files:
+            self.console.print("  [red]✗[/red] No smoke test modules found")
+            self.failures.append("No smoke test modules found")
+            return False
+
+        test_targets = [str(path.relative_to(PROJECT_ROOT)) for path in smoke_test_files]
         try:
             result = subprocess.run(
-                [sys.executable, "-m", "pytest", "tests/", "-m", "smoke", "-v", "--tb=short"],
+                [sys.executable, "-m", "pytest", *test_targets, "-m", "smoke", "-v", "--tb=short"],
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=self.smoke_test_timeout_seconds,
             )
 
             if result.returncode == 0:
