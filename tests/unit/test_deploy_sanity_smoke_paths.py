@@ -70,20 +70,18 @@ def test_sanity_script_smoke_is_explicit_paths_with_roomy_timeout() -> None:
     args, timeout = _script_constants()
     for path in SANITY_SMOKE_PATHS:
         assert path in args
+    marker_index = args.index("-m")
+    assert args[marker_index + 1] == "smoke"
     assert "tests/" not in args
     assert DOCKER_SMOKE not in args
     assert timeout >= 180
 
 
-def test_sanity_job_smoke_step_matches_script_paths() -> None:
+def test_sanity_job_runs_script_without_duplicate_smoke_step() -> None:
     jobs = _workflow()["jobs"]
-    run = _step_pytest_lines(jobs["sanity-checks"], "Run smoke tests")
-    for path in SANITY_SMOKE_PATHS:
-        assert path in run
-    assert "pytest tests/ -m" not in run
-    assert "pytest tests/ -v" not in run
-    assert DOCKER_SMOKE not in run
-    assert "smoke and not e2e" not in run
+    run = _step_run(jobs["sanity-checks"], "Run sanity checks")
+    assert "python scripts/deployment_sanity_check.py --verbose" in run
+    assert all(step.get("name") != "Run smoke tests" for step in jobs["sanity-checks"].get("steps") or [])
 
 
 def test_container_smoke_job_still_owns_docker_smoke() -> None:

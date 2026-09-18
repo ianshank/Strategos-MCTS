@@ -102,6 +102,8 @@ def _run_instructions(stage: str) -> list[str]:
             if _is_instruction(line):
                 instructions.append("\n".join(current))
                 current = []
+            elif line.lstrip().startswith("#"):
+                continue
             else:
                 current.append(line)
 
@@ -166,6 +168,16 @@ ARG BUILD_DATE=2026-09-16
         "RUN echo preflight",
         "RUN apt-get update && apt-get install -y --no-install-recommends \\\n    perl-base",
     ]
+
+
+def test_run_instruction_parser_ignores_comment_lines_between_instructions() -> None:
+    instructions = _run_instructions("""FROM python:3.11-slim AS production
+RUN echo preflight
+# apt-get update && apt-get install -y perl-base
+ARG BUILD_DATE=2026-09-16
+""")
+
+    assert instructions == ["RUN echo preflight"]
 
 
 def test_perl_base_install_detection_accepts_apt_frontend() -> None:

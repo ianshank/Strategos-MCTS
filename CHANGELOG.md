@@ -9,7 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed — Docker Deployment sanity smoke timeout
 
-- `scripts/deployment_sanity_check.py` and the sanity job's "Run smoke tests" step no longer run `pytest tests/ -m smoke` (that collection includes `tests/deployment/test_docker_smoke.py` and its 90s health wait, and died at subprocess timeout=60 on run 34705825988). Both now invoke the operational e2e, local-distillation CLI e2e, and demo-pipeline smoke files (~16 tests). Container docker smoke stays on the Container Smoke Tests job. Sanity subprocess timeout is 180s. `docs/DOCKER_DEPLOYMENT.md` splits sanity vs container smoke the same way; do not use `smoke and not e2e`.
+- `scripts/deployment_sanity_check.py` and the sanity job no longer run `pytest tests/ -m smoke` (that collection includes `tests/deployment/test_docker_smoke.py` and its 90s health wait, and died at subprocess timeout=60 on run 34705825988). The sanity job now delegates that subset to the script, which invokes the operational e2e, local-distillation CLI e2e, and demo-pipeline smoke files (~16 tests). Container docker smoke stays on the Container Smoke Tests job. Sanity subprocess timeout is 180s. `docs/DOCKER_DEPLOYMENT.md` splits sanity vs container smoke the same way; do not use `smoke and not e2e`.
+### Fixed — MCTS backup sign (`hygiene_mcts_value_semantics` AC-6 / AC-7)
+
+- `ParallelMCTSEngine` and `ProgressiveWideningEngine` gate backup negation on `two_player` (selection already did). `core.MCTSEngine` gained the same settings-backed flag (default `Settings.MCTS_TWO_PLAYER=True`) on backup and select. Default core search now negamax-flips; pass `two_player=False` for single-agent. NeuralMCTS was already consistent (`single_agent`).
+- Tests that pinned the old backup (`test_mcts_framework.py` 3-node chain all `0.6`; `test_progressive_widening.py` always-flipped root) now encode the flag. CHARTER §2 demo `test_value_semantics_regression.py` covers backup, not only stuffed-stats selection.
+
+### Fixed — MCTS remaining in-module sign holes (AC-8–AC-11, AC-4)
+
+- Parent AMAF/RAVE is parent side-to-move; `select_child_rave` no longer double-negates it. Parallel virtual loss deters under `negate_child_value=True` (negate Q, then subtract VL). `MAX_VALUE` / `ROBUST_CHILD` / `action_stats["value"]` use parent-perspective Q. `NeuralMCTS()` binds `single_agent=not Settings.MCTS_TWO_PLAYER` when omitted; `RootParallelMCTSEngine` forwards `two_player`. Core `select_child` emits per-child DEBUG logs.
+
+### Changed — hygiene contract amendments (docs/specs; `src/**` only via stacked #174)
+
+- `hygiene_ci_mechanical` is a standing contract: remaining open work is `ci.yml` `cache-to` `mode=max` → `mode=min` (AC-10; named `test_ci_build_step_cache_to_is_not_mode_max` is still absent). `pytest-socket` is out of that spec (`module: .github/`).
+- `hygiene_test_triage` AC-4 owns `pytest-socket` (`module: tests/`). The `[dev]` extra now declares `pytest-socket>=0.7.0,<1`; `--disable-socket` on `tests/unit/` collection is still the rest of that AC.
+- `hygiene_delete_framework_cluster` kill list no longer includes live `HarnessAgentAdapter` / `harness/topology/`.
+- `hygiene_mcts_value_semantics` Constraints require branch `spec/hygiene_mcts_value_semantics` without a `No-Spec:` trailer (implemented on that branch; do not reintroduce a trailer). This overlay is anchored to and targets that branch, so its PR diff has no `src/**`; merge #174 first.
+- `.trivyignore` dropped stale `CVE-2025-23042` (comment-only expiry is not enforced). Do not ignore the perl-base CRITICAL CVEs; upgrade the package.
+- CI `Prove the claim-ledger gate can fail` copies `CHARTER.md`, `README.md`, `docs`, `specs`, `src`, `tests`, `benchmarks`, `.claude`, `.github`, and `pyproject.toml` into the scratch tree so the falsify step tests the promotion rule, not missing surfaces.
+- Value-semantics peer review: in-module AC-6–AC-11 stay PASS; CL-1 stays PARTIAL. Residual (not this overlay): PW `best_action_value` is still child STM; `ParallelMCTSConfig.two_player` is dataclass-True unless `config is None`. Docs (C4 / NEXT_STEPS / MIGRATION_NOTES) no longer claim three mutually inconsistent engines.
+- Production `models/production/*.pt` load tests skip when the on-disk file is a Git LFS pointer (no smudge), instead of `UnpicklingError` on `torch.load`.
+- Deployment sanity now runs the explicit operational e2e, local-distillation CLI e2e, and demo-pipeline smoke paths with a validated, injectable 180-second subprocess timeout.
 
 ### Fixed — production image perl-base CRITICAL CVEs
 

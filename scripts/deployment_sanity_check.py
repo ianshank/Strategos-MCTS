@@ -50,14 +50,22 @@ SANITY_SMOKE_ARGS = [
     "--tb=short",
 ]
 SANITY_SMOKE_TIMEOUT_SECONDS = 180
+DEFAULT_SMOKE_TEST_TIMEOUT_SECONDS = float(SANITY_SMOKE_TIMEOUT_SECONDS)
 
 
 class DeploymentSanityChecker:
     """Comprehensive pre-deployment sanity checker."""
 
-    def __init__(self, verbose: bool = False):
+    def __init__(
+        self,
+        verbose: bool = False,
+        smoke_test_timeout_seconds: float = DEFAULT_SMOKE_TEST_TIMEOUT_SECONDS,
+    ):
+        if smoke_test_timeout_seconds <= 0:
+            raise ValueError("smoke_test_timeout_seconds must be positive")
         self.console = Console()
         self.verbose = verbose
+        self.smoke_test_timeout_seconds = smoke_test_timeout_seconds
         self.failures: list[str] = []
         self.warnings: list[str] = []
 
@@ -187,7 +195,7 @@ class DeploymentSanityChecker:
                 [sys.executable, "-m", "pytest", *SANITY_SMOKE_ARGS],
                 capture_output=True,
                 text=True,
-                timeout=SANITY_SMOKE_TIMEOUT_SECONDS,
+                timeout=self.smoke_test_timeout_seconds,
             )
 
             if result.returncode == 0:

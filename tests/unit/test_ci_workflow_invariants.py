@@ -1043,6 +1043,25 @@ def test_literal_collect_ignores_reads_the_real_guards() -> None:
     assert not {Path(f).name for f in found} & set(PROTECTED_API_SUITES)
 
 
+CLAIM_LEDGER_SCRATCH_COPY = "cp -r CHARTER.md README.md docs specs src tests benchmarks .claude .github pyproject.toml"
+
+
+@pytest.mark.unit
+def test_claim_ledger_scratch_copy_includes_cited_surfaces() -> None:
+    """The falsify-PROVEN scratch must copy every top-level the live ledger currently cites.
+
+    A copy list of only ``docs specs src pyproject.toml`` fails path/surface resolution
+    before the promotion rule can fire. Keep this pin in lockstep with
+    ``docs/CLAIM_LEDGER.md`` Source/Evidence roots; widening the ledger without
+    widening the copy is a silent gate hole.
+    """
+    ci_text = (WORKFLOW_DIR / CI_WORKFLOW).read_text(encoding="utf-8")
+    assert CLAIM_LEDGER_SCRATCH_COPY in ci_text, (
+        "ci.yml 'Prove the claim-ledger gate can fail' must copy CHARTER.md, README.md, "
+        "docs, specs, src, tests, benchmarks, .claude, .github, and pyproject.toml"
+    )
+
+
 # ============================================================================
 # Supply chain and privilege invariants
 # ============================================================================
