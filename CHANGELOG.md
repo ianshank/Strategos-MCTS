@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.trivyignore` dropped stale `CVE-2025-23042` (comment-only expiry is not enforced). Do not ignore the perl-base CRITICAL CVEs; upgrade the package.
 - CI `Prove the claim-ledger gate can fail` copies `CHARTER.md`, `README.md`, `docs`, `specs`, `src`, `tests`, `benchmarks`, `.claude`, `.github`, and `pyproject.toml` into the scratch tree so the falsify step tests the promotion rule, not missing surfaces.
 - Value-semantics peer review: in-module AC-6–AC-11 stay PASS; CL-1 stays PARTIAL. Residual (not this overlay): PW `best_action_value` is still child STM; `ParallelMCTSConfig.two_player` is dataclass-True unless `config is None`. Docs (C4 / NEXT_STEPS / MIGRATION_NOTES) no longer claim three mutually inconsistent engines.
+- Production `models/production/*.pt` load tests skip when the on-disk file is a Git LFS pointer (no smudge), instead of `UnpicklingError` on `torch.load`.
 
 ### Fixed — production image perl-base CRITICAL CVEs
 
