@@ -838,6 +838,7 @@ class TestPerspectiveFlagBinding:
 
 def test_migration_notes_document_no_escape_hatch() -> None:
     """Covers hygiene_mcts_value_semantics AC-5 — no escape hatch to the broken pair."""
-    notes = (Path(__file__).resolve().parents[3] / "docs" / "MIGRATION_NOTES.md").read_text(encoding="utf-8")
+    # tests/unit/framework/mcts/<file> → parents[4] is the repo root.
+    notes = (Path(__file__).resolve().parents[4] / "docs" / "MIGRATION_NOTES.md").read_text(encoding="utf-8")
     assert "There is no" in notes and "escape hatch back to the old behavior" in notes
     assert "There is no escape hatch to the broken asymmetric pair." in notes
