@@ -21,11 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `hygiene_ci_mechanical` is a standing contract: remaining open work is `ci.yml` `cache-to` `mode=max` → `mode=min` (AC-10; named `test_ci_build_step_cache_to_is_not_mode_max` is still absent). `pytest-socket` is out of that spec (`module: .github/`).
 - `hygiene_test_triage` AC-4 owns `pytest-socket` (`module: tests/`). The `[dev]` extra now declares `pytest-socket>=0.7.0,<1`; `--disable-socket` on `tests/unit/` collection is still the rest of that AC.
 - `hygiene_delete_framework_cluster` kill list no longer includes live `HarnessAgentAdapter` / `harness/topology/`.
-- `hygiene_mcts_value_semantics` Constraints require branch `spec/hygiene_mcts_value_semantics` without a `No-Spec:` trailer (implemented on that branch; do not reintroduce a trailer). Merge #174 first, then rebase this overlay so vs `main` it has no `src/**`.
+- `hygiene_mcts_value_semantics` Constraints require branch `spec/hygiene_mcts_value_semantics` without a `No-Spec:` trailer (implemented on that branch; do not reintroduce a trailer). This overlay is anchored to and targets that branch, so its PR diff has no `src/**`; merge #174 first.
 - `.trivyignore` dropped stale `CVE-2025-23042` (comment-only expiry is not enforced). Do not ignore the perl-base CRITICAL CVEs; upgrade the package.
 - CI `Prove the claim-ledger gate can fail` copies `CHARTER.md`, `README.md`, `docs`, `specs`, `src`, `tests`, `benchmarks`, `.claude`, `.github`, and `pyproject.toml` into the scratch tree so the falsify step tests the promotion rule, not missing surfaces.
 - Value-semantics peer review: in-module AC-6–AC-11 stay PASS; CL-1 stays PARTIAL. Residual (not this overlay): PW `best_action_value` is still child STM; `ParallelMCTSConfig.two_player` is dataclass-True unless `config is None`. Docs (C4 / NEXT_STEPS / MIGRATION_NOTES) no longer claim three mutually inconsistent engines.
 - Production `models/production/*.pt` load tests skip when the on-disk file is a Git LFS pointer (no smudge), instead of `UnpicklingError` on `torch.load`.
+- Deployment sanity discovers modules that declare `pytest.mark.smoke` before invoking pytest, avoiding full-suite collection before marker deselection; its subprocess timeout is validated, injectable, and raised from 60 to 180 seconds.
 
 ### Fixed — production image perl-base CRITICAL CVEs
 
