@@ -80,8 +80,10 @@ value without negating it — selecting the move that is best **for the opponent
 root. This mirrors a bug already found and fixed in `neural_mcts.NeuralMCTSNode.select_child`
 (the `negate_child_value` parameter), which was never ported to these two engines.
 
-Both selection methods now accept a `negate_child_value: bool = False` parameter (RAVE also
-negates the RAVE/AMAF mixing term, which was equally unnegated). Both engines gained a
+Both selection methods now accept a `negate_child_value: bool = False` parameter.
+Parent AMAF is already parent side-to-move after two-player backup, so
+`select_child_rave` must **not** negate the RAVE mixing term a second time (AC-8).
+Both engines gained a
 `two_player: bool` field/parameter (`ParallelMCTSConfig.two_player`,
 `ProgressiveWideningEngine(..., two_player=...)`), **defaulting to `True`**, wired through to
 selection as `negate_child_value=self.two_player`. A new settings field,
@@ -99,8 +101,9 @@ Default `Settings.MCTS_TWO_PLAYER` is `True`. Wiring that default into `core.MCT
 `strategos_risk_averse_subgoal_scorer` must treat post-AC-6 core as its bit-for-bit baseline.
 
 Backup parity is asserted by
-`tests/unit/framework/mcts/test_value_semantics_regression.py::TestBackupSignAndCrossEngineParity`
-(CHARTER.md §2's demo command). Do not treat stuffed-stats selection parity as backup parity.
+`tests/unit/framework/mcts/test_value_semantics_regression.py::TestBackupSignClassicalEngines`
+and `::TestBackupSignNeuralEngine` (CHARTER.md §2's demo command). Do not treat stuffed-stats
+selection parity as backup parity.
 
 ### `core.MCTSEngine` now honours `two_player` on backup and select
 
@@ -125,6 +128,15 @@ Consumers of `action_stats["value"]` under default two-player search now see
 parent Q (previously child STM). `ValueCandidateScorer` therefore agrees with
 `MAX_VALUE` without a second negation. Pass `two_player=False` for the old
 child-Q publication.
+
+Known residuals (CL-1 stays PARTIAL; not this overlay):
+- `ProgressiveWideningEngine._compute_statistics` still publishes child STM as
+  `best_action_value` (`progressive_widening.py`); `action_stats["value"]` is
+  parent-Q. Core publishes parent-Q on both surfaces.
+- `ParallelMCTSConfig.two_player` defaults `True` on the dataclass. Settings is
+  consulted only when `ParallelMCTSEngine(config=None)`.
+- `create_parallel_mcts(strategy="tree", two_player=...)` cannot forward the
+  flag (`ParallelMCTSEngine` takes it via config). AC-11 required `strategy="root"`.
 
 ### Benchmarks and the M5 policy-lift gate
 

@@ -16,13 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Parent AMAF/RAVE is parent side-to-move; `select_child_rave` no longer double-negates it. Parallel virtual loss deters under `negate_child_value=True` (negate Q, then subtract VL). `MAX_VALUE` / `ROBUST_CHILD` / `action_stats["value"]` use parent-perspective Q. `NeuralMCTS()` binds `single_agent=not Settings.MCTS_TWO_PLAYER` when omitted; `RootParallelMCTSEngine` forwards `two_player`. Core `select_child` emits per-child DEBUG logs.
 
-### Changed — hygiene contract amendments (docs/specs; no `src/**`)
+### Changed — hygiene contract amendments (docs/specs; `src/**` only via stacked #174)
 
-- `hygiene_ci_mechanical` is a standing contract: named tests for AC-1..13; remaining open work is `ci.yml` `cache-to` `mode=max` → `mode=min` (AC-10). `pytest-socket` is out of that spec (`module: .github/`).
+- `hygiene_ci_mechanical` is a standing contract: remaining open work is `ci.yml` `cache-to` `mode=max` → `mode=min` (AC-10; named `test_ci_build_step_cache_to_is_not_mode_max` is still absent). `pytest-socket` is out of that spec (`module: .github/`).
 - `hygiene_test_triage` AC-4 owns `pytest-socket` (`module: tests/`). The `[dev]` extra now declares `pytest-socket>=0.7.0,<1`; `--disable-socket` on `tests/unit/` collection is still the rest of that AC.
 - `hygiene_delete_framework_cluster` kill list no longer includes live `HarnessAgentAdapter` / `harness/topology/`.
-- `hygiene_mcts_value_semantics` Constraints require branch `spec/hygiene_mcts_value_semantics` without a `No-Spec:` trailer (implemented on that branch; do not reintroduce a trailer).
+- `hygiene_mcts_value_semantics` Constraints require branch `spec/hygiene_mcts_value_semantics` without a `No-Spec:` trailer (implemented on that branch; do not reintroduce a trailer). Merge #174 first, then rebase this overlay so vs `main` it has no `src/**`.
 - `.trivyignore` dropped stale `CVE-2025-23042` (comment-only expiry is not enforced). Do not ignore the perl-base CRITICAL CVEs; upgrade the package.
+- CI `Prove the claim-ledger gate can fail` copies `CHARTER.md`, `README.md`, `docs`, `specs`, `src`, `tests`, `benchmarks`, `.claude`, `.github`, and `pyproject.toml` into the scratch tree so the falsify step tests the promotion rule, not missing surfaces.
+- Value-semantics peer review: in-module AC-6–AC-11 stay PASS; CL-1 stays PARTIAL. Residual (not this overlay): PW `best_action_value` is still child STM; `ParallelMCTSConfig.two_player` is dataclass-True unless `config is None`. Docs (C4 / NEXT_STEPS / MIGRATION_NOTES) no longer claim three mutually inconsistent engines.
 
 ### Fixed — production image perl-base CRITICAL CVEs
 

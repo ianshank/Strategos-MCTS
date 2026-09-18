@@ -8,13 +8,18 @@
 > semantics, a Connect Four golden path, a cost-normalised Pareto report, and a promotion gate that
 > has demonstrably rejected a checkpoint.
 >
-> The reason is specific, not stylistic. An audit of the tree found that the three classic MCTS
-> engines implement three mutually inconsistent value-perspective conventions while `CHARTER.md` §2
-> asserts they agree; that no candidate-versus-champion promotion gate exists anywhere in the tree,
-> so every self-play checkpoint is promoted by default; and that no comparison in the repository is
-> cost-normalised or includes a no-search arm. Each Phase below multiplies the cost of a wrong
-> answer the current tree cannot detect. See `docs/plans/EVIDENCE_FIRST_PROGRAM.md` §1 and §2 for
-> the evidence, and §8 for this program's own kill criteria.
+> The reason is specific, not stylistic. The 2026-08-22 audit found three mutually inconsistent
+> MCTS value-perspective conventions while `CHARTER.md` §2 asserted they agree. **In-module that
+> pair has landed** (`hygiene_mcts_value_semantics` AC-6–AC-11: select and backup share
+> `two_player` / `single_agent`; parent AMAF is not double-negated; VL deters after the Q flip;
+> parent-perspective `MAX_VALUE` / `ROBUST_CHILD` / `action_stats["value"]`). **CL-1 stays
+> PARTIAL:** `GraphBuilder` and `MCTSEngineFactory` still omit `two_player=`, so default True
+> runs negamax on HRM/TRM quality scores; PW still publishes child-STM as `best_action_value`.
+> Separately, no candidate-versus-champion promotion gate exists, so every self-play checkpoint
+> is promoted by default, and no comparison in the repository is cost-normalised or includes a
+> no-search arm. Each Phase below multiplies the cost of a wrong answer the current tree cannot
+> detect. See `docs/plans/EVIDENCE_FIRST_PROGRAM.md` §1 and §2 for the original evidence, and §8
+> for this program's own kill criteria.
 >
 > **Nothing below is cancelled.** Phase 1.2 onward resumes when the E5 promotion gate has fired at
 > least one live rejection. At that point distributed self-play has a referee, inference
@@ -30,8 +35,13 @@
 > QA (device placement, LM Studio adapter URL/omni/fail-loud, live opt-in) landed on the tree;
 > next step is still human `spec-review` → `approved`. A later experiment PR may commit
 > `benchmarks/results/local_distillation_c4.json`; this does not mark Phase 3 complete.
-> God-file splits of `src/config/settings.py`, `src/framework/factories.py`, `healthcheck.py`,
-> and `src/config/constants.py` (already >600 LOC on main) need their own spec — not this hygiene pass.
+> God-file splits need their own spec — not this hygiene pass. Don't-touch sizes on this tree
+> (inputs for `godfile-decomposer`): `src/framework/mcts/llm_mcts.py` 1022,
+> `src/config/settings.py` 949, `src/framework/mcts/parallel_mcts.py` 862,
+> `src/framework/mcts/neural_policies.py` 779, `src/framework/mcts/core.py` 777,
+> `src/framework/factories.py` 770, `src/framework/mcts/neural_mcts.py` 725,
+> `src/framework/mcts/progressive_widening.py` 715, `healthcheck.py` 681,
+> `src/framework/mcts/domain_adapters.py` 642, `src/framework/mcts/game_states.py` 624.
 >
 > **The roadmap below defines the new frontier for the remainder of H2 2026: Scaling, Advanced Architectures, and Enterprise Developer Experience.**
 
