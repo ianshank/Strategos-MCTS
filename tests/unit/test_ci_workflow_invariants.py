@@ -1043,9 +1043,7 @@ def test_literal_collect_ignores_reads_the_real_guards() -> None:
     assert not {Path(f).name for f in found} & set(PROTECTED_API_SUITES)
 
 
-CLAIM_LEDGER_SCRATCH_COPY = (
-    "cp -r CHARTER.md README.md docs specs src tests benchmarks .claude .github pyproject.toml"
-)
+CLAIM_LEDGER_SCRATCH_COPY = "cp -r CHARTER.md README.md docs specs src tests benchmarks .claude .github pyproject.toml"
 
 
 @pytest.mark.unit
