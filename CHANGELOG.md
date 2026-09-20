@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — Docker Deployment sanity smoke timeout
+
+- `scripts/deployment_sanity_check.py` and the sanity job no longer run `pytest tests/ -m smoke` (that collection includes `tests/deployment/test_docker_smoke.py` and its 90s health wait, and died at subprocess timeout=60 on run 34705825988). The sanity job now delegates that subset to the script, which invokes the operational e2e, local-distillation CLI e2e, and demo-pipeline smoke files (~16 tests). Container docker smoke stays on the Container Smoke Tests job. Sanity subprocess timeout is 180s. `docs/DOCKER_DEPLOYMENT.md` splits sanity vs container smoke the same way; do not use `smoke and not e2e`.
 ### Fixed — MCTS backup sign (`hygiene_mcts_value_semantics` AC-6 / AC-7)
 
 - `ParallelMCTSEngine` and `ProgressiveWideningEngine` gate backup negation on `two_player` (selection already did). `core.MCTSEngine` gained the same settings-backed flag (default `Settings.MCTS_TWO_PLAYER=True`) on backup and select. Default core search now negamax-flips; pass `two_player=False` for single-agent. NeuralMCTS was already consistent (`single_agent`).
@@ -26,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI `Prove the claim-ledger gate can fail` copies `CHARTER.md`, `README.md`, `docs`, `specs`, `src`, `tests`, `benchmarks`, `.claude`, `.github`, and `pyproject.toml` into the scratch tree so the falsify step tests the promotion rule, not missing surfaces.
 - Value-semantics peer review: in-module AC-6–AC-11 stay PASS; CL-1 stays PARTIAL. Residual (not this overlay): PW `best_action_value` is still child STM; `ParallelMCTSConfig.two_player` is dataclass-True unless `config is None`. Docs (C4 / NEXT_STEPS / MIGRATION_NOTES) no longer claim three mutually inconsistent engines.
 - Production `models/production/*.pt` load tests skip when the on-disk file is a Git LFS pointer (no smudge), instead of `UnpicklingError` on `torch.load`.
-- Deployment sanity discovers modules that declare `pytest.mark.smoke` before invoking pytest, avoiding full-suite collection before marker deselection; its subprocess timeout is validated, injectable, and raised from 60 to 180 seconds.
+- Deployment sanity now runs the explicit operational e2e, local-distillation CLI e2e, and demo-pipeline smoke paths with a validated, injectable 180-second subprocess timeout.
 
 ### Fixed — production image perl-base CRITICAL CVEs
 
