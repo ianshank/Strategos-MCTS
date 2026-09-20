@@ -27,10 +27,9 @@ python scripts/validate_context_docs.py  # deterministic check: .claude skills/a
 
 `ruff`/`mypy` are pinned in the `[dev]` extra (CI lint job installs `.[dev]`) for CI/local
 parity — bump deliberately and re-validate. Coverage gate: 85% (`--cov-fail-under=85`).
-Achieved: **89.65%** gate-scope (`tests/unit/`, 2026-08-04, `[dev,neural,api]` env — see
-`docs/STATUS.md`). The full-suite 90.15% figure predates the 2026-08-04 denominator widening.
-`mypy src/` must remain clean (336 files).
-Async tests must use `@pytest.mark.asyncio` + `await` — never `asyncio.get_event_loop()`.
+Measured totals live in `docs/STATUS.md` (do not quote a stale % here).
+`mypy src/` must remain clean. Async tests must use `@pytest.mark.asyncio` + `await` —
+never `asyncio.get_event_loop()`.
 
 ## Harness CLI
 
@@ -129,7 +128,12 @@ Fixtures: `tests/fixtures/harness_fixtures.py` (helpers), `tests/integration/har
 - Active roadmap: `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md`
 - Current test/coverage status (source of truth): `docs/STATUS.md`
 - Spec-driven specs: `specs/<id>.SPEC.md`, schema v2 (validate with `harness validate-spec specs/*.SPEC.md`)
-- Project skills: `.claude/skills/{quality-gate,validate-specs,coverage-baseline,strategos-primer,validate-context,aqa-regression}`
+- Project skills: `.claude/skills/` — `quality-gate`, `validate-specs`, `coverage-baseline`,
+  `strategos-primer`, `validate-context`, `aqa-regression`, `e2e-device-matrix`,
+  `gpu-device-auditor`, `validate-claims`, `promotion-gate`, `deep-research`,
+  `hierarchical-recursive-brainstorm`
+- Agents: `selfplay-referee`, `eval-warden`, `spec-review`, `strategos-guide`
+- Hooks: `spec_gate`, `device_literal_gate`, `evidence_gate` (warn; `.claude/settings.json`)
 - Codebase orientation: `strategos-primer` skill + `strategos-guide` agent (`.claude/agents/`) map the
   layers/subsystems/invariants; `validate-context` (`src/tools/context_docs.py`, `validate-context-docs`
   console script, in the unit suite) deterministically checks those docs' paths and value-claims vs the tree

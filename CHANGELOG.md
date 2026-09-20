@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — overlay docs / AQA / skill wiring
+
+- Orientation docs (`AGENTS.md`, `CLAUDE.md`, `README.md`, `strategos-primer`) name the real skill/agent/hook set. `aqa-regression` adds CHARTER value-semantics, perl-base, and deploy-sanity pin lanes. `quality-gate` manual pytest uses `TEST_ENV`. `coverage-baseline` no longer writes `planning/milestones.yaml` or `docs/STATUS.md` on a red tree. `.claude/commands/pre-pr.md` delegates to `make gate`. Makefile aliases: `test-value-semantics`, `deploy-sanity`. `docs/NEXT_STEPS_IMPLEMENTATION_PLAN_2026H2.md` points at overlay PRs #171–#174 without a second roadmap.
 ### Fixed — Docker Deployment sanity smoke timeout
 
 - `scripts/deployment_sanity_check.py` and the sanity job no longer run `pytest tests/ -m smoke` (that collection includes `tests/deployment/test_docker_smoke.py` and its 90s health wait, and died at subprocess timeout=60 on run 34705825988). The sanity job now delegates that subset to the script, which invokes the operational e2e, local-distillation CLI e2e, and demo-pipeline smoke files (~16 tests). Container docker smoke stays on the Container Smoke Tests job. Sanity subprocess timeout is 180s. `docs/DOCKER_DEPLOYMENT.md` splits sanity vs container smoke the same way; do not use `smoke and not e2e`.

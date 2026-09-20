@@ -1,50 +1,30 @@
 ---
 name: coverage-baseline
 description: >-
-  Produce or refresh the evidence-backed test/coverage baseline in docs/STATUS.md
-  (pass-rate plus per-module branch coverage). Use to re-establish the source of
-  truth after dependency or test changes, and to pick coverage targets.
+  Produce a local, evidence-backed coverage report. Refresh docs/STATUS.md only
+  after main is green. Never revive planning/milestones.yaml (CHARTER NG-7).
 ---
 
 # Coverage Baseline
 
-Generate the real, reproducible project status so docs never drift from the code. The per-module table
-this produces is what selects coverage work — never assume targets from older docs.
+Generate a reproducible coverage report so docs never invent a number the tree cannot run.
+**Do not write `docs/STATUS.md` on a branch that has not landed on green main.** CHARTER NG-7
+forbids a second planning system: never update `planning/milestones.yaml`.
 
 ```bash
-# Clean, full install (heavy ML stack)
-pip install -e ".[dev,neural]"
+pip install -e ".[dev,neural,api]"
 
-# Full suite with branch coverage; term-missing shows per-line gaps, xml feeds CI/Codecov
-pytest tests/ \
-  --cov=src \
-  --cov-report=term-missing \
-  --cov-report=xml:coverage.xml \
-  --junitxml=junit.xml
-
-# Per-module summary (sorted by coverage ascending — lowest first = work targets)
-python -m coverage report --sort=cover
+# Prefer the Makefile so TEST_ENV matches CI (STRICT_OPTIONAL_DEPS=1, offline hub)
+make coverage
 ```
 
-Then update `docs/STATUS.md` with: date, pass/fail/skip counts, overall branch coverage, and the
-per-module table (lowest first). Update `planning/milestones.yaml` `quality_metrics` to match.
-
-Then regenerate the machine-readable side, which is what other tooling reads:
-
-```bash
-python -m src.tools.claim_ledger        # grades must still validate after any doc edit
-python -m src.tools.status_artifact --strict
-```
+`make coverage` runs unit tests with branch coverage and writes an HTML report under htmlcov
+(gitignored) — it does **not** edit `docs/STATUS.md`. After **green main**, refresh `docs/STATUS.md` in a dedicated follow-up using measured test output; `python -m src.tools.status_artifact --strict` only writes `artifacts/status.json`.
 
 Notes:
-- **Coverage is not evidence of capability.** It measures which lines the tests execute, not
-  whether the system works — recorded deliberately as a `FALSE` row (`CL-29`) in
-  `docs/CLAIM_LEDGER.md` so the confusion cannot recur. When writing `docs/STATUS.md`, report the
-  number and stop; capability language belongs in the ledger, where it needs evidence.
-- `docs/STATUS.md` is a live claim surface: the `.claude/hooks/evidence_gate.py` PostToolUse hook
-  scans it after every edit and warns on promotion language that no ledger row supports.
-- Coverage gate is branch coverage, `fail_under = 85.0` (`pyproject.toml`).
-- Three `src/games/chess/` modules (`ui.py`, `verification/game_verifier.py`,
-  `verification/move_validator.py`) are omitted from coverage by config — they will not appear as
-  movable targets. The two `src/api/` server modules were **un-omitted** on 2026-08-04 and are now
-  measured.
+- **Coverage is not evidence of capability.** Recorded as `FALSE` (`CL-29`) in
+  `docs/CLAIM_LEDGER.md`. When writing STATUS, report the number and stop.
+- `docs/STATUS.md` is a live claim surface: `.claude/hooks/evidence_gate.py` warns on
+  promotion language that no ledger row supports.
+- Coverage gate is branch coverage, `fail_under = 85.0` (`pyproject.toml`). Do not lower it.
+- Three `src/games/chess/` modules are omitted from coverage by config.

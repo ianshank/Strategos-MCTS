@@ -33,6 +33,7 @@ TEST_ENV := WANDB_MODE=disabled \
 .DEFAULT_GOAL := help
 .PHONY: help install format format-check lint lint-fix lint-ratchet lint-ratchet-baseline \
         typecheck test test-local-distillation test-e2e test-ui test-regression test-all \
+        test-value-semantics deploy-sanity \
         coverage specs docs claims claims-baseline status pins pins-baseline secrets gate clean
 
 help: ## Show this help
@@ -74,10 +75,16 @@ test-ui: ## Run UI and User Journey E2E tests
 test-regression: ## Comprehensive regression & AQA suite (unit, integration, and e2e)
 	$(TEST_ENV) $(PYTHON) -m pytest tests/unit/ tests/integration/ tests/e2e/ -m "not slow" -ra $(PYTEST_ARGS)
 
+test-value-semantics: ## CHARTER §2 demo — current branch coverage (selection-focused regression)
+	$(TEST_ENV) $(PYTHON) -m pytest tests/unit/framework/mcts/test_value_semantics_regression.py $(PYTEST_ARGS)
+
+deploy-sanity: ## Pre-deploy sanity script (pytest tests/ -m smoke wrapper, 60s timeout)
+	$(PYTHON) scripts/deployment_sanity_check.py
+
 test-all: ## Full non-slow sweep (wider than the gate; expect env-dependent failures)
 	$(TEST_ENV) $(PYTHON) -m pytest tests/ -m "not slow" $(PYTEST_ARGS)
 
-coverage: ## Refresh the measured baseline in docs/STATUS.md
+coverage: ## Unit coverage HTML report (does not write docs/STATUS.md)
 	$(TEST_ENV) $(PYTHON) -m pytest tests/unit/ \
 		--cov=src --cov-report=term-missing --cov-report=html:htmlcov \
 		--cov-fail-under=$(COV_MIN)
