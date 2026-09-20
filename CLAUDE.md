@@ -129,7 +129,7 @@ CONFIGURATION
 
 CORE FRAMEWORK
 ├── src/framework/graph/         # LangGraph orchestration (package)
-├── src/framework/mcts/core.py   # MCTS engine
+├── src/framework/mcts/core.py   # MCTS engine (`two_player` / Settings.MCTS_TWO_PLAYER)
 └── src/framework/factories.py   # Component factories
 
 AGENTS
@@ -219,6 +219,7 @@ LOG_LEVEL=INFO              # DEBUG | INFO | WARNING | ERROR
 MCTS_ENABLED=true           # Enable MCTS exploration
 MCTS_ITERATIONS=100         # Search iterations
 MCTS_C=1.414                # Exploration weight (UCB1)
+MCTS_TWO_PLAYER=true        # Negamax select+backup (False = single-agent, no sign flip)
 SEED=42                     # For reproducibility
 LANGSMITH_API_KEY=ls-...    # For tracing
 PINECONE_API_KEY=...        # For vector storage

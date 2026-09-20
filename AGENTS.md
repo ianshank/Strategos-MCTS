@@ -70,7 +70,7 @@ python -m scripts.local_distillation  # sidecar / promote / toy compare-arms (no
 | Settings | `src/config/settings.py`, `src/config/constants.py` (shared defaults/bounds), `src/framework/harness/settings.py` |
 | Existing agents | `src/agents/`, `src/framework/agents/base.py` |
 | LangGraph orchestration | `src/framework/graph/builder.py` |
-| MCTS engine | `src/framework/mcts/core.py` (baseline), `src/framework/mcts/neural_mcts.py` (AlphaZero-style; `single_agent` flag) |
+| MCTS engine | `src/framework/mcts/core.py` (baseline; `two_player`/`Settings.MCTS_TWO_PLAYER`), `src/framework/mcts/neural_mcts.py` (`single_agent`) |
 | Knowledge Graph | `src/training/knowledge_graph.py` (Concepts, Relationships, GraphQA, Retrieval) |
 | Gameplay domains | `src/games/chess/` (chess), `src/games/connect_four/` (connect_four), `src/games/othello/` (othello) (adversarial), `src/framework/mcts/single_agent_domains.py` (reasoning, planning) |
 | Neural self-play (M5) | `src/training/self_play_trainer.py` |
@@ -138,8 +138,9 @@ Fixtures: `tests/fixtures/harness_fixtures.py` (helpers), `tests/integration/har
   layers/subsystems/invariants; `validate-context` (`src/tools/context_docs.py`, `validate-context-docs`
   console script, in the unit suite) deterministically checks those docs' paths and value-claims vs the tree
 - SDD enforcement: `/spec-new` + `/spec-implement` (`.claude/commands/`), `spec-review` subagent
-  (`.claude/agents/`), PreToolUse gate `.claude/hooks/spec_gate.py` (warn mode; `SPEC_GATE_BYPASS=1`
-  for hotfixes; src/** PRs need a `spec/<id>` branch with an approved spec or a `No-Spec: <reason>` trailer)
+  (`.claude/agents/`); `selfplay-referee` for value-sign, `eval-warden` before measured claims.
+  PreToolUse gate `.claude/hooks/spec_gate.py` (warn mode; `SPEC_GATE_BYPASS=1` for hotfixes;
+  src/** PRs need a `spec/<id>` branch with an approved spec or a `No-Spec: <reason>` trailer)
 - Deep Research: `/deep-research` command (`.claude/commands/`), orchestrated by `research-planner`,
   `research-fetcher`, `research-critic`, and `research-synthesizer` agents (`.claude/agents/`) with
   reports output to `docs/reports/` using the `deep-research` skill (`.claude/skills/`).

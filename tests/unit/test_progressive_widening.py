@@ -266,7 +266,7 @@ class TestProgressiveWideningEngine:
         assert actions == ["a1", "a2"]
 
     def test_backpropagate_with_rave(self):
-        engine = ProgressiveWideningEngine()
+        engine = ProgressiveWideningEngine(two_player=True)
         rng = engine.rng
 
         root = RAVENode(state=_make_state("root"), rng=rng)
@@ -277,9 +277,21 @@ class TestProgressiveWideningEngine:
         assert child.visits == 1
         assert child.value_sum == 0.8
         assert root.visits == 1
-        assert root.value_sum == -0.8  # flipped
+        assert root.value_sum == -0.8  # two-player flip
         assert root.rave_visits.get("a1", 0) == 1
         assert root.rave_visits.get("a2", 0) == 1
+
+    def test_backpropagate_with_rave_single_agent_does_not_flip(self):
+        engine = ProgressiveWideningEngine(two_player=False)
+        rng = engine.rng
+
+        root = RAVENode(state=_make_state("root"), rng=rng)
+        child = RAVENode(state=_make_state("child"), parent=root, action="a1", rng=rng)
+
+        engine.backpropagate_with_rave(child, 0.8, ["a1"])
+
+        assert child.value_sum == 0.8
+        assert root.value_sum == 0.8
 
     def test_backpropagate_rave_disabled(self):
         engine = ProgressiveWideningEngine(rave_config=RAVEConfig(enable_rave=False))

@@ -17,6 +17,22 @@ yaml = pytest.importorskip("yaml", reason="PyYAML required for config loading")
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
+# Git LFS pointer files start with this ASCII header. Clones without `git lfs
+# smudge` still have the pointer, so ``Path.exists()`` is true while
+# ``torch.load`` raises ``UnpicklingError: invalid load key, 'v'``.
+_GIT_LFS_POINTER_PREFIX = b"version https://git-lfs.github.com/"
+
+
+def _skip_if_git_lfs_pointer(path: Path) -> None:
+    """Skip when the on-disk checkpoint is a Git LFS pointer, not a torch archive."""
+    try:
+        head = path.read_bytes()[:64]
+    except OSError as exc:
+        pytest.skip(f"cannot read {path.name}: {exc}")
+    if head.startswith(_GIT_LFS_POINTER_PREFIX):
+        pytest.skip(f"{path.name} is a Git LFS pointer, not a torch archive")
+
+
 try:
     from training.agent_trainer import HRMTrainer, TRMTrainer
 except ImportError:
@@ -91,6 +107,7 @@ def test_hrm_model_loading_and_inference(production_models_dir, production_confi
 
     if not model_path.exists():
         pytest.skip("HRM model not deployed")
+    _skip_if_git_lfs_pointer(model_path)
 
     try:
         trainer = HRMTrainer(production_config)
@@ -144,6 +161,7 @@ def test_trm_model_loading_and_inference(production_models_dir, production_confi
 
     if not model_path.exists():
         pytest.skip("TRM model not deployed")
+    _skip_if_git_lfs_pointer(model_path)
 
     try:
         trainer = TRMTrainer(production_config)
@@ -190,6 +208,7 @@ def test_meta_controller_loading(production_models_dir):
 
     if not model_path.exists():
         pytest.skip("Meta-controller not deployed")
+    _skip_if_git_lfs_pointer(model_path)
 
     try:
         # weights_only=False because this trusted checkpoint was saved with a numpy

@@ -309,7 +309,7 @@ class TestBackpropagationInvariants:
         """
         Property: Backpropagation should update all nodes from leaf to root.
         """
-        engine = MCTSEngine(seed=42)
+        engine = MCTSEngine(seed=42, two_player=False)
 
         state = MCTSState("root", {})
         rng = np.random.default_rng(42)

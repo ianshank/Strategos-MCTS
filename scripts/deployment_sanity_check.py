@@ -36,13 +36,36 @@ import yaml
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+# Deploy sanity must not collect ``tests/deployment/test_docker_smoke.py`` (90s health
+# wait). That file belongs to the Container Smoke Tests job. ``-m "smoke and not e2e"``
+# still collects docker smoke. Keep this list explicit. Timeout is a backstop, not a
+# performance target — CI run 34705825988 died at 60s while still collecting.
+SANITY_SMOKE_ARGS = [
+    "tests/e2e/test_operational_entry_points_e2e.py",
+    "tests/e2e/test_local_distillation_cli_e2e.py",
+    "tests/integration/test_demo_pipeline.py",
+    "-m",
+    "smoke",
+    "-q",
+    "--tb=short",
+]
+SANITY_SMOKE_TIMEOUT_SECONDS = 180
+DEFAULT_SMOKE_TEST_TIMEOUT_SECONDS = float(SANITY_SMOKE_TIMEOUT_SECONDS)
+
 
 class DeploymentSanityChecker:
     """Comprehensive pre-deployment sanity checker."""
 
-    def __init__(self, verbose: bool = False):
+    def __init__(
+        self,
+        verbose: bool = False,
+        smoke_test_timeout_seconds: float = DEFAULT_SMOKE_TEST_TIMEOUT_SECONDS,
+    ):
+        if smoke_test_timeout_seconds <= 0:
+            raise ValueError("smoke_test_timeout_seconds must be positive")
         self.console = Console()
         self.verbose = verbose
+        self.smoke_test_timeout_seconds = smoke_test_timeout_seconds
         self.failures: list[str] = []
         self.warnings: list[str] = []
 
@@ -164,15 +187,15 @@ class DeploymentSanityChecker:
             return False
 
     def check_test_suite(self) -> bool:
-        """Run smoke tests."""
+        """Run the deploy-sanity smoke subset (not container docker smoke)."""
         self.console.print("\n[cyan]Running smoke tests...[/cyan]")
 
         try:
             result = subprocess.run(
-                [sys.executable, "-m", "pytest", "tests/", "-m", "smoke", "-v", "--tb=short"],
+                [sys.executable, "-m", "pytest", *SANITY_SMOKE_ARGS],
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=self.smoke_test_timeout_seconds,
             )
 
             if result.returncode == 0:
