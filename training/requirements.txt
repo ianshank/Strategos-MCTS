@@ -15,7 +15,7 @@ torch~=2.13.0
 
 # Hugging Face Transformers - Pre-trained models and training utilities
 # Pin to 4.30+ for latest model architectures and training improvements
-transformers~=4.30.0
+transformers~=5.14.1
 
 # Hugging Face Datasets - Efficient data loading and processing
 # Held at 2.x: datasets 5.x requires requests>=2.32.2 and pyarrow>=21.0.0, which
