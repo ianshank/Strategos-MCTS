@@ -27,7 +27,7 @@ transformers~=4.30.0
 datasets~=2.14.0
 
 # PEFT - Parameter-efficient fine-tuning (LoRA, adapters)
-peft>=0.4,<0.21
+peft>=0.4,<0.22
 
 # Tokenizers
 sentencepiece~=0.2.2  # Required for DeBERTa tokenizer
